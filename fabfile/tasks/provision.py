@@ -669,7 +669,8 @@ def setup_control_node(*args):
 @roles('openstack')
 def setup_storage():
     """Provisions storage services."""
-    execute("setup_storage_master", env.host_string)
+    if detect_ostype() in ['centos']:
+        execute("setup_storage_master", env.host_string)
 
 @task
 def setup_storage_master(*args):
@@ -754,8 +755,10 @@ def setup_vrouter_node(*args):
         if 'vgw' in env.roledefs:
             if host_string in env.roledefs['vgw']:
                 set_vgw = 1
-                public_subnet = env.vgw[host_string]['public_subnet'][0]
-                public_vn_name = env.vgw[host_string]['public_vn_name'][0]
+                public_subnet = env.vgw[host_string]['public_subnet']
+                public_subnet=str(public_subnet).replace(" ", "")
+                public_vn_name = env.vgw[host_string]['public_vn_name']
+                public_vn_name=str(public_vn_name).replace(" ", "")
         haproxy = get_haproxy_opt()
         if haproxy:
             # setup haproxy and enable
@@ -871,8 +874,7 @@ def setup_all(reboot='True'):
     execute(setup_webui)
     execute(verify_webui)
     execute(setup_vrouter)
-    if detect_ostype() in ['centos']:
-        execute(setup_storage)
+    execute(setup_storage)
     execute(prov_control_bgp)
     execute(prov_external_bgp)
     execute(prov_metadata_services)
