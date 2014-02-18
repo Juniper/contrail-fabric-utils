@@ -65,6 +65,7 @@ stackUser=admin
 stackPassword=$__stack_password__
 stackTenant=$__stack_tenant__
 multiTenancy=$__multi_tenancy__
+keystone_ip=$__keystone_ip__
 
 # If you want the HTML report through HTMLTestRunner, select 'yes'. If not, the basic Unittest TextTestRunner will run the tests 
 generate_html_report=yes
@@ -270,6 +271,7 @@ stop_on_fail=no
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__timestamp__': dt.now().strftime('%Y-%m-%d-%H:%M:%S'),
              '__multi_tenancy__': get_mt_enable(),
+             '__keystone_ip__': getattr(testbed, 'keystone_ip', None),
              '__mail_to__': mail_to,
              '__log_scenario__': log_scenario,
              '__test_revision__': revision,

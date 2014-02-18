@@ -91,6 +91,12 @@ compute_vm = {
 #To disable installing contrail interface rename package
 #env.interface_rename = False
 
+#To use existing service_token
+#service_token = 'your_token'
+
+#Specify keystone IP
+#keystone_ip = '1.1.1.1'
+
 #To enable multi-tenancy feature
 #multi_tenancy = True
 
