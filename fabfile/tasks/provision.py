@@ -384,8 +384,7 @@ def setup_cfgm_node(*args):
         else:
             openstack_admin_password = 'contrail123'
 
-        openstack_host = get_control_host_string(env.roledefs['openstack'][0])
-        openstack_ip = hstr_to_ip(openstack_host)
+        keystone_ip = get_keystone_ip()
 
         # Prefer local collector node
         cfgm_host_list=[]
@@ -409,8 +408,8 @@ def setup_cfgm_node(*args):
                     run('rm /etc/init/neutron-server.override')
             with cd(INSTALLER_DIR):
                 redis_ip = first_cfgm_ip
-                run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-cfgm.py --self_ip %s --openstack_ip %s --redis_ip %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --cfgm_index %d --quantum_port %s --nworkers %d %s %s" %(
-                     cfgm_host_password, openstack_admin_password, tgt_ip, openstack_ip, redis_ip,
+                run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-cfgm.py --self_ip %s %s --redis_ip %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --cfgm_index %d --quantum_port %s --nworkers %d %s %s" %(
+                     cfgm_host_password, openstack_admin_password, tgt_ip, keystone_ip, redis_ip,
                      collector_ip, mt_opt, ' '.join(cassandra_ip_list),
                      ' '.join(cfgm_ip_list), cfgm_host_list.index(cfgm_host)+1,
                      quantum_port, nworkers, get_service_token(), get_haproxy_opt()))
@@ -450,6 +449,7 @@ def setup_openstack_node(*args):
         self_host = get_control_host_string(host_string)
         self_ip = hstr_to_ip(self_host)
         openstack_host_password = env.passwords[host_string]
+        keystone_ip = get_keystone_ip()
 
 
         if (getattr(env, 'openstack_admin_password', None)):
@@ -462,8 +462,8 @@ def setup_openstack_node(*args):
     
         with  settings(host_string=host_string):
             with cd(INSTALLER_DIR):
-                run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-openstack.py --self_ip %s --cfgm_ip %s %s %s" %(
-                    openstack_host_password, openstack_admin_password, self_ip, cfgm_ip, get_service_token(), get_haproxy_opt()))
+                run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-openstack.py --self_ip %s %s --cfgm_ip %s %s %s" %(
+                    openstack_host_password, openstack_admin_password, self_ip, keystone_ip, cfgm_ip, get_service_token(), get_haproxy_opt()))
 #end setup_openstack_node
 
 @roles('openstack')
@@ -483,7 +483,6 @@ def setup_contrail_horizon_node(*args):
         sudo('service apache2 restart')
 #end setup_contrail_horizon_node
         
-
 @task
 @roles('collector')
 def setup_collector():
@@ -587,6 +586,7 @@ def setup_webui_node(*args):
         cfgm_host_password=env.passwords[host_string]
         openstack_host = get_control_host_string(env.roledefs['openstack'][0])
         openstack_ip = hstr_to_ip(openstack_host)
+        keystone_ip = get_keystone_ip()
         ncollectors = len(env.roledefs['collector'])
         database_host_list=[]
         for entry in env.roledefs['database']:
@@ -609,7 +609,7 @@ def setup_webui_node(*args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-webui.override')
             with cd(INSTALLER_DIR):
-                run("PASSWORD=%s python setup-vnc-webui.py --cfgm_ip %s --openstack_ip %s --collector_ip %s --cassandra_ip_list %s" %(cfgm_host_password, cfgm_ip, openstack_ip, collector_ip, ' '.join(cassandra_ip_list)))
+                run("PASSWORD=%s python setup-vnc-webui.py --cfgm_ip %s %s --openstack_ip %s --collector_ip %s --cassandra_ip_list %s" %(cfgm_host_password, cfgm_ip, keystone_ip, openstack_ip, collector_ip, ' '.join(cassandra_ip_list)))
 #end setup_webui
 
 @task
@@ -748,9 +748,8 @@ def setup_vrouter_node(*args):
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
         cfgm_ip = hstr_to_ip(cfgm_host)
-        openstack_host = get_control_host_string(env.roledefs['openstack'][0])
-        openstack_ip = hstr_to_ip(openstack_host)
         openstack_mgmt_ip = hstr_to_ip(env.roledefs['openstack'][0])
+        keystone_ip = get_keystone_ip()
         compute_host = get_control_host_string(host_string)
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
     
@@ -801,8 +800,8 @@ def setup_vrouter_node(*args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-vrouter.override')
             with cd(INSTALLER_DIR):
-                cmd= "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-vrouter.py --self_ip %s --cfgm_ip %s --openstack_ip %s --openstack_mgmt_ip %s --ncontrols %s %s %s" \
-                         %(cfgm_host_password, openstack_admin_password, compute_control_ip, cfgm_ip, openstack_ip, openstack_mgmt_ip, ncontrols, get_service_token(), haproxy)
+                cmd= "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-vrouter.py --self_ip %s --cfgm_ip %s %s --openstack_mgmt_ip %s --ncontrols %s %s %s" \
+                         %(cfgm_host_password, openstack_admin_password, compute_control_ip, cfgm_ip, keystone_ip, openstack_mgmt_ip, ncontrols, get_service_token(), haproxy)
                 if tgt_ip != compute_mgmt_ip: 
                     cmd = cmd + " --non_mgmt_ip %s --non_mgmt_gw %s" %( tgt_ip, tgt_gw )
                 if set_vgw:   
