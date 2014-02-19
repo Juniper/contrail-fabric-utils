@@ -164,7 +164,7 @@ def upgrade_collector_node(rpm, *args):
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', rpm, host_string)
             execute('create_install_repo_node', host_string)
-            run("/opt/contrail/contrail_installer/contrail_config_templates/qed.conf.sh")
+            run("/opt/contrail/contrail_installer/contrail_config_templates/qe.conf.sh")
             run("/opt/contrail/contrail_installer/contrail_config_templates/collector.conf.sh")
             execute(upgrade)
             execute(upgrade_venv_packages)
