@@ -483,18 +483,13 @@ def setup_collector_node(*args):
             cassandra_host_list.remove(collector_host)
             cassandra_host_list.insert(0, collector_host)
         cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in cassandra_host_list]
-        redis_master_ip = hstr_to_ip(redis_master_host)
         with  settings(host_string=host_string):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-analytics.override')
             with cd(INSTALLER_DIR):
-                run_cmd = "PASSWORD=%s python setup-vnc-collector.py --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d --redis_master_ip %s --redis_role " \
-                           % (collector_host_password, ' '.join(cassandra_ip_list), cfgm_ip, tgt_ip, ncollectors, redis_master_ip) 
-                if not is_redis_master:
-                    run_cmd += "slave "
-                else:
-                    run_cmd += "master "
+                run_cmd = "PASSWORD=%s python setup-vnc-collector.py --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d " \
+                           % (collector_host_password, ' '.join(cassandra_ip_list), cfgm_ip, tgt_ip, ncollectors) 
                 analytics_database_ttl = get_database_ttl()
                 if analytics_database_ttl is not None:
                     run_cmd += "--analytics_data_ttl %d " % (analytics_database_ttl)
@@ -729,8 +724,24 @@ def setup_vrouter_node(*args):
         if 'vgw' in env.roledefs:
             if host_string in env.roledefs['vgw']:
                 set_vgw = 1
-                public_subnet = env.vgw[host_string]['public_subnet'][0]
-                public_vn_name = env.vgw[host_string]['public_vn_name'][0]
+                vgw_intf_list = env.vgw[host_string].keys()
+                public_subnet = []
+                public_vn_name = []
+                gateway_routes = []
+                for vgw_intf in vgw_intf_list:
+                    public_subnet.append(env.vgw[host_string][vgw_intf]['ipam-subnets'])
+                    public_vn_name.append(env.vgw[host_string][vgw_intf]['vn'])
+                    if 'gateway-routes' in env.vgw[host_string][vgw_intf].keys():
+                        gateway_routes.append(env.vgw[host_string][vgw_intf]['gateway-routes'])
+                        #gateway_routes=str(gateway_routes).replace(" ", "")
+                        gateway_routes = str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
+                
+                #public_subnet=str(public_subnet).replace(" ", "")
+                #public_vn_name=str(public_vn_name).replace(" ", "")
+                #vgw_intf_list=str(vgw_intf_list).replace(" ", "")
+                public_subnet = str([(';'.join(str(e) for e in public_subnet)).replace(" ","")])
+                public_vn_name = str([(';'.join(str(e) for e in public_vn_name)).replace(" ","")])
+                vgw_intf_list = str([(';'.join(str(e) for e in vgw_intf_list)).replace(" ","")])
         haproxy = get_haproxy_opt()
         if haproxy:
             # setup haproxy and enable
@@ -751,7 +762,9 @@ def setup_vrouter_node(*args):
                 if tgt_ip != compute_mgmt_ip: 
                     cmd = cmd + " --non_mgmt_ip %s --non_mgmt_gw %s" %( tgt_ip, tgt_gw )
                 if set_vgw:   
-                    cmd = cmd + " --public_subnet %s --public_vn_name %s" %(public_subnet,public_vn_name)
+                    cmd = cmd + " --public_subnet %s --public_vn_name %s --vgw_intf %s" %(public_subnet,public_vn_name,vgw_intf_list)
+                    if gateway_routes != []:
+                        cmd = cmd + " --gateway_routes %s" %(gateway_routes)
                 print cmd
                 run(cmd)
 #end setup_vrouter
@@ -873,7 +886,6 @@ def setup_all(reboot='True'):
     execute(setup_webui)
     execute(verify_webui)
     execute(setup_vrouter)
-    execute(setup_storage)
     execute(prov_control_bgp)
     execute(prov_external_bgp)
     execute(prov_metadata_services)

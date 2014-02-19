@@ -226,7 +226,7 @@ stop_on_fail=no
             stack_password= 'password'
             stack_tenant= 'default-project'
         else:
-            stack_password= 'contrail123'
+            stack_password = env.get('openstack_admin_password', 'contrail123')
             stack_tenant= 'admin'
 
         #get the ext router information from the testbed file and set it the
@@ -351,6 +351,7 @@ def run_sanity(feature='sanity', test=None):
               'performance'  : ['%s/scripts/performance/sanity.py' % repo],
               'multitenancy'  : ['%s/scripts/test_perms.py' % repo],
               'ecmp'            : ['%s/scripts/ecmp/sanity_with_setup.py' %repo],
+              'evpn'            : ['%s/scripts/evpn/evpn_tests.py' %repo],
               }
 
     pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
