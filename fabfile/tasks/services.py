@@ -52,7 +52,7 @@ def restart_database():
 @roles('openstack')
 def restart_openstack():
     """startops the contrail openstack services."""
-    openstack_services = ['qpidd', 'httpd', 'memcached', 'openstack-nova-api',
+    openstack_services = ['rabbitmq-server', 'httpd', 'memcached', 'openstack-nova-api',
                           'openstack-nova-scheduler', 'openstack-nova-cert',
                           'openstack-nova-consoleauth', 'openstack-nova-novncproxy',
                           'openstack-nova-conductor', 'openstack-nova-compute']
@@ -69,8 +69,15 @@ def restart_openstack_compute():
 @roles('cfgm')
 def restart_cfgm():
     """starts the contrail config services."""
-    execute('zoolink')
-    run('service supervisor-config restart')
+    execute("restart_cfgm_node", env.host_string)
+
+@task
+def restart_cfgm_node(*args):
+    """starts the contrail config services in once cfgm node. USAGE:fab restart_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        with  settings(host_string=host_string):
+            execute('zoolink_node', host_string)
+            run('service supervisor-config restart')
 
 @task
 @roles('control')
