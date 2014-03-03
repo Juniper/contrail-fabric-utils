@@ -152,6 +152,10 @@ def upgrade_control_node(pkg, *args):
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+
+            # Migrate to new configuration .ini format, if necessary.
+            run("/opt/contrail/contrail_installer/contrail_config_templates/dns.conf.sh")
+            run("/opt/contrail/contrail_installer/contrail_config_templates/control-node.conf.sh")
             execute(upgrade)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
@@ -173,6 +177,8 @@ def upgrade_collector_node(pkg, *args):
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            run("/opt/contrail/contrail_installer/contrail_config_templates/qe.conf.sh")
+            run("/opt/contrail/contrail_installer/contrail_config_templates/collector.conf.sh")
             execute(upgrade)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
@@ -215,6 +221,7 @@ def upgrade_vrouter_node(pkg, *args):
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            run("/opt/contrail/contrail_installer/contrail_config_templates/vrouter.conf.sh")
             execute(upgrade)
             execute(upgrade_venv_packages)
             execute('setup_vrouter_node', host_string)
