@@ -8,7 +8,7 @@ from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.helpers import compute_reboot, reboot_node
 from fabfile.tasks.provision import setup_vrouter, setup_vrouter_node
 from fabfile.tasks.install import install_pkg_all, create_install_repo,\
-     create_install_repo_node, upgrade_pkgs, install_pkg_node, apt_install
+     create_install_repo_node, upgrade_pkgs, install_pkg_node, yum_install,  apt_install
 
 RELEASES_WITH_QPIDD = ('1.0', '1.01', '1.02', '1.03')
 
@@ -37,19 +37,28 @@ def upgrade_zookeeper():
     run("supervisorctl -s http://localhost:9004 stop ifmap")
     run("supervisorctl -s http://localhost:9004 stop contrail-zookeeper")
 
-    apt_install(['zookeeper'])
+    if detect_ostype() in ['Ubuntu']:
+        apt_install(['zookeeper'])
+    else:
+        yum_install(['zookeeper'])
     with settings(warn_only=True):
         #http://mail-archives.apache.org/mod_mbox/zookeeper-dev/201304.mbox/%3C20130408030947.8FD7F5073C@tyr.zones.apache.org%3E
         run('/usr/sbin/useradd --comment "ZooKeeper" --shell /bin/bash -r --groups hadoop --home /usr/share/zookeeper zookeeper')
 
     execute("restore_zookeeper_config_node", env.host_string)
+    execute("zoolink_node", env.host_string)
 
     run("supervisorctl -s http://localhost:9004 start contrail-zookeeper")
 
     zookeeper_status = {}
     for host_string in env.roledefs['cfgm']:
-        with settings(host_string=host_string):
-            status = run("zkServer.sh status")
+        with settings(host_string=host_string, warn_only=True):
+            retries = 5
+            for i in range(retries):
+                status = run("zkServer.sh status")
+                if 'Error contacting service' not in status:
+                    break
+                sleep(2)
             for stat in ['leader', 'follower', 'standalone']:
                 if stat in status:
                     status = stat
