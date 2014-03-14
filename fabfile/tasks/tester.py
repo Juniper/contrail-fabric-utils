@@ -2,6 +2,7 @@ import os
 import re
 import json
 import string
+import socket
 import tempfile
 from random import randrange
 from datetime import datetime as dt
@@ -15,22 +16,29 @@ from fabfile.utils.multitenancy import *
 @roles('build')
 @task
 def setup_test_env():
-    fab_branches = local('git branch' , capture=True)
-    match = re.search('\*(.*)', fab_branches)
-    fab_branch = match.group(1).strip()
-    fab_revision = local('cat .git/refs/heads/%s' % fab_branch, capture=True)
-    if CONTROLLER_TYPE == 'Cloudstack':
-        revision = local('cat %s/.git/refs/heads/cs_sanity' % env.test_repo_dir, capture=True)
-    else:
-        with lcd(env.test_repo_dir):
-            test_branches = local('git branch' , capture=True)
-            match = re.search('\*(.*)', test_branches)
-            test_branch = match.group(1).strip()
-            revision = local('cat .git/refs/heads/%s' % test_branch, capture=True)
     cfgm_host = env.roledefs['cfgm'][0]
     cfgm_ip = hstr_to_ip(cfgm_host)
+    if socket.gethostbyname(socket.gethostname()) == cfgm_ip :
+        with settings(host_string=cfgm_host):
+            build_id = run('cat /opt/contrail/contrail_packages/VERSION')
+        fab_revision = build_id
+        revision = build_id
+        print "Testing from the CFGM."
+    else:
+        fab_branches = local('git branch' , capture=True)
+        match = re.search('\*(.*)', fab_branches)
+        fab_branch = match.group(1).strip()
+        fab_revision = local('cat .git/refs/heads/%s' % fab_branch, capture=True)
+        if CONTROLLER_TYPE == 'Cloudstack':
+            revision = local('cat %s/.git/refs/heads/cs_sanity' % env.test_repo_dir, capture=True)
+        else:
+            with lcd(env.test_repo_dir):
+                test_branches = local('git branch' , capture=True)
+                match = re.search('\*(.*)', test_branches)
+                test_branch = match.group(1).strip()
+                revision = local('cat .git/refs/heads/%s' % test_branch, capture=True)
 
-    execute(copy_dir, env.test_repo_dir, cfgm_host)
+        execute(copy_dir, env.test_repo_dir, cfgm_host)
 
     sanity_testbed_dict = {
         'hosts': [],

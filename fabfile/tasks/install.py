@@ -166,7 +166,10 @@ def apt_install(debs):
 @roles('compute')
 def install_interface_name(reboot='True'):
     """Installs interface name package in all nodes defined in compute role."""
-    execute("install_interface_name_node", env.host_string, reboot=reboot)
+    if detect_ostype() == 'Ubuntu':
+        print "[%s]: Installing interface rename package not required for Ubuntu..Skipping it" %env.host_string
+    else:
+        execute("install_interface_name_node", env.host_string, reboot=reboot)
 
 @task
 def install_interface_name_node(*args, **kwargs):
@@ -392,7 +395,7 @@ def install_contrail(reboot='True'):
     execute(install_vrouter)
     execute(upgrade_pkgs)
     execute(update_keystone_log)
-    if getattr(env, 'interface_rename', True) and detect_ostype() in ['Ubuntu']:
+    if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
 
@@ -410,7 +413,7 @@ def install_without_openstack():
     execute(install_webui)
     execute(install_vrouter)
     execute(upgrade_pkgs_without_openstack)
-    if getattr(env, 'interface_rename', True) and detect_ostype() in ['Ubuntu']:
+    if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name)
 

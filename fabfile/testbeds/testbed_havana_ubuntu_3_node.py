@@ -21,7 +21,7 @@ host_build = 'stack@10.204.216.49'
 env.roledefs = {
     'all': [host1, host2, host3],
     'cfgm': [host1],
-    'openstack': [host1],
+    'openstack': [host2],
     'control': [host1, host2],
     'compute': [host2, host3],
     'collector': [host1],

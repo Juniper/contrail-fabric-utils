@@ -13,6 +13,13 @@ def verfiy_and_update_hosts(host_name):
 @task
 @parallel
 @roles('cfgm')
+def set_guest_user_permissions():
+    with settings(warn_only=True):
+        run('rabbitmqctl set_permissions guest ".*" ".*" ".*"')
+
+@task
+@parallel
+@roles('cfgm')
 def config_rabbitmq():
     if detect_ostype() in ['centos']:
         rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
@@ -25,9 +32,12 @@ def config_rabbitmq():
 @parallel
 @roles('cfgm')
 def allow_rabbitmq_port():
-    if detect_ostype() in ['centos']:
-        run("iptables --flush")
+    os_type = detect_ostype()
+    run("iptables --flush")
+    if os_type in ['centos']:
         run("service iptables save")
+    elif os_type in ['Ubuntu']:
+        run("sudo ufw disable")
 
 @task
 @parallel
