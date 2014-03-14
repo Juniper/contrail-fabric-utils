@@ -311,7 +311,7 @@ stop_on_fail=no
         os.remove(fname)
         if CONTROLLER_TYPE == 'Cloudstack':
             with settings(warn_only = True):
-                run('yum --disablerepo=base,extras,updates -y install python-extras python-testtools python-fixtures python-pycrypto python-ssh fabric xorg-x11-server-Xvfb')
+                run('yum --disablerepo=base,extras,updates -y install python-extras python-testtools python-fixtures python-pycrypto python-ssh fabric')
         else:
             with settings(warn_only = True):
                 run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay")
