@@ -361,7 +361,7 @@ def run_sanity(feature='sanity', test=None):
                 run("cd /tmp;rm -rf temp")
                 run("cd /tmp;mkdir temp")
                 put(test,"/tmp/temp/")
-         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
+        env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
     pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
