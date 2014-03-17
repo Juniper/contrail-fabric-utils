@@ -65,12 +65,20 @@ def upgrade_zookeeper():
                     break
             zookeeper_status.update({host_string: status})
 
-    if ('leader' in zookeeper_status.values() and 'standalone' not in zookeeper_status.values()):
-        print "Zookeeper leader/follower election is done."
+    if (len(env.roledefs['cfgm']) == 1):
+        if 'standalone' in zookeeper_status.values():
+            print "Zookeeper status is standalone on Single node..ok"
+        else:
+            print "Zookeepr status is not standalone on single node..Fix it and retry upgrade"
+            print zookeeper_status
+            exit(1)
     else:
-        print "Zookeepr leader/follower election has problems. Fix it and retry upgrade"
-        print zookeeper_status
-        exit(1)
+        if ('leader' in zookeeper_status.values() and 'standalone' not in zookeeper_status.values()):
+            print "Zookeeper leader/follower election is done."
+        else:
+            print "Zookeepr leader/follower election has problems. Fix it and retry upgrade"
+            print zookeeper_status
+            exit(1)
 
 @task
 @serial
