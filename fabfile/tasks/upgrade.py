@@ -159,6 +159,8 @@ def apt_upgrade():
     if '1.04' in rls:
         #Hack to solve the webui config file issue
         cmd = "yes N | DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes upgrade"
+    elif '1.05' in rls:
+        cmd = 'yes N | DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confold" upgrade'
     else:
         cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes upgrade"
     run(cmd)
