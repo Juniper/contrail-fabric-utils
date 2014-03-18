@@ -9,6 +9,7 @@ import fabfile.common as common
 from fabfile.utils.host import *
 from fabfile.utils.multitenancy import *
 from fabfile.utils.fabos import *
+import datetime
 
 @task
 @parallel
@@ -254,15 +255,9 @@ def add_images(image=None):
     if '10.84' in env.host:
         mount= '10.84.5.100'
     elif '10.204' in env.host:
-        mount= '10.204.216.49'
+        mount= '10.204.216.51'
     if not mount :
         return 
-    mount_cmd= 'mkdir -p /cs-shared; mount -t nfs %s:/cs-shared /cs-shared/ ' %(mount) 
-    try:
-        run('service rpcbind start')
-        run(mount_cmd)
-    except Exception as e:
-        print "Error " + e + " in mount for add_images, continuing..."
 
     images = [ ("turnkey-redmine-12.0-squeeze-x86.vmdk", "redmine-web"),
                ("turnkey-redmine-12.0-squeeze-x86-mysql.vmdk", "redmine-db"),
@@ -284,19 +279,66 @@ def add_images(image=None):
     for (loc, name) in images:
         if image is not None and image != name:
             continue
-        local = "/cs-shared/images/"+loc+".gz"
+        local = "/images/"+loc+".gz"
         remote = loc.split("/")[-1]
         remote_gz = remote+".gz"
-        put(local, remote_gz)
+        run("wget http://%s/%s" % (mount, local)) 
         run("gunzip " + remote_gz)
         if ".vmdk" in loc:
             run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+")")
         else:
             run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=qcow2 < "+remote+")")
         run("rm "+remote)
-
-    run('umount /cs-shared')
 #end add_images
+
+@roles('openstack')
+@task
+def add_basic_images(image=None):
+    mount=None
+    if '10.84' in env.host:
+        mount= '10.84.5.100'
+    elif '10.204' in env.host:
+        mount= '10.204.216.51'
+    if not mount :
+        return
+
+    images = [ ("precise-server-cloudimg-amd64-disk1.img", "ubuntu"),
+               ("traffic/ubuntu-traffic.img", "ubuntu-traffic"),
+               ("cirros/cirros-0.3.0-x86_64-uec", "cirros"),
+               ("vsrx/junos-vsrx-12.1-in-network.img", "nat-service"),
+               ("vsrx/junos-vsrx-12.1-transparent.img", "vsrxbridge"),
+               ("analyzer/analyzer-vm-console.qcow2", "analyzer"),
+             ]
+
+    for (loc, name) in images:
+        if image is not None and image != name:
+            continue
+        local = "/images/"+loc+".gz"
+        remote = loc.split("/")[-1]
+        remote_gz = remote+".gz"
+        run("wget http://%s/%s" % (mount, local)) 
+        run("gunzip " + remote_gz)
+        if ".vmdk" in loc:
+            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+")")
+        elif "cirros" in loc:
+            run('source /etc/contrail/openstackrc')
+            run('cd /tmp ; sudo rm -f /tmp/cirros-0.3.0-x86_64*')
+            run('tar xvf %s -C /tmp/' %remote)
+            run('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-kernel is_public=true '+
+                'container_format=aki disk_format=aki < /tmp/cirros-0.3.0-x86_64-vmlinuz')
+            run('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-ramdisk is_public=true '+
+                    ' container_format=ari disk_format=ari < /tmp/cirros-0.3.0-x86_64-initrd')
+            run('source /etc/contrail/openstackrc && glance add name=' +remote+ ' is_public=true '+
+                'container_format=ami disk_format=ami '+
+                '\"kernel_id=$(glance index | awk \'/cirros-0.3.0-x86_64-kernel/ {print $1}\')\" '+
+                '\"ramdisk_id=$(glance index | awk \'/cirros-0.3.0-x86_64-ramdisk/ {print $1}\')\" ' +
+                ' < <(zcat --force /tmp/cirros-0.3.0-x86_64-blank.img)')
+            run('rm -rf /tmp/*cirros*')
+        else:
+            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=qcow2 < "+remote+")")
+        run("rm "+remote)
+
+#end add_basic_images
 
 @roles('compute')
 @task
@@ -351,8 +393,8 @@ def cleanup_os_config():
     This has to be run from reset_config() task only
     '''
     dbs=['nova', 'mysql', 'keystone', 'glance', 'cinder']
-    services =['contrail-database','redis', 'mysqld', 'openstack-nova-novncproxy', 'qpidd', 'ifmap', 'openstack-cinder-volume', 'openstack-cinder-scheduler', 'openstack-cinder-api', 'openstack-glance-registry', 'openstack-glance-api', 'openstack-nova-xvpvncproxy', 'openstack-nova-scheduler', 'openstack-nova-objectstore', 'openstack-nova-metadata-api', 'openstack-nova-consoleauth', 'openstack-nova-console', 'openstack-nova-compute', 'openstack-nova-cert', 'openstack-nova-api', 'contrail-vncserver', 'contrail-analyzer', 'openstack-keystone', 'quantum-server', 'contrail-api', ]
-    ubuntu_services =['contrail-database','redis', 'mysql', 'nova-novncproxy', 'qpidd', 'ifmap', 'cinder-volume', 'cinder-scheduler', 'cinder-api', 'glance-registry', 'glance-api', 'nova-xvpvncproxy', 'nova-scheduler', 'nova-objectstore', 'nova-metadata-api', 'nova-consoleauth', 'nova-console', 'nova-compute', 'nova-cert', 'nova-api', 'contrail-vncserver', 'contrail-analyzer', 'keystone', 'quantum-server', 'contrail-api', 'neutron-server', ]
+    services =['contrail-database','redis', 'mysqld', 'openstack-nova-novncproxy', 'rabbitmq-server', 'ifmap', 'openstack-cinder-volume', 'openstack-cinder-scheduler', 'openstack-cinder-api', 'openstack-glance-registry', 'openstack-glance-api', 'openstack-nova-xvpvncproxy', 'openstack-nova-scheduler', 'openstack-nova-objectstore', 'openstack-nova-metadata-api', 'openstack-nova-consoleauth', 'openstack-nova-console', 'openstack-nova-compute', 'openstack-nova-cert', 'openstack-nova-api', 'contrail-vncserver', 'contrail-analyzer', 'openstack-keystone', 'quantum-server', 'contrail-api', ]
+    ubuntu_services =['contrail-database','redis', 'mysql', 'nova-novncproxy', 'rabbitmq-server', 'ifmap', 'cinder-volume', 'cinder-scheduler', 'cinder-api', 'glance-registry', 'glance-api', 'nova-xvpvncproxy', 'nova-scheduler', 'nova-objectstore', 'nova-metadata-api', 'nova-consoleauth', 'nova-console', 'nova-compute', 'nova-cert', 'nova-api', 'contrail-vncserver', 'contrail-analyzer', 'keystone', 'quantum-server', 'contrail-api', 'neutron-server', ]
     # Drop all dbs
     with settings(warn_only=True):
         token=run('cat /etc/contrail/mysql.token')
@@ -540,6 +582,20 @@ def is_reimage_complete_node(version, maxwait, *args):
                 if start + td < datetime.datetime.now():
                     raise RuntimeError('Timeout while waiting for reimage complete')
 
+@roles('openstack')
+@task
+def increase_ulimits():
+    '''
+    Increase ulimit in /etc/init.d/mysqld /etc/init/mysql.conf /etc/init.d/rabbitmq-server files
+    '''
+    if detect_ostype() != 'Ubuntu':
+        return
+    with settings(warn_only = True):
+        run("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql") 
+        run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
+        run("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
+        run("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/mysql/my.cnf")
+
 @roles('cfgm','database','control','collector')
 @task
 def increase_limits():
@@ -583,3 +639,68 @@ def insert_line_to_file(line,file_name,pattern=None):
             sudo('sed -i \'/%s/d\' %s' %(pattern,file_name))
         sudo('printf "%s\n" >> %s' %(line, file_name))
 #end insert_line_to_file
+
+@roles('build')
+@task
+def full_mesh_ping_by_name():
+    for host in env.roledefs['all']:
+        with settings(host_string = host, warn_only = True):
+            for hostname in env.hostnames['all']:
+                result = run('ping -c 1 %s' %(hostname))
+                if not result.succeeded:
+                    print '!!! Ping from %s to %s failed !!!' %( host, hostname)
+                    exit(1)
+    print "All nodes are able to ping each other using hostnames"
+#end full_mesh_ping
+
+@roles('build')
+@task
+def validate_hosts():
+    all_hostnames = env.hostnames['all']
+    current_hostlist = {}
+    current_hosttimes = {}
+    
+    # Check if the hostnames on the nodes are as mentioned in testbed file
+    for host in env.roledefs['all']:
+        with settings(host_string = host):
+            curr_hostname = run('hostname')
+            if not curr_hostname  in all_hostnames:
+                print "Hostname of host %s : %s not defined in testbed!!!" %(
+                    host, curr_hostname)
+                exit(1)
+            if not curr_hostname  in current_hostlist.keys() :
+                current_hostlist[curr_hostname] = host
+            else:
+                print "Hostname %s assigned to more than one host" %(curr_hostname)
+                print "They are %s and %s" %(hstr_to_ip(host), hstr_to_ip(current_hostlist[curr_hostname]))
+                print "Please fix them before continuing!! "
+                exit(1)
+    
+    #Check if env.hostnames['all'] has any spurious entries
+    if set(current_hostlist.keys()) != set(env.hostnames['all']):
+        print "hostnames['all'] in testbed file does not seem to be correct"
+        print "Expected : %s" %(current_hostlist)
+        print "Seen : %s" %(env.hostnames['all']) 
+        exit(1)
+    print "All hostnames are unique and defined in testbed correctly..OK"
+    
+    #Check if date/time on the hosts are almost the same (diff < 5min)
+    for host in env.roledefs['all']:
+        with settings(host_string = host):
+            current_hosttimes[host] = run('date +%s')
+    avg_time = sum(map(int,current_hosttimes.values()))/len(current_hosttimes.values())
+    for host in env.roledefs['all']:
+        print "Expected date/time on host %s : (approx) %s, Seen : %s" %(
+            host,
+            datetime.datetime.fromtimestamp(avg_time),
+            datetime.datetime.fromtimestamp(float(current_hosttimes[host])))
+        if abs(avg_time - int(current_hosttimes[host])) > 300 : 
+            print "Time of Host % seems to be not in sync with rest of the hosts" %(host)
+            print "Please make sure that the date and time on all hosts are in sync before continuning!!"
+            exit(1)
+
+    print "Date and time on all hosts are in sync..OK"
+    
+    # Check if all hosts are reachable by each other using their hostnames
+    execute(full_mesh_ping_by_name)
+        

@@ -156,7 +156,7 @@ def yum_install(rpms):
             run(cmd + rpm)
 
 def apt_install(debs):
-    cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install "
+    cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes --allow-unauthenticated install "
     if detect_ostype() in ['Ubuntu']:
         for deb in debs:
             run(cmd + deb)
@@ -166,7 +166,10 @@ def apt_install(debs):
 @roles('compute')
 def install_interface_name(reboot='True'):
     """Installs interface name package in all nodes defined in compute role."""
-    execute("install_interface_name_node", env.host_string, reboot=reboot)
+    if detect_ostype() == 'Ubuntu':
+        print "[%s]: Installing interface rename package not required for Ubuntu..Skipping it" %env.host_string
+    else:
+        execute("install_interface_name_node", env.host_string, reboot=reboot)
 
 @task
 def install_interface_name_node(*args, **kwargs):
@@ -390,11 +393,10 @@ def install_contrail(reboot='True'):
     execute(install_collector)
     execute(install_webui)
     execute(install_vrouter)
-    execute(install_openstack_storage)
-    execute(install_compute_storage)
     execute(upgrade_pkgs)
     execute(update_keystone_log)
     if getattr(env, 'interface_rename', True):
+        print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
 
 @roles('build')
@@ -412,6 +414,7 @@ def install_without_openstack():
     execute(install_vrouter)
     execute(upgrade_pkgs_without_openstack)
     if getattr(env, 'interface_rename', True):
+        print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name)
 
 @roles('openstack')

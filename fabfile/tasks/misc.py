@@ -47,9 +47,35 @@ def check_and_kill_zookeeper():
 @roles('cfgm')
 def zoolink():
     """Creates /usr/bin/zookeeper link to /etc/zookeeper"""
-    with settings(warn_only=True):
-        dirinfo = run('ls -lrt /usr/etc/zookeeper')
-    if not '/usr/etc/zookeeper -> /etc/zookeeper' in dirinfo:
-        run('ln -s /etc/zookeeper /usr/etc/zookeeper')
-        sleep(3)
-        run('ls -lrt /usr/etc/zookeeper')
+    execute("zoolink_node", env.host_string)
+
+@task
+def zoolink_node(*args):
+    """Creates /usr/bin/zookeeper link to /etc/zookeeper"""
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            dirinfo = run('ls -lrt /usr/etc/zookeeper')
+        if not '/usr/etc/zookeeper -> /etc/zookeeper' in dirinfo:
+            run('ln -s /etc/zookeeper /usr/etc/zookeeper')
+            sleep(3)
+            run('ls -lrt /usr/etc/zookeeper')
+
+
+@task
+@roles('compute')
+def rmmod_vrouter():
+    """Removes the vrouter kernal module."""
+    execute('rmmod_vrouter_node', env.host_string)
+
+@task
+def rmmod_vrouter_node(*args):
+    """Removes the vrouter kernal module in one compoute node."""
+    for host_string in args:
+        if getattr(testbed, 'data', None) and host_string in testbed.data.keys():
+            with settings(host_string=host_string):
+                run("service supervisor-vrouter stop")
+                run("rmmod vrouter")
+                run("insmod /lib/modules/3.8.0-29-generic/extra/net/vrouter/vrouter.ko")
+                run("service supervisor-vrouter start")
+        else:
+            print "Managment and data interface are the same."

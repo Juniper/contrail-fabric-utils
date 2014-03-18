@@ -13,6 +13,7 @@ from fabfile.tasks.install import *
 from fabfile.tasks.verify import *
 from fabfile.tasks.helpers import *
 from fabfile.tasks.tester import setup_test_env
+from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import configure_esxi_network, create_ovf
 from time import sleep
 
@@ -129,7 +130,7 @@ $__contrail_disc_backend_servers__
             local("rm %s" %(tmp_fname))
             
         # haproxy enable
-        with settings(host_string=host_string):
+        with settings(host_string=host_string, warn_only=True):
             run("chkconfig haproxy on")
             run("service haproxy restart")
 
@@ -272,7 +273,7 @@ $__contrail_glance_apis__
         local("rm %s" %(tmp_fname))
 
         # enable
-        with settings(host_string=compute_host_string):
+        with settings(host_string=compute_host_string, warn_only=True):
             run("chkconfig haproxy on")
             run("service haproxy restart")
 
@@ -354,7 +355,7 @@ $__contrail_quantum_servers__
             local("rm %s" %(tmp_fname))
 
             # enable
-            with settings(host_string=openstack_host_string):
+            with settings(host_string=openstack_host_string, warn_only=True):
                 run("chkconfig haproxy on")
                 run("service haproxy restart")
 
@@ -365,7 +366,7 @@ def setup_cfgm_node(*args):
     """Provisions config services in one or list of nodes. USAGE: fab setup_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
     # Enable settings for Ubuntu
     enable_haproxy()
-    qpidd_changes_for_ubuntu()
+    #qpidd_changes_for_ubuntu()
     
     first_cfgm_ip = hstr_to_ip(get_control_host_string(
                                    env.roledefs['cfgm'][0]))
@@ -443,7 +444,7 @@ def setup_contrail_horizon():
 @task
 def setup_openstack_node(*args):
     """Provisions openstack services in one or list of nodes. USAGE: fab setup_openstack_node:user@1.1.1.1,user@2.2.2.2"""
-    qpidd_changes_for_ubuntu()
+    #qpidd_changes_for_ubuntu()
     
     for host_string in args:
         self_host = get_control_host_string(host_string)
@@ -515,21 +516,29 @@ def setup_collector_node(*args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-analytics.override')
             with cd(INSTALLER_DIR):
-                run_cmd = "PASSWORD=%s python setup-vnc-collector.py --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d --redis_master_ip %s --redis_role " \
+                # Release from contrail-install-packages
+                rls = get_release()
+                # Bitbucket - Redis UVE master slave
+                if '1.04' in rls: 
+                    run_cmd = "PASSWORD=%s python setup-vnc-collector.py --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d --redis_master_ip %s --redis_role " \
                            % (collector_host_password, ' '.join(cassandra_ip_list), cfgm_ip, tgt_ip, ncollectors, redis_master_ip) 
-                if not is_redis_master:
-                    run_cmd += "slave "
+                    if not is_redis_master:
+                        run_cmd += "slave "
+                    else:
+                        run_cmd += "master "
                 else:
-                    run_cmd += "master "
+                    # Github - Independent Redis UVE and Syslog
+                    run_cmd = "PASSWORD=%s python setup-vnc-collector.py --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d " \
+                           % (collector_host_password, ' '.join(cassandra_ip_list), cfgm_ip, tgt_ip, ncollectors) 
+                    analytics_syslog_port = get_collector_syslog_port()
+                    if analytics_syslog_port is not None:
+                        run_cmd += "--analytics_syslog_port %d " % (analytics_syslog_port)
                 analytics_database_ttl = get_database_ttl()
                 if analytics_database_ttl is not None:
                     run_cmd += "--analytics_data_ttl %d " % (analytics_database_ttl)
                 else:
                     #if nothing is provided we default to 48h
                     run_cmd += "--analytics_data_ttl 48 "
-                analytics_syslog_port = get_collector_syslog_port()
-                if analytics_syslog_port is not None:
-                    run_cmd += "--analytics_syslog_port %d " % (analytics_syslog_port)
                 print run_cmd
                 run(run_cmd)
 #end setup_collector
@@ -730,7 +739,7 @@ def setup_vrouter_node(*args):
     
     # Enable haproxy for Ubuntu
     enable_haproxy()
-    qpidd_changes_for_ubuntu()
+    #qpidd_changes_for_ubuntu()
     
     for host_string in args:
         ncontrols = len(env.roledefs['control'])
@@ -755,10 +764,26 @@ def setup_vrouter_node(*args):
         if 'vgw' in env.roledefs:
             if host_string in env.roledefs['vgw']:
                 set_vgw = 1
-                public_subnet = env.vgw[host_string]['public_subnet']
-                public_subnet=str(public_subnet).replace(" ", "")
-                public_vn_name = env.vgw[host_string]['public_vn_name']
-                public_vn_name=str(public_vn_name).replace(" ", "")
+                vgw_intf_list = env.vgw[host_string].keys()
+                public_subnet = []
+                public_vn_name = []
+                gateway_routes = []
+                for vgw_intf in vgw_intf_list:
+                    public_subnet.append(env.vgw[host_string][vgw_intf]['ipam-subnets'])
+                    public_vn_name.append(env.vgw[host_string][vgw_intf]['vn'])
+                    if 'gateway-routes' in env.vgw[host_string][vgw_intf].keys():
+                        gateway_routes.append(env.vgw[host_string][vgw_intf]['gateway-routes'])
+                        #gateway_routes=str(gateway_routes).replace(" ", "")
+                        gateway_routes = str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
+                    else:
+                        gateway_routes.append("[]")
+                
+                #public_subnet=str(public_subnet).replace(" ", "")
+                #public_vn_name=str(public_vn_name).replace(" ", "")
+                #vgw_intf_list=str(vgw_intf_list).replace(" ", "")
+                public_subnet = str([(';'.join(str(e) for e in public_subnet)).replace(" ","")])
+                public_vn_name = str([(';'.join(str(e) for e in public_vn_name)).replace(" ","")])
+                vgw_intf_list = str([(';'.join(str(e) for e in vgw_intf_list)).replace(" ","")])
         haproxy = get_haproxy_opt()
         if haproxy:
             # setup haproxy and enable
@@ -779,7 +804,9 @@ def setup_vrouter_node(*args):
                 if tgt_ip != compute_mgmt_ip: 
                     cmd = cmd + " --non_mgmt_ip %s --non_mgmt_gw %s" %( tgt_ip, tgt_gw )
                 if set_vgw:   
-                    cmd = cmd + " --public_subnet %s --public_vn_name %s" %(public_subnet,public_vn_name)
+                    cmd = cmd + " --public_subnet %s --public_vn_name %s --vgw_intf %s" %(public_subnet,public_vn_name,vgw_intf_list)
+                    if gateway_routes != []:
+                        cmd = cmd + " --gateway_routes %s" %(gateway_routes)
                 print cmd
                 run(cmd)
 #end setup_vrouter
@@ -861,7 +888,9 @@ def setup_all(reboot='True'):
     """Provisions required contrail services in all nodes as per the role definition.
     """
     execute(bash_autocomplete_systemd)
+    execute(setup_rabbitmq_cluster)
     execute(increase_limits)
+    execute(increase_ulimits)
     execute(setup_database)
     execute(verify_database)
     execute(setup_openstack)
@@ -874,12 +903,12 @@ def setup_all(reboot='True'):
     execute(setup_webui)
     execute(verify_webui)
     execute(setup_vrouter)
-    execute(setup_storage)
     execute(prov_control_bgp)
     execute(prov_external_bgp)
     execute(prov_metadata_services)
     execute(prov_encap_type)
     if reboot == 'True':
+        print "Rebooting the compute nodes after setup all."
         execute(compute_reboot)
         #Clear the connections cache
         connections.clear()
@@ -893,7 +922,9 @@ def setup_without_openstack():
        User has to provision the openstack node with their custom openstack pakckages.
     """
     execute(bash_autocomplete_systemd)
+    execute(setup_rabbitmq_cluster)
     execute(increase_limits)
+    execute(increase_ulimits)
     execute(setup_database)
     execute(setup_cfgm)
     execute(setup_control)
@@ -904,6 +935,7 @@ def setup_without_openstack():
     execute(prov_external_bgp)
     execute(prov_metadata_services)
     execute(prov_encap_type)
+    print "Rebooting the compute nodes after setup all."
     execute(compute_reboot)
 
 @roles('build')
@@ -919,7 +951,9 @@ def reimage_and_setup_test():
 @task
 def setup_all_with_images():
     execute(bash_autocomplete_systemd)
+    execute(setup_rabbitmq_cluster)
     execute(increase_limits)
+    execute(increase_ulimits)
     execute(setup_database)
     execute(setup_openstack)
     execute(setup_cfgm)
@@ -932,13 +966,16 @@ def setup_all_with_images():
     execute(prov_metadata_services)
     execute(prov_encap_type)
     execute(add_images)
+    print "Rebooting the compute nodes after setup all."
     execute(compute_reboot)
 
 @roles('build')
 @task
 def run_setup_demo():
     execute(bash_autocomplete_systemd)
+    execute(setup_rabbitmq_cluster)
     execute(increase_limits)
+    execute(increase_ulimits)
     execute(setup_database)
     execute(setup_openstack)
     execute(setup_cfgm)
@@ -960,11 +997,18 @@ def setup_interface(intf_type = 'both'):
     '''
     Configure the IP address and netmask for non-mgmt interface based on parameter passed in non_mgmt stanza of testbed file. Also generate ifcfg file for the interface if the file is not present. 
     '''
+    ostype = ''
+    with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
+        ostype = run("uname -a | grep Ubuntu")
+    #ubuntu interface provisioning
+    if ostype != '':
+        execute("setup_interface_ubuntu", intf_type)
+        return
 
     if intf_type == 'both':
         intf_type_list = ['control', 'data']
     else:
-        intf_type_list = intf_type
+        intf_type_list = [intf_type]
 
     for intf_type in intf_type_list:
         tgt_ip = None
@@ -1045,6 +1089,7 @@ def reset_config():
         execute(api_server_reset, 'add', role='cfgm')
         execute(cleanup_os_config)
         execute(increase_limits)
+        execute(increase_ulimits)
         execute(setup_database)
         execute(setup_openstack)
         execute(setup_cfgm)
@@ -1088,6 +1133,14 @@ def add_static_route():
     host3 : [{ 'ip': '4.4.4.0', 'netmask' : '255.255.255.0', 'gw':'192.168.20.254', 'intf': 'p6p0p1' }],
     }
     '''
+    ostype = ''
+    with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
+        ostype = run("uname -a | grep Ubuntu")
+    #ubuntu interface provisioning
+    if ostype != '':
+        execute("add_static_route_ubuntu")
+        return
+
     route_info = getattr(testbed, 'static_route', None)
     if route_info:
         tgt_host_list=route_info.keys()
@@ -1099,3 +1152,81 @@ def add_static_route():
                 intf = route_info[tgt_host][index]['intf']
                 configure_static_route(tgt_host,ip,netmask,gw,intf)
             restart_network_service(tgt_host)
+
+@task
+def setup_interface_ubuntu(intf_type='both'):
+    ''' Generate ifcfg file and bond interfaces for the interfaces defined in
+        data, control and bond variables specified in testbed and restart network.
+    '''
+    # Default iftypes
+    if intf_type == 'both':
+        intf_type_list = ['control', 'data']
+    else:
+        intf_type_list = [intf_type]
+
+    bondinfo = getattr(testbed, 'bond', None)
+    for iftype in intf_type_list:
+        # Skip if iftype is not defined in testbed
+        hosts = getattr(testbed, iftype, None)
+        if hosts is None:
+            print 'WARNING: (%s) is not defined in testbed, Skipping...' %iftype
+            continue
+
+        for host_str in hosts.keys():
+            hostinfo = hosts[host_str]
+            # Create command and execute at node
+            cmd = 'python setup-vnc-interfaces.py'
+            cmd += ' --device {device} --ip {ip}'.format(**hostinfo)
+            errmsg = 'For Type ({TYPE}), Host ({HOST}) is defined with device ({DEVICE}) but\
+                      its bond info is not available'
+            if re.match(r'^bond', hostinfo['device']):
+                if not bondinfo or not bondinfo.has_key(host_str):
+                    raise AttributeError(errmsg.format(TYPE=iftype, \
+                                                       HOST=host_str, \
+                                                       DEVICE=hostinfo['device']))
+                cmd += ' --members %s' %(" ".join(bondinfo[host_str]['member']))
+                if bondinfo[host_str].has_key('mode'):
+                    cmd += ' --mode %s' %bondinfo[host_str]['mode']
+                else:
+                    print 'Using Default mode for bonding interfaces'
+            with settings(host_string=host_str):
+                with cd(INSTALLER_DIR):
+                    run(cmd)
+#end: setup_interface_ubuntu
+
+@task
+def add_static_route_ubuntu(*hosts):
+    '''
+    Add static route in the node based on parameter provided in the testbed file
+    Sample configuration for testbed file
+    static_route  = {
+        host1 : [{ 'ip': '3.3.3.0', 'netmask' : '255.255.255.0', 'gw':'192.168.20.254', 'intf': 'p0p25p0' },
+                 { 'ip': '5.5.5.0', 'netmask' : '255.255.255.0', 'gw':'192.168.20.254', 'intf': 'p0p25p0' }],
+        host3 : [{ 'ip': '4.4.4.0', 'netmask' : '255.255.255.0', 'gw':'192.168.20.254', 'intf': 'p6p0p1' }],
+    }
+    '''
+
+    # Skip if no static route is defined
+    route_info = getattr(testbed, 'static_route', None)
+    if route_info is None:
+        print 'WARNING: No Static routes defined in testbed. Skipping...'
+        return
+
+    # Override with cli input
+    if len(hosts) != 0:
+        route_info = dict([(key, route_info[key]) for key in filter(route_info.has_key, hosts)])
+
+    # Call provisioning script
+    for tgt_host in route_info.keys():
+        print 'Configuring Static Routes for Host (%s)' %tgt_host
+        for routedict in route_info[tgt_host]:
+            cmd = 'python setup-vnc-static-routes.py \
+                   --device {intf}\
+                   --network {ip}\
+                   --netmask {netmask}\
+                   --gw {gw}'.format(**routedict)
+            with settings(host_string=tgt_host):
+                with cd(INSTALLER_DIR):
+                    run(cmd)
+#end: add_static_route_ubuntu
+
