@@ -1087,9 +1087,10 @@ def reset_config():
     '''
     Reset api-server and openstack config and run the setup-scripts again incase you get into issues
     '''
+    from fabfile.tasks.misc import run_cmd
     try:
-        execute(api_server_reset, 'add', role='cfgm')
         execute(cleanup_os_config)
+        execute(setup_rabbitmq_cluster)
         execute(increase_limits)
         execute(increase_ulimits)
         execute(setup_database)
@@ -1103,13 +1104,15 @@ def reset_config():
         execute(prov_external_bgp)
         execute(prov_metadata_services)
         execute(prov_encap_type)
-        sleep(5)
+        execute(config_server_reset, 'add', [env.roledefs['cfgm'][0]])
+        execute(run_cmd, env.roledefs['cfgm'][0], "service supervisor-config restart")
+        sleep(70)
     except SystemExit:
-        execute(api_server_reset, 'delete', role='cfgm')
+        execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
         raise SystemExit("\nReset config Failed.... Aborting")
     else:
-        execute(api_server_reset, 'delete', role='cfgm')
-    execute(all_reboot)
+        execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
+    execute(compute_reboot)
 #end reset_config
 
 @roles('build')

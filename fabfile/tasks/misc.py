@@ -79,3 +79,9 @@ def rmmod_vrouter_node(*args):
                 run("service supervisor-vrouter start")
         else:
             print "Managment and data interface are the same."
+
+@task
+def run_cmd(host_string,cmd):
+    with settings(host_string=host_string):
+        run(cmd)
+
