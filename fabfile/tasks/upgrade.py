@@ -295,6 +295,10 @@ def upgrade_control_node(pkg, *args):
 @roles('collector')
 def upgrade_collector(pkg):
     """Upgrades analytics pkgs in all nodes defined in collector role."""
+    if os.path.exists('/opt/contrail/contrail_installer/contrail_config_templates/collector.conf.sh'):
+        run("/opt/contrail/contrail_installer/contrail_config_templates/collector.conf.sh")
+    if os.path.exists('/opt/contrail/contrail_installer/contrail_config_templates/query-engine.conf.sh'):
+        run("/opt/contrail/contrail_installer/contrail_config_templates/query-engine.conf.sh")
     execute("upgrade_collector_node", pkg, env.host_string)
 
 @task
