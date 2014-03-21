@@ -408,11 +408,11 @@ def setup_cfgm_node(*args):
                     run('rm /etc/init/neutron-server.override')
             with cd(INSTALLER_DIR):
                 redis_ip = first_cfgm_ip
-                run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-cfgm.py --self_ip %s %s --redis_ip %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --cfgm_index %d --quantum_port %s --nworkers %d %s %s" %(
+                run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-cfgm.py --self_ip %s %s --redis_ip %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --cfgm_index %d --quantum_port %s --nworkers %d %s %s %s" %(
                      cfgm_host_password, openstack_admin_password, tgt_ip, keystone_ip, redis_ip,
                      collector_ip, mt_opt, ' '.join(cassandra_ip_list),
                      ' '.join(cfgm_ip_list), cfgm_host_list.index(cfgm_host)+1,
-                     quantum_port, nworkers, get_service_token(), get_haproxy_opt()))
+                     quantum_port, nworkers, get_service_token(), get_haproxy_opt(), get_region_name()))
 
     # HAPROXY fixups
     fixup_restart_haproxy_in_all_cfgm(nworkers)
@@ -450,7 +450,6 @@ def setup_openstack_node(*args):
         self_ip = hstr_to_ip(self_host)
         openstack_host_password = env.passwords[host_string]
         keystone_ip = get_keystone_ip()
-
 
         if (getattr(env, 'openstack_admin_password', None)):
             openstack_admin_password = env.openstack_admin_password

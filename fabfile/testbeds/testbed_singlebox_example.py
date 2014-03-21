@@ -76,6 +76,9 @@ env.ostypes = {
 #Specify keystone IP
 #keystone_ip = '1.1.1.1'
 
+#Specify Region Name
+#region_name = 'RegionName'
+
 #To enable multi-tenancy feature
 #multi_tenancy = True
 
