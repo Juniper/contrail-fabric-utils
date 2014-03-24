@@ -32,9 +32,12 @@ def config_rabbitmq():
 @parallel
 @roles('cfgm')
 def allow_rabbitmq_port():
-    if detect_ostype() in ['centos']:
-        run("iptables --flush")
+    os_type = detect_ostype()
+    run("iptables --flush")
+    if os_type in ['centos']:
         run("service iptables save")
+    elif os_type in ['Ubuntu']:
+        run("sudo ufw disable")
 
 @task
 @parallel
@@ -114,7 +117,6 @@ def verify_cluster_status():
 @task
 @roles('build')
 def setup_rabbitmq_cluster():
-    execute('stop_cfgm')
     if len(env.roledefs['cfgm']) <= 1:
         print "Single cfgm cluster, skipping rabbitmq cluster setup."
         return 

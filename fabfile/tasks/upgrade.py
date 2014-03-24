@@ -3,7 +3,7 @@ import os
 from fabfile.utils.fabos import *
 from fabfile.config import *
 from fabfile.tasks.services import *
-from fabfile.tasks.misc import rmmod_vrouter 
+from fabfile.tasks.misc import rmmod_vrouter
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.helpers import compute_reboot, reboot_node
 from fabfile.tasks.provision import setup_vrouter, setup_vrouter_node
@@ -159,6 +159,8 @@ def apt_upgrade():
     if '1.04' in rls:
         #Hack to solve the webui config file issue
         cmd = "yes N | DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes upgrade"
+    elif '1.05' in rls:
+        cmd = 'yes N | DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confold" upgrade'
     else:
         cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes upgrade"
     run(cmd)
@@ -295,10 +297,6 @@ def upgrade_control_node(pkg, *args):
 @roles('collector')
 def upgrade_collector(pkg):
     """Upgrades analytics pkgs in all nodes defined in collector role."""
-    if os.path.exists('/opt/contrail/contrail_installer/contrail_config_templates/collector.conf.sh'):
-        run("/opt/contrail/contrail_installer/contrail_config_templates/collector.conf.sh")
-    if os.path.exists('/opt/contrail/contrail_installer/contrail_config_templates/query-engine.conf.sh'):
-        run("/opt/contrail/contrail_installer/contrail_config_templates/query-engine.conf.sh")
     execute("upgrade_collector_node", pkg, env.host_string)
 
 @task

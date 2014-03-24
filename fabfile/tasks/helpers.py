@@ -316,7 +316,7 @@ def add_basic_images(image=None):
         local = "/images/"+loc+".gz"
         remote = loc.split("/")[-1]
         remote_gz = remote+".gz"
-        run("wget http://%s/%s" % (mount, local)) 
+        run("wget http://%s/%s" % (mount, local))
         run("gunzip " + remote_gz)
         if ".vmdk" in loc:
             run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+")")

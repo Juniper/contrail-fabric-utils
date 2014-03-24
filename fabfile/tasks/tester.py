@@ -91,12 +91,6 @@ log_to_console= yes
 [loggers]
 keys=root,log01
 
-[webui]
-webui=$__webui__
-
-[openstack_host_name]
-openstack_host_name =$__openstack__
-
 [logger_root]
 handlers=screen
 #qualname=(root)
@@ -260,7 +254,6 @@ stop_on_fail=no
         ext_routers = getattr(testbed, 'ext_routers', [])
         mail_server = '10.204.216.49'
         mail_port = '25'
-        webui = getattr(testbed, 'webui','False')
         if 'mail_server' in env.keys():
             mail_server = env.mail_server
             mail_port = env.mail_port
@@ -286,8 +279,6 @@ stop_on_fail=no
              '__mail_server__': mail_server,
              '__mail_port__': mail_port,
              '__test_repo__': get_remote_path(env.test_repo_dir),
-             '__webui__': webui,
-             '__openstack__': openstack_host_name,
             })
         
         fd, fname = tempfile.mkstemp()
@@ -310,7 +301,8 @@ stop_on_fail=no
                 run('yum --disablerepo=base,extras,updates -y install python-extras python-testtools python-fixtures python-pycrypto python-ssh fabric')
         else:
             with settings(warn_only = True):
-                run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay")
+                run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources")
+
 #end setup_test_env
 
 def get_remote_path(path):
@@ -363,7 +355,6 @@ def run_sanity(feature='sanity', test=None):
                                 '%s/scripts/NewPolicyTestsBase.py' % repo],
               'analytics'    : ['%s/scripts/analytics_tests_with_setup.py' % repo],
               'basic_vn_vm'  : ['%s/scripts/vm_vn_tests.py' % repo],
-              'webui'       : ['%s/scripts/tests_with_setup_base_webui.py' % repo],
               'svc_mirror'   : ['%s/scripts/servicechain/mirror/sanity.py' % repo,
                                 '%s/scripts/servicechain/mirror/regression.py' % repo],
               'vpc'          : ['%s/scripts/vpc/sanity.py' % repo],

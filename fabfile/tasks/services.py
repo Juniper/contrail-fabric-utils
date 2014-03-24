@@ -103,7 +103,7 @@ def restart_openstack_node(*args):
 
     for host_string in args:
         with  settings(host_string=host_string):
-            for svc in openstack_services:   
+            for svc in openstack_services:
                 run('service %s restart' % svc)
 
 @task
