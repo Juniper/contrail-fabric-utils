@@ -505,3 +505,26 @@ def uninstall_contrail(full=False):
         run('reboot')
 #end uninstall_contrail
 
+@roles('compute')
+@task
+def install_tempest():
+            if detect_ostype() in ['Ubuntu']:
+               if  not int(env.devstack):
+                    output = run('apt-get install -y git')
+                    output = run('apt-get install -y vim')
+                    output = run('apt-get install -y gcc')
+                    output = run('apt-get install -y python-pip')
+                    output = run('apt-get install -y libxml2-dev libxslt-dev')
+                    output = run('rm -rf /opt/stack')
+                    output = run('mkdir -p  /opt/stack')
+                    with cd('/opt/stack') :
+                         output = run('git clone https://github.com/openstack/tempest.git')
+                         output = run('pip install testrepository')
+                         output = run('pip install --upgrade fixtures')
+                         output = run('pip install --upgrade testtools')
+                         output = run('pip install nose testresources')
+                    with cd('/opt/stack/tempest'):
+                         output = run('git checkout remotes/origin/stable/havana')
+            else:
+                print("Work Under progress ")
+
