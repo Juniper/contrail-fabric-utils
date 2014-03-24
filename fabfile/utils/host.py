@@ -29,6 +29,24 @@ def get_haproxy_opt():
     haproxy_opt = '--haproxy' if testbed.haproxy else ''
     return haproxy_opt
 
+def get_region_name():
+    region_name_opt = ''
+    testbed.region_name = getattr(testbed, 'region_name', '')
+    if testbed.region_name:
+        region_name_opt = '--region_name %s' %(testbed.region_name)
+    return region_name_opt
+
+def get_keystone_ip():
+    svc_opt = ''
+    openstack_host = get_control_host_string(testbed.env.roledefs['openstack'][0])
+    openstack_ip = hstr_to_ip(openstack_host)
+    testbed.keystone_ip = getattr(testbed, 'keystone_ip', '')
+    if testbed.keystone_ip:
+        svc_opt = '--keystone_ip %s' % (testbed.keystone_ip)
+    else:
+        svc_opt = '--keystone_ip %s' % (openstack_ip)
+    return svc_opt
+
 def verify_sshd(host, user, password):
     try:
         client = paramiko.Transport((host, 22))
