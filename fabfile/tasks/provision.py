@@ -13,6 +13,7 @@ from fabfile.tasks.install import *
 from fabfile.tasks.verify import *
 from fabfile.tasks.helpers import *
 from fabfile.tasks.tester import setup_test_env
+from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import configure_esxi_network, create_ovf
 from time import sleep
 
@@ -129,7 +130,7 @@ $__contrail_disc_backend_servers__
             local("rm %s" %(tmp_fname))
             
         # haproxy enable
-        with settings(host_string=host_string):
+        with settings(host_string=host_string, warn_only=True):
             run("chkconfig haproxy on")
             run("service haproxy restart")
 
@@ -272,7 +273,7 @@ $__contrail_glance_apis__
         local("rm %s" %(tmp_fname))
 
         # enable
-        with settings(host_string=compute_host_string):
+        with settings(host_string=compute_host_string, warn_only=True):
             run("chkconfig haproxy on")
             run("service haproxy restart")
 
@@ -354,7 +355,7 @@ $__contrail_quantum_servers__
             local("rm %s" %(tmp_fname))
 
             # enable
-            with settings(host_string=openstack_host_string):
+            with settings(host_string=openstack_host_string, warn_only=True):
                 run("chkconfig haproxy on")
                 run("service haproxy restart")
 
@@ -509,22 +510,35 @@ def setup_collector_node(*args):
             cassandra_host_list.remove(collector_host)
             cassandra_host_list.insert(0, collector_host)
         cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in cassandra_host_list]
+        redis_master_ip = hstr_to_ip(redis_master_host)
         with  settings(host_string=host_string):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-analytics.override')
             with cd(INSTALLER_DIR):
-                run_cmd = "PASSWORD=%s python setup-vnc-collector.py --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d " \
+                # Release from contrail-install-packages
+                rls = get_release()
+                # Bitbucket - Redis UVE master slave
+                if '1.04' in rls: 
+                    run_cmd = "PASSWORD=%s python setup-vnc-collector.py --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d --redis_master_ip %s --redis_role " \
+                           % (collector_host_password, ' '.join(cassandra_ip_list), cfgm_ip, tgt_ip, ncollectors, redis_master_ip) 
+                    if not is_redis_master:
+                        run_cmd += "slave "
+                    else:
+                        run_cmd += "master "
+                else:
+                    # Github - Independent Redis UVE and Syslog
+                    run_cmd = "PASSWORD=%s python setup-vnc-collector.py --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d " \
                            % (collector_host_password, ' '.join(cassandra_ip_list), cfgm_ip, tgt_ip, ncollectors) 
+                    analytics_syslog_port = get_collector_syslog_port()
+                    if analytics_syslog_port is not None:
+                        run_cmd += "--analytics_syslog_port %d " % (analytics_syslog_port)
                 analytics_database_ttl = get_database_ttl()
                 if analytics_database_ttl is not None:
                     run_cmd += "--analytics_data_ttl %d " % (analytics_database_ttl)
                 else:
                     #if nothing is provided we default to 48h
                     run_cmd += "--analytics_data_ttl 48 "
-                analytics_syslog_port = get_collector_syslog_port()
-                if analytics_syslog_port is not None:
-                    run_cmd += "--analytics_syslog_port %d " % (analytics_syslog_port)
                 print run_cmd
                 run(run_cmd)
 #end setup_collector
@@ -761,6 +775,8 @@ def setup_vrouter_node(*args):
                         gateway_routes.append(env.vgw[host_string][vgw_intf]['gateway-routes'])
                         #gateway_routes=str(gateway_routes).replace(" ", "")
                         gateway_routes = str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
+                    else:
+                        gateway_routes.append("[]")
                 
                 #public_subnet=str(public_subnet).replace(" ", "")
                 #public_vn_name=str(public_vn_name).replace(" ", "")
@@ -872,6 +888,7 @@ def setup_all(reboot='True'):
     """Provisions required contrail services in all nodes as per the role definition.
     """
     execute(bash_autocomplete_systemd)
+    execute(setup_rabbitmq_cluster)
     execute(increase_limits)
     execute(increase_ulimits)
     execute(setup_database)
@@ -891,6 +908,7 @@ def setup_all(reboot='True'):
     execute(prov_metadata_services)
     execute(prov_encap_type)
     if reboot == 'True':
+        print "Rebooting the compute nodes after setup all."
         execute(compute_reboot)
         #Clear the connections cache
         connections.clear()
@@ -904,6 +922,7 @@ def setup_without_openstack():
        User has to provision the openstack node with their custom openstack pakckages.
     """
     execute(bash_autocomplete_systemd)
+    execute(setup_rabbitmq_cluster)
     execute(increase_limits)
     execute(increase_ulimits)
     execute(setup_database)
@@ -916,6 +935,7 @@ def setup_without_openstack():
     execute(prov_external_bgp)
     execute(prov_metadata_services)
     execute(prov_encap_type)
+    print "Rebooting the compute nodes after setup all."
     execute(compute_reboot)
 
 @roles('build')
@@ -931,6 +951,7 @@ def reimage_and_setup_test():
 @task
 def setup_all_with_images():
     execute(bash_autocomplete_systemd)
+    execute(setup_rabbitmq_cluster)
     execute(increase_limits)
     execute(increase_ulimits)
     execute(setup_database)
@@ -945,12 +966,14 @@ def setup_all_with_images():
     execute(prov_metadata_services)
     execute(prov_encap_type)
     execute(add_images)
+    print "Rebooting the compute nodes after setup all."
     execute(compute_reboot)
 
 @roles('build')
 @task
 def run_setup_demo():
     execute(bash_autocomplete_systemd)
+    execute(setup_rabbitmq_cluster)
     execute(increase_limits)
     execute(increase_ulimits)
     execute(setup_database)
@@ -974,11 +997,18 @@ def setup_interface(intf_type = 'both'):
     '''
     Configure the IP address and netmask for non-mgmt interface based on parameter passed in non_mgmt stanza of testbed file. Also generate ifcfg file for the interface if the file is not present. 
     '''
+    ostype = ''
+    with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
+        ostype = run("uname -a | grep Ubuntu")
+    #ubuntu interface provisioning
+    if ostype != '':
+        execute("setup_interface_ubuntu", intf_type)
+        return
 
     if intf_type == 'both':
         intf_type_list = ['control', 'data']
     else:
-        intf_type_list = intf_type
+        intf_type_list = [intf_type]
 
     for intf_type in intf_type_list:
         tgt_ip = None
@@ -1055,9 +1085,10 @@ def reset_config():
     '''
     Reset api-server and openstack config and run the setup-scripts again incase you get into issues
     '''
+    from fabfile.tasks.misc import run_cmd
     try:
-        execute(api_server_reset, 'add', role='cfgm')
         execute(cleanup_os_config)
+        execute(setup_rabbitmq_cluster)
         execute(increase_limits)
         execute(increase_ulimits)
         execute(setup_database)
@@ -1071,13 +1102,15 @@ def reset_config():
         execute(prov_external_bgp)
         execute(prov_metadata_services)
         execute(prov_encap_type)
-        sleep(5)
+        execute(config_server_reset, 'add', [env.roledefs['cfgm'][0]])
+        execute(run_cmd, env.roledefs['cfgm'][0], "service supervisor-config restart")
+        sleep(70)
     except SystemExit:
-        execute(api_server_reset, 'delete', role='cfgm')
+        execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
         raise SystemExit("\nReset config Failed.... Aborting")
     else:
-        execute(api_server_reset, 'delete', role='cfgm')
-    execute(all_reboot)
+        execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
+    execute(compute_reboot)
 #end reset_config
 
 @roles('build')
@@ -1103,6 +1136,14 @@ def add_static_route():
     host3 : [{ 'ip': '4.4.4.0', 'netmask' : '255.255.255.0', 'gw':'192.168.20.254', 'intf': 'p6p0p1' }],
     }
     '''
+    ostype = ''
+    with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
+        ostype = run("uname -a | grep Ubuntu")
+    #ubuntu interface provisioning
+    if ostype != '':
+        execute("add_static_route_ubuntu")
+        return
+
     route_info = getattr(testbed, 'static_route', None)
     if route_info:
         tgt_host_list=route_info.keys()
@@ -1116,17 +1157,18 @@ def add_static_route():
             restart_network_service(tgt_host)
 
 @task
-@EXECUTE_TASK
-def setup_interface_ubuntu(*iftypes):
+def setup_interface_ubuntu(intf_type='both'):
     ''' Generate ifcfg file and bond interfaces for the interfaces defined in
         data, control and bond variables specified in testbed and restart network.
     '''
     # Default iftypes
-    if len(iftypes) == 0:
-        iftypes = ('control', 'data')
+    if intf_type == 'both':
+        intf_type_list = ['control', 'data']
+    else:
+        intf_type_list = [intf_type]
 
     bondinfo = getattr(testbed, 'bond', None)
-    for iftype in iftypes:
+    for iftype in intf_type_list:
         # Skip if iftype is not defined in testbed
         hosts = getattr(testbed, iftype, None)
         if hosts is None:
@@ -1153,10 +1195,9 @@ def setup_interface_ubuntu(*iftypes):
             with settings(host_string=host_str):
                 with cd(INSTALLER_DIR):
                     run(cmd)
-#end: setup_interface
+#end: setup_interface_ubuntu
 
 @task
-@EXECUTE_TASK
 def add_static_route_ubuntu(*hosts):
     '''
     Add static route in the node based on parameter provided in the testbed file
@@ -1190,5 +1231,5 @@ def add_static_route_ubuntu(*hosts):
             with settings(host_string=tgt_host):
                 with cd(INSTALLER_DIR):
                     run(cmd)
-#end: add_static_route
+#end: add_static_route_ubuntu
 

@@ -255,7 +255,7 @@ def add_images(image=None):
     if '10.84' in env.host:
         mount= '10.84.5.100'
     elif '10.204' in env.host:
-        mount= '10.204.216.49'
+        mount= '10.204.216.51'
     if not mount :
         return 
 
@@ -279,7 +279,7 @@ def add_images(image=None):
     for (loc, name) in images:
         if image is not None and image != name:
             continue
-        local = "/cs-shared/images/"+loc+".gz"
+        local = "/images/"+loc+".gz"
         remote = loc.split("/")[-1]
         remote_gz = remote+".gz"
         run("wget http://%s/%s" % (mount, local)) 
@@ -290,6 +290,55 @@ def add_images(image=None):
             run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=qcow2 < "+remote+")")
         run("rm "+remote)
 #end add_images
+
+@roles('openstack')
+@task
+def add_basic_images(image=None):
+    mount=None
+    if '10.84' in env.host:
+        mount= '10.84.5.100'
+    elif '10.204' in env.host:
+        mount= '10.204.216.51'
+    if not mount :
+        return
+
+    images = [ ("precise-server-cloudimg-amd64-disk1.img", "ubuntu"),
+               ("traffic/ubuntu-traffic.img", "ubuntu-traffic"),
+               ("cirros/cirros-0.3.0-x86_64-uec", "cirros"),
+               ("vsrx/junos-vsrx-12.1-in-network.img", "nat-service"),
+               ("vsrx/junos-vsrx-12.1-transparent.img", "vsrxbridge"),
+               ("analyzer/analyzer-vm-console.qcow2", "analyzer"),
+             ]
+
+    for (loc, name) in images:
+        if image is not None and image != name:
+            continue
+        local = "/images/"+loc+".gz"
+        remote = loc.split("/")[-1]
+        remote_gz = remote+".gz"
+        run("wget http://%s/%s" % (mount, local)) 
+        run("gunzip " + remote_gz)
+        if ".vmdk" in loc:
+            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+")")
+        elif "cirros" in loc:
+            run('source /etc/contrail/openstackrc')
+            run('cd /tmp ; sudo rm -f /tmp/cirros-0.3.0-x86_64*')
+            run('tar xvf %s -C /tmp/' %remote)
+            run('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-kernel is_public=true '+
+                'container_format=aki disk_format=aki < /tmp/cirros-0.3.0-x86_64-vmlinuz')
+            run('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-ramdisk is_public=true '+
+                    ' container_format=ari disk_format=ari < /tmp/cirros-0.3.0-x86_64-initrd')
+            run('source /etc/contrail/openstackrc && glance add name=' +remote+ ' is_public=true '+
+                'container_format=ami disk_format=ami '+
+                '\"kernel_id=$(glance index | awk \'/cirros-0.3.0-x86_64-kernel/ {print $1}\')\" '+
+                '\"ramdisk_id=$(glance index | awk \'/cirros-0.3.0-x86_64-ramdisk/ {print $1}\')\" ' +
+                ' < <(zcat --force /tmp/cirros-0.3.0-x86_64-blank.img)')
+            run('rm -rf /tmp/*cirros*')
+        else:
+            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=qcow2 < "+remote+")")
+        run("rm "+remote)
+
+#end add_basic_images
 
 @roles('compute')
 @task
@@ -375,18 +424,25 @@ def cleanup_os_config():
             sudo('mysql_install_db --user=mysql --ldata=/var/lib/mysql/')
 #end cleanup_os_config
 
-@roles('cfgm')
-def api_server_reset(option):
+@roles('build')
+@task
+def config_server_reset(option=None, hosts=[]):
     
-    api_config_file = '/etc/contrail/supervisord_config_files/contrail-api.ini'
-    
-    try :
-        if option == "add" :
-            run('sudo sed -i \'s/vnc_cfg_api_server.py --conf_file/vnc_cfg_api_server.py --reset_config --conf_file/\' %s' %(api_config_file))
-        elif option == 'delete' :
-            run('sudo sed -i \'s/vnc_cfg_api_server.py --reset_config/vnc_cfg_api_server.py/\' %s' %(api_config_file))
-    except SystemExit as e:
-        print "Failure of one or more of these cmds are ok"
+    for host_string in hosts:
+        api_config_file = '/etc/contrail/supervisord_config_files/contrail-api.ini'
+        disc_config_file = '/etc/contrail/supervisord_config_files/contrail-discovery.ini'
+        
+        with settings(host_string=host_string):
+            try :
+                if option == "add" :
+                    run('sudo sed -i \'s/vnc_cfg_api_server.py --conf_file/vnc_cfg_api_server.py --reset_config --conf_file/\' %s' %(api_config_file))
+                    run('sudo sed -i \'s/disc_server_zk.py --conf_file/disc_server_zk.py --reset_config --conf_file/\' %s' %(disc_config_file))
+                elif option == 'delete' :
+                    run('sudo sed -i \'s/vnc_cfg_api_server.py --reset_config/vnc_cfg_api_server.py/\' %s' %(api_config_file))
+                    run('sudo sed -i \'s/disc_server_zk.py --reset_config/disc_server_zk.py/\' %s' %(disc_config_file))
+            except SystemExit as e:
+                print "Failure of one or more of these cmds are ok"
+#end config_server_reset
 
 @roles('compute')
 @task
