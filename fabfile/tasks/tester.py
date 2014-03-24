@@ -378,12 +378,21 @@ def run_sanity(feature='sanity', test=None):
               'ecmp'            : ['%s/scripts/ecmp/sanity_with_setup.py' %repo],
               'evpn'            : ['%s/scripts/evpn/evpn_tests.py' %repo],
               }
+    if feature == 'upgrade':
+        with settings(host_string = env.roledefs['cfgm'][0]):
+                put("./fabfile/testbeds/testbed.py", "/opt/contrail/utils/fabfile/testbeds/testbed.py")
+                run("rm -rf /usr/etc/zookeeper")
+                run("cd /tmp;rm -rf temp")
+                run("cd /tmp;mkdir temp")
+                put(test,"/tmp/temp/")
+        env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
     pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
     cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
             'quick_sanity' : pre_cmd + '%s python quick_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
+            'upgrade'      : pre_cmd + '%s python upgrade/upgrade_test.py' % (env_vars)
              }
     if CONTROLLER_TYPE == 'Cloudstack':
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../fixtures:.:./cloudstack:/opt/contrail/cloudstack'"
