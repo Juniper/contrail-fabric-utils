@@ -384,7 +384,8 @@ def run_sanity(feature='sanity', test=None):
     cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
             'quick_sanity' : pre_cmd + '%s python quick_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
-             }
+            'tempest'      : pre_cmd + '%s python tempest_neutron_sanity.py' % (env_vars),
+           }
     if CONTROLLER_TYPE == 'Cloudstack':
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../fixtures:.:./cloudstack:/opt/contrail/cloudstack'"
         cmds = {'sanity'   : pre_cmd + '%s python cloudstack/cs_sanity_suite.py' % (env_vars)
