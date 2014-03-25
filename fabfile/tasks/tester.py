@@ -11,6 +11,7 @@ from fabfile.config import *
 from fabfile.utils.host import *
 from fabfile.utils.interface import *
 from fabfile.utils.multitenancy import *
+from fabfile.utils.fabos import detect_ostype
 
 
 @roles('build')
@@ -313,6 +314,11 @@ stop_on_fail=no
         else:
             with settings(warn_only = True):
                 run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay")
+
+        for host_string in env.roledefs['compute']:
+            with settings(host_string=host_string):
+                if detect_ostype() in ['centos']:
+                    run("yum -y --disablerepo=* --enablerepo=contrail_install_repo install tcpdump")
 #end setup_test_env
 
 def get_remote_path(path):
