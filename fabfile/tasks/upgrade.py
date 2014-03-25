@@ -298,6 +298,8 @@ def upgrade_control_node(pkg, *args):
             execute(upgrade)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
+            if os.path.exists('/etc/contrail/vizd_param'):
+                run('grep -q ANALYTICS_SYSLOG_PORT /etc/contrail/vizd_param || echo "ANALYTICS_SYSLOG_PORT=-1" >> /etc/contrail/vizd_param')
             execute('restart_control_node', host_string)
 
 
