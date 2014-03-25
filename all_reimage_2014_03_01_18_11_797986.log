@@ -1,4 +1,0 @@
-[root@10.204.217.65] Executing task 'all_reimage'
-[localhost] local: /cs-shared/cf/bin/ubuntu.reimage nodeg25
-
-Done.
