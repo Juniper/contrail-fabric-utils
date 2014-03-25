@@ -1,5 +1,6 @@
 import os
 import re
+import copy
 import tempfile
 
 from fabfile.config import *
@@ -125,7 +126,7 @@ def upgrade_pkgs():
 @roles('build')
 def upgrade_pkgs_without_openstack():
     """Upgrades the pramiko and pycrypto packages in all nodes excluding openstack node."""
-    host_strings = env.roledefs['all']
+    host_strings = copy.deepcopy(env.roledefs['all'])
     dummy = [host_strings.remove(openstack_node)
              for openstack_node in env.roledefs['openstack']]
     for host_string in host_strings:
@@ -366,7 +367,7 @@ def create_install_repo():
 @roles('build')
 def create_install_repo_without_openstack():
     """Creates contrail install repo in all nodes excluding openstack node."""
-    host_strings = env.roledefs['all']
+    host_strings = copy.deepcopy(env.roledefs['all'])
     dummy = [host_strings.remove(openstack_node) 
              for openstack_node in env.roledefs['openstack']]
     for host_string in host_strings:

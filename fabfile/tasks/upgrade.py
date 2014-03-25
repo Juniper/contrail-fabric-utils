@@ -11,6 +11,7 @@ from fabfile.tasks.install import install_pkg_all, create_install_repo,\
      create_install_repo_node, upgrade_pkgs, install_pkg_node, yum_install,  apt_install
 
 RELEASES_WITH_QPIDD = ('1.0', '1.01', '1.02', '1.03')
+RELEASES_WITH_ZOO_3_4_3 = ('1.0', '1.01', '1.02', '1.03', '1.04')
 
 
 @task
@@ -105,8 +106,12 @@ def backup_zookeeper_config():
 def backup_zookeeper_config_node(*args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
+            if run('ls /etc/zookeeper/zoo.cfg').succeeded:
+                zoo_cfg = '/etc/zookeeper/zoo.cfg'
+            else:
+                zoo_cfg = '/etc/zookeeper/conf/zoo.cfg'
             if not run('ls /etc/contrail/zoo.cfg.rpmsave').succeeded:
-                run('cp /etc/zookeeper/zoo.cfg /etc/contrail/zoo.cfg.rpmsave')
+                run('cp %s /etc/contrail/zoo.cfg.rpmsave' % zoo_cfg)
 
 @task
 @parallel
@@ -119,7 +124,11 @@ def restore_zookeeper_config_node(*args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
             if run('ls /etc/contrail/zoo.cfg.rpmsave').succeeded:
-                run('cp /etc/contrail/zoo.cfg.rpmsave /etc/zookeeper/zoo.cfg')
+                if get_release() not in RELEASES_WITH_ZOO_3_4_3 and detect_ostype() in ['Ubuntu']:
+                    #upgrade to >= 1.05
+                    run('cp /etc/contrail/zoo.cfg.rpmsave /etc/zookeeper/conf/zoo.cfg')
+                else:
+                    run('cp /etc/contrail/zoo.cfg.rpmsave /etc/zookeeper/zoo.cfg')
                 run('rm -f /etc/contrail/zoo.cfg.rpmsave')
 
 @task
