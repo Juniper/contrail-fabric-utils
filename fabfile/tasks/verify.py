@@ -25,7 +25,7 @@ def verify_database():
 @roles('webui')
 def verify_webui():
     verify_service("supervisor-webui")
-    verify_service("contrail-webui-middleware")
+    #verify_service("contrail-webui-middleware")
 
 @task
 @roles('openstack')
@@ -46,17 +46,17 @@ def verify_cfgm():
     verify_service("contrail-discovery")
     verify_service("contrail-schema")
     verify_service("contrail-svc-monitor")
-    verify_service("contrail-zookeeper")
-    verify_service("ifmap")
+    #verify_service("contrail-zookeeper")
+    #verify_service("ifmap")
 
 @task
 @roles('control')
 def verify_control():
     verify_service("supervisor-control")
     verify_service("contrail-control")
-    verify_service("supervisor-dns")
-    verify_service("contrail-dns")
-    verify_service("contrail-named")
+    #verify_service("supervisor-dns")
+    #verify_service("contrail-dns")
+    #verify_service("contrail-named")
 
 @task
 @roles('collector')
@@ -66,7 +66,7 @@ def verify_collector():
     verify_service("contrail-opserver")
     verify_service("contrail-qe")
     verify_service("redis-query")
-    verify_service("redis-sentinel")
+    #verify_service("redis-sentinel")
     verify_service("redis-uve") 
 
 @task
