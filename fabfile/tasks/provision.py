@@ -565,7 +565,10 @@ def setup_database_node(*args):
                 database_dir = get_database_dir()
                 if database_dir is not None:
                     run_cmd += "--data_dir %s " % (database_dir)
-                run_cmd += "--seed_list %s" % (hstr_to_ip(get_control_host_string(env.roledefs['database'][0])))
+                if (len(env.roledefs['database'])>2):
+                    run_cmd += "--seed_list %s,%s" % (hstr_to_ip(get_control_host_string(env.roledefs['database'][0])),hstr_to_ip(get_control_host_string(env.roledefs['database'][1])))
+                else: 
+                    run_cmd += "--seed_list %s" % (hstr_to_ip(get_control_host_string(env.roledefs['database'][0])))
                 run(run_cmd)
 #end setup_database
     
