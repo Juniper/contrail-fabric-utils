@@ -55,7 +55,8 @@ def zoolink_node(*args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
             dirinfo = run('ls -lrt /usr/etc/zookeeper')
-        if not '/usr/etc/zookeeper -> /etc/zookeeper' in dirinfo:
+            link_req = run('ls /usr/etc/zookeeper/conf').succeeded
+        if not '/usr/etc/zookeeper -> /etc/zookeeper' in dirinfo and link_req:
             run('ln -s /etc/zookeeper /usr/etc/zookeeper')
             sleep(3)
             run('ls -lrt /usr/etc/zookeeper')

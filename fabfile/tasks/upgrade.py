@@ -40,7 +40,10 @@ def upgrade_zookeeper():
     run("supervisorctl -s http://localhost:9004 stop redis-config")
     run("supervisorctl -s http://localhost:9004 stop contrail-config-nodemgr")
     run("supervisorctl -s http://localhost:9004 stop ifmap")
-    run("supervisorctl -s http://localhost:9004 stop contrail-zookeeper")
+    if get_release() in RELEASES_WITH_ZOO_3_4_3:
+        run("supervisorctl -s http://localhost:9004 stop contrail-zookeeper")
+    else:
+        run("service zookeeper stop")
 
     if detect_ostype() in ['Ubuntu']:
         apt_install(['zookeeper'])
@@ -53,7 +56,10 @@ def upgrade_zookeeper():
     execute("restore_zookeeper_config_node", env.host_string)
     execute("zoolink_node", env.host_string)
 
-    run("supervisorctl -s http://localhost:9004 start contrail-zookeeper")
+    if get_release() in RELEASES_WITH_ZOO_3_4_3:
+        run("supervisorctl -s http://localhost:9004 start contrail-zookeeper")
+    else:
+        run("service zookeeper start")
 
     zookeeper_status = {}
     for host_string in env.roledefs['cfgm']:
@@ -90,7 +96,10 @@ def upgrade_zookeeper():
 @roles('cfgm')
 def start_api_services():
     with settings(warn_only=True):
-        run("supervisorctl -s http://localhost:9004 start contrail-zookeeper")
+        if get_release() in RELEASES_WITH_ZOO_3_4_3:
+            run("supervisorctl -s http://localhost:9004 start contrail-zookeeper")
+        else:
+            run("service zookeeper start")
         run("supervisorctl -s http://localhost:9004 start contrail-config-nodemgr")
         run("supervisorctl -s http://localhost:9004 start ifmap")
         run("supervisorctl -s http://localhost:9004 start redis-config")

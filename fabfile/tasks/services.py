@@ -128,13 +128,17 @@ def restart_cfgm_node(*args):
     for host_string in args:
         with  settings(host_string=host_string):
             execute('zoolink_node', host_string)
-            run('service contrail-zookeeper restart')
+            zoo_svc = 'contrail-zookeeper'
+            if detect_ostype() in ['Ubuntu']:
+                zoo_svc = 'zookeeper'
+            run('service %s restart' % zoo_svc)
     sleep(5)
 
     for host_string in args:
         with  settings(host_string=host_string):
             run('supervisorctl -s http://localhost:9004 restart contrail-config-nodemgr')
-            run('service ifmap restart')
+            if detect_ostype() not in ['Ubuntu']:
+                run('service ifmap restart')
             run('supervisorctl -s http://localhost:9004 restart contrail-api:0')
             run('supervisorctl -s http://localhost:9004 restart contrail-discovery:0')
             run('service contrail-schema restart')
