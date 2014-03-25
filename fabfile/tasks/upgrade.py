@@ -14,6 +14,10 @@ RELEASES_WITH_QPIDD = ('1.0', '1.01', '1.02', '1.03')
 RELEASES_WITH_ZOO_3_4_3 = ('1.0', '1.01', '1.02', '1.03', '1.04')
 
 
+def fix_vizd_param():
+    if os.path.exists('/etc/contrail/vizd_param'):
+        run('grep -q ANALYTICS_SYSLOG_PORT /etc/contrail/vizd_param || echo "ANALYTICS_SYSLOG_PORT=-1" >> /etc/contrail/vizd_param')
+
 @task
 @EXECUTE_TASK
 @roles('compute')
@@ -298,8 +302,6 @@ def upgrade_control_node(pkg, *args):
             execute(upgrade)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
-            if os.path.exists('/etc/contrail/vizd_param'):
-                run('grep -q ANALYTICS_SYSLOG_PORT /etc/contrail/vizd_param || echo "ANALYTICS_SYSLOG_PORT=-1" >> /etc/contrail/vizd_param')
             execute('restart_control_node', host_string)
 
 
@@ -321,6 +323,7 @@ def upgrade_collector_node(pkg, *args):
             execute(upgrade)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
+            fix_vizd_param()
             execute('restart_collector_node', host_string)
 
 
@@ -379,6 +382,7 @@ def upgrade_all(pkg):
     execute(upgrade)
     execute(upgrade_venv_packages)
     execute(upgrade_pkgs)
+    fix_vizd_param()
     execute(restart_database)
     execute(restart_openstack)
     execute(restore_zookeeper_config)
