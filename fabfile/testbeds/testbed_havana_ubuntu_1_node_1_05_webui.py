@@ -10,7 +10,7 @@ ext_routers = []
 router_asn = 64512
 public_vn_rtgt = 10000
 public_vn_subnet = "10.84.41.0/24"
-host_build = 'ankitja@10.204.216.4'
+host_build = 'ankitja@10.204.216.49'
 env.roledefs = {
     'all': [host1],
     'cfgm': [host1],
@@ -34,7 +34,7 @@ env.passwords = {
     host_build: 'c0ntrail123',
 }
 
-env.test_repo_dir='/home/ankitja/contrail-test'
+env.test_repo_dir='/home/stack/webui_ubuntu_single_node/havana/contrail-test'
 env.mail_from='ankitja@juniper.net'
 env.mail_to='ankitja@juniper.net'
 
