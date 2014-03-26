@@ -73,7 +73,7 @@ def verify_collector():
 @roles('compute')
 def verify_compute():
     verify_service("supervisor-vrouter")
-    verify_service("contrail-vrouter")
+    #verify_service("contrail-vrouter")
 
 
 @task
