@@ -1,4 +1,5 @@
 import uuid
+import re
 
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype
@@ -101,24 +102,35 @@ def add_cfgm_to_rabbitmq_cluster():
 @roles('cfgm')
 def verify_cluster_status():
     output = run("rabbitmqctl cluster_status")
-    
+    match = re.search("{running_nodes,\[(.*)\]}", output)
+    clustered_nodes = match.group(1).split(',')
+    clustered_nodes = [node.strip("'") for node in clustered_nodes]
+
     cfgms = []
     for host_string in env.roledefs['cfgm']:
         with settings(host_string=host_string):
             host_name = run('hostname')
             cfgms.append('rabbit@%s' % host_name)
     for cfgm in cfgms:
-        if cfgm+',' not in output and cfgm+']' not in output:
-            print "RabbitMQ cluster is not setup properly"
-            exit(1)
+        if cfgm not in clustered_nodes:
+            print "RabbitMQ cluster doesnt list %s in running_nodes" % env.host_string
+            return False
+    return True
 
 
 @task
 @roles('build')
 def setup_rabbitmq_cluster():
+    """Task to cluster the rabbit servers."""
     if len(env.roledefs['cfgm']) <= 1:
         print "Single cfgm cluster, skipping rabbitmq cluster setup."
         return 
+
+    result = execute(verify_cluster_status)
+    if False not in result.values():
+        print "RabbitMQ cluster is up and running; No need to cluster again."
+        return
+
     rabbitmq_cluster_uuid = getattr(testbed, 'rabbitmq_cluster_uuid', None)
     if not rabbitmq_cluster_uuid:
         rabbitmq_cluster_uuid = uuid.uuid4()
@@ -133,4 +145,7 @@ def setup_rabbitmq_cluster():
     execute("rabbitmqctl_start_app_node", env.roledefs['cfgm'][0])
     execute(add_cfgm_to_rabbitmq_cluster)
     execute(rabbitmqctl_start_app) 
-    execute(verify_cluster_status)
+    result = execute(verify_cluster_status)
+    if False in result.values():
+        print "RabbitMQ cluster is not setup properly"
+        exit(1)
