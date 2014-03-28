@@ -39,7 +39,8 @@ def upgrade_zookeeper():
     if get_release() in RELEASES_WITH_ZOO_3_4_3:
         run("supervisorctl -s http://localhost:9004 stop contrail-zookeeper")
     else:
-        run("service zookeeper stop")
+        if "running" in run("service zookeeper status"):
+            run("service zookeeper stop")
 
     if detect_ostype() in ['Ubuntu']:
         apt_install(['zookeeper'])
@@ -57,35 +58,38 @@ def upgrade_zookeeper():
     else:
         run("service zookeeper start")
 
-    zookeeper_status = {}
-    for host_string in env.roledefs['cfgm']:
-        with settings(host_string=host_string, warn_only=True):
-            retries = 5
-            for i in range(retries):
-                status = run("zkServer.sh status")
-                if 'Error contacting service' not in status:
-                    break
-                sleep(2)
-            for stat in ['leader', 'follower', 'standalone']:
-                if stat in status:
-                    status = stat
-                    break
-            zookeeper_status.update({host_string: status})
+    #zookeeper_status = {}
+    #status_cmd = "zkServer.sh status"
+    #if detect_ostype() in ['Ubuntu'] and get_release() not in RELEASES_WITH_ZOO_3_4_3:
+    #    status_cmd = '/usr/share/zookeeper/bin/zkServer.sh status'
+    #for host_string in env.roledefs['cfgm']:
+    #    with settings(host_string=host_string, warn_only=True):
+    #        retries = 5
+    #        for i in range(retries):
+    #            status = run(status_cmd)
+    #            if 'Error contacting service' not in status:
+    #                break
+    #            sleep(2)
+    #        for stat in ['leader', 'follower', 'standalone']:
+    #            if stat in status:
+    #                status = stat
+    #                break
+    #        zookeeper_status.update({host_string: status})
 
-    if (len(env.roledefs['cfgm']) == 1):
-        if 'standalone' in zookeeper_status.values():
-            print "Zookeeper status is standalone on Single node..ok"
-        else:
-            print "Zookeepr status is not standalone on single node..Fix it and retry upgrade"
-            print zookeeper_status
-            exit(1)
-    else:
-        if ('leader' in zookeeper_status.values() and 'standalone' not in zookeeper_status.values()):
-            print "Zookeeper leader/follower election is done."
-        else:
-            print "Zookeepr leader/follower election has problems. Fix it and retry upgrade"
-            print zookeeper_status
-            exit(1)
+    #if (len(env.roledefs['cfgm']) == 1):
+    #    if 'standalone' in zookeeper_status.values():
+    #        print "Zookeeper status is standalone on Single node..ok"
+    #    else:
+    #        print "Zookeepr status is not standalone on single node..Fix it and retry upgrade"
+    #        print zookeeper_status
+    #        exit(1)
+    #else:
+    #    if ('leader' in zookeeper_status.values() and 'standalone' not in zookeeper_status.values()):
+    #        print "Zookeeper leader/follower election is done."
+    #    else:
+    #        print "Zookeepr leader/follower election has problems. Fix it and retry upgrade"
+    #        print zookeeper_status
+    #        exit(1)
 
 @task
 @serial

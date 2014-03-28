@@ -33,14 +33,18 @@ def install_pkg_node(pkg, *args):
     """Installs any rpm/deb in one node."""
     for host_string in args:
         with settings(host_string=host_string):
-           pkg_name = os.path.basename(pkg)
-           temp_dir= tempfile.mkdtemp()
-           run('mkdir -p %s' % temp_dir)
-           put(pkg, '%s/%s' % (temp_dir, pkg_name))
-           if pkg.endswith('.rpm'):
-               run("yum --disablerepo=* -y localinstall %s/%s" % (temp_dir, pkg_name))
-           elif pkg.endswith('.deb'):
-               run("dpkg -i %s/%s" % (temp_dir, pkg_name))
+            build = get_build()
+            if build and build in pkg:
+                print "Package %s already installed in the node(%s)." % (pkg, host_string)
+                continue
+            pkg_name = os.path.basename(pkg)
+            temp_dir= tempfile.mkdtemp()
+            run('mkdir -p %s' % temp_dir)
+            put(pkg, '%s/%s' % (temp_dir, pkg_name))
+            if pkg.endswith('.rpm'):
+                run("yum --disablerepo=* -y localinstall %s/%s" % (temp_dir, pkg_name))
+            elif pkg.endswith('.deb'):
+                run("dpkg -i %s/%s" % (temp_dir, pkg_name))
 
 
 def upgrade_rpm(rpm):
