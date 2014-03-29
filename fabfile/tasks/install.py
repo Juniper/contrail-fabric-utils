@@ -32,7 +32,7 @@ def install_pkg_all(deb):
 def install_pkg_node(pkg, *args):
     """Installs any rpm/deb in one node."""
     for host_string in args:
-        with settings(host_string=host_string, warn_only=True)
+        with settings(host_string=host_string, warn_only=True):
             build = get_build()
             if build and build in pkg:
                 print "Package %s already installed in the node(%s)." % (pkg, host_string)
