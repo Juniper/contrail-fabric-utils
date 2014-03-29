@@ -48,7 +48,6 @@ def stop_rabbitmq_and_set_cookie(uuid):
 
 
 @task
-@parallel
 @roles('cfgm')
 def start_rabbitmq():
      run("service rabbitmq-server start")
@@ -94,13 +93,15 @@ def add_cfgm_to_rabbitmq_cluster():
     if detect_ostype() in ['Ubuntu']:
         run("rabbitmqctl cluster rabbit@%s rabbit@%s" % (cfgm1, this_cfgm))
     else:
-        run("rabbitmqctl join_cluster --ram rabbit@%s" % cfgm1)
+        run("rabbitmqctl join_cluster rabbit@%s" % cfgm1)
 
 @task
 @roles('cfgm')
 def verify_cluster_status():
     output = run("rabbitmqctl cluster_status")
     match = re.search("{running_nodes,\[(.*)\]}", output)
+    if not match:
+        return False
     clustered_nodes = match.group(1).split(',')
     clustered_nodes = [node.strip("'") for node in clustered_nodes]
 
@@ -124,8 +125,9 @@ def setup_rabbitmq_cluster():
         print "Single cfgm cluster, skipping rabbitmq cluster setup."
         return 
 
-    result = execute(verify_cluster_status)
-    if False not in result.values():
+    with settings(warn_only=True):
+        result = execute(verify_cluster_status)
+    if result and False not in result.values():
         print "RabbitMQ cluster is up and running; No need to cluster again."
         return
 
