@@ -48,6 +48,7 @@ def stop_rabbitmq_and_set_cookie(uuid):
 
 
 @task
+@parallel
 @roles('cfgm')
 def start_rabbitmq():
      run("service rabbitmq-server start")
