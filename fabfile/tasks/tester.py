@@ -2,6 +2,7 @@ import os
 import re
 import json
 import string
+import socket
 import tempfile
 from random import randrange
 from datetime import datetime as dt
@@ -10,20 +11,35 @@ from fabfile.config import *
 from fabfile.utils.host import *
 from fabfile.utils.interface import *
 from fabfile.utils.multitenancy import *
+from fabfile.utils.fabos import detect_ostype
 
 
 @roles('build')
 @task
 def setup_test_env():
-    fab_revision = local('cat .git/refs/heads/master', capture=True)
-    if CONTROLLER_TYPE == 'Cloudstack':
-        revision = local('cat %s/.git/refs/heads/cs_sanity' % env.test_repo_dir, capture=True)
-    else:
-        revision = local('cat %s/.git/refs/heads/master' % env.test_repo_dir, capture=True)
     cfgm_host = env.roledefs['cfgm'][0]
     cfgm_ip = hstr_to_ip(cfgm_host)
+    if socket.gethostname() in socket.gethostbyaddr(cfgm_ip)[0]:
+        with settings(host_string=cfgm_host):
+            build_id = run('cat /opt/contrail/contrail_packages/VERSION')
+        fab_revision = build_id
+        revision = build_id
+        print "Testing from the CFGM."
+    else:
+        fab_branches = local('git branch' , capture=True)
+        match = re.search('\*(.*)', fab_branches)
+        fab_branch = match.group(1).strip()
+        fab_revision = local('cat .git/refs/heads/%s' % fab_branch, capture=True)
+        if CONTROLLER_TYPE == 'Cloudstack':
+            revision = local('cat %s/.git/refs/heads/cs_sanity' % env.test_repo_dir, capture=True)
+        else:
+            with lcd(env.test_repo_dir):
+                test_branches = local('git branch' , capture=True)
+                match = re.search('\*(.*)', test_branches)
+                test_branch = match.group(1).strip()
+                revision = local('cat .git/refs/heads/%s' % test_branch, capture=True)
 
-    execute(copy_dir, env.test_repo_dir, cfgm_host)
+        execute(copy_dir, env.test_repo_dir, cfgm_host)
 
     sanity_testbed_dict = {
         'hosts': [],
@@ -47,6 +63,7 @@ stackUser=admin
 stackPassword=$__stack_password__
 stackTenant=$__stack_tenant__
 multiTenancy=$__multi_tenancy__
+keystone_ip=$__keystone_ip__
 
 # If you want the HTML report through HTMLTestRunner, select 'yes'. If not, the basic Unittest TextTestRunner will run the tests 
 generate_html_report=yes
@@ -76,6 +93,12 @@ log_to_console= yes
 
 [loggers]
 keys=root,log01
+
+[webui]
+webui=$__webui__
+
+[openstack_host_name]
+openstack_host_name =$__openstack__
 
 [logger_root]
 handlers=screen
@@ -228,7 +251,7 @@ stop_on_fail=no
             stack_password= 'password'
             stack_tenant= 'default-project'
         else:
-            stack_password= 'contrail123'
+            stack_password = env.get('openstack_admin_password', 'contrail123')
             stack_tenant= 'admin'
 
         #get the ext router information from the testbed file and set it the
@@ -241,6 +264,7 @@ stop_on_fail=no
         ext_routers = getattr(testbed, 'ext_routers', [])
         mail_server = '10.204.216.49'
         mail_port = '25'
+        webui = getattr(testbed, 'webui','False')
         if 'mail_server' in env.keys():
             mail_server = env.mail_server
             mail_port = env.mail_port
@@ -252,6 +276,7 @@ stop_on_fail=no
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__timestamp__': dt.now().strftime('%Y-%m-%d-%H:%M:%S'),
              '__multi_tenancy__': get_mt_enable(),
+             '__keystone_ip__': getattr(testbed, 'keystone_ip', None),
              '__mail_to__': mail_to,
              '__log_scenario__': log_scenario,
              '__test_revision__': revision,
@@ -266,6 +291,8 @@ stop_on_fail=no
              '__mail_server__': mail_server,
              '__mail_port__': mail_port,
              '__test_repo__': get_remote_path(env.test_repo_dir),
+             '__webui__': webui,
+             '__openstack__': openstack_host_name,
             })
         
         fd, fname = tempfile.mkstemp()
@@ -288,8 +315,12 @@ stop_on_fail=no
                 run('yum --disablerepo=base,extras,updates -y install python-extras python-testtools python-fixtures python-pycrypto python-ssh fabric')
         else:
             with settings(warn_only = True):
-                run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources")
+                run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay")
 
+        for host_string in env.roledefs['compute']:
+            with settings(host_string=host_string):
+                if detect_ostype() in ['centos']:
+                    run("yum -y --disablerepo=* --enablerepo=contrail_install_repo install tcpdump")
 #end setup_test_env
 
 def get_remote_path(path):
@@ -342,10 +373,12 @@ def run_sanity(feature='sanity', test=None):
                                 '%s/scripts/NewPolicyTestsBase.py' % repo],
               'analytics'    : ['%s/scripts/analytics_tests_with_setup.py' % repo],
               'basic_vn_vm'  : ['%s/scripts/vm_vn_tests.py' % repo],
+              'webui'       : ['%s/scripts/tests_with_setup_base_webui.py' % repo],
               'svc_mirror'   : ['%s/scripts/servicechain/mirror/sanity.py' % repo,
                                 '%s/scripts/servicechain/mirror/regression.py' % repo],
               'vpc'          : ['%s/scripts/vpc/sanity.py' % repo],
-              'sec_group'    : ['%s/scripts/securitygroup/sanity.py' % repo],
+              'sec_group'    : ['%s/scripts/securitygroup/sanity_base.py' % repo,
+                                '%s/scripts/securitygroup/regression.py' % repo],
               'multi_tenancy': ['%s/scripts/test_perms.py' % repo],
               'vdns'         : ['%s/scripts/vdns/vdns_tests.py' % repo],
               'discovery'    : ['%s/scripts/discovery_tests_with_setup.py' % repo],
@@ -355,12 +388,21 @@ def run_sanity(feature='sanity', test=None):
               'ecmp'            : ['%s/scripts/ecmp/sanity_with_setup.py' %repo],
               'evpn'            : ['%s/scripts/evpn/evpn_tests.py' %repo],
               }
+    if feature == 'upgrade':
+        with settings(host_string = env.roledefs['cfgm'][0]):
+                put("./fabfile/testbeds/testbed.py", "/opt/contrail/utils/fabfile/testbeds/testbed.py")
+                run("rm -rf /usr/etc/zookeeper")
+                run("cd /tmp;rm -rf temp")
+                run("cd /tmp;mkdir temp")
+                put(test,"/tmp/temp/")
+        env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
     pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
     cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
             'quick_sanity' : pre_cmd + '%s python quick_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
+            'upgrade'      : pre_cmd + '%s python upgrade/upgrade_test.py' % (env_vars)
              }
     if CONTROLLER_TYPE == 'Cloudstack':
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../fixtures:.:./cloudstack:/opt/contrail/cloudstack'"

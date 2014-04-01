@@ -1,9 +1,7 @@
 from fabric.api import env
 
 #Management ip addresses of hosts in the cluster
-host1 = 'root@10.204.217.18'
-host2 = 'root@10.204.217.19'
-host3 = 'root@10.204.217.20'
+host1 = 'root@10.204.216.59'
 
 #External routers if any
 #for eg. 
@@ -11,7 +9,7 @@ host3 = 'root@10.204.217.20'
 ext_routers = [('mx1', '10.204.216.253')]
 router_asn = 64512
 public_vn_rtgt = 10003
-public_vn_subnet = "10.204.219.176/29"
+public_vn_subnet = "10.204.219.184/29"
 
 
 #Host from which the fab commands are triggered to install and provision
@@ -19,11 +17,11 @@ host_build = 'stack@10.204.216.49'
 
 #Role definition of the hosts.
 env.roledefs = {
-    'all': [host1, host2, host3],
+    'all': [host1],
     'cfgm': [host1],
-    'openstack': [host2],
-    'control': [host1, host2],
-    'compute': [host2, host3],
+    'openstack': [host1],
+    'control': [host1],
+    'compute': [host1],
     'collector': [host1],
     'webui': [host1],
     'database': [host1],
@@ -31,13 +29,11 @@ env.roledefs = {
 }
 
 env.hostnames = {
-    'all': ['nodec33', 'nodec34', 'nodec35']
+    'all': ['nodec2']
 }
 
 env.ostypes = {
     host1:'ubuntu',
-    host2:'ubuntu',
-    host3:'ubuntu',
 }
 
 #Openstack admin password
@@ -47,8 +43,6 @@ env.password = 'c0ntrail123'
 #Passwords of each host
 env.passwords = {
     host1: 'c0ntrail123',
-    host2: 'c0ntrail123',
-    host3: 'c0ntrail123',
 
     host_build: 'contrail123',
 }
@@ -90,6 +84,6 @@ env.passwords = {
 #To Enable prallel execution of task in multiple nodes
 #do_parallel = True
 #haproxy = True
-env.test_repo_dir='/home/stack/ubuntu_multi_node/contrail-test'
+env.test_repo_dir='/home/stack/github_ubuntu_single_node/grizzly/contrail-test'
 env.mail_to='dl-contrail-sw@juniper.net'
-env.log_scenario='Ubuntu Three-Node Sanity'
+env.log_scenario='Ubuntu-Grizzly Single-Node Sanity'

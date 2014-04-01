@@ -1,5 +1,6 @@
 import os
 import re
+import copy
 import tempfile
 
 from fabfile.config import *
@@ -31,15 +32,19 @@ def install_pkg_all(deb):
 def install_pkg_node(pkg, *args):
     """Installs any rpm/deb in one node."""
     for host_string in args:
-        with settings(host_string=host_string):
-           pkg_name = os.path.basename(pkg)
-           temp_dir= tempfile.mkdtemp()
-           run('mkdir -p %s' % temp_dir)
-           put(pkg, '%s/%s' % (temp_dir, pkg_name))
-           if pkg.endswith('.rpm'):
-               run("yum --disablerepo=* -y localinstall %s/%s" % (temp_dir, pkg_name))
-           elif pkg.endswith('.deb'):
-               run("dpkg -i %s/%s" % (temp_dir, pkg_name))
+        with settings(host_string=host_string, warn_only=True):
+            build = get_build()
+            if build and build in pkg:
+                print "Package %s already installed in the node(%s)." % (pkg, host_string)
+                continue
+            pkg_name = os.path.basename(pkg)
+            temp_dir= tempfile.mkdtemp()
+            run('mkdir -p %s' % temp_dir)
+            put(pkg, '%s/%s' % (temp_dir, pkg_name))
+            if pkg.endswith('.rpm'):
+                run("yum --disablerepo=* -y localinstall %s/%s" % (temp_dir, pkg_name))
+            elif pkg.endswith('.deb'):
+                run("dpkg -i %s/%s" % (temp_dir, pkg_name))
 
 
 def upgrade_rpm(rpm):
@@ -122,6 +127,17 @@ def upgrade_pkgs():
     execute("upgrade_pkgs_node", env.host_string)
 
 @task
+@roles('build')
+def upgrade_pkgs_without_openstack():
+    """Upgrades the pramiko and pycrypto packages in all nodes excluding openstack node."""
+    host_strings = copy.deepcopy(env.roledefs['all'])
+    dummy = [host_strings.remove(openstack_node)
+             for openstack_node in env.roledefs['openstack']]
+    for host_string in host_strings:
+        with settings(host_string=host_string):
+            execute("upgrade_pkgs_node", host_string)
+
+@task
 def upgrade_pkgs_node(*args):
     """Upgrades the pramiko/pcrypto packages in single or list of nodes. USAGE:fab upgrade_pkgs_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
@@ -135,17 +151,17 @@ def upgrade_pkgs_node(*args):
                   /opt/contrail/contrail_installer/contrail_setup_utils/pycrypto-2.6.tar.gz;\
                   sudo easy_install \
                   /opt/contrail/contrail_installer/contrail_setup_utils/paramiko-1.11.0.tar.gz"
-            if detect_ostype() in ['centos', 'fedora']:
+            if detect_ostype() in ['centos', 'fedora', 'redhat']:
                 run(cmd)
 
 def yum_install(rpms):
     cmd = "yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo install "
-    if detect_ostype() in ['centos', 'fedora']:
+    if detect_ostype() in ['centos', 'fedora', 'redhat']:
         for rpm in rpms:
             run(cmd + rpm)
 
 def apt_install(debs):
-    cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install "
+    cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes --allow-unauthenticated install "
     if detect_ostype() in ['Ubuntu']:
         for deb in debs:
             run(cmd + deb)
@@ -155,7 +171,10 @@ def apt_install(debs):
 @roles('compute')
 def install_interface_name(reboot='True'):
     """Installs interface name package in all nodes defined in compute role."""
-    execute("install_interface_name_node", env.host_string, reboot=reboot)
+    if detect_ostype() == 'Ubuntu':
+        print "[%s]: Installing interface rename package not required for Ubuntu..Skipping it" %env.host_string
+    else:
+        execute("install_interface_name_node", env.host_string, reboot=reboot)
 
 @task
 def install_interface_name_node(*args, **kwargs):
@@ -352,7 +371,7 @@ def create_install_repo():
 @roles('build')
 def create_install_repo_without_openstack():
     """Creates contrail install repo in all nodes excluding openstack node."""
-    host_strings = env.roledefs['all']
+    host_strings = copy.deepcopy(env.roledefs['all'])
     dummy = [host_strings.remove(openstack_node) 
              for openstack_node in env.roledefs['openstack']]
     for host_string in host_strings:
@@ -379,11 +398,10 @@ def install_contrail(reboot='True'):
     execute(install_collector)
     execute(install_webui)
     execute(install_vrouter)
-    execute(install_openstack_storage)
-    execute(install_compute_storage)
     execute(upgrade_pkgs)
     execute(update_keystone_log)
     if getattr(env, 'interface_rename', True):
+        print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
 
 @roles('build')
@@ -399,8 +417,9 @@ def install_without_openstack():
     execute(install_collector)
     execute(install_webui)
     execute(install_vrouter)
-    execute(upgrade_pkgs)
+    execute(upgrade_pkgs_without_openstack)
     if getattr(env, 'interface_rename', True):
+        print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name)
 
 @roles('openstack')
@@ -463,7 +482,7 @@ def uninstall_contrail(full=False):
     To force a full cleanup, set full=True as argument. 
     This will remove contrail-install-packages as well
     '''
-    run('sudo yum --disablerepo=* --enablerepo=contrail_install_repo -y remove contrail-control contrail-dns openstack-nova openstack-quantum openstack-cinder openstack-glance openstack-keystone openstack-quantum-contrail mysql qpid-cpp-server openstack-dashboard mysql-server openstack-nova-novncproxy zookeeper zookeeper-lib irond contrail-webui contrail-analytics contrail-libs contrail-analytics-venv contrail-api-extension contrail-api-venv contrail-control-venv  contrail-database contrail-nodejs contrail-vrouter-venv contrail-setup openstack-utils redis contrail-openstack-* contrail-database-venv nodejs java java-1.7.0-openjdk libvirt contrail-vrouter euca2ools cassandra django-horizon django-staticfiles python-bitarray python-boto python-thrift libvirt-python libvirt-client python-django-openstack-auth memcached haproxy')
+    run('sudo yum --disablerepo=* --enablerepo=contrail_install_repo -y remove contrail-control contrail-dns openstack-nova openstack-quantum openstack-cinder openstack-glance openstack-keystone openstack-quantum-contrail mysql qpid-cpp-server openstack-dashboard mysql-server openstack-nova-novncproxy zookeeper zookeeper-lib irond contrail-webui contrail-analytics contrail-libs contrail-analytics-venv contrail-api-extension contrail-api-venv contrail-control-venv  contrail-database contrail-nodejs contrail-vrouter-venv contrail-setup openstack-utils redis contrail-openstack-* contrail-database-venv nodejs java java-1.7.0-openjdk libvirt contrail-vrouter euca2ools cassandra django-horizon django-staticfiles python-bitarray python-boto python-thrift libvirt-python libvirt-client python-django-openstack-auth memcached haproxy rabbitmq-server esl-erlang')
     
     run('sudo yum --disablerepo=* --enablerepo=contrail_install_repo -y remove *openstack* *quantum* *nova* *glance* *keystone* *cinder*')
     with cd('/etc/'):

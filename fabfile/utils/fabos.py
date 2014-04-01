@@ -35,8 +35,35 @@ def get_release(pkg='contrail-install-packages'):
     dist = detect_ostype() 
     if dist in ['centos', 'fedora', 'redhat']:
         cmd = "rpm -q --queryformat '%%{VERSION}' %s" %pkg
-        pkg_ver = run(cmd)
     elif dist in ['Ubuntu']:
-        pass
+        cmd = "dpkg -p %s | grep Version: | cut -d' ' -f2 | cut -d'-' -f1" %pkg
+    pkg_ver = run(cmd)
+    if 'is not installed' in pkg_ver or 'is not available' in pkg_ver:
+        print "Package %s not installed." % pkg
+        return None
     return pkg_ver
-    
+
+def get_build(pkg='contrail-install-packages'):
+    pkg_rel = None
+    dist = detect_ostype()
+    if dist in ['centos', 'fedora', 'redhat']:
+        cmd = "rpm -q --queryformat '%%{RELEASE}' %s" %pkg
+    elif dist in ['Ubuntu']:
+        cmd = "dpkg -p %s | grep Version: | cut -d' ' -f2 | cut -d'-' -f2" %pkg
+    pkg_rel = run(cmd)
+    if 'is not installed' in pkg_rel or 'is not available' in pkg_rel:
+        print "Package %s not installed." % pkg
+        return None
+    return pkg_rel
+
+def is_package_installed(pkg_name):
+    ostype = detect_ostype()
+    if ostype in ['Ubuntu']:
+        cmd = 'dpkg-query -l "%s" | grep -q ^.i'
+    elif ostype in ['centos','fedora']:
+        cmd = 'rpm -qi %s '
+    cmd = cmd % (pkg_name)
+    with settings(warn_only=True):
+        result = run(cmd)
+    return result.succeeded 
+#end is_package_installed
