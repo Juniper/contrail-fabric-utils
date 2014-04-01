@@ -432,6 +432,7 @@ def config_server_reset(option=None, hosts=[]):
         api_config_file = '/etc/contrail/supervisord_config_files/contrail-api.ini'
         disc_config_file = '/etc/contrail/supervisord_config_files/contrail-discovery.ini'
         schema_config_file = '/etc/contrail/supervisord_config_files/contrail-schema.ini'
+        svc_m_config_file = '/etc/contrail/supervisord_config_files/contrail-svc-monitor.ini'
         
         with settings(host_string=host_string):
             try :
@@ -439,10 +440,12 @@ def config_server_reset(option=None, hosts=[]):
                     run('sudo sed -i \'s/vnc_cfg_api_server.py --conf_file/vnc_cfg_api_server.py --reset_config --conf_file/\' %s' %(api_config_file))
                     run('sudo sed -i \'s/disc_server_zk.py --conf_file/disc_server_zk.py --reset_config --conf_file/\' %s' %(disc_config_file))
                     run('sudo sed -i \'s/to_bgp.py --conf_file/to_bgp.py --reset_config --conf_file/\' %s' %(schema_config_file))
+                    run('sudo sed -i \'s/svc_monitor.py --conf_file/svc_monitor.py --reset_config --conf_file/\' %s' %(svc_m_config_file))
                 elif option == 'delete' :
                     run('sudo sed -i \'s/vnc_cfg_api_server.py --reset_config/vnc_cfg_api_server.py/\' %s' %(api_config_file))
                     run('sudo sed -i \'s/disc_server_zk.py --reset_config/disc_server_zk.py/\' %s' %(disc_config_file))
                     run('sudo sed -i \'s/to_bgp.py --reset_config/to_bgp.py/\' %s' %(schema_config_file))
+                    run('sudo sed -i \'s/svc_monitor.py --reset_config/svc_monitor.py/\' %s' %(svc_m_config_file))
             except SystemExit as e:
                 print "Failure of one or more of these cmds are ok"
 #end config_server_reset
