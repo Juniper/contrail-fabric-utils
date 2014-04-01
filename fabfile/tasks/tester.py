@@ -43,6 +43,7 @@ def setup_test_env():
 
     sanity_testbed_dict = {
         'hosts': [],
+        'vgw': []
     }
 
     sanity_ini_templ = string.Template("""[Basic]
@@ -233,6 +234,7 @@ stop_on_fail=no
             host_dict['roles'].append(role_dict)
 
         sanity_testbed_dict['hosts'].append(host_dict)
+        if env.has_key('vgw'): sanity_testbed_dict['vgw'].append(env.vgw)
     # for every host_string
 
     with settings(host_string = cfgm_host):
