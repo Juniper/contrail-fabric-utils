@@ -28,5 +28,6 @@ from tasks.rabbitmq import *
 # For contrail use
 try:
     from contraillabs.setup import *
+    from contraillabs.rdo import *
 except ImportError:
     pass
