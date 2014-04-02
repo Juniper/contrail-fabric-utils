@@ -5,7 +5,7 @@ os_password = 'contrail123'
 os_tenant_name = 'demo'
 multi_tenancy = False
 webui = True
-host1='root@10.204.217.60'
+host1='root@10.204.217.53'
 ext_routers = []
 router_asn = 64512
 public_vn_rtgt = 10000
@@ -23,7 +23,7 @@ env.roledefs = {
     'build': [host_build],
 }
 env.hostnames = {
-    'all': ['nodeg20']
+    'all': ['nodeg13']
 }
 env.ostypes = {
      host1: 'ubuntu'
