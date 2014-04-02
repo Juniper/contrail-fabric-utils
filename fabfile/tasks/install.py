@@ -510,3 +510,15 @@ def uninstall_contrail(full=False):
         run('reboot')
 #end uninstall_contrail
 
+@roles('webui')
+@task
+def install_webui_packages(source_dir):
+    if detect_ostype() in ['Ubuntu']:
+        run('cp ' + source_dir + '/contrail-test/scripts/ubuntu_repo/sources.list /etc/apt')
+        run('sudo apt-get -y update')
+        run('sudo apt-get install -y firefox')
+        run('sudo apt-get install -y xvfb')
+    elif detect_ostype() in ['centos', 'fedora', 'redhat']:
+        run('yum install -y firefox')
+        run('yum install -y xorg-x11-server-Xvfb')
+#end install_webui_packages
