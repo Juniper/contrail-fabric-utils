@@ -18,7 +18,9 @@ from fabfile.utils.multitenancy import *
 def setup_test_env():
     cfgm_host = env.roledefs['cfgm'][0]
     cfgm_ip = hstr_to_ip(cfgm_host)
-    if socket.gethostname() in socket.gethostbyaddr(cfgm_ip)[0]:
+    with settings(warn_only=True):
+        is_git_repo = local('git branch').succeeded
+    if not is_git_repo:
         with settings(host_string=cfgm_host):
             build_id = run('cat /opt/contrail/contrail_packages/VERSION')
         fab_revision = build_id
