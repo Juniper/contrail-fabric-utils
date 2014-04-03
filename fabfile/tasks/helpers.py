@@ -601,13 +601,16 @@ def increase_ulimits():
     '''
     Increase ulimit in /etc/init.d/mysqld /etc/init/mysql.conf /etc/init.d/rabbitmq-server files
     '''
-    if detect_ostype() != 'Ubuntu':
-        return
     with settings(warn_only = True):
-        run("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql") 
-        run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
-        run("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
-        run("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/mysql/my.cnf")
+        if detect_ostype() == 'Ubuntu':
+            run("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql") 
+            run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
+            run("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
+            run("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/mysql/my.cnf")
+        else:
+            run("sed -i '/start(){/ a\    ulimit -n 10240' /etc/init.d/mysqld")
+            run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
+            run("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/my.cnf")
 
 @roles('cfgm','database','control','collector')
 @task
@@ -717,3 +720,24 @@ def validate_hosts():
     # Check if all hosts are reachable by each other using their hostnames
     execute(full_mesh_ping_by_name)
         
+
+@task
+@roles('openstack')
+def reboot_vm(vmid='all', mode='soft'):
+    flag = ''
+    if mode == 'hard':
+        flag = '--hard'
+
+    if vmid != 'all':
+        with settings(warn_only=True):
+            run('source /etc/contrail/openstackrc; nova reboot %s %s' % (flag, vmid))
+        return
+
+    print "Rebooting all the VM's"
+    nova_list = run ("source /etc/contrail/openstackrc; nova list")
+    nova_list = nova_list.split('\r\n')
+    nova_list = nova_list[3:-1]
+    for vm_info in nova_list:
+        vm_id = vm_info.split('|')[1]
+        with settings(warn_only=True):
+            run('source /etc/contrail/openstackrc; nova reboot %s %s' % (flag, vm_id))
