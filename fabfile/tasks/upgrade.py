@@ -15,7 +15,7 @@ RELEASES_WITH_ZOO_3_4_3 = ('1.0', '1.01', '1.02', '1.03', '1.04')
 
 
 def fix_vizd_param():
-    if os.path.exists('/etc/contrail/vizd_param'):
+    if run('ls /etc/contrail/vizd_param').succeeded:
         run('grep -q ANALYTICS_SYSLOG_PORT /etc/contrail/vizd_param || echo "ANALYTICS_SYSLOG_PORT=-1" >> /etc/contrail/vizd_param')
 
 @task
