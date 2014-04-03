@@ -162,7 +162,10 @@ Above fab command will reboot the node; so login again and issue the following c
     cd /opt/contrail/utils
     fab restart_openstack_compute
 
-### Step 4: Soft Reboot all the VM's through horizon dashbord.
+### Step 4: Soft Reboot all the VM's through horizon dashbord or using following fab command.
+    cd /opt/contrail/utils
+    fab reboot_vm (To do soft reboot)
+    fab reboot_vm:mode=hard (To do hard reboot)
 
 Upgrade multinod contrail VNS
 ------------------------------
