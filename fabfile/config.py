@@ -20,6 +20,11 @@ if hasattr(env, 'mytestbed'):
 else:
     import testbeds.testbed as testbed
 
+#Fabric 1.7.0 and above expects the keys/host_strings in env.passwords to be with :port
+#Adding host_strings with :22, to make the fabric-utils compatabile with it.
+for key in env.passwords.keys():
+    env.passwords.update({key+':22' : env.passwords[key]})
+
 class Logger(object):
     def __init__(self, filename="fabric.log"):
         self.terminal = sys.stdout
