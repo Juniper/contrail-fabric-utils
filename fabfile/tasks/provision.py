@@ -771,14 +771,9 @@ def setup_vrouter_node(*args):
                     public_vn_name.append(env.vgw[host_string][vgw_intf]['vn'])
                     if 'gateway-routes' in env.vgw[host_string][vgw_intf].keys():
                         gateway_routes.append(env.vgw[host_string][vgw_intf]['gateway-routes'])
-                        #gateway_routes=str(gateway_routes).replace(" ", "")
-                        gateway_routes = str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
                     else:
                         gateway_routes.append("[]")
-                
-                #public_subnet=str(public_subnet).replace(" ", "")
-                #public_vn_name=str(public_vn_name).replace(" ", "")
-                #vgw_intf_list=str(vgw_intf_list).replace(" ", "")
+                gateway_routes = str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
                 public_subnet = str([(';'.join(str(e) for e in public_subnet)).replace(" ","")])
                 public_vn_name = str([(';'.join(str(e) for e in public_vn_name)).replace(" ","")])
                 vgw_intf_list = str([(';'.join(str(e) for e in vgw_intf_list)).replace(" ","")])
