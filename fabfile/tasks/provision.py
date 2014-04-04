@@ -803,6 +803,7 @@ def setup_vrouter_node(*args):
                     cmd = cmd + " --non_mgmt_ip %s --non_mgmt_gw %s" %( tgt_ip, tgt_gw )
                 if set_vgw:   
                     cmd = cmd + " --public_subnet %s --public_vn_name %s --vgw_intf %s" %(public_subnet,public_vn_name,vgw_intf_list)
+                    if set(gateway_routes) == set(['[]']): gateway_routes = []
                     if gateway_routes != []:
                         cmd = cmd + " --gateway_routes %s" %(gateway_routes)
                 print cmd
