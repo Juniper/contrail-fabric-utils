@@ -773,14 +773,9 @@ def setup_vrouter_node(*args):
                     public_vn_name.append(env.vgw[host_string][vgw_intf]['vn'])
                     if 'gateway-routes' in env.vgw[host_string][vgw_intf].keys():
                         gateway_routes.append(env.vgw[host_string][vgw_intf]['gateway-routes'])
-                        #gateway_routes=str(gateway_routes).replace(" ", "")
-                        gateway_routes = str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
                     else:
                         gateway_routes.append("[]")
-                
-                #public_subnet=str(public_subnet).replace(" ", "")
-                #public_vn_name=str(public_vn_name).replace(" ", "")
-                #vgw_intf_list=str(vgw_intf_list).replace(" ", "")
+                gateway_routes = str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
                 public_subnet = str([(';'.join(str(e) for e in public_subnet)).replace(" ","")])
                 public_vn_name = str([(';'.join(str(e) for e in public_vn_name)).replace(" ","")])
                 vgw_intf_list = str([(';'.join(str(e) for e in vgw_intf_list)).replace(" ","")])
@@ -805,7 +800,6 @@ def setup_vrouter_node(*args):
                     cmd = cmd + " --non_mgmt_ip %s --non_mgmt_gw %s" %( tgt_ip, tgt_gw )
                 if set_vgw:   
                     cmd = cmd + " --public_subnet %s --public_vn_name %s --vgw_intf %s" %(public_subnet,public_vn_name,vgw_intf_list)
-                    if set(gateway_routes) == set(['[]']): gateway_routes = []
                     if gateway_routes != []:
                         cmd = cmd + " --gateway_routes %s" %(gateway_routes)
                 print cmd
