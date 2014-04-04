@@ -20,6 +20,15 @@ def fix_vizd_param():
 
 @task
 @EXECUTE_TASK
+@roles('collector')
+def fix_redis_uve_conf():
+    redis_uve_conf = '/etc/contrail/redis-uve.conf'
+    if os.path.exists(redis_uve_conf) and get_release() == '1.05':
+        run("sed 's/^slaveof/#&/' %s > %s.new" % (redis_uve_conf, redis_uve_conf))
+        run("mv %s.new %s" % (redis_uve_conf, redis_uve_conf))
+
+@task
+@EXECUTE_TASK
 @roles('compute')
 def fixup_agent_param():
     if (detect_ostype() in ['Ubuntu'] and get_release() == '1.04'):
@@ -336,6 +345,7 @@ def upgrade_collector_node(pkg, *args):
             execute(upgrade)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
+            execute('fix_redis_uve_conf')
             fix_vizd_param()
             execute('restart_collector_node', host_string)
 
@@ -396,6 +406,7 @@ def upgrade_all(pkg):
     execute(upgrade_venv_packages)
     execute(upgrade_pkgs)
     fix_vizd_param()
+    execute('fix_redis_uve_conf')
     execute(restart_database)
     execute(restart_openstack)
     execute(restore_zookeeper_config)
