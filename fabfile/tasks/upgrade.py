@@ -49,8 +49,7 @@ def upgrade_zookeeper():
     run("supervisorctl -s http://localhost:9004 stop redis-config")
     run("supervisorctl -s http://localhost:9004 stop contrail-config-nodemgr")
     run("supervisorctl -s http://localhost:9004 stop ifmap")
-    current_zoo_ver = get_release('zookeeper')
-    if '3.4.3' in current_zoo_ver:
+    if '3.4.3' in get_release('zookeeper'):
         run("supervisorctl -s http://localhost:9004 stop contrail-zookeeper")
     else:
         if "running" in run("service zookeeper status"):
@@ -67,7 +66,7 @@ def upgrade_zookeeper():
     execute("restore_zookeeper_config_node", env.host_string)
     execute("zoolink_node", env.host_string)
 
-    if '3.4.3' in current_zoo_ver:
+    if '3.4.3' in get_release('zookeeper'):
         run("supervisorctl -s http://localhost:9004 start contrail-zookeeper")
     else:
         run("service zookeeper start")
