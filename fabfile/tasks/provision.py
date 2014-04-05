@@ -43,7 +43,7 @@ def get_openstack_credentials():
     try:
         ks_admin_password = getattr(testbed, 'keystone_admin_password')
     except AttributeError:
-        ks_admin_password = 'contrail123'
+        ks_admin_password = getattr(env, 'openstack_admin_password', 'contrail123')
 
     return ks_admin_user, ks_admin_password
 # end get_openstack_credentials
