@@ -114,6 +114,12 @@ env.ostypes = {
 #Specify keystone IP
 #keystone_ip = '1.1.1.1'
 
+#Specify Keystone admin user if not same as  admin
+#keystone_admin_user = 'nonadmin'
+
+#Specify Keystone admin password if not same as env.openstack_admin_password
+#keystone_admin_password = 'contrail123'
+
 #Specify Region Name
 #region_name = 'RegionName'
 
