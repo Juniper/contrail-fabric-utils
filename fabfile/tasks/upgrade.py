@@ -23,7 +23,10 @@ def fix_vizd_param():
 @roles('collector')
 def fix_redis_uve_conf():
     redis_uve_conf = '/etc/contrail/redis-uve.conf'
-    if os.path.exists(redis_uve_conf): 
+    with settings(warn_only=True):
+        redis_uve_conf_exists = run('ls %s' % redis_uve_conf).succeeded
+
+    if redis_uve_conf_exists:
         run("sed 's/^slaveof/#&/' %s > %s.new" % (redis_uve_conf, redis_uve_conf))
         run("mv %s.new %s" % (redis_uve_conf, redis_uve_conf))
 
