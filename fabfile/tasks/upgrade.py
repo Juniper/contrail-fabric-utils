@@ -16,6 +16,18 @@ RELEASES_WITH_ZOO_3_4_3 = ('1.0', '1.01', '1.02', '1.03', '1.04')
 
 @task
 @EXECUTE_TASK
+@roles('collector')
+def fix_redis_uve_conf():
+    redis_uve_conf = '/etc/contrail/redis-uve.conf'
+    with settings(warn_only=True):
+        redis_uve_conf_exists = run('ls %s' % redis_uve_conf).succeeded
+
+    if redis_uve_conf_exists:
+        run("sed 's/^slaveof/#&/' %s > %s.new" % (redis_uve_conf, redis_uve_conf))
+        run("mv %s.new %s" % (redis_uve_conf, redis_uve_conf))
+
+@task
+@EXECUTE_TASK
 @roles('compute')
 def fixup_agent_param():
     if (detect_ostype() in ['Ubuntu'] and get_release() == '1.04'):
@@ -334,6 +346,7 @@ def upgrade_collector_node(pkg, *args):
             execute(upgrade)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
+            execute('fix_redis_uve_conf')
             execute('restart_collector_node', host_string)
 
 
@@ -392,6 +405,7 @@ def upgrade_all(pkg):
     execute(upgrade)
     execute(upgrade_venv_packages)
     execute(upgrade_pkgs)
+    execute('fix_redis_uve_conf')
     execute(restart_database)
     execute(restart_openstack)
     execute(restore_zookeeper_config)
