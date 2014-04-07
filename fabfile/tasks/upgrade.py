@@ -284,7 +284,7 @@ def cleanup_venv(venv):
             run('apt-get -y --reinstall install contrail-%s' % venv)
 
         if venv == "api-venv":
-            run('apt-get -y --reinstall install python-neutronclient contrail-config')
+            run('apt-get -y --reinstall install python-neutronclient contrail-config contrail-config-extension')
         if venv == "analytics-venv":
             run('apt-get -y --reinstall install python-neutronclient contrail-analytics')
 
@@ -359,6 +359,9 @@ def upgrade_openstack_node(pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             execute(upgrade)
+            with settings(warn_only=True):
+                if get_release() in ['1.05']:
+                    run('apt-get -y remove openstack-dashboard-ubuntu-theme')
             execute(cleanup_venvs)
             execute(upgrade_api_venv_packages)
             execute('upgrade_pkgs_node', host_string)
