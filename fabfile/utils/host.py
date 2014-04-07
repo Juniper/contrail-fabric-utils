@@ -30,10 +30,8 @@ def get_haproxy_opt():
     return haproxy_opt
 
 def get_region_name():
-    region_name_opt = ''
-    testbed.region_name = getattr(testbed, 'region_name', '')
-    if testbed.region_name:
-        region_name_opt = '--region_name %s' %(testbed.region_name)
+    region_name = getattr(testbed, 'region_name', 'RegionOne')
+    region_name_opt = '--region_name %s' %(region_name)
     return region_name_opt
 
 def get_keystone_ip():
