@@ -501,6 +501,9 @@ def upgrade_all(pkg):
     execute(check_and_stop_disable_qpidd_in_openstack)
     execute(check_and_stop_disable_qpidd_in_cfgm)
     execute(upgrade)
+    with settings(warn_only=True):
+        if get_release() in ['1.05']:
+            run('apt-get -y remove openstack-dashboard-ubuntu-theme')
     execute(cleanup_venvs)
     execute(purge_database)
     execute(fix_supervisord_config)
