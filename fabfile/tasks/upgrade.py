@@ -18,9 +18,6 @@ def fix_vizd_param():
     if run('ls /etc/contrail/vizd_param').succeeded:
         run('grep -q ANALYTICS_SYSLOG_PORT /etc/contrail/vizd_param || echo "ANALYTICS_SYSLOG_PORT=-1" >> /etc/contrail/vizd_param')
 
-@task
-@EXECUTE_TASK
-@roles('collector')
 def fix_redis_uve_conf():
     redis_uve_conf = '/etc/contrail/redis-uve.conf'
     with settings(warn_only=True):
@@ -43,7 +40,7 @@ def fixup_agent_param():
 @task
 @serial
 @roles('cfgm')
-def upgrade_zookeeper():
+def start_zookeeper():
     execute("create_install_repo_node", env.host_string)
     run("supervisorctl -s http://localhost:9004 stop contrail-api:0")
     run("supervisorctl -s http://localhost:9004 stop contrail-discovery:0")
@@ -58,13 +55,13 @@ def upgrade_zookeeper():
         if "running" in run("service zookeeper status"):
             run("service zookeeper stop")
 
-    if detect_ostype() in ['Ubuntu']:
-        apt_install(['zookeeper'])
-    else:
-        yum_install(['zookeeper'])
-    with settings(warn_only=True):
-        #http://mail-archives.apache.org/mod_mbox/zookeeper-dev/201304.mbox/%3C20130408030947.8FD7F5073C@tyr.zones.apache.org%3E
-        run('/usr/sbin/useradd --comment "ZooKeeper" --shell /bin/bash -r --groups hadoop --home /usr/share/zookeeper zookeeper')
+    #if detect_ostype() in ['Ubuntu']:
+    #    apt_install(['zookeeper'])
+    #else:
+    #    yum_install(['zookeeper'])
+    #with settings(warn_only=True):
+    #    #http://mail-archives.apache.org/mod_mbox/zookeeper-dev/201304.mbox/%3C20130408030947.8FD7F5073C@tyr.zones.apache.org%3E
+    #    run('/usr/sbin/useradd --comment "ZooKeeper" --shell /bin/bash -r --groups hadoop --home /usr/share/zookeeper zookeeper')
 
     execute("restore_zookeeper_config_node", env.host_string)
     execute("zoolink_node", env.host_string)
@@ -187,6 +184,55 @@ def uninstall_database_node(*args):
                 #install new version, start will happen later after update of all other packages
                 run('yum -y --disablerepo=* --enablerepo=contrail_install_repo install contrail-openstack-database')
 
+@task
+def purge_database_node(*args):
+    for host_string in args:
+        if detect_ostype() == 'Ubuntu':
+            with settings(host_string=host_string, warn_only=True):
+                run('apt-get -y  purge contrail-database') 
+@task
+@EXECUTE_TASK
+@roles('database')
+def purge_database():
+    execute('purge_database_node', env.host_string)
+
+@task
+def fix_supervisord_config_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string):
+            if detect_ostype() == 'Ubuntu':
+                run('apt-get -y  --reinstall -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install contrail-openstack-config') 
+                run('rm /etc/contrail/supervisord_config_files/contrail-zookeeper.ini')
+@task
+@EXECUTE_TASK
+@roles('cfgm')
+def fix_supervisord_config():
+    execute('fix_supervisord_config_node', env.host_string)
+
+@task
+def fix_supervisord_analytics_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string):
+            if detect_ostype() == 'Ubuntu':
+                run('apt-get -y --reinstall -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install contrail-openstack-analytics')
+@task
+@EXECUTE_TASK
+@roles('collector')
+def fix_supervisord_analytics():
+    execute('fix_supervisord_analytics_node', env.host_string)
+
+@task
+def fix_supervisord_control_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string):
+            if detect_ostype() == 'Ubuntu':
+                run('apt-get -y --reinstall -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install contrail-openstack-control')
+@task
+@EXECUTE_TASK
+@roles('control')
+def fix_supervisord_control():
+    execute('fix_supervisord_control_node', env.host_string)
+
 def yum_upgrade():
     run('yum clean all')
     run('yum -y --disablerepo=* --enablerepo=contrail_install_repo update')
@@ -198,7 +244,13 @@ def apt_upgrade():
         #Hack to solve the webui config file issue
         cmd = "yes N | DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes upgrade"
     elif '1.05' in rls:
-        cmd = 'yes N | DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confold" upgrade'
+        cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confold" update'
+        run(cmd)
+        cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confold" dist-upgrade'
+        run(cmd)
+        cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confold" autoremove'
+        run(cmd)
+        return
     else:
         cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes upgrade"
     run(cmd)
@@ -217,6 +269,35 @@ def upgrade_api_venv_packages():
         if run("ls /opt/contrail/api-venv/archive").succeeded:
             run('chmod +x /opt/contrail/api-venv/bin/pip')
             run("source /opt/contrail/api-venv/bin/activate && %s /opt/contrail/api-venv/archive/*" % pip_cmd)
+
+def cleanup_venv(venv):
+    if get_build('contrail-%s' % venv) == get_build():
+        print "Virtual Enviroinment [contrail-%s] is already cleaned up" % venv
+    with settings(warn_only=True):
+        if venv in ['vrouter-ven', 'control-venv', 'database-venv']:
+            with settings(warn_only=True):
+                run('rm -rf /opt/contrail/contrail-%s' % venv)
+                return
+
+        if run("ls /opt/contrail/%s" % venv).succeeded:
+            run("rm -rf /opt/contrail/%s/*" % venv)
+            run('apt-get -y --reinstall install contrail-%s' % venv)
+
+        if venv == "api-venv":
+            run('apt-get -y --reinstall install python-neutronclient contrail-config')
+        if venv == "analytics-venv":
+            run('apt-get -y --reinstall install python-neutronclient contrail-analytics')
+
+@task
+def cleanup_venvs():
+    if detect_ostype() != 'Ubuntu':
+        print "No need to clenup venv packages."
+        return
+    cleanup_venv('api-venv')
+    cleanup_venv('analytics-venv')
+    cleanup_venv('vrouter-venv')
+    cleanup_venv('control-venv')
+    cleanup_venv('database-venv')
 
 @task
 def upgrade_venv_packages():
@@ -256,6 +337,8 @@ def upgrade_database_node(pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             execute(upgrade)
+            execute(cleanup_venvs)
+            execute('purge_database_node', host_string)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
             execute('restart_database_node', host_string)
@@ -276,6 +359,7 @@ def upgrade_openstack_node(pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             execute(upgrade)
+            execute(cleanup_venvs)
             execute(upgrade_api_venv_packages)
             execute('upgrade_pkgs_node', host_string)
             execute('restart_openstack_node', host_string)
@@ -298,6 +382,8 @@ def upgrade_cfgm_node(pkg, *args):
             execute('create_install_repo_node', host_string)
             execute('backup_zookeeper_config_node', host_string)
             execute(upgrade)
+            execute(cleanup_venvs)
+            execute('fix_supervisord_config_node', host_string)
             execute('restore_zookeeper_config_node', host_string)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
@@ -325,6 +411,8 @@ def upgrade_control_node(pkg, *args):
             if os.path.exists('/opt/contrail/contrail_installer/contrail_config_templates/dns.conf.sh'):
                 run("/opt/contrail/contrail_installer/contrail_config_templates/dns.conf.sh")
             execute(upgrade)
+            execute(cleanup_venvs)
+            execute('fix_supervisord_control_node', host_string)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
             execute('restart_control_node', host_string)
@@ -346,9 +434,11 @@ def upgrade_collector_node(pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             execute(upgrade)
+            execute(cleanup_venvs)
+            execute('fix_supervisord_analytics_node', host_string)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
-            execute('fix_redis_uve_conf')
+            fix_redis_uve_conf()
             fix_vizd_param()
             execute('restart_collector_node', host_string)
 
@@ -369,6 +459,7 @@ def upgrade_webui_node(pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             execute(upgrade)
+            execute(cleanup_venvs)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
             execute('restart_webui_node', host_string)
@@ -390,6 +481,7 @@ def upgrade_vrouter_node(pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             execute(upgrade)
+            execute(cleanup_venvs)
             execute(upgrade_venv_packages)
             execute('setup_vrouter_node', host_string)
 
@@ -406,10 +498,15 @@ def upgrade_all(pkg):
     execute(check_and_stop_disable_qpidd_in_openstack)
     execute(check_and_stop_disable_qpidd_in_cfgm)
     execute(upgrade)
+    execute(cleanup_venvs)
+    execute(purge_database)
+    execute(fix_supervisord_config)
+    execute(fix_supervisord_analytics)
+    execute(fix_supervisord_control)
     execute(upgrade_venv_packages)
     execute(upgrade_pkgs)
     fix_vizd_param()
-    execute('fix_redis_uve_conf')
+    fix_redis_uve_conf()
     execute(restart_database)
     execute(restart_openstack)
     execute(restore_zookeeper_config)
@@ -439,8 +536,8 @@ def upgrade_contrail(pkg):
         execute('install_pkg_all', pkg)
         execute(check_and_stop_disable_qpidd_in_openstack)
         execute(check_and_stop_disable_qpidd_in_cfgm)
-        execute('upgrade_zookeeper')
         execute('upgrade_cfgm', pkg)
+        execute('start_zookeeper')
         execute(check_and_setup_rabbitmq_cluster)
         execute('setup_cfgm')
         execute('start_api_services')
@@ -469,8 +566,8 @@ def upgrade_without_openstack(pkg):
     execute(backup_zookeeper_config)
     execute('install_pkg_all', pkg)
     execute(check_and_stop_disable_qpidd_in_cfgm)
-    execute('upgrade_zookeeper')
     execute('upgrade_cfgm', pkg)
+    execute('start_zookeeper')
     execute(check_and_setup_rabbitmq_cluster)
     execute(setup_cfgm)
     execute('start_api_services')
