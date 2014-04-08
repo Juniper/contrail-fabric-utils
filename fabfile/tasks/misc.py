@@ -86,3 +86,67 @@ def run_cmd(host_string,cmd):
     with settings(host_string=host_string):
         run(cmd)
 
+@task
+def create_default_secgrp_rules():
+    if detect_ostype() != 'Ubuntu':
+        return
+    try:
+        from vnc_api import vnc_api
+        from vnc_api.gen.resource_xsd import PolicyRuleType, PolicyEntriesType, AddressType, PortType, SubnetType
+    except ImportError:
+        print "Task [create_default_secgrp_rules] can be executed only from the cfgm node"
+        return
+    vnc_api_ip = env.roledefs['cfgm'][0]
+    vnc_api_port = 8082
+    auth_user, auth_passwd =  get_openstack_credentials()
+    auth_tenant = 'admin'
+    try:
+        vnc_lib = vnc_api.VncApi(
+            api_server_host=vnc_api_ip,
+            api_server_port=vnc_api_port,
+            username=auth_user,
+            password=auth_passwd,
+            tenant_name=auth_tenant)
+    except Exception ,err:
+        print "Unable to connect to API-server %s:%s, as %s/%s" % (vnc_api_ip, vnc_api_port, auth_user, auth_password)
+        print "ERROR: \n%s" % err
+
+    projects = vnc_lib.projects_list()['projects']
+    project_ids = set([proj['uuid'] for proj in projects])
+    for proj_uuid in project_ids:
+        proj_obj = vnc_lib.project_read(id=proj_uuid)
+
+        for sg in proj_obj.get_security_groups():
+            sg_obj = vnc_lib.security_group_read(id=sg['uuid'])
+            if sg_obj.name != 'default':
+                continue
+
+            sgr_uuid = str(uuid.uuid4())
+            ingress_rule = PolicyRuleType(rule_uuid=sgr_uuid, direction='>',
+                                          protocol='any',
+                                          src_addresses=[
+                                              AddressType(
+                                                  security_group=proj_obj.get_fq_name_str() + ':' + 'default')],
+                                          src_ports=[PortType(0, 65535)],
+                                          dst_addresses=[
+                                              AddressType(security_group='local')],
+                                          dst_ports=[PortType(0, 65535)])
+            sg_rules = PolicyEntriesType([ingress_rule])
+
+            sgr_uuid = str(uuid.uuid4())
+            egress_rule = PolicyRuleType(rule_uuid=sgr_uuid, direction='>',
+                                         protocol='any',
+                                         src_addresses=[
+                                             AddressType(security_group='local')],
+                                         src_ports=[PortType(0, 65535)],
+                                         dst_addresses=[
+                                             AddressType(
+                                                 subnet=SubnetType('0.0.0.0', 0))],
+                                         dst_ports=[PortType(0, 65535)])
+            sg_rules.add_policy_rule(egress_rule)
+
+            # update security group
+            sg_obj.security_group_entries = sg_rules
+            vnc_lib.security_group_update(sg_obj)
+            print "Updated default security group rules in project %s" % proj_obj.name
+# end create_default_secgrp_rules

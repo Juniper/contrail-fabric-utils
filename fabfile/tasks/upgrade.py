@@ -3,7 +3,7 @@ import os
 from fabfile.utils.fabos import *
 from fabfile.config import *
 from fabfile.tasks.services import *
-from fabfile.tasks.misc import rmmod_vrouter
+from fabfile.tasks.misc import rmmod_vrouter, create_default_secgrp_rules
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.helpers import compute_reboot, reboot_node
 from fabfile.tasks.provision import setup_vrouter, setup_vrouter_node
@@ -524,6 +524,7 @@ def upgrade_all(pkg):
     with settings(host_string=env.roledefs['compute'][0]):
         if detect_ostype() in ['Ubuntu']:
             execute(rmmod_vrouter)
+    execute(create_default_secgrp_rules)
     execute(compute_reboot)
     #Clear the connections cache
     connections.clear()
@@ -557,6 +558,7 @@ def upgrade_contrail(pkg):
         with settings(host_string=env.roledefs['compute'][0]):
             if detect_ostype() in ['Ubuntu']:
                 execute(rmmod_vrouter)
+        execute(create_default_secgrp_rules)
         execute(compute_reboot)
         #Clear the connections cache
         connections.clear()
@@ -586,6 +588,7 @@ def upgrade_without_openstack(pkg):
     with settings(host_string=env.roledefs['compute'][0]):
         if detect_ostype() in ['Ubuntu']:
             execute(rmmod_vrouter)
+    execute(create_default_secgrp_rules)
     execute(compute_reboot)
     #Clear the connections cache
     connections.clear()
