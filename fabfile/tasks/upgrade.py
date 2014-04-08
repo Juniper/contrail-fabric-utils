@@ -1,4 +1,5 @@
 import os
+import copy
 
 from fabfile.utils.fabos import *
 from fabfile.config import *
@@ -12,6 +13,7 @@ from fabfile.tasks.install import install_pkg_all, create_install_repo,\
 
 RELEASES_WITH_QPIDD = ('1.0', '1.01', '1.02', '1.03')
 RELEASES_WITH_ZOO_3_4_3 = ('1.0', '1.01', '1.02', '1.03', '1.04')
+VENVS = ['vrouter-ven', 'control-venv', 'database-venv', 'api-venv', 'analytics-venv']
 
 
 def fix_vizd_param():
@@ -279,19 +281,23 @@ def cleanup_venv(venv):
     if get_build('contrail-%s' % venv) == get_build():
         print "Virtual Enviroinment [contrail-%s] is already cleaned up" % venv
     with settings(warn_only=True):
-        if venv in ['vrouter-ven', 'control-venv', 'database-venv']:
+        venvs = copy.deepcopy(VENVS)
+        if env.host_string in env.roledefs['cfgm']:
+            venvs.remove('api-venv')
+        if env.host_string in env.roledefs['collector']:
+            venvs.remove('analytics-venv')
+        if venv in venvs:
             with settings(warn_only=True):
-                run('rm -rf /opt/contrail/contrail-%s' % venv)
+                run('rm -rf /opt/contrail/%s' % venv)
                 return
 
         if run("ls /opt/contrail/%s" % venv).succeeded:
             run("rm -rf /opt/contrail/%s/*" % venv)
             run('apt-get -y --reinstall install contrail-%s' % venv)
-
-        if venv == "api-venv":
-            run('apt-get -y --reinstall install python-neutronclient contrail-config contrail-config-extension')
-        if venv == "analytics-venv":
-            run('apt-get -y --reinstall install python-neutronclient contrail-analytics')
+            if venv == "api-venv":
+                run('apt-get -y --reinstall install python-neutronclient contrail-config contrail-config-extension')
+            if venv == "analytics-venv":
+                run('apt-get -y --reinstall install contrail-analytics')
 
 @task
 def cleanup_venvs():
