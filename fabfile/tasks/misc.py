@@ -88,6 +88,7 @@ def run_cmd(host_string,cmd):
         run(cmd)
 
 @task
+@hosts(*env.roledefs['cfgm'][:1])
 def create_default_secgrp_rules():
     if detect_ostype() != 'Ubuntu':
         return

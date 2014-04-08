@@ -382,6 +382,11 @@ def create_install_repo_node(*args):
     """Creates contrail install repo in one or list of nodes. USAGE:fab create_install_repo_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with  settings(host_string=host_string, warn_only=True):
+            contrail_setup_pkg = run("ls /opt/contrail/contrail_install_repo/contrail-setup*")
+            contrail_setup_pkgs = contrail_setup_pkg.split('\n')
+            if (len(contrail_setup_pkgs) == 1 and get_release() in contrail_setup_pkgs[0]):
+                print "Contrail install repo created already."
+                return
             run("sudo /opt/contrail/contrail_packages/setup.sh")
 
 @roles('build')
