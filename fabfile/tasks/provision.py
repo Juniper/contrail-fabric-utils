@@ -431,8 +431,10 @@ def setup_openstack():
     #TODO Need to remove this finally
     if detect_ostype() == 'Ubuntu':
         execute("setup_openstack_node", env.host_string)
-    if is_package_installed('contrail-openstack-dashboard'):
-        execute('setup_contrail_horizon_node', env.host_string)
+        # keep this check under ubuntu only, when we will have contrail dashboard for 
+        # centos-havana, this will be revisited
+        if is_package_installed('contrail-openstack-dashboard'):
+            execute('setup_contrail_horizon_node', env.host_string)
 
 @roles('openstack')
 @task
