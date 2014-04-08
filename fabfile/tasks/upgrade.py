@@ -29,6 +29,9 @@ def fix_redis_uve_conf():
             run("sed 's/^slaveof/#&/' %s > %s.new" % (redis_uve_conf, redis_uve_conf))
             run("mv %s.new %s" % (redis_uve_conf, redis_uve_conf))
 
+        run('rm -f /etc/contrail/sentinel.conf')
+        run('rm -f /etc/contrail/supervisord_analytics_files/redis-sentinel.ini')
+
 @task
 @EXECUTE_TASK
 @roles('compute')
@@ -502,6 +505,7 @@ def upgrade_all(pkg):
     execute(create_install_repo)
     execute(check_and_stop_disable_qpidd_in_openstack)
     execute(check_and_stop_disable_qpidd_in_cfgm)
+    execute('stop_collector')
     execute(upgrade)
     with settings(warn_only=True):
         if get_release() in ['1.05']:
@@ -551,6 +555,7 @@ def upgrade_contrail(pkg):
         execute('setup_cfgm')
         execute('start_api_services')
         execute('upgrade_database', pkg)
+        execute('stop_collector')
         execute('upgrade_collector', pkg)
         execute('upgrade_openstack', pkg)
         execute('upgrade_control', pkg)
