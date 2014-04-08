@@ -51,11 +51,6 @@ def stop_control():
 def stop_collector():
     """stops the contrail collector services."""
     run('service supervisor-analytics stop')
-    run('service contrail-collector stop')
-    run('service contrail-opserver stop')
-    run('service contrail-qe stop')
-    run('service redis-query stop')
-    run('service redis-uve stop')
 
 @task
 @roles('compute')
