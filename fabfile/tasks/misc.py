@@ -1,10 +1,11 @@
 import os
 import re
+import uuid
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.tasks.helpers import reboot_node
-from fabfile.tasks.provision import setup_vrouter_node
+from fabfile.tasks.provision import setup_vrouter_node, get_openstack_credentials
 from fabfile.tasks.install import create_install_repo_node, install_interface_name_node, install_vrouter_node
 
 @task
