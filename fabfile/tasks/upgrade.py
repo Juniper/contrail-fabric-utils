@@ -23,9 +23,11 @@ def fix_redis_uve_conf():
     with settings(warn_only=True):
         redis_uve_conf_exists = run('ls %s' % redis_uve_conf).succeeded
 
-    if redis_uve_conf_exists:
-        run("sed 's/^slaveof/#&/' %s > %s.new" % (redis_uve_conf, redis_uve_conf))
-        run("mv %s.new %s" % (redis_uve_conf, redis_uve_conf))
+        if redis_uve_conf_exists:
+            run('service redis-uve stop')
+            run('rm -f /var/lib/redis/dump-uve.rdb')
+            run("sed 's/^slaveof/#&/' %s > %s.new" % (redis_uve_conf, redis_uve_conf))
+            run("mv %s.new %s" % (redis_uve_conf, redis_uve_conf))
 
 @task
 @EXECUTE_TASK
