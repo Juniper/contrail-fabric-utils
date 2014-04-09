@@ -240,6 +240,7 @@ def upgrade_openstack_node(pkg, *args):
             execute(upgrade)
             execute(upgrade_api_venv_packages)
             execute('upgrade_pkgs_node', host_string)
+            execute('chkconfig_rabbitmq_on_node', host_string)
             execute('restart_openstack_node', host_string)
 
 

@@ -85,7 +85,13 @@ def restart_database_node(*args):
 @task
 @roles('openstack')
 def chkconfig_rabbitmq_on():
-    run('chkconfig rabbitmq-server on')
+    execute('chkconfig_rabbitmq_on_node', env.host_string)
+
+@task
+def chkconfig_rabbitmq_on_node(*args):
+    for host_string in args:
+        with  settings(host_string=host_string):
+           run('chkconfig rabbitmq-server on')
 
 @task
 @roles('openstack')
