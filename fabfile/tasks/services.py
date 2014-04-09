@@ -123,8 +123,9 @@ def restart_cfgm_node(*args):
     for host_string in args:
         with  settings(host_string=host_string):
             execute('zoolink_node', host_string)
-            zoo_svc = 'contrail-zookeeper'
-            if detect_ostype() in ['Ubuntu']:
+            if '3.4.3' in get_release('zookeeper'):
+                zoo_svc = 'contrail-zookeeper'
+            else:
                 zoo_svc = 'zookeeper'
             run('service %s restart' % zoo_svc)
     sleep(5)

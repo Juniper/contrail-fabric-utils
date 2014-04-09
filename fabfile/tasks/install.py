@@ -337,6 +337,8 @@ def install_vrouter_node(*args):
     for host_string in args:
         with  settings(host_string=host_string):
             pkg = ['contrail-openstack-vrouter']
+            if getattr(testbed, 'haproxy', False):
+                pkg.append('haproxy')
             if detect_ostype() == 'Ubuntu':
                 run('echo "manual" >> /etc/init/supervisor-vrouter.override')
                 apt_install(pkg)
