@@ -84,6 +84,11 @@ def restart_database_node(*args):
 
 @task
 @roles('openstack')
+def chkconfig_rabbitmq_on():
+    run('chkconfig rabbitmq-server on')
+
+@task
+@roles('openstack')
 def restart_openstack():
     """Restarts the contrail openstack services."""
     execute('restart_openstack_node', env.host_string)

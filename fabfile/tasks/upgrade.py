@@ -369,6 +369,7 @@ def upgrade_all(pkg):
     execute(upgrade_venv_packages)
     execute(upgrade_pkgs)
     execute(restart_database)
+    execute(chkconfig_rabbitmq_on)
     execute(restart_openstack)
     execute(restore_zookeeper_config)
     execute(restart_cfgm)
