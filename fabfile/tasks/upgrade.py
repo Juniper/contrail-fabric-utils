@@ -57,9 +57,11 @@ def upgrade_zookeeper_node(*args):
             if detect_ostype() == 'Ubuntu':
                 print "No need to upgrade specifically zookeeper in ubuntu."
                 return
-            run('rpm -e --nodeps zookeeper zookeeper-lib zkpython')
+            with settings(warn_only=True):
+                run('rpm -e --nodeps zookeeper zookeeper-lib zkpython')
             yum_install(['zookeeper'])
             run('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo reinstall contrail-config')
+            run('chkconfig zookeeper on')
 
 @task
 @serial
@@ -77,8 +79,9 @@ def start_zookeeper():
     if '3.4.3' in zoo_release and zoo_release != '3.4.3':
         run("supervisorctl -s http://localhost:9004 stop contrail-zookeeper")
     else:
-        if "running" in run("service zookeeper status"):
-            run("service zookeeper stop")
+        with settings(warn_only=True):
+            if "running" in run("service zookeeper status"):
+                run("service zookeeper stop")
 
     #if detect_ostype() in ['Ubuntu']:
     #    apt_install(['zookeeper'])
@@ -181,6 +184,35 @@ def restore_zookeeper_config_node(*args):
                 else:
                     run('cp /etc/contrail/zoo.cfg.rpmsave /etc/zookeeper/zoo.cfg')
                 run('rm -f /etc/contrail/zoo.cfg.rpmsave')
+
+@task
+@parallel
+@roles('cfgm')
+def backup_discovery_ini():
+    execute("backup_discovery_ini_node", env.host_string)
+
+@task
+def backup_discovery_ini_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            if (detect_ostype() in ['centos']): 
+                if run('ls /etc/contrail/supervisord_config_files/contrail-discovery.ini').succeeded:
+                    run('cp /etc/contrail/supervisord_config_files/contrail-discovery.ini /etc/contrail/contrail-discovery.ini.save')
+
+@task
+@parallel
+@roles('cfgm')
+def restore_discovery_ini():
+    execute("restore_discovery_ini_node", env.host_string)
+
+@task
+def restore_discovery_ini_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            if (detect_ostype() in ['centos']): 
+                if run('ls /etc/contrail/contrail-discovery.ini.save').succeeded:
+                    run('cp /etc/contrail/contrail-discovery.ini.save /etc/contrail/supervisord_config_files/contrail-discovery.ini')
+                    run('rm -f /etc/contrail/contrail-discovery.ini.save')
 
 @task
 @EXECUTE_TASK
@@ -414,7 +446,7 @@ def upgrade_cfgm_node(pkg, *args):
             execute('create_install_repo_node', host_string)
             execute('backup_zookeeper_config_node', host_string)
             execute(upgrade)
-            excecute('upgrade_zookeeper_node', host_string)
+            execute('upgrade_zookeeper_node', host_string)
             execute(cleanup_venvs)
             execute('fix_supervisord_config_node', host_string)
             execute('restore_zookeeper_config_node', host_string)
@@ -531,6 +563,8 @@ def upgrade_all(pkg):
     execute(check_and_stop_disable_qpidd_in_openstack)
     execute(check_and_stop_disable_qpidd_in_cfgm)
     execute('stop_collector')
+    # needed only for centos all in one box as setup_cfgm is not run.
+    execute(backup_discovery_ini)
     execute(upgrade)
     execute(upgrade_zookeeper)
     with settings(warn_only=True):
@@ -548,6 +582,8 @@ def upgrade_all(pkg):
     execute(restart_database)
     execute(restart_openstack)
     execute(restore_zookeeper_config)
+    # needed only for centos all in one box as setup_cfgm is not run.
+    execute(restore_discovery_ini)
     execute(restart_cfgm)
     execute(restart_control)
     execute(restart_collector)
