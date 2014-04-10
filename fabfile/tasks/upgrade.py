@@ -256,7 +256,7 @@ def purge_database():
 @task
 def fix_supervisord_config_node(*args):
     for host_string in args:
-        with settings(host_string=host_string):
+        with settings(host_string=host_string, warn_only=True):
             if detect_ostype() == 'Ubuntu':
                 run('apt-get -y  --reinstall -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install contrail-openstack-config') 
                 run('rm /etc/contrail/supervisord_config_files/contrail-zookeeper.ini')
@@ -330,6 +330,7 @@ def upgrade_api_venv_packages():
 def cleanup_venv(venv):
     if get_build('contrail-%s' % venv) == get_build():
         print "Virtual Enviroinment [contrail-%s] is already cleaned up" % venv
+        return
     with settings(warn_only=True):
         venvs = copy.deepcopy(VENVS)
         if env.host_string in env.roledefs['cfgm']:

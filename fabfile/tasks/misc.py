@@ -90,8 +90,6 @@ def run_cmd(host_string,cmd):
 @task
 @hosts(*env.roledefs['cfgm'][:1])
 def create_default_secgrp_rules():
-    if detect_ostype() != 'Ubuntu':
-        return
     try:
         from vnc_api import vnc_api
         from vnc_api.gen.resource_xsd import PolicyRuleType, PolicyEntriesType, AddressType, PortType, SubnetType
