@@ -364,9 +364,6 @@ $__contrail_quantum_servers__
 @task
 def setup_cfgm_node(*args):
     """Provisions config services in one or list of nodes. USAGE: fab setup_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
-    # Enable settings for Ubuntu
-    enable_haproxy()
-    #qpidd_changes_for_ubuntu()
     
     first_cfgm_ip = hstr_to_ip(get_control_host_string(
                                    env.roledefs['cfgm'][0]))
@@ -374,6 +371,9 @@ def setup_cfgm_node(*args):
     quantum_port = '9697'
 
     for host_string in args:
+        # Enable settings for Ubuntu
+        enable_haproxy()
+        #qpidd_changes_for_ubuntu()
         #cfgm_host = env.host_string
         cfgm_host=get_control_host_string(host_string)
         tgt_ip = hstr_to_ip(cfgm_host)
@@ -736,11 +736,11 @@ def setup_vrouter_node(*args):
     #    print "contrail-agent package not installed. Install it and then run setup_vrouter"
     #    return
     
-    # Enable haproxy for Ubuntu
-    enable_haproxy()
-    #qpidd_changes_for_ubuntu()
     
     for host_string in args:
+        # Enable haproxy for Ubuntu
+        enable_haproxy()
+        #qpidd_changes_for_ubuntu()
         ncontrols = len(env.roledefs['control'])
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]

@@ -1,6 +1,6 @@
 from fabfile.config import *
 from misc import zoolink
-from fabfile.utils.fabos import detect_ostype
+from fabfile.utils.fabos import detect_ostype, get_release
 
 @task
 def stop_and_disable_qpidd():
@@ -123,7 +123,8 @@ def restart_cfgm_node(*args):
     for host_string in args:
         with  settings(host_string=host_string):
             execute('zoolink_node', host_string)
-            if '3.4.3' in get_release('zookeeper'):
+            zoo_release = get_release('zookeeper')
+            if '3.4.3' in zoo_release and zoo_release != '3.4.3':
                 zoo_svc = 'contrail-zookeeper'
             else:
                 zoo_svc = 'zookeeper'

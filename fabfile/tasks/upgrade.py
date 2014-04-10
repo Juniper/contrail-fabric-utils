@@ -45,6 +45,23 @@ def fixup_agent_param():
         run("mv agent_param.newer /etc/contrail/agent_param")
 
 @task
+@EXECUTE_TASK
+@roles('cfgm')
+def upgrade_zookeeper():
+    execute('upgrade_zookeeper_node', env.host_string)
+
+@task
+def upgrade_zookeeper_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string):
+            if detect_ostype() == 'Ubuntu':
+                print "No need to upgrade specifically zookeeper in ubuntu."
+                return
+            run('rpm -e --nodeps zookeeper zookeeper-lib zkpython')
+            yum_install(['zookeeper'])
+            run('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo reinstall contrail-config')
+
+@task
 @serial
 @roles('cfgm')
 def start_zookeeper():
@@ -56,7 +73,8 @@ def start_zookeeper():
     run("supervisorctl -s http://localhost:9004 stop redis-config")
     run("supervisorctl -s http://localhost:9004 stop contrail-config-nodemgr")
     run("supervisorctl -s http://localhost:9004 stop ifmap")
-    if '3.4.3' in get_release('zookeeper'):
+    zoo_release = get_release('zookeeper')
+    if '3.4.3' in zoo_release and zoo_release != '3.4.3':
         run("supervisorctl -s http://localhost:9004 stop contrail-zookeeper")
     else:
         if "running" in run("service zookeeper status"):
@@ -396,6 +414,7 @@ def upgrade_cfgm_node(pkg, *args):
             execute('create_install_repo_node', host_string)
             execute('backup_zookeeper_config_node', host_string)
             execute(upgrade)
+            excecute('upgrade_zookeeper_node', host_string)
             execute(cleanup_venvs)
             execute('fix_supervisord_config_node', host_string)
             execute('restore_zookeeper_config_node', host_string)
@@ -513,6 +532,7 @@ def upgrade_all(pkg):
     execute(check_and_stop_disable_qpidd_in_cfgm)
     execute('stop_collector')
     execute(upgrade)
+    execute(upgrade_zookeeper)
     with settings(warn_only=True):
         if get_release() in ['1.05']:
             run('apt-get -y remove openstack-dashboard-ubuntu-theme')
