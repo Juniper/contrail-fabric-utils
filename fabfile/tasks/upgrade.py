@@ -13,7 +13,7 @@ from fabfile.tasks.install import install_pkg_all, create_install_repo,\
 
 RELEASES_WITH_QPIDD = ('1.0', '1.01', '1.02', '1.03')
 RELEASES_WITH_ZOO_3_4_3 = ('1.0', '1.01', '1.02', '1.03', '1.04')
-VENVS = ['vrouter-ven', 'control-venv', 'database-venv', 'api-venv', 'analytics-venv']
+VENVS = ['vrouter-venv', 'control-venv', 'database-venv', 'api-venv', 'analytics-venv']
 
 
 def fix_vizd_param():
