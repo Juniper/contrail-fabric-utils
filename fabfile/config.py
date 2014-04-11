@@ -29,8 +29,16 @@ class Logger(object):
     def __init__(self, filename="fabric.log"):
         self.terminal = sys.stdout
         self.log = open(filename, "a")
+        self.plus_timestamp = True
 
     def write(self, message):
+        time_stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S:%f')
+        if '\n' in message:
+            self.plus_timestamp = True
+        if self.plus_timestamp:
+            message = message.replace('\n', '\n%s: ' %time_stamp)
+            self.plus_timestamp = False
+
         self.terminal.write(message)
         self.log.write(message)
 
