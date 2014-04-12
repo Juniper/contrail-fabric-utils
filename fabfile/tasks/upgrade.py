@@ -432,7 +432,7 @@ def upgrade_without_openstack(pkg):
     execute('upgrade_zookeeper')
     execute('upgrade_cfgm', pkg)
     execute(check_and_setup_rabbitmq_cluster)
-    execute(setup_cfgm)
+    execute('setup_cfgm')
     execute('start_api_services')
     execute('upgrade_database', pkg)
     execute('upgrade_collector', pkg)
