@@ -264,6 +264,11 @@ def fix_supervisord_config_node(*args):
             if detect_ostype() == 'Ubuntu':
                 run('apt-get -y  --reinstall -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install contrail-openstack-config') 
                 run('rm /etc/contrail/supervisord_config_files/contrail-zookeeper.ini')
+
+            # config does not use redis anymore
+            run('rm -f /etc/contrail/redis_config.conf')
+            run('rm -f /etc/contrail/supervisord_config_files/redis-config.ini')
+
 @task
 @EXECUTE_TASK
 @roles('cfgm')
