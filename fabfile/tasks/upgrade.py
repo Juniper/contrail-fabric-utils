@@ -34,6 +34,10 @@ def fix_redis_uve_conf():
         run('rm -f /etc/contrail/sentinel.conf')
         run('rm -f /etc/contrail/supervisord_analytics_files/redis-sentinel.ini')
 
+    if (detect_ostype() in ['centos'] and get_release() == '1.05'):
+        with settings(warn_only=True):
+            run('mv -f /etc/contrail/supervisord_analytics.conf.rpmnew /etc/contrail/supervisord_analytics.conf')
+
 @task
 @EXECUTE_TASK
 @roles('compute')
