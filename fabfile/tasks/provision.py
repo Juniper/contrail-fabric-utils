@@ -553,6 +553,8 @@ def setup_database():
 def setup_database_node(*args):
     """Provisions database services in one or list of nodes. USAGE: fab setup_database_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
+        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+        cfgm_ip = hstr_to_ip(cfgm_host)
         database_host = host_string
         database_host_password=env.passwords[host_string]
         tgt_ip = hstr_to_ip(get_control_host_string(database_host))
@@ -561,7 +563,7 @@ def setup_database_node(*args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisord-contrail-database.override')
             with cd(INSTALLER_DIR):
-                run_cmd = "PASSWORD=%s python setup-vnc-database.py --self_ip %s " % (database_host_password, tgt_ip)
+                run_cmd = "PASSWORD=%s python setup-vnc-database.py --self_ip %s --cfgm_ip %s " % (database_host_password, tgt_ip, cfgm_ip)
                 database_dir = get_database_dir()
                 if database_dir is not None:
                     run_cmd += "--data_dir %s " % (database_dir)
