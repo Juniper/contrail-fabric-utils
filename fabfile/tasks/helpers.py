@@ -595,13 +595,16 @@ def increase_ulimits():
     '''
     Increase ulimit in /etc/init.d/mysqld /etc/init/mysql.conf /etc/init.d/rabbitmq-server files
     '''
-    if detect_ostype() != 'Ubuntu':
-        return
     with settings(warn_only = True):
-        run("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql") 
-        run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
-        run("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
-        run("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/mysql/my.cnf")
+        if detect_ostype() == 'Ubuntu':
+            run("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql")
+            run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
+            run("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
+            run("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/mysql/my.cnf")
+        else:
+            run("sed -i '/start(){/ a\    ulimit -n 10240' /etc/init.d/mysqld")
+            run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
+            run("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/my.cnf")
 
 @roles('cfgm','database','control','collector')
 @task
