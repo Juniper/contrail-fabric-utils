@@ -710,4 +710,24 @@ def validate_hosts():
     
     # Check if all hosts are reachable by each other using their hostnames
     execute(full_mesh_ping_by_name)
-        
+
+@task
+@roles('openstack')
+def reboot_vm(vmid='all', mode='soft'):
+    flag = ''
+    if mode == 'hard':
+        flag = '--hard'
+
+    if vmid != 'all':
+        with settings(warn_only=True):
+            run('source /etc/contrail/openstackrc; nova reboot %s %s' % (flag, vmid))
+        return
+
+    print "Rebooting all the VM's"
+    nova_list = run ("source /etc/contrail/openstackrc; nova list")
+    nova_list = nova_list.split('\r\n')
+    nova_list = nova_list[3:-1]
+    for vm_info in nova_list:
+        vm_id = vm_info.split('|')[1]
+        with settings(warn_only=True):
+            run('source /etc/contrail/openstackrc; nova reboot %s %s' % (flag, vm_id))
