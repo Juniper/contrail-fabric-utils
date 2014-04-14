@@ -122,17 +122,18 @@ def verify_cluster_status():
 
 @task
 @roles('build')
-def setup_rabbitmq_cluster():
+def setup_rabbitmq_cluster(force=False):
     """Task to cluster the rabbit servers."""
     if len(env.roledefs['cfgm']) <= 1:
         print "Single cfgm cluster, skipping rabbitmq cluster setup."
         return
 
-    with settings(warn_only=True):
-        result = execute(verify_cluster_status)
-    if result and False not in result.values():
-        print "RabbitMQ cluster is up and running; No need to cluster again."
-        return
+    if not force:
+        with settings(warn_only=True):
+            result = execute(verify_cluster_status)
+        if result and False not in result.values():
+            print "RabbitMQ cluster is up and running; No need to cluster again."
+            return
 
     rabbitmq_cluster_uuid = getattr(testbed, 'rabbitmq_cluster_uuid', None)
     if not rabbitmq_cluster_uuid:
