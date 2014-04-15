@@ -16,6 +16,18 @@ RELEASES_WITH_ZOO_3_4_3 = ('1.0', '1.01', '1.02', '1.03', '1.04')
 VENVS = ['vrouter-venv', 'control-venv', 'database-venv', 'api-venv', 'analytics-venv']
 
 
+@task
+def backup_source_list():
+    run('mv /etc/apt/sources.list /etc/apt/sources.list.upgradesave')
+
+@task
+def create_contrail_source_list():
+    run('echo "deb file:/opt/contrail/contrail_install_repo ./" > /etc/apt/sources.list')
+@task
+def restore_source_list():
+    with settings(warn_only=True):
+        run('mv /etc/apt/sources.list.upgradesave /etc/apt/sources.list')
+
 def fix_vizd_param():
     if run('ls /etc/contrail/vizd_param').succeeded:
         run('grep -q ANALYTICS_SYSLOG_PORT /etc/contrail/vizd_param || echo "ANALYTICS_SYSLOG_PORT=-1" >> /etc/contrail/vizd_param')
@@ -304,6 +316,8 @@ def yum_upgrade():
     run('yum -y --disablerepo=* --enablerepo=contrail_install_repo update')
 
 def apt_upgrade():
+    execute('backup_source_list')
+    execute('create_contrail_source_list')
     run(' apt-get clean')
     rls = get_release()
     if '1.04' in rls:
@@ -316,10 +330,12 @@ def apt_upgrade():
         run(cmd)
         cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confold" autoremove'
         run(cmd)
+        execute('restore_source_list')
         return
     else:
         cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes upgrade"
     run(cmd)
+    execute('restore_source_list')
     
 @task
 def upgrade():
