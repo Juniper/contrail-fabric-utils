@@ -7,12 +7,12 @@ def hstr_to_ip(host_string):
     return host_string.split('@')[1]
 
 def get_control_host_string(mgmt_host):
-    isPresent= getattr(testbed, 'control', None)
-    if isPresent:
-        host_ip=getattr(testbed, 'control', None)[mgmt_host]['ip']
-        ip = str(IPNetwork(host_ip).ip)
-        user= mgmt_host.split('@')[0]
-        host_details= user+'@'+ip
+    ctrl_ip_info= getattr(testbed, 'control_data', None)
+    if ctrl_ip_info:
+        if mgmt_host in ctrl_ip_info.keys():
+            ip = str(IPNetwork(ctrl_ip_info[mgmt_host]['ip']).ip)
+            user= mgmt_host.split('@')[0]
+            host_details= user+'@'+ip
     else :
         host_details= mgmt_host
     return host_details
