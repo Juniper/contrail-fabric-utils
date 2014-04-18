@@ -432,10 +432,8 @@ def setup_openstack():
     #TODO Need to remove this finally
     if detect_ostype() == 'Ubuntu':
         execute("setup_openstack_node", env.host_string)
-        # keep this check under ubuntu only, when we will have contrail dashboard for 
-        # centos-havana, this will be revisited
-        if is_package_installed('contrail-openstack-dashboard'):
-            execute('setup_contrail_horizon_node', env.host_string)
+    if is_package_installed('contrail-openstack-dashboard'):
+        execute('setup_contrail_horizon_node', env.host_string)
 
 @roles('openstack')
 @task
@@ -471,18 +469,37 @@ def setup_openstack_node(*args):
 @roles('openstack')
 @task
 def setup_contrail_horizon_node(*args):
-    ''' 
+    '''
     Configure horizon to pick up contrail customization
+    Based on OS and SKU type pick conf file in following order:
+    1. /etc/openstack-dashboard/local_settings.py
+    2. /etc/openstack-dashboard/local_settings
+    3. /usr/lib/python2.6/site-packages/openstack_dashboard/local/local_settings.py
     '''
     file_name = '/etc/openstack-dashboard/local_settings.py'
+    if not (os.path.isfile(file_name)):
+        file_name = '/etc/openstack-dashboard/local_settings'
+    if not (os.path.isfile(file_name)):
+        file_name = '/usr/lib/python2.6/site-packages/openstack_dashboard/local/local_settings.py'
+    if not (os.path.isfile(file_name)):
+        return
+
     pattern='^HORIZON_CONFIG.*customization_module.*'
     line = '''HORIZON_CONFIG[\'customization_module\'] = \'contrail_openstack_dashboard.overrides\' '''
     insert_line_to_file(pattern = pattern, line = line, file_name = file_name)
+
     pattern = 'LOGOUT_URL.*'
-    line = '''LOGOUT_URL='/horizon/auth/logout/' '''
+    if detect_ostype() == 'Ubuntu':
+        line = '''LOGOUT_URL='/horizon/auth/logout/' '''
+        web_restart = 'service apache2 restart'
+    else:
+        line = '''LOGOUT_URL='/dashboard/auth/logout/' '''
+        web_restart = 'service httpd restart'
+
     insert_line_to_file(pattern = pattern, line = line, file_name = file_name)
+
     for host_string in args:
-        sudo('service apache2 restart')
+        sudo(web_restart)
 #end setup_contrail_horizon_node
         
 @task
