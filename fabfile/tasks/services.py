@@ -40,6 +40,29 @@ def start_cfgm():
         run('service supervisor-config start')
 
 @task
+@roles('database')
+def start_database():
+    """Starts the contrail database services."""
+    run('service supervisord-contrail-database start')
+
+@task
+@roles('control')
+def start_control():
+    """Starts the contrail control services."""
+    run('service supervisor-control start')
+
+@task
+@roles('webui')
+def start_webui():
+    """starts the contrail webui services."""
+    run('service supervisor-webui start')
+
+@task
+@roles('collector')
+def start_collector():
+    """starts the contrail collector services."""
+    run('service supervisor-analytics start')
+
 @task
 @roles('control')
 def stop_control():
@@ -196,3 +219,33 @@ def restart_webui_node(*args):
     for host_string in args:
         with  settings(host_string=host_string):
             run('service supervisor-webui restart')
+
+@task
+@roles('build')
+def stop_contrail_control_services():
+    """stops the Contrail config,control,analytics,database,webui services."""
+    execute('stop_cfgm')
+    execute('stop_database')
+    execute('stop_collector')
+    execute('stop_control')
+    execute('stop_webui')
+
+@task
+@roles('build')
+def start_contrail_control_services():
+    """Starts the Contrail config,control,analytics,database,webui services."""
+    execute('start_cfgm')
+    execute('start_database')
+    execute('start_collector')
+    execute('start_control')
+    execute('start_webui')
+
+@task
+@roles('build')
+def restart_contrail_control_services():
+    """Restarts the Contrail config,control,analytics,database,webui services."""
+    execute('restart_cfgm') 
+    execute('restart_database')
+    execute('restart_collector')
+    execute('restart_control')
+    execute('restart_webui')
