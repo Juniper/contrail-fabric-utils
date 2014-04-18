@@ -17,6 +17,7 @@ from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import configure_esxi_network, create_ovf
 from time import sleep
+from fabric.contrib.files import exists
 
 @task
 @EXECUTE_TASK
@@ -477,11 +478,11 @@ def setup_contrail_horizon_node(*args):
     3. /usr/lib/python2.6/site-packages/openstack_dashboard/local/local_settings.py
     '''
     file_name = '/etc/openstack-dashboard/local_settings.py'
-    if not (os.path.isfile(file_name)):
+    if not exists(file_name):
         file_name = '/etc/openstack-dashboard/local_settings'
-    if not (os.path.isfile(file_name)):
+    if not exists(file_name):
         file_name = '/usr/lib/python2.6/site-packages/openstack_dashboard/local/local_settings.py'
-    if not (os.path.isfile(file_name)):
+    if not exists(file_name):
         return
 
     pattern='^HORIZON_CONFIG.*customization_module.*'
@@ -498,8 +499,7 @@ def setup_contrail_horizon_node(*args):
 
     insert_line_to_file(pattern = pattern, line = line, file_name = file_name)
 
-    for host_string in args:
-        sudo(web_restart)
+    sudo(web_restart)
 #end setup_contrail_horizon_node
         
 @task
