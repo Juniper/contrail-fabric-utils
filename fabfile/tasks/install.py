@@ -488,6 +488,10 @@ def uninstall_contrail(full=False):
     To force a full cleanup, set full=True as argument. 
     This will remove contrail-install-packages as well
     '''
+    #TODO Until it works on ubuntu, dont run 
+    if detect_ostype() in ['Ubuntu']:
+        print "This task is not supported on Ubuntu yet"
+        return 
     run('sudo yum --disablerepo=* --enablerepo=contrail_install_repo -y remove contrail-control contrail-dns openstack-nova openstack-quantum openstack-cinder openstack-glance openstack-keystone openstack-quantum-contrail mysql qpid-cpp-server openstack-dashboard mysql-server openstack-nova-novncproxy zookeeper zookeeper-lib irond contrail-webui contrail-analytics contrail-libs contrail-analytics-venv contrail-api-extension contrail-api-venv contrail-control-venv  contrail-database contrail-nodejs contrail-vrouter-venv contrail-setup openstack-utils redis contrail-openstack-* contrail-database-venv nodejs java java-1.7.0-openjdk libvirt contrail-vrouter euca2ools cassandra django-horizon django-staticfiles python-bitarray python-boto python-thrift libvirt-python libvirt-client python-django-openstack-auth memcached haproxy rabbitmq-server esl-erlang')
     
     run('sudo yum --disablerepo=* --enablerepo=contrail_install_repo -y remove *openstack* *quantum* *nova* *glance* *keystone* *cinder*')
