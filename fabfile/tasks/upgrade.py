@@ -258,6 +258,19 @@ def upgrade_database_node(pkg, *args):
             execute('restart_database_node', host_string)
 
 @task
+@roles('openstack')
+def fix_nova_conf():
+    execute("fix_nova_conf_node", env.host_string)
+
+@task
+def fix_nova_conf_node(*args):
+    keystone_ip = getattr(testbed, 'keystone_ip', env.roledefs['openstack'][0].split('@')[1])
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            run("openstack-config --del /etc/nova/nova.conf DEFAULT rpc_backend")
+            run("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" % keystone_ip)
+
+@task
 @EXECUTE_TASK
 @roles('openstack')
 def upgrade_openstack(pkg):
@@ -275,6 +288,7 @@ def upgrade_openstack_node(pkg, *args):
             execute(upgrade)
             execute(upgrade_api_venv_packages)
             execute('upgrade_pkgs_node', host_string)
+            execute('chkconfig_rabbitmq_on_node', host_string)
             execute('restart_openstack_node', host_string)
 
 
@@ -411,6 +425,7 @@ def upgrade_all(pkg):
     execute(upgrade_pkgs)
     execute('fix_redis_uve_conf')
     execute(restart_database)
+    execute(fix_nova_conf)
     execute(restart_openstack)
     execute(restore_zookeeper_config)
     execute(restart_cfgm)
