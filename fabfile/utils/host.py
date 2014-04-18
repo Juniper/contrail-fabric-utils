@@ -38,9 +38,9 @@ def get_keystone_ip():
     svc_opt = ''
     openstack_host = get_control_host_string(testbed.env.roledefs['openstack'][0])
     openstack_ip = hstr_to_ip(openstack_host)
-    testbed.keystone_ip = getattr(testbed, 'keystone_ip', '')
-    if testbed.keystone_ip:
-        svc_opt = '--keystone_ip %s' % (testbed.keystone_ip)
+    keystone_ip = getattr(testbed, 'keystone_ip', '')
+    if keystone_ip:
+        svc_opt = '--keystone_ip %s' % (keystone_ip)
     else:
         svc_opt = '--keystone_ip %s' % (openstack_ip)
     return svc_opt
