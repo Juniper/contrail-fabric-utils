@@ -1080,30 +1080,39 @@ def reset_config():
     Reset api-server and openstack config and run the setup-scripts again incase you get into issues
     '''
     from fabfile.tasks.misc import run_cmd
+    from fabfile.tasks.services import stop_cfgm, start_cfgm, stop_contrail_control_services
     try:
+        execute(stop_contrail_control_services)
         execute(cleanup_os_config)
         execute(setup_rabbitmq_cluster)
         execute(increase_limits)
         execute(increase_ulimits)
         execute(setup_database)
+        execute(verify_database)
         execute(setup_openstack)
         execute(setup_cfgm)
+        execute(verify_cfgm)
         execute(setup_control)
+        execute(verify_control)
         execute(setup_collector)
+        execute(verify_collector)
         execute(setup_webui)
-        execute(setup_vrouter)
-        execute(prov_control_bgp)
-        execute(prov_external_bgp)
-        execute(prov_metadata_services)
-        execute(prov_encap_type)
+        execute(verify_webui)
+        execute(stop_cfgm)
         execute(config_server_reset, 'add', [env.roledefs['cfgm'][0]])
         execute(run_cmd, env.roledefs['cfgm'][0], "service supervisor-config restart")
-        sleep(70)
+        execute(start_cfgm)
+        sleep(120)
     except SystemExit:
         execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
         raise SystemExit("\nReset config Failed.... Aborting")
     else:
         execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
+    execute(prov_control_bgp)
+    execute(prov_external_bgp)
+    execute(prov_metadata_services)
+    execute(prov_encap_type)
+    execute(setup_vrouter)
     execute(compute_reboot)
 #end reset_config
 
