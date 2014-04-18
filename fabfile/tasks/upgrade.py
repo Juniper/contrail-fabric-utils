@@ -154,11 +154,9 @@ def restore_zookeeper_config_node(*args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
             if run('ls /etc/contrail/zoo.cfg.rpmsave').succeeded:
-                if get_release() not in RELEASES_WITH_ZOO_3_4_3 and detect_ostype() in ['Ubuntu']:
+                if get_release() not in RELEASES_WITH_ZOO_3_4_3:
                     #upgrade to >= 1.05
                     run('cp /etc/contrail/zoo.cfg.rpmsave /etc/zookeeper/conf/zoo.cfg')
-                else:
-                    run('cp /etc/contrail/zoo.cfg.rpmsave /etc/zookeeper/zoo.cfg')
                 run('rm -f /etc/contrail/zoo.cfg.rpmsave')
 
 @task
