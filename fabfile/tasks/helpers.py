@@ -562,39 +562,6 @@ def is_pingable(host_string, negate=False, maxwait=900):
                 time.sleep(1)
     return result
 
-@task
-@roles('all')
-def is_reimage_complete(version, maxwait=900):
-    is_reimage_complete_node(version, maxwait, env.host_string)
-
-@task
-@parallel
-def is_reimage_complete_node(version, maxwait, *args):
-    for host_string in args:
-        user, hostip = host_string.split('@')
-        start = datetime.datetime.now()
-        td = datetime.timedelta(seconds=int(maxwait))
-        with settings(host_string=host_string, warn_only=True):
-            if is_pingable(host_string, 'True', maxwait):
-                raise RuntimeError('Host (%s) is still up' %hostip)
-            print 'Host (%s) is Down, Wait till host comes back' %hostip
-            if is_pingable(host_string, 'False', maxwait):
-                raise RuntimeError('Host (%s) is still down' %hostip)
-            print 'Host (%s) is UP, Wait till SSH is UP in host' %hostip
-            while True:
-                if not verify_sshd(hostip, user, env.password):
-                    raise RuntimeError('Unable to SSH to Host (%s)' %hostip)
-                act_version = run('rpm -q --queryformat "%{RELEASE}" contrail-install-packages').split('.')[0]
-                if int(version) != int(act_version):
-                    print 'Expected Reimaged Version (%s) != Actual Version (%s)' %(
-                                        version, act_version)
-                    print 'Retrying...'
-                else:
-                    print 'Host (%s) is reimaged to %s' %(hostip, version)
-                    break
-                if start + td < datetime.datetime.now():
-                    raise RuntimeError('Timeout while waiting for reimage complete')
-
 @roles('openstack')
 @task
 def increase_ulimits():
