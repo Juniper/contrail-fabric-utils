@@ -7,7 +7,8 @@ from fabfile.tasks.services import *
 from fabfile.tasks.misc import rmmod_vrouter, create_default_secgrp_rules
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.helpers import compute_reboot, reboot_node
-from fabfile.tasks.provision import setup_vrouter, setup_vrouter_node
+from fabfile.tasks.provision import setup_vrouter, setup_vrouter_node,\
+     setup_contrail_horizon_node, setup_contrail_horizon
 from fabfile.tasks.install import install_pkg_all, create_install_repo,\
      create_install_repo_node, upgrade_pkgs, install_pkg_node, yum_install,  apt_install
 
@@ -464,6 +465,7 @@ def upgrade_openstack_node(pkg, *args):
             execute(upgrade_api_venv_packages)
             execute('upgrade_pkgs_node', host_string)
             execute('fix_nova_conf_node', host_string)
+            execute('setup_contrail_horizon_node', host_string)
             execute('restart_openstack_node', host_string)
 
 
@@ -619,6 +621,7 @@ def upgrade_all(pkg):
     fix_redis_uve_conf()
     execute(restart_database)
     execute(fix_nova_conf)
+    execute(setup_contrail_horizon)
     execute(restart_openstack)
     execute(restore_zookeeper_config)
     # needed only for centos all in one box as setup_cfgm is not run.
