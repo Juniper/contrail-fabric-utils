@@ -65,8 +65,9 @@ def bringup_test_node(build):
     connections.clear()
 
     # setup interface
-    with cd('/opt/contrail/utils/'):
-        run('fab setup_interface')
+    with settings(host_string=env.roledefs['cfgm'][0]):
+        with cd('/opt/contrail/utils/'):
+            run('fab setup_interface')
 
     # setup all
     with settings(host_string=env.roledefs['cfgm'][0]):
