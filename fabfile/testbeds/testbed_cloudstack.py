@@ -3,6 +3,7 @@ from fabric.api import env
 hypervisor_type = 'XenServer'
 controller_type = 'Cloudstack'
 
+orchestrator = 'root@10.84.58.223'
 controller = 'root@10.84.58.246'
 xenserver = 'root@10.84.13.6'
 xenserver2 = 'root@10.84.13.7'
@@ -10,20 +11,16 @@ builder = 'root@10.84.5.100'
 
 # Password used while loging into all hosts
 env.password = 'c0ntrail123'
-env.cs_version = '4.2.0'
-
-env.hosts = [
-    controller,
-    xenserver,
-    xenserver2,
-    builder
-]
+env.cs_version = '4.3.0'
+env.xen_ver = '6.2SP1'
+env.xen62sp1_repo = 'http://10.84.5.100/xen62sp1'
 
 env.roledefs = {
     'control': [controller],
     'compute': [xenserver, xenserver2],
     'build': [builder],
-    'cfgm': [controller]
+    'cfgm': [controller],
+    'orchestrator': [orchestrator]
 }
 
 # Cloudstack specific config
@@ -42,6 +39,7 @@ config = {
     'cloud': {
         'username': 'admin',
         'password': 'password',
+        'host_password': env.password,
 
         'external_dns': '10.84.5.100',
         'internal_dns': '10.84.5.100',
@@ -75,6 +73,3 @@ config = {
     }
 }
 env.config = config
-
-
-

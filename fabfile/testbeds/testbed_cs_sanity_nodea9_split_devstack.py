@@ -3,47 +3,47 @@ from fabric.api import env
 hypervisor_type = 'XenServer'
 controller_type = 'Cloudstack'
 
+orchestrator = 'root@10.204.217.12'
 controller = 'root@10.204.216.60'
 xenserver1 = 'root@10.204.216.47'
-xenserver2 = 'root@10.204.216.11'
+ubuntu_devstack = 'root@10.204.216.11'
 builder = 'vjoshi@10.204.216.56'
 
-# Password used while loging into all hosts
+# Password used while loging into all hosts.
+#All xen servers need to have same password
 env.password = 'c0ntrail123'
-env.cs_version = '4.3.0'
+env.cs_version = '4.3.0_ACS'
+env.cs_flavor = 'apache'
 env.xen_ver = '6.2SP1'
-env.xen62sp1_repo = 'http://10.84.5.100/xen62sp1'
-
-env.hosts = [
-    controller,
-    xenserver1,
-    xenserver2,
-    builder
-]
 
 env.ostypes = {
-    controller: 'centos',
+    orchestrator: 'cent63',
     xenserver1 : 'xenserver',
-    xenserver2 : 'xenserver',
+#    xenserver2 : 'xenserver',
+    controller: 'centos',
+    ubuntu_devstack : 'ubuntu',
 }
 
 env.passwords = {
     controller: 'c0ntrail123',
-    xenserver1: 'c0ntrail123',
-    xenserver2: 'c0ntrail123',
+    orchestrator: 'c0ntrail123',
+    xenserver1: env.password,
+#    xenserver2: env.password,
+    ubuntu_devstack: 'c0ntrail123',
     builder: 'secret',
 }
 
 env.roledefs = {
     'control': [controller],
-    'compute': [xenserver1, xenserver2],
+    'compute': [xenserver1],
     'build': [builder],
     'cfgm': [controller],
-    'all' : [ controller, xenserver1, xenserver2 ],
+    'orchestrator': [orchestrator],
+    'all' : [ controller, xenserver1, orchestrator, ubuntu_devstack ],
 }
 
 env.hostnames = {
-    'all': ['nodec3','nodea9', 'nodea15']
+    'all': ['nodea9','nodec3','nodec27', 'nodea12']
 }
 
 # Cloudstack specific config
@@ -80,12 +80,12 @@ config = {
                         'hypervisor_type': 'XenServer',
 
                         'hosts': {
-                            'xen1': '10.204.216.47',
-                            'xen2': '10.204.216.11'
+                            'xen1': '10.204.216.60'
+#                            'xen2': '10.204.217.12'
                         }
                     }
                 }
-            },
+            }
         },
 
         'public_net': {
@@ -97,8 +97,10 @@ config = {
     }
 }
 env.config = config
+env.xen62sp1_repo = '10.204.216.51/xen62sp1'
 
 env.test_repo_dir='/home/stack/cloudstack_sanity/test'
-env.mail_to='contrail-cloudstack-dev@juniper.net'
-env.log_scenario='Cloudstack Multi-node Sanity'
+env.mail_to='dl-contrail-sw@juniper.net'
+env.log_scenario='ACS split setup'
+
 

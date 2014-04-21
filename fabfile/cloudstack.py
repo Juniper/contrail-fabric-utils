@@ -24,23 +24,20 @@ from common import *
 # Note that fabfile/testbeds/testbed.py MUST NOT be added to the repository.
 import testbeds.testbed as testbed
 
-INSTALLER_DIR = '/opt/contrail/contrail_installer'
-UTILS_DIR = '/opt/contrail/utils'
-BUG_DIR = '/volume/labcores/contrail/bugs'
-env.disable_known_hosts=True
-
-def print_hello():
-    print "hello world"
-
 def host_string_to_ip(host_string):
     return host_string.split('@')[1]
 
 def render_controller_config(cfg):
+    cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
+    orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     out = cfg['cloud']
     out['nfs_share_path'] = cfg['nfs_share_path']
-    out['controller_ip'] = host_string_to_ip(env.roledefs['control'][0])
+    if (orchestrator_ip == cfgm_ip):
+        out['controller_ip'] = '127.0.0.1'
+    else:
+        out['controller_ip'] = host_string_to_ip(env.roledefs['orchestrator'][0])
+    out['orchestrator_ip'] = orchestrator_ip
     return out
-
 
 def try_login(host, username, password):
     try:
@@ -60,7 +57,6 @@ def try_login(host, username, password):
         return False
 
     return True
-
 
 def wait_for_cloudstack_management_up(host, username, password):
     timeout = 0
@@ -82,7 +78,7 @@ def check_cs_version_in_config():
         env.cs_version = '4.2.0'
 #end get_cs_version_from_config
 
-@roles('control', 'cfgm')
+@roles('control', 'orchestrator', 'cfgm')
 @task
 def add_contrail_repo():
     txt = '[Contrail]\n' + \
@@ -105,26 +101,33 @@ def install_packages():
     execute(install_cloudstack_packages)
     execute(install_contrail_packages)
 
-
-@roles('control')
+@roles('orchestrator')
 @task
 def install_cloudstack_packages():
     execute(add_contrail_repo)
-    run('yum install --disablerepo=base,updates -y contrail-cloudstack-utils')
+    run('yum install --disablerepo=base,updates,extras -y contrail-cloudstack-utils')
     check_cs_version_in_config()
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     run('sh /opt/contrail/cloudstack-utils/cloudstack-install.sh %s %s %s %s %s %s' %
 (env.config['nfs_share_path'], env.config['yum_repo_host'], env.host, env.cs_version, cfgm_ip, 8082))
 
-@roles('cfgm')
+def install_rabbitmq():
+    run('chkconfig rabbitmq-server on')
+    run('service rabbitmq-server start')
+    run('rabbitmqctl set_permissions guest ".*" ".*" ".*"')
+
+@roles('control')
 @task
 def install_contrail_packages():
-    controller_ip = host_string_to_ip(env.roledefs['control'][0])
+    orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
+    control_ip = host_string_to_ip(env.roledefs['control'][0])
+    #If both CSmgmt and Contrailsvr are running on same box, do below
     execute(add_contrail_repo)
-    run('yum install --disablerepo=base,updates -y contrail-cloudstack-utils')
+    run('yum install --disablerepo=extras,base,updates -y contrail-cloudstack-utils')
+    install_rabbitmq()
     run('sh /opt/contrail/cloudstack-utils/contrail-install.sh %s' %
-(env.config['yum_repo_host']))
+                (env.config['yum_repo_host']))
 
     # Over-write the api-conf file with listen addr as 0.0.0.0 and discovery ip
     run("sed -i '/listen_ip_addr/c\listen_ip_addr=0.0.0.0' /etc/contrail/api_server.conf")
@@ -138,12 +141,13 @@ def install_contrail_packages():
         run("source ../bin/activate && pip install *")
 
     # control venv instalation
+    run("echo 'HOSTIP=%s\n'>> /etc/contrail/control_param" %(control_ip))
     run("/bin/cp /opt/contrail/api-venv/archive/xml* /opt/contrail/control-venv/archive/")
     with cd("/opt/contrail/control-venv/archive"):
         run("source ../bin/activate && pip install *")
     #Reboot and wait for sometime for the box to come up
-    run('python /opt/contrail/cloudstack-utils/contrail_post_install.py %s %s' %(controller_ip, cfgm_ip))
-    reboot(180)
+    run('python /opt/contrail/cloudstack-utils/contrail_post_install.py %s %s' %(orchestrator_ip, cfgm_ip))
+    reboot(900)
  
 
 @roles('cfgm')
@@ -163,29 +167,34 @@ def setup_cloud():
         json.dump(cfg, f)
         f.flush()
         put(f.name, '~/config.json')
-    if env.cs_version == '4.3.0':
-        run('python /opt/contrail/cloudstack-utils/system-setup.py ~/config.json ' +
-            '~/system-setup.log 4.3 %s' %env.cs_flavor)
-    else :
+    if '4.2.0' in env.cs_version:
         run('python /opt/contrail/cloudstack-utils/system-setup.py ~/config.json ' +
             '~/system-setup.log 4.2 %s' %env.cs_flavor)
+    else :
+        run('python /opt/contrail/cloudstack-utils/system-setup.py ~/config.json ' +
+            '~/system-setup.log 4.3 %s' %env.cs_flavor)
 
-@roles('control')
+@roles('orchestrator')
 @task
 def cloudstack_api_setup():
+    orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
+    if (orchestrator_ip == cfgm_ip):
+        cfgm_ip = '127.0.0.1'
     run('cat <<EOF > /usr/share/cloudstack-management/webapps/client/WEB-INF/classes/contrail.properties '+ 
 '\napi.hostname=%s\napi.port=8082\nEOF' %cfgm_ip) 
 
-@roles('control')
+@roles('orchestrator')
 @task
 def install_vm_template(url, name, osname):
+    if '4.3.0' in env.cs_version:
+        csvers = '4.3.0'
     options = ' -t "%s" -n "%s" ' % (url, name)
     if osname:
         options += ' -o "%s"' % (osname)
     # TODO: parametrise mysql login/password/database
     options += ' -u cloud -p cloud -d cloud'
-    options += ' -s "%s" -i "%s" -v "%s"' % (env.config['nfs_share_path'], env.host, env.cs_version)
+    options += ' -s "%s" -i "%s" -v "%s"' % (env.config['nfs_share_path'], env.host, csvers)
     run('sh /opt/contrail/cloudstack-utils/vm-template-install.sh' + options)
 
 @roles('cfgm')
@@ -196,18 +205,18 @@ def provision_routing():
     run('python /opt/contrail/cloudstack-utils/provision_routing.py ' +
         '%s 127.0.0.1 %s %s' % (cfgm_ip, env.config['route_target'],env.config['mx_ip']))
 
-@roles('control')
+@roles('orchestrator')
 @task
 def provision_all():
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
-    controller_ip = host_string_to_ip(env.roledefs['control'][0])
+    orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     execute(install_cloudstack_packages)
     #Induce some sleep here to wait till CS finishes DB upgrade 
     sleep(120)
     wait_for_cloudstack_management_up(env.host, env.config['cloud']['username'],
                                       env.config['cloud']['password'])
     #Issue a reboot to cleanup and restart CS 
-    reboot(180)
+    reboot(900)
     execute(install_contrail_packages)
     # Need to ensure connectivity between CS and API, so restart
     run('/etc/init.d/cloudstack-management restart')
@@ -228,8 +237,8 @@ def provision_all():
 @roles('compute')
 @task
 def enable_proxyvm_console_access():
-    controller_ip = host_string_to_ip(env.roledefs['control'][0])
-    run('cd /opt/contrail/xenserver-scripts/ && sh ./xen-console-proxy-vm-setup.sh %s' %controller_ip)
+    orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
+    run('cd /opt/contrail/xenserver-scripts/ && sh ./xen-console-proxy-vm-setup.sh %s' %orchestrator_ip)
 
 @roles('cfgm')
 @task
@@ -244,11 +253,14 @@ def check_systemvms():
     if not keypair:
         assert False, "Unable to fetch apikey and secret key"
     (apikey, secretkey) = keypair
-    controller_ip = host_string_to_ip(env.roledefs['control'][0])
+    orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     run('cloudmonkey set color false')
-    run('sed -i "/host/c\host=%s" ~/.cloudmonkey/config' %controller_ip)
+    run('sed -i "/host/c\host=%s" ~/.cloudmonkey/config' %orchestrator_ip)
     run('sed -i "s/secretkey\s*\=.*$/secretkey \= %s/" ~/.cloudmonkey/config' %secretkey)
     run('sed -i "s/apikey\s*\=.*$/apikey \= %s/" ~/.cloudmonkey/config' %apikey)
+
+    #Increase the storage disable threshold to 97%.
+    run('cloudmonkey update configuration name=pool.storage.capacity.disablethreshold value=0.97')
 
     for retry in range (30):
         output = run('cloudmonkey listSystemVms')
@@ -266,10 +278,10 @@ def check_systemvms():
         assert False, "SystemVms are not up even after %d secs" %((retry+1)*interval)
 
 def cloudLogin(file):
-    controller_ip = host_string_to_ip(env.roledefs['control'][0])
+    orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     login = ("'command=login&username=" + env.config['cloud']['username'] + "&password=" + env.config['cloud']['password'] +
              "&response=json'")
-    cmd = "curl -H 'Content-Type: application/x-www-form-urlencoded' -H 'Accept: application/json' -X POST -d %s -c '%s' http://%s:8080/client/api" %(login, file, controller_ip)
+    cmd = "curl -H 'Content-Type: application/x-www-form-urlencoded' -H 'Accept: application/json' -X POST -d %s -c '%s' http://%s:8080/client/api" %(login, file, orchestrator_ip)
     output = run(cmd)
     response = json.loads(output)
     if not response or response.get('errorresponse'):
@@ -280,8 +292,8 @@ def cloudLogin(file):
 
 def getKeys(loginresp, file):
     urlParam = '&response=json&id=' + loginresp['userid'] + '&sessionkey=' + encodeURIComponent(loginresp['sessionkey'])
-    controller_ip = host_string_to_ip(env.roledefs['control'][0])
-    cmd = "curl -H 'Content-Type: application/json' -b %s -X POST 'http://%s:8080/client/api/?command=listUsers%s'" %(file, controller_ip, urlParam)
+    orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
+    cmd = "curl -H 'Content-Type: application/json' -b %s -X POST 'http://%s:8080/client/api/?command=listUsers%s'" %(file, orchestrator_ip, urlParam)
     output = run(cmd)
     response = json.loads(output)
     user = response['listusersresponse']['user'][0]
@@ -292,7 +304,7 @@ def getKeys(loginresp, file):
 def encodeURIComponent(str):
     return quote(str, safe='~()*!.\'')
 
-@roles('control')
+@roles('orchestrator')
 @task
 def setup_vmtemplate():
     execute(install_vm_template, env.config['vm_template_url'],
@@ -348,8 +360,8 @@ def run_sanity(feature='sanity', test=None):
     from tasks.tester import *
     execute(setup_test_env)
     #cfgm_host = env.roledefs['cfgm'][0]
-    cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
-    with settings(host_string = cfgm_ip):
+    cfgm_host = env.roledefs['cfgm'][0]
+    with settings(host_string = cfgm_host):
         with cd('%s/scripts' %(get_remote_path(env.test_repo_dir))):
             if feature in cmds.keys():
                 run(cmds[feature])
@@ -357,4 +369,3 @@ def run_sanity(feature='sanity', test=None):
             run(cmd + test)
 
 #end run_sanity
-

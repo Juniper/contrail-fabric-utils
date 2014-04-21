@@ -3,33 +3,22 @@ from fabric.api import env
 hypervisor_type = 'XenServer'
 controller_type = 'Cloudstack'
 
-controller = 'root@10.204.216.47'
-xenserver1 = 'root@10.204.216.60'
-xenserver2 = 'root@10.204.217.12'
+controller = 'root@10.204.216.60'
+xenserver1 = 'root@10.204.216.47'
 builder = 'vjoshi@10.204.216.56'
 
 # Password used while loging into all hosts.
 #All xen servers need to have same password
 env.password = 'c0ntrail123'
-env.cs_version = '4.2.0'
-
-env.hosts = [
-    controller,
-    xenserver1,
-#    xenserver2,
-    builder
-]
 
 env.ostypes = {
     controller: 'centos',
     xenserver1 : 'xenserver',
-#    xenserver2 : 'xenserver',
 }
 
 env.passwords = {
     controller: 'c0ntrail123',
     xenserver1: env.password,
-#    xenserver2: env.password,
     builder: 'secret',
 }
 
@@ -38,11 +27,12 @@ env.roledefs = {
     'compute': [xenserver1],
     'build': [builder],
     'cfgm': [controller],
+    'orchestrator': [controller],
     'all' : [ controller, xenserver1],
 }
 
 env.hostnames = {
-    'all': ['nodea9','nodec3','nodec27']
+    'all': ['nodec3', 'nodea9']
 }
 
 # Cloudstack specific config
@@ -79,8 +69,7 @@ config = {
                         'hypervisor_type': 'XenServer',
 
                         'hosts': {
-                            'xen1': '10.204.216.60'
-#                            'xen2': '10.204.217.12'
+                            'xen1': '10.204.216.47'
                         }
                     }
                 }
@@ -100,5 +89,3 @@ env.config = config
 env.test_repo_dir='/home/stack/cloudstack_sanity/test'
 env.mail_to='dl-contrail-sw@juniper.net'
 env.log_scenario='Cloudstack Sanity'
-
-
