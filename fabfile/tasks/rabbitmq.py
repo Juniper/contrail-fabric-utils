@@ -22,12 +22,11 @@ def set_guest_user_permissions():
 @parallel
 @roles('cfgm')
 def config_rabbitmq():
-    if detect_ostype() in ['centos']:
-        rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
-        run('sudo echo "[" > %s' % rabbit_conf)
-        run("sudo echo '   {rabbit, [ {tcp_listeners, [{\"0.0.0.0\", 5672}]} ]' >> %s" % rabbit_conf)
-        run('sudo echo "    }" >> %s' % rabbit_conf)
-        run('sudo echo "]." >> %s' % rabbit_conf)
+    rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
+    run('sudo echo "[" > %s' % rabbit_conf)
+    run("sudo echo '   {rabbit, [ {tcp_listeners, [{\"0.0.0.0\", 5672}]}, {cluster_partition_handling, autoheal} ]' >> %s" % rabbit_conf)
+    run('sudo echo "    }" >> %s' % rabbit_conf)
+    run('sudo echo "]." >> %s' % rabbit_conf)
 
 @task
 @parallel
