@@ -3,34 +3,28 @@ from fabric.api import env
 hypervisor_type = 'XenServer'
 controller_type = 'Cloudstack'
 
+orchestrator = 'root@10.204.217.12'
 controller = 'root@10.204.216.60'
 xenserver1 = 'root@10.204.216.47'
 xenserver2 = 'root@10.204.216.11'
 builder = 'vjoshi@10.204.216.56'
 
-# Password used while loging into all hosts
+# Password used while loging into all hosts.
+#All xen servers need to have same password
 env.password = 'c0ntrail123'
-env.cs_version = '4.3.0'
-env.xen_ver = '6.2SP1'
-env.xen62sp1_repo = 'http://10.84.5.100/xen62sp1'
-
-env.hosts = [
-    controller,
-    xenserver1,
-    xenserver2,
-    builder
-]
 
 env.ostypes = {
     controller: 'centos',
+    orchestrator: 'centos',
     xenserver1 : 'xenserver',
     xenserver2 : 'xenserver',
 }
 
 env.passwords = {
     controller: 'c0ntrail123',
-    xenserver1: 'c0ntrail123',
-    xenserver2: 'c0ntrail123',
+    orchestrator: 'c0ntrail123',
+    xenserver1: env.password,
+    xenserver2: env.password,
     builder: 'secret',
 }
 
@@ -39,11 +33,12 @@ env.roledefs = {
     'compute': [xenserver1, xenserver2],
     'build': [builder],
     'cfgm': [controller],
-    'all' : [ controller, xenserver1, xenserver2 ],
+    'orchestrator': [orchestrator],
+    'all' : [ controller, orchestrator, xenserver1, xenserver2 ],
 }
 
 env.hostnames = {
-    'all': ['nodec3','nodea9', 'nodea15']
+    'all': ['nodec3', 'nodea9', 'nodec27', 'nodea15']
 }
 
 # Cloudstack specific config
@@ -74,20 +69,17 @@ config = {
                 'endip'  : '10.204.216.240',
                 'gateway': '10.204.216.254',
                 'netmask': '255.255.255.0',
-
                 'clusters': {
                     'a6-xen1': {
                         'hypervisor_type': 'XenServer',
-
                         'hosts': {
                             'xen1': '10.204.216.47',
                             'xen2': '10.204.216.11'
                         }
                     }
                 }
-            },
+            }
         },
-
         'public_net': {
             'startip': '10.204.219.121',
             'endip': '10.204.219.126',
@@ -99,6 +91,5 @@ config = {
 env.config = config
 
 env.test_repo_dir='/home/stack/cloudstack_sanity/test'
-env.mail_to='contrail-cloudstack-dev@juniper.net'
-env.log_scenario='Cloudstack Multi-node Sanity'
-
+env.mail_to='dl-contrail-sw@juniper.net'
+env.log_scenario='Cloudstack Sanity'
