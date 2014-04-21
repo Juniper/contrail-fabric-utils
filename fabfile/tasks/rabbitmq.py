@@ -103,7 +103,7 @@ def add_cfgm_to_rabbitmq_cluster():
 @roles('cfgm')
 def verify_cluster_status():
     output = run("rabbitmqctl cluster_status")
-    running_nodes = re.compile("{running_nodes,\[(.*)\]}", re.DOTALL)
+    running_nodes = re.compile("{running_nodes,\[(\S+)\]}", re.DOTALL)
     match = running_nodes.search(output)
     if not match:
         return False
