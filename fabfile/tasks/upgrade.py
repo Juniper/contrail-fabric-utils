@@ -395,6 +395,8 @@ def upgrade_webui_node(pkg, *args):
 @roles('compute')
 def upgrade_vrouter(pkg):
     """Upgrades vrouter pkgs in all nodes defined in vrouter role."""
+    if os.path.exists('/opt/contrail/contrail_installer/contrail_config_templates/vnswad_xml2ini.py'):
+        run("python /opt/contrail/contrail_installer/contrail_config_templates/vnswad_xml2ini.py")
     execute("upgrade_vrouter_node", pkg, env.host_string)
 
 @task
