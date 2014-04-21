@@ -22,12 +22,11 @@ def set_guest_user_permissions():
 @parallel
 @roles('cfgm')
 def config_rabbitmq():
-    if detect_ostype() in ['centos']:
-        rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
-        run('sudo echo "[" > %s' % rabbit_conf)
-        run("sudo echo '   {rabbit, [ {tcp_listeners, [{\"0.0.0.0\", 5672}]} ]' >> %s" % rabbit_conf)
-        run('sudo echo "    }" >> %s' % rabbit_conf)
-        run('sudo echo "]." >> %s' % rabbit_conf)
+    rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
+    run('sudo echo "[" > %s' % rabbit_conf)
+    run("sudo echo '   {rabbit, [ {tcp_listeners, [{\"0.0.0.0\", 5672}]}, {cluster_partition_handling, autoheal} ]' >> %s" % rabbit_conf)
+    run('sudo echo "    }" >> %s' % rabbit_conf)
+    run('sudo echo "]." >> %s' % rabbit_conf)
 
 @task
 @parallel
@@ -100,7 +99,7 @@ def add_cfgm_to_rabbitmq_cluster():
 @roles('cfgm')
 def verify_cluster_status():
     output = run("rabbitmqctl cluster_status")
-    running_nodes = re.compile("{running_nodes,\[(\S+)\]}", re.DOTALL)
+    running_nodes = re.compile(r"running_nodes,\[([^\]]*)")
     match = running_nodes.search(output)
     if not match:
         return False
@@ -120,18 +119,18 @@ def verify_cluster_status():
 
 @task
 @roles('build')
-def setup_rabbitmq_cluster():
+def setup_rabbitmq_cluster(force=False):
     """Task to cluster the rabbit servers."""
-    execute('stop_cfgm')
     if len(env.roledefs['cfgm']) <= 1:
         print "Single cfgm cluster, skipping rabbitmq cluster setup."
         return 
 
-    with settings(warn_only=True):
-        result = execute(verify_cluster_status)
-    if result and False not in result.values():
-        print "RabbitMQ cluster is up and running; No need to cluster again."
-        return
+    if not force:
+        with settings(warn_only=True):
+            result = execute(verify_cluster_status)
+        if result and False not in result.values():
+            print "RabbitMQ cluster is up and running; No need to cluster again."
+            return
 
     rabbitmq_cluster_uuid = getattr(testbed, 'rabbitmq_cluster_uuid', None)
     if not rabbitmq_cluster_uuid:
