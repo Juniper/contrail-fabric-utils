@@ -708,3 +708,10 @@ def reboot_vm(vmid='all', mode='soft'):
         vm_id = vm_info.split('|')[1]
         with settings(warn_only=True):
             run('source /etc/contrail/openstackrc; nova reboot %s %s' % (flag, vm_id))
+
+@task
+@roles('database')
+def delete_cassandra_db_files():
+    run('rm -rf /home/cassandra/commitlog')
+    run('rm -rf /home/cassandra/data')
+    run('rm -rf /home/cassandra/saved_caches')

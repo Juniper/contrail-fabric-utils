@@ -1103,7 +1103,9 @@ def reset_config():
     Reset api-server and openstack config and run the setup-scripts again incase you get into issues
     '''
     from fabfile.tasks.misc import run_cmd
-    from fabfile.tasks.services import stop_cfgm, start_cfgm, stop_contrail_control_services
+    from fabfile.tasks.services import stop_cfgm, start_cfgm,\
+          stop_database, start_database,\
+          stop_contrail_control_services
     try:
         execute(stop_contrail_control_services)
         execute(cleanup_os_config)
@@ -1121,6 +1123,9 @@ def reset_config():
         execute(verify_collector)
         execute(setup_webui)
         execute(verify_webui)
+        execute(stop_database)
+        execute(delete_cassandra_db_files)
+        execute(start_database)
         execute(stop_cfgm)
         execute(config_server_reset, 'add', [env.roledefs['cfgm'][0]])
         execute(run_cmd, env.roledefs['cfgm'][0], "service supervisor-config restart")
