@@ -6,10 +6,10 @@ from fabfile.utils.fabos import detect_ostype
 
 
 def verfiy_and_update_hosts(host_name):
-    host_name = run('hostname')
-    resolved = run("ping -c 1 %s | grep '1 received'" % host_name)
+    with settings(warn_only=True):
+        resolved = run("ping -c 1 %s | grep '1 received'" % host_name).succeeded
     if not resolved:
-        run("echo '%s          %s' >> /etc/hosts" % (host_string.split('@')[1], host_name))
+        run("echo '%s          %s' >> /etc/hosts" % (env.host_string.split('@')[1], host_name))
 
 @task
 @parallel
