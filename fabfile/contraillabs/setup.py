@@ -47,6 +47,10 @@ def bringup_test_node(build):
         else:
             raise RuntimeError('Unsuported package or mismatch in testbed.ostypes and package.')
         execute('check_reimage_status')
+    else:
+        print "Package %s not found." % build
+        print "Specify a valid contrail-install-packages location."
+        exit(1)
     execute('install_pkg_all', build)
     buildid = build.split('-')[-1].split('.')[0]
 
