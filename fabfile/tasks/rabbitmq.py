@@ -5,9 +5,9 @@ from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype
 
 
-def verfiy_and_update_hosts(host_name):
-    host_name = run('hostname')
-    resolved = run("ping -c 1 %s | grep '1 received'" % host_name)
+def verfiy_and_update_hosts(host_name, host_string):
+    with settings(warn_only=True):
+        resolved = run("ping -c 1 %s | grep '1 received'" % host_name).succeeded
     if not resolved:
         run("echo '%s          %s' >> /etc/hosts" % (host_string.split('@')[1], host_name))
 
@@ -86,7 +86,7 @@ def verify_cfgm_hostname():
     for host_string in env.roledefs['cfgm']:
         with settings(host_string=host_string):
             host_name = run('hostname')
-        verfiy_and_update_hosts(host_name)
+        verfiy_and_update_hosts(host_name, host_string)
 
 @task
 @hosts(*env.roledefs['cfgm'][1:])
@@ -103,11 +103,12 @@ def add_cfgm_to_rabbitmq_cluster():
 @roles('cfgm')
 def verify_cluster_status():
     output = run("rabbitmqctl cluster_status")
-    match = re.search("{running_nodes,\[(.*)\]}", output)
+    running_nodes = re.compile(r"running_nodes,\[([^\]]*)")
+    match = running_nodes.search(output)
     if not match:
         return False
     clustered_nodes = match.group(1).split(',')
-    clustered_nodes = [node.strip("'") for node in clustered_nodes]
+    clustered_nodes = [node.strip() for node in clustered_nodes]
 
     cfgms = []
     for host_string in env.roledefs['cfgm']:

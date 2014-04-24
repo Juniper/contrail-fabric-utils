@@ -380,6 +380,7 @@ def run_sanity(feature='sanity', test=None):
               'multitenancy'  : ['%s/scripts/test_perms.py' % repo],
               'ecmp'            : ['%s/scripts/ecmp/sanity_with_setup.py' %repo],
               'evpn'            : ['%s/scripts/evpn/evpn_tests.py' %repo],
+              'vgw'             : ['%s/scripts/vgw/vgw_tests.py' %repo],
               }
 
     pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
