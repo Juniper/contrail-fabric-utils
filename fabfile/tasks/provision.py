@@ -1100,7 +1100,7 @@ def reset_config():
     from fabfile.tasks.misc import run_cmd
     from fabfile.tasks.services import stop_cfgm, start_cfgm,\
           stop_database, start_database,\
-          stop_contrail_control_services, restart_collector
+          stop_contrail_control_services
     try:
         execute(stop_contrail_control_services)
         execute(cleanup_os_config)
@@ -1125,7 +1125,6 @@ def reset_config():
         execute(config_server_reset, 'add', [env.roledefs['cfgm'][0]])
         execute(run_cmd, env.roledefs['cfgm'][0], "service supervisor-config restart")
         execute(start_cfgm)
-        execute(restart_collector)
         sleep(120)
     except SystemExit:
         execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
