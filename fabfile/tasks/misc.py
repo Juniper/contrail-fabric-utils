@@ -1,10 +1,12 @@
 import os
 import re
 import uuid
+import socket
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.tasks.helpers import reboot_node
+from fabfile.utils.host import get_control_host_string, hstr_to_ip
 from fabfile.tasks.provision import setup_vrouter_node, get_openstack_credentials
 from fabfile.tasks.install import create_install_repo_node, install_interface_name_node, install_vrouter_node
 
@@ -26,11 +28,18 @@ def add_vrouter_node(*args):
 @task
 def detach_vrouter_node(*args):
     """Detaches one/more compute node from the existing cluster."""
+    cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+    cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
+    cfgm_ip = hstr_to_ip(cfgm_host)
+
     for host_string in args:
-        with settings(host_string=host_string):
+        compute_hostname = socket.gethostbyaddr(hstr_to_ip(host_string))[0].split('.')[0]
+        with settings(host_string=host_string, warn_only=True):
             run("service supervisor-vrouter stop")
+        with settings(host_string=cfgm_host, pasword=cfgm_host_password):
+            run("python /opt/contrail/utils/provision_vrouter.py --host_name %s --host_ip %s --api_server_ip %s --oper del" %
+                (compute_hostname, host_string.split('@')[1], cfgm_ip))
     execute("restart_control")
-    execute("restart_cfgm")
 
 @task
 @roles('build')
