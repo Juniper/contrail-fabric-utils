@@ -1006,16 +1006,17 @@ def setup_interface():
 
     for host in hosts.keys():
         cmd = 'python setup-vnc-interfaces.py'
-        errmsg = 'Host ({HOST}) is defined with device ({DEVICE})'+\
-                 ' but its bond info is not available'
+        errmsg = 'WARNING: Host ({HOST}) is defined with device ({DEVICE})'+\
+                 ' but its bond info is not available\n'
         if hosts[host].has_key('device') and hosts[host].has_key('ip'):
             cmd += ' --device {device} --ip {ip}'.format(**hosts[host])
             device = hosts[host]['device']
             if 'bond' in device.lower():
                 if not bondinfo or not (bondinfo.has_key(host)
                     and device == bondinfo[host]['name']):
-                    raise AttributeError(errmsg.format(HOST=host,
+                    print (errmsg.format(HOST=host,
                                            DEVICE=hosts[host]['device']))
+                    continue
                 if not bondinfo[host].has_key('member'):
                     raise AttributeError('Bond members are not defined for'+ \
                                          ' host %s, device %s' %(host, device))
