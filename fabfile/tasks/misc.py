@@ -128,7 +128,7 @@ def create_default_secgrp_rules():
         security_groups = proj_obj.get_security_groups()
         if not security_groups:
             continue
-        for sg in security_groups
+        for sg in security_groups:
             sg_obj = vnc_lib.security_group_read(id=sg['uuid'])
             if sg_obj.name != 'default':
                 continue
