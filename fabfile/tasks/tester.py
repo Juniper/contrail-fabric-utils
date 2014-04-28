@@ -193,7 +193,7 @@ stop_on_fail=no
         host_dict['ip'] = "127.0.0.1" if (CONTROLLER_TYPE == 'Cloudstack' and host_string in env.roledefs['control']) else host_ip
         host_dict['data-ip']= get_data_ip(host_string)[0]
         if host_dict['data-ip'] == host_string.split('@')[1]:
-            host_dict['data-ip'] = get_data_ip(host_string,section='control')[0]
+            host_dict['data-ip'] = get_data_ip(host_string)[0]
         host_dict['control-ip']= get_control_host_string(host_string).split('@')[1]
        
         host_dict['name'] = host_name
