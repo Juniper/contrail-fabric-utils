@@ -25,6 +25,8 @@ env.roledefs = {
     'webui': [host1],
     'database': [host1],
     'build': [host_build],
+    'storage-master': [host1],
+    'storage-compute': [host1],
 }
 
 #Openstack admin password
@@ -66,6 +68,16 @@ env.ostypes = {
 #data = {
 #    host1 : { 'ip': '192.161.10.1/24', 'gw' : '192.161.10.254', 'device':'bond0' },
 #}
+
+
+#storage compute disk config
+#storage_node_config = {
+#    host1 : { 'disks' : ['sdc', 'sdd'] },
+#}
+
+#live migration config
+#live_migration = True
+
 
 #To disable installing contrail interface rename package
 #env.interface_rename = False

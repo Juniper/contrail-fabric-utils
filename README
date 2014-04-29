@@ -242,3 +242,15 @@ Invoke `fab list` to see the list of all tasks and a brief description. The comp
             prov_external_bgp
             compute_reboot
                 => This task will reboot the compute nodes
+
+
+    The composition of tasks related to storage are as below:
+
+    a. To install storage packages:
+
+	install_storage
+	    install_storage_master
+	    install_storage_compute
+
+    b. To setup storage:
+        setup_storage

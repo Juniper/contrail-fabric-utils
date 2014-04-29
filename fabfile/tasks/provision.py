@@ -682,13 +682,14 @@ def setup_control_node(*args):
 @task
 @EXECUTE_TASK
 @roles('storage-master')
-def setup_ceph_storage():
-    """Provisions storage services."""
-    execute("setup_storage_master", env.host_string)
+@task
+def setup_master_storage():
+    """Provisions storage master services."""
+    execute("setup_storage_master_node", env.host_string)
 
 @task
-def setup_storage_master(*args):
-    """Provisions storage services in one or list of nodes. USAGE: fab setup_storage:user@1.1.1.1,user@2.2.2.2"""
+def setup_storage_master_node(*args):
+    """Provisions storage master services""" 
     for host_string in args:
         if host_string == env.roledefs['storage-master'][0]:
             storage_host_entries=[]
@@ -704,7 +705,7 @@ def setup_storage_master(*args):
                         storage_host = get_control_host_string(entry)
                         storage_data_ip=get_data_ip(storage_host, 'data')[0]
                         storage_host_list.append(storage_data_ip)
-            for entry in env.roledefs['compute-storage']:
+            for entry in env.roledefs['storage-compute']:
                 for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
                     if entry == sthostentry and entry != env.roledefs['storage-master'][0]:
                         storage_hostnames.append(sthostname)
@@ -723,6 +724,21 @@ def setup_storage_master(*args):
                     print cmd
                     run(cmd)
 #end setup_storage_master
+
+
+@task
+@EXECUTE_TASK
+@roles('storage-compute')
+@task
+def setup_compute_storage():
+    """Provisions storage compute services."""
+    execute("setup_storage_compute_node", env.host_string)
+
+@task
+def setup_storage_compute_node(*args):
+	"""Provisions storage compute services in one or list of nodes"""
+	#dummy for now
+	return
 
 
 @task
@@ -864,7 +880,8 @@ def prov_metadata_services():
 def setup_storage():
     """Provisions required contrail services in all nodes as per the role definition.
     """
-    execute(setup_ceph_storage)
+    execute(setup_master_storage)
+    execute(setup_compute_storage)
 #end setup_storage
 
 @roles('cfgm')
