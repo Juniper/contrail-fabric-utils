@@ -48,6 +48,34 @@ env.ostypes = {
     host1:'centos',
 }
 
+#OPTIONAL ANALYTICS CONFIGURATION
+#================================
+# database_dir is the directory where cassandra data is stored
+#
+# If it is not passed, we will use cassandra's default
+# /var/lib/cassandra/data
+#
+#database_dir = '<separate-partition>/cassandra'
+#
+# analytics_data_dir is the directory where cassandra data for analytics
+# is stored. This is used to seperate cassandra's main data storage [internal
+# use and config data] with analytics data. That way critical cassandra's 
+# system data and config data are not overrun by analytis data
+#
+# If it is not passed, we will use cassandra's default
+# /var/lib/cassandra/data
+#
+#analytics_data_dir = '<separate-partition>/analytics_data'
+#
+# ssd_data_dir is the directory where cassandra can store fast retrievable
+# temporary files (commit_logs). Giving cassandra an ssd disk for this
+# purpose improves cassandra performance
+#
+# If it is not passed, we will use cassandra's default
+# /var/lib/cassandra/commit_logs
+#
+#ssd_data_dir = '<seperate-partition>/commit_logs_data'
+
 #OPTIONAL BONDING CONFIGURATION
 #==============================
 #Inferface Bonding

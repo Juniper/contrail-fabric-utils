@@ -567,6 +567,12 @@ def setup_database_node(*args):
                 database_dir = get_database_dir()
                 if database_dir is not None:
                     run_cmd += "--data_dir %s " % (database_dir)
+                analytics_data_dir = get_analytics_data_dir()
+                if analytics_data_dir is not None:
+                    run_cmd += "--analytics_data_dir %s " % (analytics_data_dir)
+                ssd_data_dir = get_ssd_data_dir()
+                if ssd_data_dir is not None:
+                    run_cmd += "--ssd_data_dir %s " % (ssd_data_dir)
                 if (len(env.roledefs['database'])>2):
                     run_cmd += "--seed_list %s,%s" % (hstr_to_ip(get_control_host_string(env.roledefs['database'][0])),hstr_to_ip(get_control_host_string(env.roledefs['database'][1])))
                 else: 
