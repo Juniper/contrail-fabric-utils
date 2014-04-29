@@ -350,13 +350,13 @@ def install_vrouter_node(*args):
 
 @task
 @EXECUTE_TASK
-@roles('compute-storage')
-def install_compute_storage():
-    """Installs storage pkgs in all nodes defined in compute-storage role."""
-    execute("install_compute_storage_node", env.host_string)
+@roles('storage-compute')
+def install_storage_compute():
+    """Installs storage pkgs in all nodes defined in storage-compute role."""
+    execute("install_storage_compute_node", env.host_string)
 
 @task
-def install_compute_storage_node(*args):
+def install_storage_compute_node(*args):
     """Installs storage pkgs in one or list of nodes. USAGE:fab install_compute_storage_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with  settings(host_string=host_string):
@@ -434,7 +434,7 @@ def install_storage():
     """Installs required storage packages in nodes as per the role definition.
     """
     execute(install_storage_master)
-    execute(install_compute_storage)
+    execute(install_storage_compute)
 
 @roles('openstack')
 @task

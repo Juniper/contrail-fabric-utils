@@ -34,6 +34,8 @@ env.roledefs = {
     'webui': [host1],
     'database': [host1, host2, host3],
     'build': [host_build],
+    'storage-master': [host1],
+    'storage-compute': [host4, host5, host6, host7, host8, host9, host10],
 }
 
 env.hostnames = {
@@ -132,6 +134,17 @@ env.ostypes = {
 #    host2 : { 'ip': '192.161.10.1/24', 'gw' : '192.161.10.254', 'device':'bond0' },
 #    host5 : { 'ip': '192.161.10.2/24', 'gw' : '192.161.10.254', 'device':'bond0' },
 #}
+
+#storage compute disk config
+#storage_node_config = {
+#    host4 : { 'disks' : ['sdc', 'sdd'] },
+#    host5 : { 'disks' : ['sdc', 'sdd'] },
+#    host6 : { 'disks' : ['sdc', 'sdd'] },
+#}
+
+#live migration config
+#live_migration = True
+
 
 #To disable installing contrail interface rename package
 #env.interface_rename = False
