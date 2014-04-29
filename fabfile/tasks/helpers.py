@@ -56,17 +56,14 @@ def all_reimage(build_param="@LATEST"):
 
         if 'ostypes' in env.keys():
             if 'xen' in env.ostypes[host]:
-                if env.xen_ver == '6.2':
-                    #XenServer 6.2
-                    local("/cs-shared/cf/bin/xen62.reimage %s" %(hostname))
-                else:
-                    #XenServer 6.1
-                    local("/cs-shared/cf/bin/xen.reimage %s" %(hostname))
+                pass
             elif 'fedora' in env.ostypes[host]:
                 # Fedora
                 local("/cs-shared/cf/bin/reimage %s %s" %(hostname, build_param))
             elif 'ubuntu' in env.ostypes[host]:
                 local("/cs-shared/cf/bin/ubuntu.reimage %s" %(hostname))
+            elif 'cent63' in env.ostypes[host]:
+                local("/cs-shared/cf/bin/centos63.reimage %s" %(hostname))
             else:
                 # CentOS
                 local("/cs-shared/cf/bin/centos.reimage %s %s" %(hostname, build_param))
