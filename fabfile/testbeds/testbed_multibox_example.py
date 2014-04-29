@@ -26,13 +26,13 @@ host_build = 'root@1.1.1.1'
 #Role definition of the hosts.
 env.roledefs = {
     'all': [host1, host2, host3, host4, host5, host6, host7, host8, host9, host10],
-    'cfgm': [host1],
+    'cfgm': [host1, host2, host3],
     'openstack': [host1],
-    'control': [host2, host3],
+    'control': [host1, host2, host3],
     'compute': [host4, host5, host6, host7, host8, host9, host10],
-    'collector': [host1],
+    'collector': [host1, host2, host3],
     'webui': [host1],
-    'database': [host1],
+    'database': [host1, host2, host3],
     'build': [host_build],
 }
 
@@ -73,6 +73,34 @@ env.ostypes = {
     host9: 'centos',
     host10: 'centos',
 }
+
+#OPTIONAL ANALYTICS CONFIGURATION
+#================================
+# database_dir is the directory where cassandra data is stored
+#
+# If it is not passed, we will use cassandra's default
+# /var/lib/cassandra/data
+#
+#database_dir = '<separate-partition>/cassandra'
+#
+# analytics_data_dir is the directory where cassandra data for analytics
+# is stored. This is used to seperate cassandra's main data storage [internal
+# use and config data] with analytics data. That way critical cassandra's 
+# system data and config data are not overrun by analytis data
+#
+# If it is not passed, we will use cassandra's default
+# /var/lib/cassandra/data
+#
+#analytics_data_dir = '<separate-partition>/analytics_data'
+#
+# ssd_data_dir is the directory where cassandra can store fast retrievable
+# temporary files (commit_logs). Giving cassandra an ssd disk for this
+# purpose improves cassandra performance
+#
+# If it is not passed, we will use cassandra's default
+# /var/lib/cassandra/commit_logs
+#
+#ssd_data_dir = '<seperate-partition>/commit_logs_data'
 
 #OPTIONAL BONDING CONFIGURATION
 #==============================
