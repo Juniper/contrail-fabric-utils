@@ -133,6 +133,45 @@ def create_default_secgrp_rules():
             if sg_obj.name != 'default':
                 continue
 
+            sg_rules = sg_obj.security_group_entries
+            ingress_rule_exists = False
+            eggress_rule_exists = False
+            for rule in sg_rules.get_policy_rule():
+                if (len(rule.get_src_addresses()) == 1 and
+                    rule.get_src_addresses()[0].get_security_group() and
+                    rule.get_src_addresses()[0].get_security_group().endswith(':default') and
+                    len(rule.get_dst_addresses()) == 1 and
+                    rule.get_dst_addresses()[0].get_security_group() and
+                    rule.get_dst_addresses()[0].get_security_group() == 'local' and
+                    len(rule.get_src_ports()) == 1 and
+                    rule.get_src_ports()[0].get_start_port() == 0 and
+                    rule.get_src_ports()[0].get_end_port() == 65535 and
+                    len(rule.get_dst_ports()) == 1 and
+                    rule.get_dst_ports()[0].get_start_port() == 0 and
+                    rule.get_dst_ports()[0].get_end_port() == 65535 and
+                    rule.get_protocol() == 'any'):
+                    print "Default Ingress rule exists in project %s" % proj_obj.name
+                    ingress_rule_exists = True
+                    if egress_rule_exists:
+                        break
+                elif (len(rule.get_src_addresses()) == 1 and
+                    rule.get_src_addresses()[0].get_security_group() and
+                    rule.get_src_addresses()[0].get_security_group() == 'local' and
+                    len(rule.get_dst_addresses()) == 1 and
+                    rule.get_dst_addresses()[0].get_subnet() and
+                    rule.get_dst_addresses()[0].get_subnet().get_ip_prefix() == '0.0.0.0' and
+                    len(rule.get_src_ports()) == 1 and
+                    rule.get_src_ports()[0].get_start_port() == 0 and
+                    rule.get_src_ports()[0].get_end_port() == 65535 and
+                    len(rule.get_dst_ports()) == 1 and
+                    rule.get_dst_ports()[0].get_start_port() == 0 and
+                    rule.get_dst_ports()[0].get_end_port() == 65535 and
+                    rule.get_protocol() == 'any'):
+                    print "Default Egress rule exists in project %s" % proj_obj.name
+                    egress_rule_exists = True
+                    if ingress_rule_exists:
+                        break
+
             sgr_uuid = str(uuid.uuid4())
             ingress_rule = PolicyRuleType(rule_uuid=sgr_uuid, direction='>',
                                           protocol='any',
@@ -143,7 +182,10 @@ def create_default_secgrp_rules():
                                           dst_addresses=[
                                               AddressType(security_group='local')],
                                           dst_ports=[PortType(0, 65535)])
-            sg_rules = PolicyEntriesType([ingress_rule])
+
+            if not ingress_rule_exists:
+                print "Default Ingress rule doesn't exists in project %s" % proj_obj.name
+                sg_rules.add_policy_rule(ingress_rule)
 
             sgr_uuid = str(uuid.uuid4())
             egress_rule = PolicyRuleType(rule_uuid=sgr_uuid, direction='>',
@@ -155,7 +197,9 @@ def create_default_secgrp_rules():
                                              AddressType(
                                                  subnet=SubnetType('0.0.0.0', 0))],
                                          dst_ports=[PortType(0, 65535)])
-            sg_rules.add_policy_rule(egress_rule)
+            if not egress_rule_exists:
+                print "Default Egress rule doesn't exists in project %s" % proj_obj.name
+                sg_rules.add_policy_rule(egress_rule)
 
             # update security group
             sg_obj.security_group_entries = sg_rules
