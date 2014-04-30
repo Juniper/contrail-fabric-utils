@@ -17,9 +17,11 @@ def add_vrouter_node(*args):
         with settings(host_string=host_string):
             execute("create_install_repo_node", env.host_string)
             execute("install_vrouter_node", env.host_string)
-            execute("install_interface_name_node", env.host_string)
-            #Clear the connections cache
-            connections.clear()
+            if getattr(env, 'interface_rename', True):
+                print "Installing interface Rename package and rebooting the system."
+                execute("install_interface_name_node", env.host_string)
+                #Clear the connections cache
+                connections.clear()
             execute("upgrade_pkgs_node", env.host_string)
             execute("setup_vrouter_node", env.host_string)
             execute("reboot_node", env.host_string)
