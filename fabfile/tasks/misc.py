@@ -135,7 +135,7 @@ def create_default_secgrp_rules():
 
             sg_rules = sg_obj.security_group_entries
             ingress_rule_exists = False
-            eggress_rule_exists = False
+            egress_rule_exists = False
             for rule in sg_rules.get_policy_rule():
                 if (len(rule.get_src_addresses()) == 1 and
                     rule.get_src_addresses()[0].get_security_group() and
