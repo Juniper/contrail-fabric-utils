@@ -35,6 +35,10 @@ env.passwords = {
     host_build: 'dsetia123',
 }
 
+env.ostypes = {
+    host1:'ubuntu',
+}
+
 env.test_repo_dir='/home/dsetia/test'
 env.pkg_dir='/home/dsetia/rpmbuild/RPMS'
 env.mail_from='dsetia@juniper.net'
