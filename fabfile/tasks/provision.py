@@ -705,22 +705,22 @@ def setup_control_node(*args):
 
 @task
 @EXECUTE_TASK
-@roles('openstack')
-def setup_storage():
-    """Provisions storage services."""
-    if detect_ostype() in ['centos']:
-        execute("setup_storage_master", env.host_string)
+@roles('storage-master')
+@task
+def setup_master_storage():
+    """Provisions storage master services."""
+    execute("setup_storage_master_node", env.host_string)
 
 @task
-def setup_storage_master(*args):
-    """Provisions storage services in one or list of nodes. USAGE: fab setup_storage:user@1.1.1.1,user@2.2.2.2"""
+def setup_storage_master_node(*args):
+    """Provisions storage master services""" 
     for host_string in args:
-        if host_string == env.roledefs['openstack'][0]:
+        if host_string == env.roledefs['storage-master'][0]:
             storage_host_entries=[]
             storage_pass_list=[]
             storage_host_list=[]
             storage_hostnames=[]
-            for entry in env.roledefs['openstack']:
+            for entry in env.roledefs['storage-master']:
                 for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
                     if entry == sthostentry:
                         storage_hostnames.append(sthostname)
@@ -729,18 +729,18 @@ def setup_storage_master(*args):
                         storage_host = get_control_host_string(entry)
                         storage_data_ip=get_data_ip(storage_host)[0]
                         storage_host_list.append(storage_data_ip)
-            for entry in env.roledefs['compute']:
+            for entry in env.roledefs['storage-compute']:
                 for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
-                    if entry == sthostentry and entry != env.roledefs['openstack'][0]:
+                    if entry == sthostentry and entry != env.roledefs['storage-master'][0]:
                         storage_hostnames.append(sthostname)
                         storage_host_password=env.passwords[entry]
                         storage_pass_list.append(storage_host_password)
                         storage_host = get_control_host_string(entry)
                         storage_data_ip=get_data_ip(storage_host)[0]
                         storage_host_list.append(storage_data_ip)
-            storage_master=get_control_host_string(env.roledefs['openstack'][0])
+            storage_master=get_control_host_string(env.roledefs['storage-master'][0])
             storage_master_ip=get_data_ip(storage_master)[0]
-            storage_master_password=env.passwords[env.roledefs['openstack'][0]]
+            storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
             with  settings(host_string = storage_master, password = storage_master_password):
                 with cd(INSTALLER_DIR):
                     cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s" \
@@ -748,6 +748,21 @@ def setup_storage_master(*args):
                     print cmd
                     run(cmd)
 #end setup_storage_master
+
+
+@task
+@EXECUTE_TASK
+@roles('storage-compute')
+@task
+def setup_compute_storage():
+    """Provisions storage compute services."""
+    execute("setup_storage_compute_node", env.host_string)
+
+@task
+def setup_storage_compute_node(*args):
+	"""Provisions storage compute services in one or list of nodes"""
+	#dummy for now
+	return
 
 
 @task
@@ -882,11 +897,12 @@ def prov_metadata_services():
 
 @roles('build')
 @task
-def setup_st():
+def setup_storage():
     """Provisions required contrail services in all nodes as per the role definition.
     """
-    execute(setup_storage)
-#end setup_st
+    execute(setup_master_storage)
+    execute(setup_compute_storage)
+#end setup_storage
 
 @roles('cfgm')
 @task
