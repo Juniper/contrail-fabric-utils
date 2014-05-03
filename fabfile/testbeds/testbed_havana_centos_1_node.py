@@ -72,7 +72,7 @@ env.passwords = {
 #}
 
 #To disable installing contrail interface rename package
-#env.interface_rename = False
+env.interface_rename = False
 
 #To enable multi-tenancy feature
 #multi_tenancy = True
