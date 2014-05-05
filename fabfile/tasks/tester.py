@@ -390,7 +390,7 @@ def run_sanity(feature='sanity', test=None):
               'ecmp'            : ['%s/scripts/ecmp/sanity_with_setup.py' %repo],
               'evpn'            : ['%s/scripts/evpn/evpn_tests.py' %repo],
               }
-    if feature == 'upgrade':
+    if feature in ('upgrade','upgrade_only'):
         with settings(host_string = env.roledefs['cfgm'][0]):
                 put("./fabfile/testbeds/testbed.py", "/opt/contrail/utils/fabfile/testbeds/testbed.py")
                 run("rm -rf /usr/etc/zookeeper")
@@ -405,7 +405,8 @@ def run_sanity(feature='sanity', test=None):
             'quick_sanity' : pre_cmd + '%s python quick_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
             'upgrade'      : pre_cmd + '%s python upgrade/upgrade_test.py' % (env_vars),
-            'webui_sanity' : pre_cmd + '%s python webui_tests_suite.py' % (env_vars)
+            'webui_sanity' : pre_cmd + '%s python webui_tests_suite.py' % (env_vars),
+            'upgrade_only' : pre_cmd + '%s python upgrade/upgrade_only.py' % (env_vars)
              }
     if CONTROLLER_TYPE == 'Cloudstack':
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../fixtures:.:./cloudstack:/opt/contrail/cloudstack'"
