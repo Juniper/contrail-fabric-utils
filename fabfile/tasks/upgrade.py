@@ -310,6 +310,35 @@ def fix_supervisord_control_node(*args):
 def fix_supervisord_control():
     execute('fix_supervisord_control_node', env.host_string)
 
+@task
+@EXECUTE_TASK
+@roles('openstack')
+def increase_item_size_max():
+    """Increases the memcached item_size_max to 2 MB"""
+    execute('increase_item_size_max_node', env.host_string)
+
+@task
+def increase_item_size_max_node(*args):
+    """Increases the memcached item_size_max to 2 MB in one or list of nodes. USAGE:fab increase_item_size_max_node:user@1.1.1.1,user@2.2.2.2"""
+    item_size_max = '2m'
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            if detect_ostype() == 'Ubuntu':
+                memcache_conf='/etc/memcached.conf'
+                if run('grep "\-I " %s' % memcache_conf).failed:
+                    #Write option to memcached config file
+                    run('echo "-I %s" >> %s' % (item_size_max, memcache_conf))
+            else:
+                memcache_conf='/etc/sysconfig/memcached'
+                opts = run("grep OPTIONS %s | grep -Po '\".*?\"'" % memcache_conf)
+                if opts.failed:
+                    #Write option to memcached config file
+                    run("echo 'OPTIONS=\"-I %s\"' >> %s" % (item_size_max, memcache_conf))
+                elif run("grep OPTIONS %s | grep -Po '\".*?\"' | grep \"\-I\"" % memcache_conf).failed:
+                    #concatenate with the existing options
+                    opts = opts.strip('"') + '-I %s' % item_size_max
+                    run("sed -i 's/OPTIONS.*/OPTIONS=\"%s\"/g' %s" % (opts, memcache_conf))
+
 def yum_upgrade():
     run('yum clean all')
     run('yum -y --disablerepo=* --enablerepo=contrail_install_repo update')
@@ -458,6 +487,7 @@ def upgrade_openstack_node(pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             execute(upgrade)
+            execute('increase_item_size_max_node', host_string)
             with settings(warn_only=True):
                 if get_release() in ['1.05']:
                     run('apt-get -y remove openstack-dashboard-ubuntu-theme')
@@ -612,6 +642,7 @@ def upgrade_all(pkg):
             run('apt-get -y remove openstack-dashboard-ubuntu-theme')
     execute(cleanup_venvs)
     execute(purge_database)
+    execute(increase_item_size_max)
     execute(fix_supervisord_config)
     execute(fix_supervisord_analytics)
     execute(fix_supervisord_control)
