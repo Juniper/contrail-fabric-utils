@@ -85,7 +85,7 @@ The following commands are required on the server running config node:
 
 ### Step 4: Provision and start the services
     cd /opt/contrail/utils
-    fab -c fabrc setup_interface
+    fab -c fabrc setup_network
     fab -c fabrc setup_all
     <compute nodes will reboot>
 
@@ -125,7 +125,7 @@ The following commands are required on the server running config node:
 
 ### Step 4: Provision and start the services
     cd /opt/contrail/utils
-    fab -c fabrc setup_interface
+    fab -c fabrc setup_network
     fab -c fabrc setup_all
     <compute nodes will reboot>
     

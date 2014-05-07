@@ -82,21 +82,21 @@ env.ostypes = {
 #==============================
 #Inferface Bonding
 #bond= {
-#    host1 : { 'name': 'bond0', 'member': ['p2p0p0','p2p0p1','p2p0p2','p2p0p3'], 'mode':'balance-xor' },
+#    host1 : { 'name': 'bond0', 'member': ['p2p0p0','p2p0p1','p2p0p2','p2p0p3'], 'mode': '802.3ad', 'xmit_hash_policy': 'layer3+4' },
 #}
 
-#OPTIONAL SEPARATION OF MANAGEMENT AND CONTROL + DATA
-#====================================================
-#Control Interface
-#control = {
-#    host1 : { 'ip': '192.168.10.1/24', 'gw' : '192.168.10.254', 'device':'eth0' },
+#OPTIONAL SEPARATION OF MANAGEMENT AND CONTROL + DATA AND OPTIONAL VLAN INFORMATION
+#==================================================================================
+#control_data = {
+#    host1 : { 'ip': '192.168.10.1/24', 'gw' : '192.168.10.254', 'device': 'bond0', 'vlan': '224' },
 #}
 
-#Data Interface
-#data = {
-#    host1 : { 'ip': '192.161.10.1/24', 'gw' : '192.161.10.254', 'device':'bond0' },
+#OPTIONAL STATIC ROUTE CONFIGURATION
+#===================================
+#static_route  = {
+#    host1 : [{ 'ip': '10.1.1.0', 'netmask' : '255.255.255.0', 'gw':'192.168.10.254', 'intf': 'bond0' },
+#             { 'ip': '10.1.2.0', 'netmask' : '255.255.255.0', 'gw':'192.168.10.254', 'intf': 'bond0' }],
 #}
-
 
 #storage compute disk config
 #storage_node_config = {
