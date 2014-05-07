@@ -85,7 +85,7 @@ env.ostypes = {
 #    host1 : { 'name': 'bond0', 'member': ['p2p0p0','p2p0p1','p2p0p2','p2p0p3'], 'mode': '802.3ad', 'xmit_hash_policy': 'layer3+4' },
 #}
 
-#OPTIONAL SEPARATION OF MANAGEMENT AND CONTROL + DATA AND OPTIONAL VLAN INFORMATION
+#OPTIONAL SEPARATION OF MANAGEMENT AND CONTROL + DATA and OPTIONAL VLAN INFORMATION
 #==================================================================================
 #control_data = {
 #    host1 : { 'ip': '192.168.10.1/24', 'gw' : '192.168.10.254', 'device': 'bond0', 'vlan': '224' },
