@@ -145,6 +145,9 @@ env.ostypes = {
 #live migration config
 #live_migration = True
 
+#ceph_nfs_livem = True
+#ceph_nfs_livem_subnet = '192.168.10.253/24'
+#ceph_nfs_livem_image = '/ubuntu/livemnfs.qcow2'
 
 #To disable installing contrail interface rename package
 #env.interface_rename = False
