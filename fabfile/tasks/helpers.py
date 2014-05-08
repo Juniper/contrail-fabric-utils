@@ -387,7 +387,7 @@ def copy(src, dst = '.'):
     put(src, dst)
 #end copy
 
-@roles('all')
+@roles('openstack','compute')
 def cleanup_os_config():
     '''
     This has to be run from reset_config() task only
@@ -410,7 +410,14 @@ def cleanup_os_config():
         run('sudo rm -f /etc/contrail/mysql.token')
         run('sudo rm -f /etc/contrail/service.token')
         run('sudo rm -f /etc/contrail/keystonerc')
-        run('sudo rm -f /var/lib/glance/images/*')
+        
+        #TODO 
+        # In Ubuntu, by default glance uses sqlite
+        # Until we have a clean way of clearing glance image-data in sqlite,
+        # just skip removing the images on Ubuntu
+        if not detect_ostype() in ['Ubuntu']:
+            run('sudo rm -f /var/lib/glance/images/*')
+        
         run('sudo rm -rf /var/lib/nova/tmp/nova-iptables')
         run('sudo rm -rf /var/lib/libvirt/qemu/instance*')
         run('sudo rm -rf /var/log/libvirt/qemu/instance*')
