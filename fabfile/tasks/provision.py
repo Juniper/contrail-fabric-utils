@@ -1132,6 +1132,7 @@ def reset_config():
         raise SystemExit("\nReset config Failed.... Aborting")
     else:
         execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
+    sleep(60)
     execute(prov_control_bgp)
     execute(prov_external_bgp)
     execute(prov_metadata_services)
