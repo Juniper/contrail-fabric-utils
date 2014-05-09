@@ -129,9 +129,6 @@ def install_contrail_packages():
     run('sh /opt/contrail/cloudstack-utils/contrail-install.sh %s' %
                 (env.config['yum_repo_host']))
 
-    # Over-write the api-conf file with listen addr as 0.0.0.0 and discovery ip
-    run("sed -i '/listen_ip_addr/c\listen_ip_addr=0.0.0.0' /etc/contrail/api_server.conf")
-    run("echo 'disc_server_ip=%s\ndisc_server_port=5998\nredis_server_ip=%s'>> /etc/contrail/api_server.conf" %(cfgm_ip,cfgm_ip))
     # analytics venv instalation
     with cd("/opt/contrail/analytics-venv/archive"):
         run("source ../bin/activate && pip install *")
