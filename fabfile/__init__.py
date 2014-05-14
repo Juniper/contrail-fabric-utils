@@ -17,11 +17,11 @@ from  config import *
 # Fabric tasks
 from tasks.tester import *
 from tasks.install import *
-#from tasks.storage.install import *
+from tasks.storage.install import *
 from tasks.syslogs import *
 from tasks.helpers import *
 from tasks.provision import *
-#from tasks.storage.provision import *
+from tasks.storage.provision import *
 from tasks.upgrade import *
 from tasks.services import *
 from tasks.misc import *
