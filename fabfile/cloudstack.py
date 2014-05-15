@@ -1,6 +1,6 @@
 __all__ = ['install_packages', 'install_cloudstack_packages', 'install_contrail_packages', 'setup_cloud', 'install_vm_template',
            'provision_routing', 'provision_all', 'run_sanity', 'enable_proxyvm_console_access', 'cloudstack_api_setup',
-           'install_contrail', 'install_cloudstack', 'install_xenserver']
+           'setup_vmtemplate', 'check_systemvms', 'install_contrail', 'install_cloudstack', 'install_xenserver']
 
 from fabric.api import env, parallel, roles, run, settings, sudo, task, cd, \
     execute, local, lcd, hide
@@ -16,6 +16,7 @@ import sys
 import subprocess
 import re
 import socket
+import os
 
 from common import *
 
@@ -137,8 +138,7 @@ def install_cloudstack(pkg):
     with settings(host_string = host):
         run('mkdir -p %s' % temp_dir)
         put(pkg, '%s/%s' % (temp_dir, pkg_name))
-        run('tar xjf %s'%pkg_name)
-        run('sh ./cloudstack_setup.sh')
+        run('cd %s && tar xjf %s && sh ./cloudstack_setup.sh' %(temp_dir, pkg_name))
     execute(install_cloudstack_packages)
 
 @roles('build')
@@ -150,8 +150,7 @@ def install_contrail(pkg):
     with settings(host_string = host):
         run('mkdir -p %s' % temp_dir)
         put(pkg, '%s/%s' % (temp_dir, pkg_name))
-        run('tar xjf %s'%pkg_name)
-        run('sh ./controller_setup.sh')
+        run('cd %s && tar xjf %s && sh ./contrail_setup.sh' %(temp_dir, pkg_name))
     execute(install_contrail_packages)
 
 @roles('build')
@@ -164,8 +163,7 @@ def install_xenserver(pkg):
         with settings(host_string = host):
             run('mkdir -p %s' % temp_dir)
             put(pkg, '%s/%s' % (temp_dir, pkg_name))
-            run('tar xjf %s'%pkg_name)
-            run('sh ./xenserver_setup.sh')
+            run('cd %s && tar xjf %s && sh ./xen_setup.sh'%(temp_dir, pkg_name))
 
 @roles('build')
 @task
@@ -176,7 +174,7 @@ def install_packages():
 @roles('orchestrator')
 @task
 def install_cloudstack_packages():
-    run('yum install --disablerepo=* --enablerepo=Contrail -y contrail-cloudstack-utils')
+    run('yum install --disablerepo=* --enablerepo=contrail_install_repo -y contrail-cloudstack-utils')
     check_cs_version_in_config()
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     if not 'systemvm_template' in env:
@@ -196,13 +194,10 @@ def install_contrail_packages():
     orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     control_ip = host_string_to_ip(env.roledefs['control'][0])
-    run('yum install --disablerepo=* --enablerepo=Contrail -y contrail-cloudstack-utils')
-    run('sh /opt/contrail/cloudstack-utils/contrail-install.sh')
+    run('yum install --disablerepo=* --enablerepo=contrail_install_repo -y contrail-cloudstack-utils')
+    run('sh /opt/contrail/cloudstack-utils/contrail-install.sh 127.0.0.1')
     install_rabbitmq()
 
-    # Over-write the api-conf file with listen addr as 0.0.0.0 and discovery ip
-    run("sed -i '/listen_ip_addr/c\listen_ip_addr=0.0.0.0' /etc/contrail/api_server.conf")
-    run("echo 'disc_server_ip=%s\ndisc_server_port=5998\nredis_server_ip=%s'>> /etc/contrail/api_server.conf" %(cfgm_ip,cfgm_ip))
     # analytics venv instalation
     with cd("/opt/contrail/analytics-venv/archive"):
         run("source ../bin/activate && pip install *")
@@ -293,7 +288,6 @@ def provision_routing():
 def provision_all():
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
-    sleep(60)
     run('/etc/init.d/cloudstack-management restart')
     wait_for_cloudstack_management_up(env.host, env.config['cloud']['username'],
                                       env.config['cloud']['password'])
@@ -301,10 +295,10 @@ def provision_all():
     run('/etc/init.d/cloudstack-management restart')
     wait_for_cloudstack_management_up(env.host, env.config['cloud']['username'],
                                       env.config['cloud']['password'])
-    execute(setup_vmtemplate)
     execute(provision_routing)
     execute(check_systemvms)
     execute(enable_proxyvm_console_access)
+    execute(setup_vmtemplate)
 
 @roles('compute')
 @task
