@@ -13,6 +13,7 @@ from fabfile.utils.interface import *
 from fabfile.utils.multitenancy import *
 from fabfile.utils.fabos import detect_ostype
 
+devstack_flag = False
 
 @roles('build')
 @task
@@ -98,6 +99,9 @@ keys=root,log01
 
 [webui]
 webui=$__webui__
+
+[devstack]
+devstack=$__devstack__
 
 [openstack_host_name]
 openstack_host_name =$__openstack__
@@ -267,6 +271,7 @@ stop_on_fail=no
         mail_server = '10.204.216.49'
         mail_port = '25'
         webui = getattr(testbed, 'webui','False')
+
         if 'mail_server' in env.keys():
             mail_server = env.mail_server
             mail_port = env.mail_port
@@ -294,6 +299,7 @@ stop_on_fail=no
              '__mail_port__': mail_port,
              '__test_repo__': get_remote_path(env.test_repo_dir),
              '__webui__': webui,
+             '__devstack__': devstack_flag,
              '__openstack__': openstack_host_name,
             })
         
@@ -317,7 +323,10 @@ stop_on_fail=no
                 run('yum --disablerepo=base,extras,updates -y install python-extras python-testtools python-fixtures python-pycrypto python-ssh fabric')
         else:
             with settings(warn_only = True):
-                run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay")
+                if devstack_flag == True :
+                    run("pip install fixtures testtools testresources selenium pyvirtualdisplay")
+                else :
+                    run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay")
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
@@ -376,6 +385,7 @@ def run_sanity(feature='sanity', test=None):
               'analytics'    : ['%s/scripts/analytics_tests_with_setup.py' % repo],
               'basic_vn_vm'  : ['%s/scripts/vm_vn_tests.py' % repo],
               'webui'       : ['%s/scripts/tests_with_setup_base_webui.py' % repo],
+              'devstack'       : ['%s/scripts/devstack_sanity_tests_with_setup.py' % repo],
               'svc_mirror'   : ['%s/scripts/servicechain/mirror/sanity.py' % repo,
                                 '%s/scripts/servicechain/mirror/regression.py' % repo],
               'vpc'          : ['%s/scripts/vpc/sanity.py' % repo],
@@ -400,13 +410,21 @@ def run_sanity(feature='sanity', test=None):
                 put(test,"/tmp/temp/")
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
-    pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
+    global devstack_flag
+    devstack_flag = getattr(testbed, 'devstack','False')
+
+    if devstack_flag == True :
+        pre_cmd = ''
+    else :
+        pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
+
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
     cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
             'quick_sanity' : pre_cmd + '%s python quick_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
             'upgrade'      : pre_cmd + '%s python upgrade/upgrade_test.py' % (env_vars),
             'webui_sanity' : pre_cmd + '%s python webui_tests_suite.py' % (env_vars),
+            'devstack_sanity' : pre_cmd + '%s python devstack_sanity_tests_with_setup.py' % (env_vars),
             'upgrade_only' : pre_cmd + '%s python upgrade/upgrade_only.py' % (env_vars)
              }
     if CONTROLLER_TYPE == 'Cloudstack':
