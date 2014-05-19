@@ -6,6 +6,7 @@ from fabric.api import env, parallel, roles, run, settings, sudo, task, cd, \
     execute, local, lcd, hide
 from fabric.state import output, connections
 from fabric.operations import get, put
+from tasks.tester import get_remote_path, setup_test_env 
 
 import json
 import tempfile
@@ -138,7 +139,7 @@ def install_cloudstack(pkg):
     with settings(host_string = host):
         run('mkdir -p %s' % temp_dir)
         put(pkg, '%s/%s' % (temp_dir, pkg_name))
-        run('cd %s && tar xjf %s && sh ./cloudstack_setup.sh' %(temp_dir, pkg_name))
+        run('cd %s && tar xvjf %s && sh ./cloudstack_setup.sh' %(temp_dir, pkg_name))
     execute(install_cloudstack_packages)
 
 @roles('build')
@@ -150,7 +151,7 @@ def install_contrail(pkg):
     with settings(host_string = host):
         run('mkdir -p %s' % temp_dir)
         put(pkg, '%s/%s' % (temp_dir, pkg_name))
-        run('cd %s && tar xjf %s && sh ./contrail_setup.sh' %(temp_dir, pkg_name))
+        run('cd %s && tar xvjf %s && sh ./contrail_setup.sh' %(temp_dir, pkg_name))
     execute(install_contrail_packages)
 
 @roles('build')
@@ -163,7 +164,7 @@ def install_xenserver(pkg):
         with settings(host_string = host):
             run('mkdir -p %s' % temp_dir)
             put(pkg, '%s/%s' % (temp_dir, pkg_name))
-            run('cd %s && tar xjf %s && sh ./xen_setup.sh'%(temp_dir, pkg_name))
+            run('cd %s && tar xvjf %s && sh ./xen_setup.sh'%(temp_dir, pkg_name))
 
 @roles('build')
 @task
@@ -234,6 +235,9 @@ def setup_cloud():
         put(f.name, '~/config.json')
     run('python /opt/contrail/cloudstack-utils/system-setup.py ~/config.json ' +
             '~/system-setup.log %s %s' %(env.cs_version, env.cs_flavor))
+    run('/etc/init.d/cloudstack-management restart')
+    wait_for_cloudstack_management_up(env.host, env.config['cloud']['username'],
+                                      env.config['cloud']['password'])
 
 @roles('orchestrator')
 @task
@@ -244,6 +248,9 @@ def cloudstack_api_setup():
         cfgm_ip = '127.0.0.1'
     run('cat <<EOF > /usr/share/cloudstack-management/webapps/client/WEB-INF/classes/contrail.properties '+ 
             '\napi.hostname=%s\napi.port=8082\nEOF' %cfgm_ip) 
+    run('/etc/init.d/cloudstack-management restart')
+    wait_for_cloudstack_management_up(env.host, env.config['cloud']['username'],
+                                      env.config['cloud']['password'])
 
 def get_ip_from_url(url):
     match = re.search(r'(http[s]?://|ftp://)(.*?)/', url)
@@ -288,13 +295,7 @@ def provision_routing():
 def provision_all():
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
-    run('/etc/init.d/cloudstack-management restart')
-    wait_for_cloudstack_management_up(env.host, env.config['cloud']['username'],
-                                      env.config['cloud']['password'])
     execute(setup_cloud)
-    run('/etc/init.d/cloudstack-management restart')
-    wait_for_cloudstack_management_up(env.host, env.config['cloud']['username'],
-                                      env.config['cloud']['password'])
     execute(provision_routing)
     execute(check_systemvms)
     execute(enable_proxyvm_console_access)
@@ -382,7 +383,6 @@ def run_sanity(feature='sanity', test=None):
             tests = [get_module(suite) for suite in suites[feature]]
             test = ' '.join(tests)
 
-    from tasks.tester import *
     execute(setup_test_env)
     #cfgm_host = env.roledefs['cfgm'][0]
     cfgm_host = env.roledefs['cfgm'][0]
