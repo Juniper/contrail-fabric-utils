@@ -957,10 +957,8 @@ def setup_without_openstack():
     """Provisions required contrail packages in all nodes as per the role definition except the openstack.
        User has to provision the openstack node with their custom openstack pakckages.
     """
-    execute(bash_autocomplete_systemd)
     execute(setup_rabbitmq_cluster)
     execute(increase_limits)
-    execute(increase_ulimits)
     execute(setup_database)
     execute(setup_cfgm)
     execute(setup_control)
