@@ -454,7 +454,7 @@ def upgrade_database_node(pkg, *args):
             execute(upgrade)
             execute(cleanup_venvs)
             execute('purge_database_node', host_string)
-            execute(upgrade_venv_packages)
+            #execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
             execute('restart_database_node', host_string)
 
@@ -492,7 +492,7 @@ def upgrade_openstack_node(pkg, *args):
                 if get_release() in ['1.05', '1.10']:
                     run('apt-get -y remove openstack-dashboard-ubuntu-theme')
             execute(cleanup_venvs)
-            execute(upgrade_api_venv_packages)
+            #execute(upgrade_api_venv_packages)
             execute('upgrade_pkgs_node', host_string)
             execute('fix_nova_conf_node', host_string)
             execute('setup_contrail_horizon_node', host_string)
@@ -520,7 +520,7 @@ def upgrade_cfgm_node(pkg, *args):
             execute(cleanup_venvs)
             execute('fix_supervisord_config_node', host_string)
             execute('restore_zookeeper_config_node', host_string)
-            execute(upgrade_venv_packages)
+            #execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
 
 
@@ -548,7 +548,7 @@ def upgrade_control_node(pkg, *args):
             execute(upgrade)
             execute(cleanup_venvs)
             execute('fix_supervisord_control_node', host_string)
-            execute(upgrade_venv_packages)
+            #execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
             execute('restart_control_node', host_string)
 
@@ -571,7 +571,7 @@ def upgrade_collector_node(pkg, *args):
             execute(upgrade)
             execute(cleanup_venvs)
             execute('fix_supervisord_analytics_node', host_string)
-            execute(upgrade_venv_packages)
+            #execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
             fix_redis_uve_conf()
             fix_vizd_param()
@@ -595,7 +595,7 @@ def upgrade_webui_node(pkg, *args):
             execute('create_install_repo_node', host_string)
             execute(upgrade)
             execute(cleanup_venvs)
-            execute(upgrade_venv_packages)
+            #execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
             execute('restart_webui_node', host_string)
 
@@ -617,7 +617,7 @@ def upgrade_vrouter_node(pkg, *args):
             execute('create_install_repo_node', host_string)
             execute(upgrade)
             execute(cleanup_venvs)
-            execute(upgrade_venv_packages)
+            #execute(upgrade_venv_packages)
             execute('setup_vrouter_node', host_string)
 
 @task
@@ -646,7 +646,7 @@ def upgrade_all(pkg):
     execute(fix_supervisord_config)
     execute(fix_supervisord_analytics)
     execute(fix_supervisord_control)
-    execute(upgrade_venv_packages)
+    #execute(upgrade_venv_packages)
     execute(upgrade_pkgs)
     fix_vizd_param()
     fix_redis_uve_conf()

@@ -410,13 +410,7 @@ def run_sanity(feature='sanity', test=None):
                 put(test,"/tmp/temp/")
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
-    global devstack_flag
-    devstack_flag = getattr(testbed, 'devstack','False')
-
-    if devstack_flag == True :
-        pre_cmd = ''
-    else :
-        pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
+    pre_cmd = ''
 
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
     cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
