@@ -323,10 +323,7 @@ stop_on_fail=no
                 run('yum --disablerepo=base,extras,updates -y install python-extras python-testtools python-fixtures python-pycrypto python-ssh fabric')
         else:
             with settings(warn_only = True):
-                if devstack_flag == True :
-                    run("pip install fixtures testtools testresources selenium pyvirtualdisplay")
-                else :
-                    run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay")
+                run("pip install fixtures testtools testresources selenium pyvirtualdisplay")
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
