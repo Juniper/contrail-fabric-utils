@@ -12,7 +12,7 @@ host5 = 'root@10.204.217.102'
 host6 = 'root@10.204.217.3'
 
 ext_routers = [('blr-mx1', '10.204.216.253')]
-router_asn = 64512
+router_asn = 64510
 public_vn_rtgt = 10003
 public_vn_subnet = '10.204.219.16/29'
 
