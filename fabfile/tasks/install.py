@@ -24,9 +24,18 @@ def install_deb_all(deb):
 @task
 @parallel(pool_size=20)
 @roles('all')
-def install_pkg_all(deb):
+def install_pkg_all(pkg):
     """Installs any rpm/deb package in all nodes."""
-    execute('install_pkg_node', deb, env.host_string)
+    execute('install_pkg_node', pkg, env.host_string)
+
+@task
+@roles('build')
+def install_pkg_all_without_openstack(pkg):
+    """Installs any rpm/deb package in all nodes excluding openstack node."""
+    host_strings = copy.deepcopy(env.roledefs['all'])
+    dummy = [host_strings.remove(openstack_node)
+             for openstack_node in env.roledefs['openstack']]
+    execute('install_pkg_node', pkg, *host_strings)
 
 @task
 def install_pkg_node(pkg, *args):
