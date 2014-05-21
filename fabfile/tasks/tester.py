@@ -170,6 +170,8 @@ stop_on_fail=no
     if CONTROLLER_TYPE == 'Openstack':
         with settings(host_string = env.roledefs['openstack'][0]):
             openstack_host_name = run("hostname")
+    elif CONTROLLER_TYPE == 'Cloudstack':
+        openstack_host_name = None
 
     with settings(host_string = env.roledefs['cfgm'][0]):
         cfgm_host_name = run("hostname")
@@ -207,6 +209,9 @@ stop_on_fail=no
 
         if CONTROLLER_TYPE == 'Openstack' and host_string in env.roledefs['openstack']:
             role_dict = {'type': 'openstack', 'params': {'cfgm': cfgm_host_name}}
+            host_dict['roles'].append(role_dict)
+        elif CONTROLLER_TYPE == 'Cloudstack' and host_string in env.roledefs['orchestrator']:
+            role_dict = {'type': 'orchestrator', 'params': {'cfgm': cfgm_host_name}}
             host_dict['roles'].append(role_dict)
 
         if host_string in env.roledefs['cfgm']:
@@ -320,7 +325,7 @@ stop_on_fail=no
         os.remove(fname)
         if CONTROLLER_TYPE == 'Cloudstack':
             with settings(warn_only = True):
-                run('yum --disablerepo=base,extras,updates -y install python-extras python-testtools python-fixtures python-pycrypto python-ssh fabric')
+                run('python-pip install fixtures testtools fabric')
         else:
             with settings(warn_only = True):
                 run("pip install fixtures testtools testresources selenium pyvirtualdisplay")
