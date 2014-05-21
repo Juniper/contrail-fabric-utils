@@ -173,7 +173,7 @@ def install_packages():
 
 @roles('orchestrator')
 @task
-def install_cloudstack_packages():
+def install_cloudstack_packages(pkg=None):
     if pkg:
         pkg_name = os.path.basename(pkg)
         temp_dir = tempfile.mkdtemp()
@@ -191,7 +191,7 @@ def install_cloudstack_packages():
                 (env.config['nfs_share_path'], env.systemvm_template, env.host, env.cs_version))
     execute(cloudstack_api_setup)
 
-@roles('control')
+@roles('cfgm')
 @task
 def install_contrail_packages(pkg=None):
     if pkg:
@@ -316,7 +316,6 @@ def install_vm_template(url, name, osname):
 @task
 def provision_routing():
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
-    controller_ip = host_string_to_ip(env.roledefs['control'][0])
     run('python /opt/contrail/cloudstack-utils/provision_routing.py ' +
         '%s 127.0.0.1 %s %s' % (cfgm_ip, env.config['route_target'], env.config['mx_ip']))
 
