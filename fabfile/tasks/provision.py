@@ -651,7 +651,11 @@ def fixup_irond_config(control_host_string):
     tmp_fname = "/tmp/basicauthusers-%s" %(control_host_string)
     for config_host_string in env.roledefs['cfgm']:
         with settings(host_string=config_host_string):
-            get("/etc/ifmap-server/basicauthusers.properties", tmp_fname)
+            if detect_ostype() == 'Ubuntu':
+		pfl = "/etc/ifmap-server/basicauthusers.properties" 
+	    else:
+		pfl = "/etc/irond/basicauthusers.properties" 
+            get(pfl, tmp_fname)
             # replace control-node and dns proc creds
             local("sed -i -e '/%s:/d' -e '/%s.dns:/d' %s" \
                               %(control_ip, control_ip, tmp_fname))
@@ -659,8 +663,7 @@ def fixup_irond_config(control_host_string):
                          %(control_ip, control_ip, tmp_fname))
             local("echo '%s.dns:%s.dns' >> %s" \
                          %(control_ip, control_ip, tmp_fname))
-            put("%s" %(tmp_fname),
-                "/etc/ifmap-server/basicauthusers.properties")
+            put("%s" %(tmp_fname), pfl)
 
             local("rm %s" %(tmp_fname))
 

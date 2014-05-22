@@ -328,7 +328,10 @@ stop_on_fail=no
                 run('python-pip install fixtures testtools fabric')
         else:
             with settings(warn_only = True):
-                run("pip install fixtures testtools testresources selenium pyvirtualdisplay")
+                if detect_ostype() in ['centos']:
+                    run('source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay')
+                else:
+                    run("pip install fixtures testtools testresources selenium pyvirtualdisplay")
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
@@ -412,7 +415,10 @@ def run_sanity(feature='sanity', test=None):
                 put(test,"/tmp/temp/")
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
-    pre_cmd = ''
+    if detect_ostype() in ['centos']:
+	pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
+    else:
+	pre_cmd = ''
 
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
     cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
