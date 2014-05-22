@@ -104,7 +104,7 @@ def verify_cluster_status():
     if not match:
         return False
     clustered_nodes = match.group(1).split(',')
-    clustered_nodes = [node.strip() for node in clustered_nodes]
+    clustered_nodes = [node.strip(' \n\r\'') for node in clustered_nodes]
 
     cfgms = []
     for host_string in env.roledefs['cfgm']:
