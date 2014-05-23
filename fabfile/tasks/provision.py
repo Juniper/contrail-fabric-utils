@@ -801,6 +801,9 @@ def prov_control_bgp():
             tgt_hostname = run("hostname")
 
         with cd(UTILS_DIR):
+            #Configure global system config with the same ASN
+            run("python provision_control.py --api_server_ip %s --api_server_port 8082 --router_asn %s " \
+                        %(cfgm_ip, testbed.router_asn))
             run("python provision_control.py --api_server_ip %s --api_server_port 8082 --host_name %s --host_ip %s --router_asn %s %s" \
                         %(cfgm_ip, tgt_hostname, tgt_ip, testbed.router_asn, get_mt_opts()))
 #end prov_control_bgp
