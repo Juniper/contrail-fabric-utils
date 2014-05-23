@@ -67,9 +67,10 @@ def get_cassandra_logs():
     uptime_min=str(uptime_min) + 'm'
     print "Node %s is up for %s. Collecting Cassandra logs for %s" %(e,uptime_min,uptime_min)    
     cmd = "/opt/contrail/utils/contrail-logs --last %s --all" %(uptime_min)
-    sudo("%s >> /var/log/cassandra_log_%s_%s.log" %(cmd,e,a))
-    sudo("gzip /var/log/cassandra_log_*" )
-    print "\nCassandra logs are saved in /var/log/cassandra_log_%s_%s.log.gz of %s" %( e, a , e )
+    with settings(warn_only=True):
+        sudo("%s >> /var/log/cassandra_log_%s_%s.log" %(cmd,e,a))
+        sudo("gzip /var/log/cassandra_log_*" )
+        print "\nCassandra logs are saved in /var/log/cassandra_log_%s_%s.log.gz of %s" %( e, a , e )
 #end get_cassandra_logs
 
 @roles('database')
