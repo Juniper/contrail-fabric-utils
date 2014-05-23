@@ -3,6 +3,7 @@ from netaddr import *
 
 from fabric.api import *
 
+from time import sleep
 from fabfile.config import testbed
 from fabfile.utils.host import hstr_to_ip
 from fabric.exceptions import CommandTimeout
@@ -80,6 +81,7 @@ def create_intf_file(tgt_host,name,member,mode, intf_ip):
         bond_mode="mode=" + mode + " xmit_hash_policy=layer3+4"
         run("echo BONDING_OPTS=\\\'%s\\\' >>  %s" %(bond_mode,filename))
         run("echo BOOTPROTO=none >>  %s" %(filename))
+        run("echo SUBCHANNELS=1,2,3 >> %s" %(filename))
         if intf_ip:
             run("echo NETMASK=%s >>  %s" %(bond_netmask,filename))
             run("echo IPADDR=%s >>  %s" %(bond_ip,filename))
@@ -138,6 +140,7 @@ def restart_network_service(tgt_host):
            run("cd /tmp ; ./%s" %(filename), timeout=30)
         except CommandTimeout:
             pass
+        sleep(5)
 
 def check_intf_is_bond(tgt_host,tgt_device):
     is_bond= False
