@@ -716,6 +716,12 @@ def reboot_vm(vmid='all', mode='soft'):
 @task
 @roles('database')
 def delete_cassandra_db_files():
-    run('rm -rf /home/cassandra/commitlog')
-    run('rm -rf /home/cassandra/data')
-    run('rm -rf /home/cassandra/saved_caches')
+    if exists('/home/cassandra/'):
+        db_path = '/home/cassandra/'
+    else:
+        db_path = '/var/lib/cassandra/'
+
+    run('rm -rf %s/commitlog' %(db_path))
+    run('rm -rf %s/data' %(db_path))
+    run('rm -rf %s/saved_caches' %(db_path))
+
