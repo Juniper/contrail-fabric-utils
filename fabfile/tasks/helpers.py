@@ -716,7 +716,7 @@ def reboot_vm(vmid='all', mode='soft'):
 @task
 @roles('database')
 def delete_cassandra_db_files():
-    if exists('/home/cassandra/'):
+    if os.path.exists('/home/cassandra/'):
         db_path = '/home/cassandra/'
     else:
         db_path = '/var/lib/cassandra/'
