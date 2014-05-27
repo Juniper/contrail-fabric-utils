@@ -9,6 +9,7 @@ import fabfile.common as common
 from fabfile.utils.host import *
 from fabfile.utils.multitenancy import *
 from fabfile.utils.fabos import *
+from fabric.contrib.files import exists
 import datetime
 
 @task
