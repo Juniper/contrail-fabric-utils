@@ -9,6 +9,7 @@ import fabfile.common as common
 from fabfile.utils.host import *
 from fabfile.utils.multitenancy import *
 from fabfile.utils.fabos import *
+from fabric.contrib.files import exists
 import datetime
 
 @task
@@ -716,7 +717,7 @@ def reboot_vm(vmid='all', mode='soft'):
 @task
 @roles('database')
 def delete_cassandra_db_files():
-    if os.path.exists('/home/cassandra/'):
+    if exists('/home/cassandra/'):
         db_path = '/home/cassandra/'
     else:
         db_path = '/var/lib/cassandra/'
