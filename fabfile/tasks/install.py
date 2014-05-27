@@ -489,11 +489,12 @@ def uninstall_contrail(full=False):
         run('reboot')
 #end uninstall_contrail
 
-@roles('webui')
+@roles('cfgm')
 @task
-def install_webui_packages(source_dir):
+def install_webui_packages():
+    source_dir = env.test_repo_dir
     if detect_ostype() in ['Ubuntu']:
-        run('cp ' + source_dir + '/contrail-test/scripts/ubuntu_repo/sources.list /etc/apt')
+        run('cp ' '/root' + source_dir + '/scripts/ubuntu_repo/sources.list /etc/apt')
         run('sudo apt-get -y update')
         run('sudo apt-get install -y firefox')
         run('sudo apt-get install -y xvfb')
