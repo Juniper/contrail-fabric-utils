@@ -348,20 +348,50 @@ def install_webui_node(*args):
 @task
 @EXECUTE_TASK
 @roles('compute')
-def install_vrouter():
+def install_vrouter(nova_compute='yes'):
     """Installs vrouter pkgs in all nodes defined in vrouter role."""
     if env.roledefs['compute']:
-        execute("install_vrouter_node", env.host_string)
+        execute("install_only_vrouter_node", nova_compute, env.host_string)
 
 @task
 def install_vrouter_node(*args):
-    """Installs vrouter pkgs in one or list of nodes. USAGE:fab install_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
+    """Installs nova compute and vrouter pkgs in one or list of nodes. USAGE:fab install_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
+    execute('install_only_vrouter_node', 'yes', args)
+
+@task
+def install_only_vrouter_node(nova_compute='yes', *args):
+    """Installs only vrouter pkgs in one or list of nodes. USAGE:fab install_vrouter_node:user@1.1.1.1,user@2.2.2.2
+       If nova_compute = no, User has to install nova-compute in the compute node.
+    """
     for host_string in args:
         with  settings(host_string=host_string):
+            ostype = detect_ostype()
             pkg = ['contrail-openstack-vrouter']
+            if (not nova_compute == 'no' and ostype in ['centos']):
+                pkg = ['contrail-api-lib',
+                       'contrail-vrouter',
+                       'abrt',
+                       #'openstack-nova-compute',
+                       'openstack-utils',
+                       'python-thrift',
+                       #'librabbitmq',
+                       'contrail-nova-vif',
+                       'contrail-setup'
+                      ]
+            elif (nova_compute== 'no' and ostype in ['Ubuntu']):
+                pkg = ['contrail-nodemgr',
+                       'contrail-setup',
+                       'contrail-vrouter-init',
+                       #'nova-compute',
+                       'python-iniparse',
+                       #'python-novaclient',
+                       'contrail-nova-vif',
+                       #'librabbitmq0',
+                       'linux-crashdump'
+                      ]
             if getattr(testbed, 'haproxy', False):
                 pkg.append('haproxy')
-            if detect_ostype() == 'Ubuntu':
+            if ostype == 'Ubuntu':
                 run('echo "manual" >> /etc/init/supervisor-vrouter.override')
                 apt_install(pkg)
             else:
@@ -432,9 +462,10 @@ def install_contrail(reboot='True'):
 
 @roles('build')
 @task
-def install_without_openstack():
+def install_without_openstack(nova_compute='yes'):
     """Installs required contrail packages in all nodes as per the role definition except the openstack.
        User has to install the openstack node with their custom openstack pakckages.
+       If nova_compute = no, User has to install nova-compute in the compute node.
     """
     execute(create_install_repo_without_openstack)
     execute(install_database)
@@ -442,7 +473,7 @@ def install_without_openstack():
     execute(install_control)
     execute(install_collector)
     execute(install_webui)
-    execute(install_vrouter)
+    execute('install_vrouter', nova_compute)
     execute(upgrade_pkgs_without_openstack)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."

@@ -777,14 +777,22 @@ def setup_storage_compute_node(*args):
 @task
 @EXECUTE_TASK
 @roles('compute')
-def setup_vrouter():
-    """Provisions vrouter services in all nodes defined in vrouter role."""
+def setup_vrouter(nova_compute='yes'):
+    """Provisions vrouter services in all nodes defined in vrouter role.
+       If nova_compute = no; Only vrouter services is provisioned, nova-compute provisioning will be skipped.
+    """
     if env.roledefs['compute']:
-        execute("setup_vrouter_node", env.host_string)
+        execute("setup_only_vrouter_node", nova_compute,  env.host_string)
 
 @task
 def setup_vrouter_node(*args):
-    """Provisions vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
+    """Provisions nova-compute and vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
+    execute("setup_only_vrouter_node", 'yes', args)
+@task
+def setup_only_vrouter_node(nova_compute='yes', *args):
+    """Provisions only vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2
+       If nova_compute = no; Only vrouter services is provisioned, nova-compute provisioning will be skipped.
+    """
     # make sure an agent pkg has been installed
     #try:
     #    run("yum list installed | grep contrail-agent")
@@ -852,6 +860,8 @@ def setup_vrouter_node(*args):
                     cmd = cmd + " --public_subnet %s --public_vn_name %s --vgw_intf %s" %(public_subnet,public_vn_name,vgw_intf_list)
                     if gateway_routes != []:
                         cmd = cmd + " --gateway_routes %s" %(gateway_routes)
+                if nova_compute == 'no':
+                    cmd = cmd + "  --no_contrail_openstack"
                 print cmd
                 run(cmd)
 #end setup_vrouter
@@ -963,9 +973,10 @@ def setup_all(reboot='True'):
 
 @roles('build')
 @task
-def setup_without_openstack():
+def setup_without_openstack(nova_compute='yes'):
     """Provisions required contrail packages in all nodes as per the role definition except the openstack.
        User has to provision the openstack node with their custom openstack pakckages.
+       If nova_compute = no; Only vrouter services is provisioned, nova-compute will be skipped in the compute node.
     """
     execute(setup_rabbitmq_cluster)
     execute(increase_limits)
@@ -974,7 +985,7 @@ def setup_without_openstack():
     execute(setup_control)
     execute(setup_collector)
     execute(setup_webui)
-    execute(setup_vrouter)
+    execute('setup_vrouter', nova_compute)
     execute(prov_control_bgp)
     execute(prov_external_bgp)
     execute(prov_metadata_services)
