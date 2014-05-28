@@ -15,7 +15,8 @@ import datetime
 @parallel
 @roles('compute')
 def compute_reboot():
-    reboot_node(env.host_string)
+    if env.roledefs['compute']:
+        reboot_node(env.host_string)
 
 @task
 def reboot_node(*args):
