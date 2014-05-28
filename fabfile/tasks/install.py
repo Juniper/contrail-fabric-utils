@@ -180,6 +180,8 @@ def apt_install(debs):
 @roles('compute')
 def install_interface_name(reboot='True'):
     """Installs interface name package in all nodes defined in compute role."""
+    if not env.roledefs['compute']:
+        return
     if detect_ostype() == 'Ubuntu':
         print "[%s]: Installing interface rename package not required for Ubuntu..Skipping it" %env.host_string
     else:
@@ -204,7 +206,8 @@ def install_interface_name_node(*args, **kwargs):
 @roles('database')
 def install_database():
     """Installs database pkgs in all nodes defined in database."""
-    execute("install_database_node", env.host_string)
+    if env.roledefs['database']:
+        execute("install_database_node", env.host_string)
 
 @task
 def install_database_node(*args):
@@ -223,7 +226,8 @@ def install_database_node(*args):
 @roles('openstack')
 def install_openstack():
     """Installs openstack pkgs in all nodes defined in openstack role."""
-    execute("install_openstack_node", env.host_string)
+    if env.roledefs['openstack']:
+        execute("install_openstack_node", env.host_string)
 
 @task
 def install_openstack_node(*args):
@@ -241,7 +245,8 @@ def install_openstack_node(*args):
 @roles('storage-master')
 def install_storage_master():
     """Installs storage pkgs in all nodes defined in storage-master role."""
-    execute("install_storage_master_node", env.host_string)
+    if env.roledefs['storage-master']:
+        execute("install_storage_master_node", env.host_string)
 
 @task
 def install_storage_master_node(*args):
@@ -259,7 +264,8 @@ def install_storage_master_node(*args):
 @roles('cfgm')
 def install_cfgm():
     """Installs config pkgs in all nodes defined in cfgm role."""
-    execute("install_cfgm_node", env.host_string)
+    if env.roledefs['cfgm']:
+        execute("install_cfgm_node", env.host_string)
 
 @task
 def install_cfgm_node(*args):
@@ -280,7 +286,8 @@ def install_cfgm_node(*args):
 @roles('control')
 def install_control():
     """Installs control pkgs in all nodes defined in control role."""
-    execute("install_control_node", env.host_string)
+    if env.roledefs['control']:
+        execute("install_control_node", env.host_string)
 
 @task
 def install_control_node(*args):
@@ -301,7 +308,8 @@ def install_control_node(*args):
 @roles('collector')
 def install_collector():
     """Installs analytics pkgs in all nodes defined in collector role."""
-    execute("install_collector_node", env.host_string)
+    if env.roledefs['collector']:
+        execute("install_collector_node", env.host_string)
 
 @task
 def install_collector_node(*args):
@@ -321,7 +329,8 @@ def install_collector_node(*args):
 @roles('webui')
 def install_webui():
     """Installs webui pkgs in all nodes defined in webui role."""
-    execute("install_webui_node", env.host_string)
+    if env.roledefs['webui']:
+        execute("install_webui_node", env.host_string)
 
 @task
 def install_webui_node(*args):
@@ -341,7 +350,8 @@ def install_webui_node(*args):
 @roles('compute')
 def install_vrouter():
     """Installs vrouter pkgs in all nodes defined in vrouter role."""
-    execute("install_vrouter_node", env.host_string)
+    if env.roledefs['compute']:
+        execute("install_vrouter_node", env.host_string)
 
 @task
 def install_vrouter_node(*args):
@@ -362,7 +372,8 @@ def install_vrouter_node(*args):
 @roles('storage-compute')
 def install_storage_compute():
     """Installs storage pkgs in all nodes defined in storage-compute role."""
-    execute("install_storage_compute_node", env.host_string)
+    if env.roledefs['storage-compute']:
+        execute("install_storage_compute_node", env.host_string)
 
 @task
 def install_storage_compute_node(*args):

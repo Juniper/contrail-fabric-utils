@@ -35,7 +35,8 @@ def bash_autocomplete_systemd():
 @task
 def setup_cfgm():
     """Provisions config services in all nodes defined in cfgm role."""
-    execute("setup_cfgm_node", env.host_string)
+    if env.roledefs['cfgm']:
+        execute("setup_cfgm_node", env.host_string)
 
 def get_openstack_credentials():
     try:
@@ -428,19 +429,21 @@ def setup_cfgm_node(*args):
 @roles('openstack')
 def setup_openstack():
     """Provisions openstack services in all nodes defined in openstack role."""
-    execute("setup_openstack_node", env.host_string)
-    # Blindly run setup_openstack twice for Ubuntu
-    #TODO Need to remove this finally
-    if detect_ostype() == 'Ubuntu':
+    if env.roledefs['openstack']:
         execute("setup_openstack_node", env.host_string)
-    if is_package_installed('contrail-openstack-dashboard'):
-        execute('setup_contrail_horizon_node', env.host_string)
+        # Blindly run setup_openstack twice for Ubuntu
+        #TODO Need to remove this finally
+        if detect_ostype() == 'Ubuntu':
+            execute("setup_openstack_node", env.host_string)
+        if is_package_installed('contrail-openstack-dashboard'):
+            execute('setup_contrail_horizon_node', env.host_string)
 
 @roles('openstack')
 @task
 def setup_contrail_horizon():
-    if is_package_installed('contrail-openstack-dashboard'):
-        execute('setup_contrail_horizon_node', env.host_string)
+    if env.roledefs['openstack']:
+        if is_package_installed('contrail-openstack-dashboard'):
+            execute('setup_contrail_horizon_node', env.host_string)
 
 @task
 def setup_openstack_node(*args):
@@ -506,7 +509,8 @@ def setup_contrail_horizon_node(*args):
 @roles('collector')
 def setup_collector():
     """Provisions collector services in all nodes defined in collector role."""
-    execute("setup_collector_node", env.host_string)
+    if env.roledefs['collector']:
+        execute("setup_collector_node", env.host_string)
 
 @task
 def setup_collector_node(*args):
@@ -565,7 +569,8 @@ def setup_collector_node(*args):
 @roles('database')
 def setup_database():
     """Provisions database services in all nodes defined in database role."""
-    execute("setup_database_node", env.host_string)
+    if env.roledefs['database']:
+        execute("setup_database_node", env.host_string)
 
 @task
 def setup_database_node(*args):
@@ -602,7 +607,8 @@ def setup_database_node(*args):
 @roles('webui')
 def setup_webui():
     """Provisions webui services in all nodes defined in webui role."""
-    execute("setup_webui_node", env.host_string)
+    if env.roledefs['webui']:
+        execute("setup_webui_node", env.host_string)
 
 @task
 def setup_webui_node(*args):
@@ -644,7 +650,8 @@ def setup_webui_node(*args):
 @roles('control')
 def setup_control():
     """Provisions control services in all nodes defined in control role."""
-    execute("setup_control_node", env.host_string)
+    if env.roledefs['control']:
+        execute("setup_control_node", env.host_string)
 
 def fixup_irond_config(control_host_string):
     control_ip = hstr_to_ip(get_control_host_string(control_host_string))
@@ -709,7 +716,8 @@ def setup_control_node(*args):
 @task
 def setup_master_storage():
     """Provisions storage master services."""
-    execute("setup_storage_master_node", env.host_string)
+    if env.roledefs['storage-master']:
+        execute("setup_storage_master_node", env.host_string)
 
 @task
 def setup_storage_master_node(*args):
@@ -756,7 +764,8 @@ def setup_storage_master_node(*args):
 @task
 def setup_compute_storage():
     """Provisions storage compute services."""
-    execute("setup_storage_compute_node", env.host_string)
+    if env.roledefs['storage-compute']:
+        execute("setup_storage_compute_node", env.host_string)
 
 @task
 def setup_storage_compute_node(*args):
@@ -770,7 +779,8 @@ def setup_storage_compute_node(*args):
 @roles('compute')
 def setup_vrouter():
     """Provisions vrouter services in all nodes defined in vrouter role."""
-    execute("setup_vrouter_node", env.host_string)
+    if env.roledefs['compute']:
+        execute("setup_vrouter_node", env.host_string)
 
 @task
 def setup_vrouter_node(*args):
