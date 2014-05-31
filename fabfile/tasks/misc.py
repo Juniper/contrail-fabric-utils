@@ -46,7 +46,7 @@ def detach_vrouter_node(*args):
 @task
 @roles('build')
 def check_and_kill_zookeeper():
-    for host_string in env.roledefs['cfgm']:
+    for host_string in env.roledefs['database']:
         with settings(host_string=host_string, warn_only=True):
             pkg_rls = get_release('zookeeper')
             if pkg_rls in ['3.4.3']: 
@@ -56,7 +56,7 @@ def check_and_kill_zookeeper():
             run('ps -ef | grep zookeeper')
 
 @task
-@roles('cfgm')
+@roles('database')
 def zoolink():
     """Creates /usr/bin/zookeeper link to /etc/zookeeper"""
     execute("zoolink_node", env.host_string)
