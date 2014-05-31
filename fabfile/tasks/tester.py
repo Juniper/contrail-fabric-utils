@@ -394,7 +394,6 @@ def run_sanity(feature='sanity', test=None):
     if feature == 'upgrade':
         with settings(host_string = env.roledefs['cfgm'][0]):
                 put("./fabfile/testbeds/testbed.py", "/opt/contrail/utils/fabfile/testbeds/testbed.py")
-                run("rm -rf /usr/etc/zookeeper")
                 run("cd /tmp;rm -rf temp")
                 run("cd /tmp;mkdir temp")
                 put(test,"/tmp/temp/")
