@@ -173,3 +173,6 @@ env.ostypes = {
 
 # To configure the encapsulation priority. Default: MPLSoGRE 
 #env.encap_priority =  "'MPLSoUDP','MPLSoGRE','VXLAN'"
+
+# Optional proxy settings.
+# env.http_proxy = os.environ.get('http_proxy')
