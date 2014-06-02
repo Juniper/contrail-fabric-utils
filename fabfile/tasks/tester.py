@@ -96,6 +96,9 @@ log_to_console= yes
 [loggers]
 keys=root,log01
 
+[proxy]
+http=$__http_proxy__
+
 [logger_root]
 handlers=screen
 #qualname=(root)
@@ -286,6 +289,13 @@ stop_on_fail=no
              '__mail_server__': mail_server,
              '__mail_port__': mail_port,
              '__test_repo__': get_remote_path(env.test_repo_dir),
+<<<<<<< HEAD
+=======
+             '__webui__': webui,
+             '__devstack__': devstack_flag,
+             '__openstack__': openstack_host_name,
+             '__http_proxy__': env.get('http_proxy'),
+>>>>>>> a7c268e... Add http proxy settings support
             })
         
         fd, fname = tempfile.mkstemp()
