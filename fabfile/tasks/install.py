@@ -367,7 +367,7 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
         with  settings(host_string=host_string):
             ostype = detect_ostype()
             pkg = ['contrail-openstack-vrouter']
-            if (not manage_nova_compute == 'no' and ostype in ['centos']):
+            if (manage_nova_compute == 'no' and ostype in ['centos']):
                 pkg = ['contrail-api-lib',
                        'contrail-vrouter',
                        'abrt',

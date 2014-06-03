@@ -807,7 +807,8 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
     
     for host_string in args:
         # Enable haproxy for Ubuntu
-        enable_haproxy()
+        with settings(host_string=host_string):
+            enable_haproxy()
         #qpidd_changes_for_ubuntu()
         ncontrols = len(env.roledefs['control'])
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
@@ -844,14 +845,15 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
         haproxy = get_haproxy_opt()
         if haproxy:
             # setup haproxy and enable
-            fixup_restart_haproxy_in_one_compute(host_string)
+            with settings(host_string=host_string):
+                fixup_restart_haproxy_in_one_compute(host_string)
     
         if (getattr(env, 'openstack_admin_password', None)):
             openstack_admin_password = env.openstack_admin_password
         else:
             openstack_admin_password = 'contrail123'
 
-        with  settings(host_string=host_string):
+        with settings(host_string=host_string):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-vrouter.override')
