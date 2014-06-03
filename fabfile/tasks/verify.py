@@ -1,7 +1,7 @@
 from time import sleep
 
 from fabfile.config import *
-from fabfile.fabos import detect_ostype
+from fabfile.utils.fabos import detect_ostype
 
 class OpenStackSetupError(Exception):
     pass
