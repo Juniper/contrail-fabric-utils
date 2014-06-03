@@ -97,6 +97,9 @@ log_to_console= yes
 [loggers]
 keys=root,log01
 
+[proxy]
+http=$__http_proxy__
+
 [webui]
 webui=$__webui__
 
@@ -306,6 +309,7 @@ stop_on_fail=no
              '__webui__': webui,
              '__devstack__': devstack_flag,
              '__openstack__': openstack_host_name,
+             '__http_proxy__': env.get('http_proxy'),
             })
         
         fd, fname = tempfile.mkstemp()
