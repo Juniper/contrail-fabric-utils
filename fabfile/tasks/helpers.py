@@ -442,15 +442,15 @@ def config_server_reset(option=None, hosts=[]):
         with settings(host_string=host_string):
             try :
                 if option == "add" :
-                    run('sudo sed -i \'s/vnc_cfg_api_server.py --conf_file/vnc_cfg_api_server.py --reset_config --conf_file/\' %s' %(api_config_file))
-                    run('sudo sed -i \'s/disc_server_zk.py --conf_file/disc_server_zk.py --reset_config --conf_file/\' %s' %(disc_config_file))
-                    run('sudo sed -i \'s/to_bgp.py --conf_file/to_bgp.py --reset_config --conf_file/\' %s' %(schema_config_file))
-                    run('sudo sed -i \'s/svc_monitor.py --conf_file/svc_monitor.py --reset_config --conf_file/\' %s' %(svc_m_config_file))
+                    run('sudo sed -i \'s/contrail-api --conf_file/contrail-api --reset_config --conf_file/\' %s' %(api_config_file))
+                    run('sudo sed -i \'s/discovery-server --conf_file/discovery-server --reset_config --conf_file/\' %s' %(disc_config_file))
+                    run('sudo sed -i \'s/contrail-schema --conf_file/contrail-schema --reset_config --conf_file/\' %s' %(schema_config_file))
+                    run('sudo sed -i \'s/contrail-svc-monitor --conf_file/contrail-svc-monitor --reset_config --conf_file/\' %s' %(svc_m_config_file))
                 elif option == 'delete' :
-                    run('sudo sed -i \'s/vnc_cfg_api_server.py --reset_config/vnc_cfg_api_server.py/\' %s' %(api_config_file))
-                    run('sudo sed -i \'s/disc_server_zk.py --reset_config/disc_server_zk.py/\' %s' %(disc_config_file))
-                    run('sudo sed -i \'s/to_bgp.py --reset_config/to_bgp.py/\' %s' %(schema_config_file))
-                    run('sudo sed -i \'s/svc_monitor.py --reset_config/svc_monitor.py/\' %s' %(svc_m_config_file))
+                    run('sudo sed -i \'s/contrail-api --reset_config/contrail-api/\' %s' %(api_config_file))
+                    run('sudo sed -i \'s/discovery-server --reset_config/discovery-server/\' %s' %(disc_config_file))
+                    run('sudo sed -i \'s/contrail-schema --reset_config/contrail-schema/\' %s' %(schema_config_file))
+                    run('sudo sed -i \'s/contrail-svc-monitor --reset_config/contrail-svc-monitor/\' %s' %(svc_m_config_file))
             except SystemExit as e:
                 print "Failure of one or more of these cmds are ok"
 #end config_server_reset
