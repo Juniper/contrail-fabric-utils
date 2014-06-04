@@ -265,8 +265,8 @@ stop_on_fail=no
             stack_password= 'password'
             stack_tenant= 'default-project'
         else:
-            stack_password = env.get('openstack_admin_password', 'contrail123')
-            stack_tenant= 'admin'
+            stack_password = get_keystone_admin_password()
+            stack_tenant= get_keystone_admin_user()
 
         #get the ext router information from the testbed file and set it the
         # ini inputs.
