@@ -580,9 +580,9 @@ def setup_database_node(*args):
         for entry in env.roledefs['database']:
             database_host_list.append(get_control_host_string(entry))
         zookeeper_ip_list = [hstr_to_ip(get_control_host_string(zookeeper_host)) for zookeeper_host in env.roledefs['database']]
-        database_host = host_string
+        database_host=get_control_host_string(host_string)
         database_host_password=env.passwords[host_string]
-        tgt_ip = hstr_to_ip(get_control_host_string(database_host))
+        tgt_ip = hstr_to_ip(database_host)
         with  settings(host_string=host_string):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
