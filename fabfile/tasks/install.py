@@ -489,7 +489,7 @@ def uninstall_contrail(full=False):
         run('reboot')
 #end uninstall_contrail
 
-@roles('webui')
+@roles('cfgm')
 @task
 def install_webui_packages(source_dir):
     if detect_ostype() in ['Ubuntu']:
