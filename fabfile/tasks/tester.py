@@ -97,6 +97,9 @@ log_to_console= yes
 [loggers]
 keys=root,log01
 
+[proxy]
+http=$__http_proxy__
+
 [webui]
 webui=$__webui__
 
@@ -105,7 +108,6 @@ webui_config=$__webui_config__
 
 [devstack]
 devstack=$__devstack__
-
 
 [logger_root]
 handlers=screen
@@ -263,8 +265,8 @@ stop_on_fail=no
             stack_password= 'password'
             stack_tenant= 'default-project'
         else:
-            stack_password = env.get('openstack_admin_password', 'contrail123')
-            stack_tenant= 'admin'
+            stack_password = get_keystone_admin_password()
+            stack_tenant= get_keystone_admin_user()
 
         #get the ext router information from the testbed file and set it the
         # ini inputs.
@@ -278,6 +280,7 @@ stop_on_fail=no
         mail_port = '25'
         webui = getattr(testbed, 'webui', False)
         webui_config = getattr(testbed, 'webui_config', False)
+
         if 'mail_server' in env.keys():
             mail_server = env.mail_server
             mail_port = env.mail_port
@@ -307,6 +310,7 @@ stop_on_fail=no
              '__webui__': webui,
              '__devstack__': devstack_flag,
              '__webui_config__': webui_config,
+             '__http_proxy__': env.get('http_proxy'),
             })
         
         fd, fname = tempfile.mkstemp()
