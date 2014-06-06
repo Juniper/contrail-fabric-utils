@@ -391,6 +391,7 @@ def run_sanity(feature='sanity', test=None):
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
     cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
             'quick_sanity' : pre_cmd + '%s python quick_sanity_suite.py' % (env_vars),
+            'ci_sanity'    : pre_cmd + '%s python ci_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
              }
     if CONTROLLER_TYPE == 'Cloudstack':
