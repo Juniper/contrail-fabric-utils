@@ -97,14 +97,17 @@ log_to_console= yes
 [loggers]
 keys=root,log01
 
+[proxy]
+http=$__http_proxy__
+
 [webui]
 webui=$__webui__
 
+[webui_config]
+webui_config=$__webui_config__
+
 [devstack]
 devstack=$__devstack__
-
-[openstack_host_name]
-openstack_host_name =$__openstack__
 
 [logger_root]
 handlers=screen
@@ -262,8 +265,8 @@ stop_on_fail=no
             stack_password= 'password'
             stack_tenant= 'default-project'
         else:
-            stack_password = env.get('openstack_admin_password', 'contrail123')
-            stack_tenant= 'admin'
+            stack_password = get_keystone_admin_password()
+            stack_tenant= get_keystone_admin_user()
 
         #get the ext router information from the testbed file and set it the
         # ini inputs.
@@ -275,7 +278,8 @@ stop_on_fail=no
         ext_routers = getattr(testbed, 'ext_routers', [])
         mail_server = '10.204.216.49'
         mail_port = '25'
-        webui = getattr(testbed, 'webui','False')
+        webui = getattr(testbed, 'webui', False)
+        webui_config = getattr(testbed, 'webui_config', False)
 
         if 'mail_server' in env.keys():
             mail_server = env.mail_server
@@ -305,7 +309,8 @@ stop_on_fail=no
              '__test_repo__': get_remote_path(env.test_repo_dir),
              '__webui__': webui,
              '__devstack__': devstack_flag,
-             '__openstack__': openstack_host_name,
+             '__webui_config__': webui_config,
+             '__http_proxy__': env.get('http_proxy'),
             })
         
         fd, fname = tempfile.mkstemp()
@@ -389,7 +394,7 @@ def run_sanity(feature='sanity', test=None):
                                 '%s/scripts/NewPolicyTestsBase.py' % repo],
               'analytics'    : ['%s/scripts/analytics_tests_with_setup.py' % repo],
               'basic_vn_vm'  : ['%s/scripts/vm_vn_tests.py' % repo],
-              'webui'       : ['%s/scripts/tests_with_setup_base_webui.py' % repo],
+              'webui'       : ['%s/scripts/webui/tests_with_setup_base_webui.py' % repo],
               'devstack'       : ['%s/scripts/devstack_sanity_tests_with_setup.py' % repo],
               'svc_mirror'   : ['%s/scripts/servicechain/mirror/sanity.py' % repo,
                                 '%s/scripts/servicechain/mirror/regression.py' % repo],
@@ -423,6 +428,7 @@ def run_sanity(feature='sanity', test=None):
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
     cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
             'quick_sanity' : pre_cmd + '%s python quick_sanity_suite.py' % (env_vars),
+            'ci_sanity'    : pre_cmd + '%s python ci_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
             'upgrade'      : pre_cmd + '%s python upgrade/upgrade_test.py' % (env_vars),
             'webui_sanity' : pre_cmd + '%s python webui_tests_suite.py' % (env_vars),

@@ -110,20 +110,48 @@ env.ostypes = {
 #To disable installing contrail interface rename package
 #env.interface_rename = False
 
-#To use existing service_token
-#service_token = 'your_token'
+#In environments where keystone is deployed outside of Contrail provisioning
+#scripts , you can use the below options 
+#
+# Note : 
+# "insecure" is applicable only when protocol is https
+# The entries in env.keystone overrides the below options which used 
+# to be supported earlier :
+#  service_token
+#  keystone_ip
+#  keystone_admin_user
+#  keystone_admin_password
+#  region_name
+#
+#env.keystone = {
+#    'keystone_ip'   : 'x.y.z.a',
+#    'auth_protocol' : 'http',                  #Default is http
+#    'auth_port'     : '35357',                 #Default is 35357
+#    'admin_token'   : '33c57636fbc2c5552fd2',  #admin_token in keystone.conf
+#    'admin_user'    : 'admin',                 #Default is admin
+#    'admin_password': 'contrail123',           #Default is contrail123
+#    'service_tenant': 'service',               #Default is service
+#    'admin_tenant'  : 'admin',                 #Default is admin
+#    'region_name'   : 'RegionOne',             #Default is RegionOne
+#    'insecure'      : 'True',                  #Default = False
+#}
+#
 
-#Specify keystone IP
-#keystone_ip = '1.1.1.1'
+# In environments where openstack services are deployed independently 
+# from contrail, you can use the below options 
+# service_token : Common service token for for all services like nova,
+#                 neutron, glance, cinder etc
+# amqp_host     : IP of AMQP Server to be used in openstack
+#
+#env.openstack = {
+#    'service_token' : '33c57636fbc2c5552fd2', 
+#    'amqp_host' : '10.204.217.19',
+#}
 
-#Specify Keystone admin user if not same as  admin
-#keystone_admin_user = 'nonadmin'
-
-#Specify Keystone admin password if not same as env.openstack_admin_password
-#keystone_admin_password = 'contrail123'
-
-#Specify Region Name
-#region_name = 'RegionName'
+# Neutron specific configuration 
+#env.neutron = {
+#   'protocol': 'http', # Default is http
+#}
 
 #To enable multi-tenancy feature
 #multi_tenancy = True
@@ -136,3 +164,6 @@ env.ostypes = {
 
 # To configure the encapsulation priority. Default: MPLSoGRE 
 #env.encap_priority =  "'MPLSoUDP','MPLSoGRE','VXLAN'"
+
+# Optional proxy settings.
+# env.http_proxy = os.environ.get('http_proxy')

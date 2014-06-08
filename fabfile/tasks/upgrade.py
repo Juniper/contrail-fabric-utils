@@ -2,6 +2,7 @@ import os
 import copy
 
 from fabfile.utils.fabos import *
+from fabfile.utils.host import *
 from fabfile.config import *
 from fabfile.tasks.services import *
 from fabfile.tasks.misc import rmmod_vrouter, create_default_secgrp_rules
@@ -465,11 +466,11 @@ def fix_nova_conf():
 
 @task
 def fix_nova_conf_node(*args):
-    keystone_ip = getattr(testbed, 'keystone_ip', env.roledefs['openstack'][0].split('@')[1])
+    rabbit_host = get_openstack_amqp_server()
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
             run("openstack-config --del /etc/nova/nova.conf DEFAULT rpc_backend")
-            run("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" % keystone_ip)
+            run("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" % rabbit_host)
 
 @task
 @EXECUTE_TASK

@@ -26,16 +26,13 @@ env.roledefs = {
 env.hostnames = {
     'all': ['nodeg24']
 }
-env.ostypes = {
-     host1: 'ubuntu'
-}
 
 env.passwords = {
     host1: 'c0ntrail123',
     host_build: 'c0ntrail123',
 }
 
-env.test_repo_dir='/home/stack/webui_ubuntu_single_node/grizzly/contrail-test'
+env.test_repo_dir='/home/stack/webui_centos_single_node/grizzly/contrail-test'
 env.mail_from='ankitja@juniper.net'
 env.mail_to='dl-contrail-sw@juniper.net'
-env.log_scenario='Ubuntu-Grizzly Single-Node Webui Sanity'
+env.log_scenario='CentOS-Grizzly Single-Node Webui Sanity'
