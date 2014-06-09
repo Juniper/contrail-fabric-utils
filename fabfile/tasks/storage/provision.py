@@ -13,12 +13,7 @@ from fabfile.utils.analytics import *
 @task
 def setup_master_storage(mode):
     """Provisions storage master services."""
-    execute("setup_storage_master_node", env.host_string, mode)
-
-@task
-def setup_storage_master_node(args, mode):
-    """Provisions storage master services""" 
-    host_string = args
+    host_string = env.host_string
     if host_string == env.roledefs['storage-master'][0]:
         storage_host_entries=[]
         storage_pass_list=[]
@@ -53,18 +48,14 @@ def setup_storage_master_node(args, mode):
                 run(cmd)
 #end setup_storage_master
 
+
 @task
 @EXECUTE_TASK
 @roles('storage-master')
 @task
 def setup_nfs_live_migration(mode):
     """Provisions nfs vm for live migration and live migration related configuration."""
-    execute("setup_nfs_live_migration_services", env.host_string, mode)
-
-@task
-def setup_nfs_live_migration_services(args, mode):
-    """Provisions storage master services""" 
-    host_string = args
+    host_string = env.host_string
     if host_string == env.roledefs['storage-master'][0]:
         storage_host_entries=[]
         storage_pass_list=[]
