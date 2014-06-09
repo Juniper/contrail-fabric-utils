@@ -34,12 +34,19 @@ def reboot_node(*args):
         common.wait_until_host_down(wait=300, host=hostip)
         print 'Node (%s) is down... Waiting for node to come back' % hostip
         sys.stdout.write('.')
+        count = 0
         while not verify_sshd(hostip,
-                              user,
-                              env.passwords[host_string]):
+                          user,
+                          env.passwords[host_string]):
             sys.stdout.write('.')
             sleep(2)
-            continue
+            count+=1
+            if count <=100:
+                print 'waiting...'
+                continue
+            else:
+                print 'Timed out waiting for node to come back up'
+                sys.exit(1)
 #end compute_reboot
 
 @roles('build')
