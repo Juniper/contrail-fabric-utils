@@ -25,6 +25,7 @@ from tasks.storage.provision import *
 from tasks.upgrade import *
 from tasks.services import *
 from tasks.misc import *
+from tasks.storage.misc import *
 from tasks.rabbitmq import *
 
 # For contrail use
