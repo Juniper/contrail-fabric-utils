@@ -957,7 +957,7 @@ def setup_all(reboot='True'):
     execute(increase_limits)
     execute(increase_ulimits)
     execute(setup_database)
-    execute(verify_database)
+    #execute(verify_database)
     execute(setup_openstack)
     execute(setup_cfgm)
     execute(verify_cfgm)
