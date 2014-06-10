@@ -25,13 +25,13 @@ env.roledefs = {
     'build': [host_build],
 }
 
+env.hostnames = {
+    'all': ['a1s27', 'a1s28']
+}
+
 env.ostypes = {
     host1:'ubuntu',
     host2:'ubuntu',
-}
-
-env.hostnames = {
-    'all': ['a1s27', 'a1s28']
 }
 
 env.passwords = {
