@@ -107,8 +107,9 @@ def get_quantum_service_protocol():
     
 def verify_sshd(host, user, password):
     try:
-        client = paramiko.Transport((host, 22))
-        client.connect(username=user, password=password)
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(host, username=user, password=password, timeout=5)
     except Exception:
         return False
 

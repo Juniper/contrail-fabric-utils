@@ -41,8 +41,7 @@ def reboot_node(*args):
             sys.stdout.write('.')
             sleep(2)
             count+=1
-            if count <=100:
-                print 'waiting...'
+            if count <=1000:
                 continue
             else:
                 print 'Timed out waiting for node to come back up'
