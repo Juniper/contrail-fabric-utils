@@ -6,7 +6,7 @@ os_tenant_name = 'demo'
 
 host1 = 'root@10.84.13.30'
 
-ext_routers = []
+ext_routers = [('mx1', '10.84.11.253'), ('mx2', '10.84.11.252')]
 router_asn = 64512
 public_vn_rtgt = 10000
 
