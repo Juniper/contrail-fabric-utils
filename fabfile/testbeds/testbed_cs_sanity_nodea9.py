@@ -10,6 +10,10 @@ builder = 'vjoshi@10.204.216.56'
 # Password used while loging into all hosts.
 #All xen servers need to have same password
 env.password = 'c0ntrail123'
+env.cs_version = '4.3.0'
+env.xen_ver = '6.2SP1'
+env.xen62sp1_repo = 'http://10.204.216.51/xen62sp1/'
+env.systemvm_template = 'http://10.204.216.51/cloudstack/vm_templates/systemvm64template-2014-01-14-master-xen.vhd.bz2'
 
 env.ostypes = {
     controller: 'centos',
@@ -40,7 +44,6 @@ config = {
     # Repos, NFS, etc.
     'nfs_share_path': '10.204.216.49:/cs-attic',
     'yum_repo_host': '10.204.216.51',
-    'cobbler_server_ip': '10.204.216.51',
     'vm_template_url': 'http://10.204.216.51/cloudstack/vm_templates/centos56-x86_64-xen.vhd.bz2',
     'vm_template_name': 'CentOS',
     'vsrx_template_url': 'http://10.204.216.51/cloudstack/vm_templates/juniper-vsrx-nat.vhd.bz2',
@@ -67,7 +70,6 @@ config = {
                 'clusters': {
                     'a6-xen1': {
                         'hypervisor_type': 'XenServer',
-
                         'hosts': {
                             'xen1': '10.204.216.47'
                         }
@@ -88,4 +90,4 @@ env.config = config
 
 env.test_repo_dir='/home/stack/cloudstack_sanity/test'
 env.mail_to='dl-contrail-sw@juniper.net'
-env.log_scenario='Cloudstack Sanity'
+env.log_scenario='Cloudstack 4.3 Sanity - Combined mode'

@@ -3,7 +3,7 @@ from fabric.api import env
 host1 = 'root@10.204.216.2'
 
 ext_routers = [('blr-mx1', '10.204.216.253')]
-router_asn = 64512
+router_asn = 64510
 public_vn_rtgt = 10003
 public_vn_subnet = "10.204.219.40/29"
 

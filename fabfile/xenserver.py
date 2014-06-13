@@ -15,8 +15,7 @@ def host_string_to_ip(host_string):
 
 def check_xen_version():
     if not 'xen_ver' in env:
-        print "ERROR: Please set xen_ver=<6.1 or 6.2SP1> in testbed.py"
-        sys.exit(1)
+        env.xen_ver = '6.2SP1'
     elif env.xen_ver != '6.1' and env.xen_ver != '6.2SP1':
         print "ERROR: xen_ver should be 6.1 or 6.2SP1 in testbed.py"
         sys.exit(1)

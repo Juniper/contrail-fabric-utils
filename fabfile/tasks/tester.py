@@ -29,19 +29,14 @@ def setup_test_env():
         revision = build_id
         print "Testing from the CFGM."
     else:
-        fab_branches = local('git branch' , capture=True)
-        match = re.search('\*(.*)', fab_branches)
-        fab_branch = match.group(1).strip()
-        fab_revision = local('cat .git/refs/heads/%s' % fab_branch, capture=True)
+        fab_revision = local('git log --format="%H" -n 1', capture=True)
         if CONTROLLER_TYPE == 'Cloudstack':
             revision = local('cat %s/.git/refs/heads/cs_sanity' % env.test_repo_dir, capture=True)
         else:
             with lcd(env.test_repo_dir):
-                test_branches = local('git branch' , capture=True)
-                match = re.search('\*(.*)', test_branches)
-                test_branch = match.group(1).strip()
-                revision = local('cat .git/refs/heads/%s' % test_branch, capture=True)
+                revision = local('git log --format="%H" -n 1', capture=True)
 
+    if not env.roledefs['build'][0] == cfgm_host:
         execute(copy_dir, env.test_repo_dir, cfgm_host)
 
     sanity_testbed_dict = {
@@ -97,14 +92,17 @@ log_to_console= yes
 [loggers]
 keys=root,log01
 
+[proxy]
+http=$__http_proxy__
+
 [webui]
 webui=$__webui__
 
+[webui_config]
+webui_config=$__webui_config__
+
 [devstack]
 devstack=$__devstack__
-
-[openstack_host_name]
-openstack_host_name =$__openstack__
 
 [logger_root]
 handlers=screen
@@ -170,6 +168,8 @@ stop_on_fail=no
     if CONTROLLER_TYPE == 'Openstack':
         with settings(host_string = env.roledefs['openstack'][0]):
             openstack_host_name = run("hostname")
+    elif CONTROLLER_TYPE == 'Cloudstack':
+        openstack_host_name = None
 
     with settings(host_string = env.roledefs['cfgm'][0]):
         cfgm_host_name = run("hostname")
@@ -207,6 +207,9 @@ stop_on_fail=no
 
         if CONTROLLER_TYPE == 'Openstack' and host_string in env.roledefs['openstack']:
             role_dict = {'type': 'openstack', 'params': {'cfgm': cfgm_host_name}}
+            host_dict['roles'].append(role_dict)
+        elif CONTROLLER_TYPE == 'Cloudstack' and host_string in env.roledefs['orchestrator']:
+            role_dict = {'type': 'orchestrator', 'params': {'cfgm': cfgm_host_name}}
             host_dict['roles'].append(role_dict)
 
         if host_string in env.roledefs['cfgm']:
@@ -257,8 +260,8 @@ stop_on_fail=no
             stack_password= 'password'
             stack_tenant= 'default-project'
         else:
-            stack_password = env.get('openstack_admin_password', 'contrail123')
-            stack_tenant= 'admin'
+            stack_password = get_keystone_admin_password()
+            stack_tenant= get_keystone_admin_user()
 
         #get the ext router information from the testbed file and set it the
         # ini inputs.
@@ -270,7 +273,8 @@ stop_on_fail=no
         ext_routers = getattr(testbed, 'ext_routers', [])
         mail_server = '10.204.216.49'
         mail_port = '25'
-        webui = getattr(testbed, 'webui','False')
+        webui = getattr(testbed, 'webui', False)
+        webui_config = getattr(testbed, 'webui_config', False)
 
         if 'mail_server' in env.keys():
             mail_server = env.mail_server
@@ -300,7 +304,8 @@ stop_on_fail=no
              '__test_repo__': get_remote_path(env.test_repo_dir),
              '__webui__': webui,
              '__devstack__': devstack_flag,
-             '__openstack__': openstack_host_name,
+             '__webui_config__': webui_config,
+             '__http_proxy__': env.get('http_proxy'),
             })
         
         fd, fname = tempfile.mkstemp()
@@ -320,13 +325,13 @@ stop_on_fail=no
         os.remove(fname)
         if CONTROLLER_TYPE == 'Cloudstack':
             with settings(warn_only = True):
-                run('yum --disablerepo=base,extras,updates -y install python-extras python-testtools python-fixtures python-pycrypto python-ssh fabric')
+                run('python-pip install fixtures testtools fabric')
         else:
             with settings(warn_only = True):
-                if devstack_flag == True :
+                if detect_ostype() in ['centos']:
+                    run('source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay')
+                else:
                     run("pip install fixtures testtools testresources selenium pyvirtualdisplay")
-                else :
-                    run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay")
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
@@ -384,7 +389,7 @@ def run_sanity(feature='sanity', test=None):
                                 '%s/scripts/NewPolicyTestsBase.py' % repo],
               'analytics'    : ['%s/scripts/analytics_tests_with_setup.py' % repo],
               'basic_vn_vm'  : ['%s/scripts/vm_vn_tests.py' % repo],
-              'webui'       : ['%s/scripts/tests_with_setup_base_webui.py' % repo],
+              'webui'       : ['%s/scripts/webui/tests_with_setup_base_webui.py' % repo],
               'devstack'       : ['%s/scripts/devstack_sanity_tests_with_setup.py' % repo],
               'svc_mirror'   : ['%s/scripts/servicechain/mirror/sanity.py' % repo,
                                 '%s/scripts/servicechain/mirror/regression.py' % repo],
@@ -410,11 +415,15 @@ def run_sanity(feature='sanity', test=None):
                 put(test,"/tmp/temp/")
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
-    pre_cmd = ''
+    if detect_ostype() in ['centos']:
+	pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
+    else:
+	pre_cmd = ''
 
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
     cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
             'quick_sanity' : pre_cmd + '%s python quick_sanity_suite.py' % (env_vars),
+            'ci_sanity'    : pre_cmd + '%s python ci_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
             'upgrade'      : pre_cmd + '%s python upgrade/upgrade_test.py' % (env_vars),
             'webui_sanity' : pre_cmd + '%s python webui_tests_suite.py' % (env_vars),

@@ -9,6 +9,7 @@ import fabfile.common as common
 from fabfile.utils.host import *
 from fabfile.utils.multitenancy import *
 from fabfile.utils.fabos import *
+from fabric.contrib.files import exists
 import datetime
 
 @task
@@ -33,12 +34,18 @@ def reboot_node(*args):
         common.wait_until_host_down(wait=300, host=hostip)
         print 'Node (%s) is down... Waiting for node to come back' % hostip
         sys.stdout.write('.')
+        count = 0
         while not verify_sshd(hostip,
-                              user,
-                              env.passwords[host_string]):
+                          user,
+                          env.passwords[host_string]):
             sys.stdout.write('.')
             sleep(2)
-            continue
+            count+=1
+            if count <=1000:
+                continue
+            else:
+                print 'Timed out waiting for node to come back up'
+                sys.exit(1)
 #end compute_reboot
 
 @roles('build')
@@ -366,8 +373,8 @@ def net_list():
 
     os_opts = ''
     os_opts = os_opts + ' --os-username %s --os-password %s '\
-                          %(testbed.os_username, testbed.os_password)
-    os_opts = os_opts + ' --os-tenant-name %s ' %(testbed.os_tenant_name)
+                          %(get_keystone_admin_user(), get_keystone_admin_password())
+    os_opts = os_opts + ' --os-tenant-name %s ' %(get_keystone_admin_tenant_name())
     os_opts = os_opts + ' --os-auth-url http://%s:5000/v2.0 ' %(cfgm_ip)
 
     run('quantum %s net-list' %(os_opts))
@@ -441,15 +448,15 @@ def config_server_reset(option=None, hosts=[]):
         with settings(host_string=host_string):
             try :
                 if option == "add" :
-                    run('sudo sed -i \'s/vnc_cfg_api_server.py --conf_file/vnc_cfg_api_server.py --reset_config --conf_file/\' %s' %(api_config_file))
-                    run('sudo sed -i \'s/disc_server_zk.py --conf_file/disc_server_zk.py --reset_config --conf_file/\' %s' %(disc_config_file))
-                    run('sudo sed -i \'s/to_bgp.py --conf_file/to_bgp.py --reset_config --conf_file/\' %s' %(schema_config_file))
-                    run('sudo sed -i \'s/svc_monitor.py --conf_file/svc_monitor.py --reset_config --conf_file/\' %s' %(svc_m_config_file))
+                    run('sudo sed -i \'s/contrail-api --conf_file/contrail-api --reset_config --conf_file/\' %s' %(api_config_file))
+                    run('sudo sed -i \'s/discovery-server --conf_file/discovery-server --reset_config --conf_file/\' %s' %(disc_config_file))
+                    run('sudo sed -i \'s/contrail-schema --conf_file/contrail-schema --reset_config --conf_file/\' %s' %(schema_config_file))
+                    run('sudo sed -i \'s/contrail-svc-monitor --conf_file/contrail-svc-monitor --reset_config --conf_file/\' %s' %(svc_m_config_file))
                 elif option == 'delete' :
-                    run('sudo sed -i \'s/vnc_cfg_api_server.py --reset_config/vnc_cfg_api_server.py/\' %s' %(api_config_file))
-                    run('sudo sed -i \'s/disc_server_zk.py --reset_config/disc_server_zk.py/\' %s' %(disc_config_file))
-                    run('sudo sed -i \'s/to_bgp.py --reset_config/to_bgp.py/\' %s' %(schema_config_file))
-                    run('sudo sed -i \'s/svc_monitor.py --reset_config/svc_monitor.py/\' %s' %(svc_m_config_file))
+                    run('sudo sed -i \'s/contrail-api --reset_config/contrail-api/\' %s' %(api_config_file))
+                    run('sudo sed -i \'s/discovery-server --reset_config/discovery-server/\' %s' %(disc_config_file))
+                    run('sudo sed -i \'s/contrail-schema --reset_config/contrail-schema/\' %s' %(schema_config_file))
+                    run('sudo sed -i \'s/contrail-svc-monitor --reset_config/contrail-svc-monitor/\' %s' %(svc_m_config_file))
             except SystemExit as e:
                 print "Failure of one or more of these cmds are ok"
 #end config_server_reset
@@ -716,6 +723,12 @@ def reboot_vm(vmid='all', mode='soft'):
 @task
 @roles('database')
 def delete_cassandra_db_files():
-    run('rm -rf /home/cassandra/commitlog')
-    run('rm -rf /home/cassandra/data')
-    run('rm -rf /home/cassandra/saved_caches')
+    if exists('/home/cassandra/'):
+        db_path = '/home/cassandra/'
+    else:
+        db_path = '/var/lib/cassandra/'
+
+    run('rm -rf %s/commitlog' %(db_path))
+    run('rm -rf %s/data' %(db_path))
+    run('rm -rf %s/saved_caches' %(db_path))
+

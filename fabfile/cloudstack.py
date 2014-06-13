@@ -6,7 +6,6 @@ from fabric.api import env, parallel, roles, run, settings, sudo, task, cd, \
     execute, local, lcd, hide
 from fabric.state import output, connections
 from fabric.operations import get, put
-from tasks.tester import get_remote_path, setup_test_env 
 
 import json
 import tempfile
@@ -77,8 +76,8 @@ def check_cs_version_in_config():
     if 'cs_version' in env:
         print "found cs-version\n"
     else:
-        print "cs-versiion doesnt exist\n"
-        env.cs_version = '4.2.0'
+        print "cs-version doesnt exist\n"
+        env.cs_version = '4.3.0'
 #end get_cs_version_from_config
 
 def cloudLogin(file):
@@ -174,40 +173,50 @@ def install_packages():
 
 @roles('orchestrator')
 @task
-def install_cloudstack_packages():
+def install_cloudstack_packages(pkg=None):
+    if pkg:
+        pkg_name = os.path.basename(pkg)
+        temp_dir = tempfile.mkdtemp()
+        host = env.roledefs['cfgm'][0]
+        run('mkdir -p %s' % temp_dir)
+        put(pkg, '%s/%s' % (temp_dir, pkg_name))
+        run('cd %s && tar xvjf %s && sh ./cloudstack_setup.sh' %(temp_dir, pkg_name))
+
     run('yum install --disablerepo=* --enablerepo=contrail_install_repo -y contrail-cloudstack-utils')
     check_cs_version_in_config()
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     if not 'systemvm_template' in env:
-        env.systemvm_template = "http://10.84.5.100/cloudstack/vm_templates/systemvm64template-2014-04-10-master-xen.vhd.bz2"
+        env.systemvm_template = "http://10.84.5.100/cloudstack/vm_templates/systemvm64template-unknown-xen.vhd.bz2"
     run('sh /opt/contrail/cloudstack-utils/cloudstack-install.sh %s %s %s %s' %
                 (env.config['nfs_share_path'], env.systemvm_template, env.host, env.cs_version))
     execute(cloudstack_api_setup)
 
-def install_rabbitmq():
-    run('chkconfig rabbitmq-server on')
-    run('service rabbitmq-server start')
-    run('rabbitmqctl set_permissions guest ".*" ".*" ".*"')
-
-@roles('control')
+@roles('cfgm')
 @task
-def install_contrail_packages():
+def install_contrail_packages(pkg=None):
+    if pkg:
+        pkg_name = os.path.basename(pkg)
+        temp_dir = tempfile.mkdtemp()
+        host = env.roledefs['cfgm'][0]
+        run('mkdir -p %s' % temp_dir)
+        put(pkg, '%s/%s' % (temp_dir, pkg_name))
+        run('cd %s && tar xvjf %s && sh ./contrail_setup.sh' %(temp_dir, pkg_name))
+
     orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     control_ip = host_string_to_ip(env.roledefs['control'][0])
     run('yum install --disablerepo=* --enablerepo=contrail_install_repo -y contrail-cloudstack-utils')
     run('sh /opt/contrail/cloudstack-utils/contrail-install.sh 127.0.0.1')
-    install_rabbitmq()
 
-    # analytics venv instalation
+    # analytics venv installation
     with cd("/opt/contrail/analytics-venv/archive"):
         run("source ../bin/activate && pip install *")
 
-    # api venv instalation
+    # api venv installation
     with cd("/opt/contrail/api-venv/archive"):
         run("source ../bin/activate && pip install *")
 
-    # control venv instalation
+    # control venv installation
     run("echo 'HOSTIP=%s\n'>> /etc/contrail/control_param" %(control_ip))
     run("/bin/cp /opt/contrail/api-venv/archive/xml* /opt/contrail/control-venv/archive/")
     with cd("/opt/contrail/control-venv/archive"):
@@ -237,8 +246,9 @@ def setup_cloud():
     else:
         print "cs_flavor does not exist, defaulting to juniper\n"
         env.cs_flavor = "juniper"
-
     check_cs_version_in_config()
+    orchestrator = env.roledefs['orchestrator'][0]
+
     # Create config file on remote host
     with tempfile.NamedTemporaryFile() as f:
         cfg = render_controller_config(env.config)
@@ -247,8 +257,9 @@ def setup_cloud():
         put(f.name, '~/config.json')
     run('python /opt/contrail/cloudstack-utils/system-setup.py ~/config.json ' +
             '~/system-setup.log %s %s' %(env.cs_version, env.cs_flavor))
-    run('/etc/init.d/cloudstack-management restart')
-    wait_for_cloudstack_management_up(env.host, env.config['cloud']['username'],
+    with settings(host_string = orchestrator):
+        run('/etc/init.d/cloudstack-management restart')
+        wait_for_cloudstack_management_up(host_string_to_ip(orchestrator), env.config['cloud']['username'],
                                       env.config['cloud']['password'])
 
 @roles('orchestrator')
@@ -276,37 +287,53 @@ def get_ip_from_url(url):
 @roles('cfgm')
 @task
 def install_vm_template(url, name, osname):
+    orchestrator = env.roledefs['orchestrator'][0]
     updateCloudMonkeyConfig()
     template_server_ip = get_ip_from_url(url)
     assert template_server_ip, "Unable to get the ip from URL. URL should have http[s] or ftp prefix"
     run('cloudmonkey api updateConfiguration name=secstorage.allowed.internal.sites value=%s/32' %template_server_ip)
+    with settings(host_string = orchestrator):
+        run('/etc/init.d/cloudstack-management restart')
+        wait_for_cloudstack_management_up(host_string_to_ip(orchestrator), env.config['cloud']['username'],
+                                      env.config['cloud']['password'])
+
     list_os_type = "\'list ostypes description=\"%s\"\'"%(osname)
     run('cloudmonkey set color false')
     output = run('cloudmonkey %s' %list_os_type)
-    run('cloudmonkey set color true')
     match = re.search('^id\s*=\s*(\S+)', output, re.M)
     if not match:
         output = run('cloudmonkey list ostypes | grep description')
         assert False, "OS name %s is not found in list types. Available options are %s" %(
                                        osname, output)
     ostype_id = match.group(1)
-    register_template_opts = "name=%s displaytext=%s url=%s ostypeid=%s "%(name, name, url, ostype_id)+\
+    register_template_opts = "name='%s' displaytext='%s' url=%s ostypeid=%s "%(name, name, url, ostype_id)+\
                              "hypervisor=XenServer format=VHD zoneid=-1 isextractable=True ispublic=True"
     run('cloudmonkey "register template %s"' %register_template_opts)
+    interval = 30
+    for retry in range (30):
+        output = run('cloudmonkey "list templates templatefilter=all name=\'%s\'"'%name)
+        state = re.search(r'isready = True', output, re.M|re.I)
+        if not state:
+            if (retry < 29):
+                print "Template \'%s\' is not ready yet. Sleeping for %d secs before retry" %(name,interval)
+                sleep(interval)
+        else:
+            print "Template \'%s\' is installed" %name
+            break
+    run('cloudmonkey set color true')
+    if retry == 29:
+        assert False, "SystemVms are not up even after %d secs" %((retry+1)*interval)
 
 @roles('cfgm')
 @task
 def provision_routing():
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
-    controller_ip = host_string_to_ip(env.roledefs['control'][0])
     run('python /opt/contrail/cloudstack-utils/provision_routing.py ' +
         '%s 127.0.0.1 %s %s' % (cfgm_ip, env.config['route_target'], env.config['mx_ip']))
 
 @roles('orchestrator')
 @task
 def provision_all():
-    cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
-    orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     execute(setup_cloud)
     execute(provision_routing)
     execute(check_systemvms)
@@ -395,6 +422,7 @@ def run_sanity(feature='sanity', test=None):
             tests = [get_module(suite) for suite in suites[feature]]
             test = ' '.join(tests)
 
+    from tasks.tester import *
     execute(setup_test_env)
     #cfgm_host = env.roledefs['cfgm'][0]
     cfgm_host = env.roledefs['cfgm'][0]

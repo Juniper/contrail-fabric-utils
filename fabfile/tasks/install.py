@@ -24,9 +24,18 @@ def install_deb_all(deb):
 @task
 @parallel(pool_size=20)
 @roles('all')
-def install_pkg_all(deb):
+def install_pkg_all(pkg):
     """Installs any rpm/deb package in all nodes."""
-    execute('install_pkg_node', deb, env.host_string)
+    execute('install_pkg_node', pkg, env.host_string)
+
+@task
+@roles('build')
+def install_pkg_all_without_openstack(pkg):
+    """Installs any rpm/deb package in all nodes excluding openstack node."""
+    host_strings = copy.deepcopy(env.roledefs['all'])
+    dummy = [host_strings.remove(openstack_node)
+             for openstack_node in env.roledefs['openstack']]
+    execute('install_pkg_node', pkg, *host_strings)
 
 @task
 def install_pkg_node(pkg, *args):
@@ -452,7 +461,7 @@ def uninstall_contrail(full=False):
     To force a full cleanup, set full=True as argument. 
     This will remove contrail-install-packages as well
     '''
-    run('sudo yum --disablerepo=* --enablerepo=contrail_install_repo -y remove contrail-control contrail-dns openstack-nova openstack-quantum openstack-cinder openstack-glance openstack-keystone openstack-quantum-contrail mysql qpid-cpp-server openstack-dashboard mysql-server openstack-nova-novncproxy zookeeper zookeeper-lib irond contrail-webui contrail-analytics contrail-libs contrail-analytics-venv contrail-api-extension contrail-api-venv contrail-control-venv  contrail-database contrail-nodejs contrail-vrouter-venv contrail-setup openstack-utils redis contrail-openstack-* contrail-database-venv nodejs java java-1.7.0-openjdk libvirt contrail-vrouter euca2ools cassandra django-horizon django-staticfiles python-bitarray python-boto python-thrift libvirt-python libvirt-client python-django-openstack-auth memcached haproxy rabbitmq-server esl-erlang')
+    run('sudo yum --disablerepo=* --enablerepo=contrail_install_repo -y remove contrail-control contrail-dns openstack-nova openstack-quantum openstack-cinder openstack-glance openstack-keystone openstack-quantum-contrail mysql qpid-cpp-server openstack-dashboard mysql-server openstack-nova-novncproxy zookeeper zookeeper-lib irond contrail-web-controller contrail-web-core contrail-analytics contrail-libs contrail-analytics-venv contrail-api-extension contrail-api-venv contrail-control-venv  contrail-database contrail-nodejs contrail-vrouter-venv contrail-setup openstack-utils redis contrail-openstack-* contrail-database-venv nodejs java java-1.7.0-openjdk libvirt contrail-vrouter euca2ools cassandra django-horizon django-staticfiles python-bitarray python-boto python-thrift libvirt-python libvirt-client python-django-openstack-auth memcached haproxy rabbitmq-server esl-erlang')
     
     run('sudo yum --disablerepo=* --enablerepo=contrail_install_repo -y remove *openstack* *quantum* *nova* *glance* *keystone* *cinder*')
     with cd('/etc/'):
@@ -480,7 +489,7 @@ def uninstall_contrail(full=False):
         run('reboot')
 #end uninstall_contrail
 
-@roles('webui')
+@roles('cfgm')
 @task
 def install_webui_packages(source_dir):
     if detect_ostype() in ['Ubuntu']:
