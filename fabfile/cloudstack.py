@@ -213,6 +213,18 @@ def install_contrail_packages():
     with cd("/opt/contrail/control-venv/archive"):
         run("source ../bin/activate && pip install *")
     run('python /opt/contrail/cloudstack-utils/contrail_post_install.py %s %s' %(orchestrator_ip, cfgm_ip))
+    hosts = env.roledefs['compute']
+    for host in hosts:
+         compute_ip = host_string_to_ip(host)
+         try:
+             compute_hostname = socket.gethostbyaddr(compute_ip)
+         except:
+             print "Could not get hostname, using ipaddr"
+             compute_hostname = compute_ip
+         prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
+                        "--admin_user %s --admin_password %s --admin_tenant_name %s" \
+                        %(compute_hostname, compute_ip, cfgm_ip, "admin", "password", "admin")
+         run("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
 
 @roles('cfgm')
 @task
