@@ -791,7 +791,7 @@ def setup_vrouter(manage_nova_compute='yes'):
 @task
 def setup_vrouter_node(*args):
     """Provisions nova-compute and vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
-    execute("setup_only_vrouter_node", 'yes', args)
+    execute("setup_only_vrouter_node", 'yes', *args)
 @task
 def setup_only_vrouter_node(manage_nova_compute='yes', *args):
     """Provisions only vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2
