@@ -541,10 +541,11 @@ def upgrade_control_node(pkg, *args):
             execute('create_install_repo_node', host_string)
 
             # If necessary, migrate to new ini format based configuration.
-            if os.path.exists('/opt/contrail/contrail_installer/contrail_config_templates/control-node.conf.sh'):
-                run("/opt/contrail/contrail_installer/contrail_config_templates/control-node.conf.sh")
-            if os.path.exists('/opt/contrail/contrail_installer/contrail_config_templates/dns.conf.sh'):
-                run("/opt/contrail/contrail_installer/contrail_config_templates/dns.conf.sh")
+            with settings(warn_only=True):
+                if run("ls /etc/contrail/control-node.conf").failed:
+                    run("/opt/contrail/contrail_installer/contrail_config_templates/control-node.conf.sh")
+                if run("ls /etc/contrail/dns.conf").failed:
+                    run("/opt/contrail/contrail_installer/contrail_config_templates/dns.conf.sh")
             execute(upgrade)
             execute(cleanup_venvs)
             execute('fix_supervisord_control_node', host_string)
