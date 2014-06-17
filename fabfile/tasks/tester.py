@@ -408,7 +408,10 @@ def run_sanity(feature='sanity', test=None):
             'webui_sanity' : pre_cmd + '%s python webui_tests_suite.py' % (env_vars)
              }
     if CONTROLLER_TYPE == 'Cloudstack':
-        env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../fixtures:.:./cloudstack:/opt/contrail/cloudstack'"
+        test_delay_factor = os.environ.get("TEST_DELAY_FACTOR") or "1.0"
+        test_retry_factor = os.environ.get("TEST_RETRY_FACTOR") or "1.0"
+
+        env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../fixtures:.:./cloudstack:/opt/contrail/cloudstack' TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s" % (test_delay_factor, test_retry_factor)
         cmds = {'sanity'   : pre_cmd + '%s python cloudstack/cs_sanity_suite.py' % (env_vars)
                }
 
