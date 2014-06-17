@@ -39,13 +39,19 @@ env.hostnames = {
     'all': ['nodec3', 'nodea9']
 }
 
+# Below block is needed for sanity purpose alone
+ext_routers = [('mx', '10.204.216.253')]
+router_asn = 64512
+public_vn_rtgt = 10003
+public_vn_subnet = '10.204.219.0/24'
+
 # Cloudstack specific config
 config = {
     # Repos, NFS, etc.
     'nfs_share_path': '10.204.216.49:/cs-attic',
     'yum_repo_host': '10.204.216.51',
-    'vm_template_url': 'http://10.204.216.51/cloudstack/vm_templates/centos56-x86_64-xen.vhd.bz2',
-    'vm_template_name': 'CentOS',
+    'vm_template_url': 'http://10.204.216.51/cloudstack/vm_templates/centos64.vhd.bz2',
+    'vm_template_name': 'CentOS64',
     'vsrx_template_url': 'http://10.204.216.51/cloudstack/vm_templates/juniper-vsrx-nat.vhd.bz2',
     'vsrx_template_name': 'Juniper vSRX',
     'mx_ip' : '10.204.216.253',

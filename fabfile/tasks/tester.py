@@ -217,6 +217,10 @@ stop_on_fail=no
             if CONTROLLER_TYPE == 'Openstack':
                 role_dict['openstack'] = openstack_host_name
             host_dict['roles'].append(role_dict)
+            # Currently Cloudstack supports all-in-one model alone for contrail hence piggybacking Controller role on to cfgm
+            if CONTROLLER_TYPE == 'Cloudstack':
+                role_dict = { 'type': 'collector', 'params': {'cassandra': ' '.join(cassandra_host_names)} }
+                host_dict['roles'].append(role_dict)
 
         if host_string in env.roledefs['control']:
             role_dict = {'type': 'bgp', 'params': {'collector': cfgm_host_name, 'cfgm': cfgm_host_name}}
