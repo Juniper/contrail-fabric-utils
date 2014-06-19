@@ -135,9 +135,9 @@ env.ostypes = {
 
 #storage compute disk config
 #storage_node_config = {
-#    host4 : { 'disks' : ['sdc', 'sdd'] },
-#    host5 : { 'disks' : ['sdc', 'sdd'] },
-#    host6 : { 'disks' : ['sdc', 'sdd'] },
+#    host4 : { 'disks' : ['/dev/sdc', '/dev/sdd'], 'journal' : ['/dev/sde', '/dev/sdf'] },
+#    host5 : { 'disks' : ['/dev/sdc:/dev/sde', '/dev/sdd:/dev/sde'], 'ssd-disks' : ['/dev/sdf', '/dev/sdg'] },
+#    host6 : { 'disks' : ['/dev/sdc', '/dev/sdd'], 'local-disks' : ['/dev/sde'], 'local-ssd-disks' : ['/dev/sdf'] },
 #}
 
 #live migration config
