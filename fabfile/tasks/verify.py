@@ -1,7 +1,7 @@
 from time import sleep
 
 from fabfile.config import *
-from fabfile.fabos import detect_ostype
+from fabfile.utils.fabos import detect_ostype
 
 class OpenStackSetupError(Exception):
     pass
@@ -21,9 +21,7 @@ def verify_service(service):
 @task
 @roles('database')
 def verify_database():
-    zoo_svc = 'contrail-zookeeper'
-    if detect_ostype() in ['Ubuntu']:
-        zoo_svc = 'zookeeper'
+    zoo_svc = 'zookeeper'
     verify_service(zoo_svc)
     verify_service("supervisord-contrail-database")
     verify_service("contrail-database")
