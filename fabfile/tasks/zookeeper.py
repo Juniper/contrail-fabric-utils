@@ -4,7 +4,7 @@ import tempfile
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.host import hstr_to_ip
-from fabfile.tasks.install import apt_install
+from fabfile.tasks.install import apt_install, yum_install
 
 
 @task
@@ -30,8 +30,11 @@ def zookeeper_rolling_restart():
             pdist = detect_ostype()
             # Install zookeeper in the new node.
             execute('create_install_repo_node', new_node)
-            apt_install(['contrail-openstack-database'])
-            run("ln -sf /bin/true /sbin/chkconfig")
+            if pdist in ['centos']:
+                yum_install(['contrail-openstack-database'])
+            elif pdist in ['Ubuntu']:
+                apt_install(['contrail-openstack-database'])
+                run("ln -sf /bin/true /sbin/chkconfig")
             run("chkconfig zookeeper on")
             # Fix zookeeper configs
             run("sudo sed 's/^#log4j.appender.ROLLINGFILE.MaxBackupIndex=/log4j.appender.ROLLINGFILE.MaxBackupIndex=/g' /etc/zookeeper/conf/log4j.properties > log4j.properties.new")
@@ -58,6 +61,8 @@ def zookeeper_rolling_restart():
             # Start Zookeeper in new database node
             run("service zookeeper restart")
 
+    print "Waiting 5 seconds for the new nodes in the zookeeper quorum to be synced."
+    sleep(5)
     # Shutdown onld nodes one by one and also make sure leader/follower election is complete.
     # after each shut downs
     zoo_nodes = cfgm_nodes + database_nodes
