@@ -43,6 +43,7 @@ def zookeeper_rolling_restart():
             #put cluster-unique zookeeper's instance id in myid
             run('sudo echo "%s" > /var/lib/zookeeper/myid' % (zk_index))
 
+    # Add new nodes to existing zookeeper quorum
     with settings(host_string=cfgm_nodes[0], password=env.passwords[cfgm_nodes[0]]):
         for new_node in new_nodes:
             zk_index = (database_nodes.index(new_node) + len(cfgm_nodes) + 1)
@@ -50,12 +51,15 @@ def zookeeper_rolling_restart():
         tmp_dir= tempfile.mkdtemp()
         get(zoo_cfg, tmp_dir)
 
+    # Restart zookeeper in all nodes to make new nodes join zookeeper quorum
     for zookeeper_node in cfgm_nodes + new_nodes:
         with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
             put(tmp_dir+'/zoo.cfg', zoo_cfg)
             # Start Zookeeper in new database node
-            run("servcie zookeeper restart")
+            run("service zookeeper restart")
 
+    # Shutdown onld nodes one by one and also make sure leader/follower election is complete.
+    # after each shut downs
     zoo_nodes = cfgm_nodes + database_nodes
     for old_node in old_nodes:
         zoo_nodes.remove(old_node)
@@ -76,6 +80,7 @@ def zookeeper_rolling_restart():
                     print zookeeper_status
                     exit(1)
           
+    # Correct the server id in zoo.cfg for the new nodes in the zookeeper quorum
     with settings(host_string=database_nodes[0], password=env.passwords[database_nodes[0]]):
         run("sed -i '/^server.*3888/d' %s" % zoo_cfg)
         for zookeeper_node in database_nodes:
@@ -84,6 +89,7 @@ def zookeeper_rolling_restart():
         tmp_dir= tempfile.mkdtemp()
         get(zoo_cfg, tmp_dir)
 
+    # Correct the myid in myid file for the new nodes in the zookeeper quorum
     for zookeeper_node in database_nodes:
         zk_index = (database_nodes.index(zookeeper_node) + 1)
         with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
@@ -91,17 +97,24 @@ def zookeeper_rolling_restart():
             run('sudo echo "%s" > /var/lib/zookeeper/myid' % (zk_index))
             run("service zookeeper stop")
 
+    # Restart all the zookeeper nodes in the new quorum
     for zookeeper_node in database_nodes:
         with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
             put(tmp_dir+'/zoo.cfg', zoo_cfg)
-
-    for zookeeper_node in database_nodes:
-        with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
             run("service zookeeper restart")
+
+    # Mkae sure leader/folower election is complete
+    with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
+        retries = 3
+        while retries:
             zookeeper_status = verfiy_zookeeper(*database_nodes)
             if 'leader' in zookeeper_status.values() and 'standalone' not in zookeeper_status.values():
-                continue
+                print zookeeper_status
+                break
             else:
+                retries -= 1
+                if retries:
+                    continue
                 print "Zookeepr leader/follower election has problems. Fix it and retry upgrade"
                 print zookeeper_status
                 exit(1)
