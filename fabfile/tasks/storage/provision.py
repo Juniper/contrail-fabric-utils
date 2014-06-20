@@ -42,8 +42,21 @@ def setup_master_storage(mode):
         storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
         with  settings(host_string = storage_master, password = storage_master_password):
             with cd(INSTALLER_DIR):
-                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s" \
-                        %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts())
+                # Argument details
+                # storage-setup-mode - setup/unconfigure/reconfigure - First time setup/Remove all configuration/Do a reconfigure
+                # storage-master - Storage master IP
+                # storage-hostnames - hostnames of all the nodes (storage master + storage compute)
+                # storage-host-tokens - password for all the nodes (storage master + storage compute)
+                # storage-disk-config - Disk list for Ceph combined pool or HDD pool
+                # storage-ssd-disk-config - Disk list for Ceph SSD pool
+                # storage-journal-config - OSD journal disk list
+                # storage-local-disk-config - Disk list for local LVM pool
+                # storage-local-ssd-disk-config - Disk list for local LVM SSD pool
+                # storage-local-nfs-disk-config - NFS storage list
+                # storage-directory-config - Directory list for Ceph
+                # live-migration - Enable/Disable live migration
+                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s" \
+                        %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts())
                 print cmd
                 run(cmd)
 #end setup_storage_master
@@ -84,6 +97,13 @@ def setup_nfs_live_migration(mode):
         storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
         with  settings(host_string = storage_master, password = storage_master_password):
             with cd(INSTALLER_DIR):
+                # Argument details
+                # storage-setup-mode - setup/unconfigure/reconfigure - First time nfs livemigration configurations/Unconfigure/Reconfigure
+                # storage-master - Storage master IP
+                # storage-hostnames - hostnames of all the nodes (storage master + storage compute)
+                # storage-host-tokens - password for all the nodes (storage master + storage compute)
+                # live-migration - Enable/Disable live migration
+                # nfs-live-migration - NFS Livemigration configuration (Image path, subnet, host)
                 cmd= "PASSWORD=%s python setup-vnc-livemigration.py --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s --nfs-live-migration %s" \
                     %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), get_nfs_live_migration_opts())
                 print cmd
@@ -124,8 +144,20 @@ def setup_add_storage_compute_node(*args):
         storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
         with  settings(host_string = storage_master, password = storage_master_password):
             with cd(INSTALLER_DIR):
-                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode addnode --add-storage-node %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s" \
-                        %(storage_master_password, new_storage_hostnames, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts())
+                # Argument details
+                # storage-setup-mode - addnode - Add a new node
+                # storage-master - Storage master IP
+                # storage-hostnames - hostnames of all the nodes (storage master + storage compute)
+                # storage-host-tokens - password for all the nodes (storage master + storage compute)
+                # storage-disk-config - Disk list for Ceph combined pool or HDD pool
+                # storage-ssd-disk-config - Disk list for Ceph SSD pool
+                # storage-journal-config - OSD journal disk list
+                # storage-local-disk-config - Disk list for local LVM pool
+                # storage-local-ssd-disk-config - Disk list for local LVM SSD pool
+                # storage-local-nfs-disk-config - NFS storage list
+                # storage-directory-config - Directory list for Ceph
+                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode addnode --add-storage-node %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s" \
+                        %(storage_master_password, new_storage_hostnames, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts())
                 print cmd
                 run(cmd)
 
