@@ -63,7 +63,7 @@ def fixup_agent_param():
 
 @task
 @EXECUTE_TASK
-@roles('cfgm')
+@roles('database')
 def upgrade_zookeeper():
     execute('upgrade_zookeeper_node', env.host_string)
 
@@ -82,7 +82,7 @@ def upgrade_zookeeper_node(*args):
 
 @task
 @serial
-@roles('cfgm')
+@roles('database')
 def start_zookeeper():
     execute("create_install_repo_node", env.host_string)
     run("supervisorctl -s http://localhost:9004 stop contrail-api:0")
@@ -169,7 +169,7 @@ def start_api_services():
 
 @task
 @parallel
-@roles('cfgm')
+@roles('database')
 def backup_zookeeper_config():
     execute("backup_zookeeper_config_node", env.host_string)
 
@@ -186,7 +186,7 @@ def backup_zookeeper_config_node(*args):
 
 @task
 @parallel
-@roles('cfgm')
+@roles('database')
 def restore_zookeeper_config():
     execute("restore_zookeeper_config_node", env.host_string)
 
@@ -451,11 +451,13 @@ def upgrade_database_node(pkg, *args):
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            execute('backup_zookeeper_config_node', host_string)
             execute(upgrade)
             execute(cleanup_venvs)
             execute('purge_database_node', host_string)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
+            execute('restore_zookeeper_config_node', host_string)
             execute('restart_database_node', host_string)
 
 @task
@@ -514,12 +516,12 @@ def upgrade_cfgm_node(pkg, *args):
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            execute('backup_zookeeper_config_node', host_string)
+            #execute('backup_zookeeper_config_node', host_string)
             execute(upgrade)
             execute('upgrade_zookeeper_node', host_string)
             execute(cleanup_venvs)
             execute('fix_supervisord_config_node', host_string)
-            execute('restore_zookeeper_config_node', host_string)
+            #execute('restore_zookeeper_config_node', host_string)
             execute(upgrade_venv_packages)
             execute('upgrade_pkgs_node', host_string)
 
@@ -677,20 +679,19 @@ def upgrade_all(pkg):
 def upgrade_contrail(pkg):
     """Upgrades all the  contrail packages in all nodes as per the role definition.
     """
-    execute('check_and_kill_zookeeper')
     execute(backup_zookeeper_config)
     if len(env.roledefs['all']) == 1:
         execute('upgrade_all', pkg)
     else:
         execute('install_pkg_all', pkg)
+        #execute('zookeeper_rolling_restart')
         execute(check_and_stop_disable_qpidd_in_openstack)
         execute(check_and_stop_disable_qpidd_in_cfgm)
-        execute('upgrade_cfgm', pkg)
-        execute('start_zookeeper')
         execute(check_and_setup_rabbitmq_cluster)
-        execute('setup_cfgm')
-        execute('start_api_services')
         execute('upgrade_database', pkg)
+        execute('setup_database')
+        execute('upgrade_cfgm', pkg)
+        execute('setup_cfgm')
         execute('stop_collector')
         execute('upgrade_collector', pkg)
         execute('upgrade_openstack', pkg)
@@ -706,6 +707,7 @@ def upgrade_contrail(pkg):
         #Clear the connections cache
         connections.clear()
         execute(restart_openstack_compute)
+        execute('reboot_vm')
 
 
 @roles('build')
@@ -713,16 +715,17 @@ def upgrade_contrail(pkg):
 def upgrade_without_openstack(pkg):
     """Upgrades all the  contrail packages in all nodes except openstack node as per the role definition.
     """
-    execute('check_and_kill_zookeeper')
     execute(backup_zookeeper_config)
     execute('install_pkg_all', pkg)
+    #execute('zookeeper_rolling_restart')
     execute(check_and_stop_disable_qpidd_in_cfgm)
-    execute('upgrade_cfgm', pkg)
-    execute('start_zookeeper')
     execute(check_and_setup_rabbitmq_cluster)
-    execute(setup_cfgm)
     execute('start_api_services')
     execute('upgrade_database', pkg)
+    execute('setup_database')
+    execute('upgrade_cfgm', pkg)
+    execute('setup_cfgm')
+    execute('stop_collector')
     execute('upgrade_collector', pkg)
     execute('upgrade_control', pkg)
     execute('upgrade_webui', pkg)
@@ -736,6 +739,7 @@ def upgrade_without_openstack(pkg):
     #Clear the connections cache
     connections.clear()
     execute(restart_openstack_compute)
+    execute('reboot_vm')
 
 @task
 @EXECUTE_TASK
