@@ -66,9 +66,6 @@ def verify_collector():
     verify_service("contrail-collector")
     verify_service("contrail-opserver")
     verify_service("contrail-qe")
-    verify_service("redis-query")
-    #verify_service("redis-sentinel")
-    verify_service("redis-uve") 
 
 @task
 @roles('compute')
