@@ -98,6 +98,14 @@ def restart_database_node(*args):
     """Restarts the contrail database services in once database node. USAGE:fab restart_database_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with  settings(host_string=host_string):
+            execute('zoolink_node', host_string)
+            zoo_svc = 'contrail-zookeeper'
+            if detect_ostype() in ['Ubuntu']:
+                zoo_svc = 'zookeeper'
+            run('service %s restart' % zoo_svc)
+
+    for host_string in args:
+        with  settings(host_string=host_string):
             run('service supervisord-contrail-database restart')
 
 @task
@@ -143,15 +151,6 @@ def restart_cfgm():
 @task
 def restart_cfgm_node(*args):
     """Restarts the contrail config services in once cfgm node. USAGE:fab restart_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
-    for host_string in args:
-        with  settings(host_string=host_string):
-            execute('zoolink_node', host_string)
-            zoo_svc = 'contrail-zookeeper'
-            if detect_ostype() in ['Ubuntu']:
-                zoo_svc = 'zookeeper'
-            run('service %s restart' % zoo_svc)
-    sleep(5)
-
     for host_string in args:
         with  settings(host_string=host_string):
             run('supervisorctl -s http://localhost:9004 restart contrail-config-nodemgr')

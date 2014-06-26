@@ -391,7 +391,6 @@ def setup_cfgm_node(*args):
             collector_ip = hstr_to_ip(collector_host)
         mt_opt = '--multi_tenancy' if get_mt_enable() else ''
         cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host)) for cassandra_host in env.roledefs['database']]
-        cfgm_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host)) for cassandra_host in env.roledefs['cfgm']]
         with  settings(host_string=host_string):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
@@ -399,7 +398,7 @@ def setup_cfgm_node(*args):
                     run('rm /etc/init/neutron-server.override')
             with cd(INSTALLER_DIR):
                 redis_ip = first_cfgm_ip
-                run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-cfgm.py --self_ip %s %s --redis_ip %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --cfgm_index %d --quantum_port %s --nworkers %d --keystone_auth_protocol %s --keystone_auth_port %s --keystone_admin_token %s --keystone_insecure %s %s %s %s" %(
+                run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-cfgm.py --self_ip %s %s --redis_ip %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --quantum_port %s --nworkers %d --keystone_auth_protocol %s --keystone_auth_port %s --keystone_admin_token %s --keystone_insecure %s %s %s %s" %(
                      cfgm_host_password,
                      openstack_admin_password, 
                      tgt_ip,
@@ -408,8 +407,7 @@ def setup_cfgm_node(*args):
                      collector_ip,
                      mt_opt,
                      ' '.join(cassandra_ip_list),
-                     ' '.join(cfgm_ip_list),
-                     cfgm_host_list.index(cfgm_host)+1,
+                     ' '.join(cassandra_ip_list),
                      quantum_port,
                      nworkers,
                      get_keystone_auth_protocol(),
@@ -575,9 +573,13 @@ def setup_database_node(*args):
     for host_string in args:
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_ip = hstr_to_ip(cfgm_host)
-        database_host = host_string
+        database_host_list=[]
+        for entry in env.roledefs['database']:
+            database_host_list.append(get_control_host_string(entry))
+        zookeeper_ip_list = [hstr_to_ip(get_control_host_string(zookeeper_host)) for zookeeper_host in env.roledefs['database']]
+        database_host=get_control_host_string(host_string)
         database_host_password=env.passwords[host_string]
-        tgt_ip = hstr_to_ip(get_control_host_string(database_host))
+        tgt_ip = hstr_to_ip(database_host)
         with  settings(host_string=host_string):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
@@ -597,6 +599,8 @@ def setup_database_node(*args):
                     run_cmd += "--seed_list %s,%s" % (hstr_to_ip(get_control_host_string(env.roledefs['database'][0])),hstr_to_ip(get_control_host_string(env.roledefs['database'][1])))
                 else: 
                     run_cmd += "--seed_list %s" % (hstr_to_ip(get_control_host_string(env.roledefs['database'][0])))
+                run_cmd += " --zookeeper_ip_list %s" % ' '.join(zookeeper_ip_list)
+                run_cmd += " --database_index %d" % (database_host_list.index(database_host) + 1)
                 run(run_cmd)
 #end setup_database
     
