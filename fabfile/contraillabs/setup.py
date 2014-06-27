@@ -37,7 +37,6 @@ def bringup_test_node(build):
     if os.path.isfile(build):
         fname = os.path.basename(build)
         name, ftype = os.path.splitext(fname)
-        """
         if ftype == '.iso':
             execute('all_reimage', build)
             buildid = build.split('-')[1]
@@ -48,7 +47,6 @@ def bringup_test_node(build):
         else:
             raise RuntimeError('Unsuported package or mismatch in testbed.ostypes and package.')
         execute('check_reimage_status')
-        """
     else:
         print "Package %s not found." % build
         print "Specify a valid contrail-install-packages location."
