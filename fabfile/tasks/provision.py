@@ -360,8 +360,6 @@ $__contrail_quantum_servers__
 def setup_cfgm_node(*args):
     """Provisions config services in one or list of nodes. USAGE: fab setup_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
     
-    first_cfgm_ip = hstr_to_ip(get_control_host_string(
-                                   env.roledefs['cfgm'][0]))
     nworkers = 1
     quantum_port = '9697'
 
@@ -398,12 +396,11 @@ def setup_cfgm_node(*args):
                     run('rm /etc/init/neutron-server.override')
             with cd(INSTALLER_DIR):
                 redis_ip = first_cfgm_ip
-                run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-cfgm.py --self_ip %s %s --redis_ip %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --quantum_port %s --nworkers %d --keystone_auth_protocol %s --keystone_auth_port %s --keystone_admin_token %s --keystone_insecure %s %s %s %s" %(
+                run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-cfgm.py --self_ip %s %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --quantum_port %s --nworkers %d --keystone_auth_protocol %s --keystone_auth_port %s --keystone_admin_token %s --keystone_insecure %s %s %s %s" %(
                      cfgm_host_password,
                      openstack_admin_password, 
                      tgt_ip,
                      keystone_ip,
-                     redis_ip,
                      collector_ip,
                      mt_opt,
                      ' '.join(cassandra_ip_list),
@@ -512,6 +509,19 @@ def setup_collector():
 def setup_collector_node(*args):
     """Provisions collector services in one or list of nodes. USAGE: fab setup_collector_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
+        #we need the redis to be listening on *, comment bind line
+        with  settings(host_string=host_string):
+            with settings(warn_only=True):
+                if detect_ostype() == 'Ubuntu':
+                    run("service redis-server stop")
+                    run("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
+                    run("service redis-server start")
+                else:
+                    run("service redis stop")
+                    run("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis.conf")
+                    run("chkconfig redis on")
+                    run("service redis start")
+        
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_ip = hstr_to_ip(cfgm_host)
         collector_host_password = env.passwords[host_string]

@@ -15,16 +15,17 @@ router_asn = 64512
 public_vn_rtgt = 10000
 public_vn_subnet = "10.84.43.0/24"
 
-host_build = 'ajayhn@10.84.5.101'
+host_build = 'rajreddy@10.84.5.112'
 
 env.roledefs = {
     'all': [host1, host2, host3, host4, host5],
-    'cfgm': [host1],
-    'control': [host2, host3],
+    'openstack': [host1],
+    'cfgm': [host1, host2],
+    'control': [host1, host2],
     'compute': [host4, host5],
-    'collector': [host1],
+    'collector': [host1, host2],
     'webui': [host1],
-    'database': [host1],
+    'database': [host1, host2, host3],
     'build': [host_build],
 }
 
@@ -33,6 +34,7 @@ env.hostnames = {
 }
 
 
+env.password = 'c0ntrail123'
 env.passwords = {
     host1: 'c0ntrail123',
     host2: 'c0ntrail123',
@@ -40,5 +42,15 @@ env.passwords = {
     host4: 'c0ntrail123',
     host5: 'c0ntrail123',
 
-    host_build: 'c0ntrail123',
+    host_build: 'rajreddy123',
 }
+
+env.ostypes = {
+    host1: 'centos',
+    host2: 'centos',
+    host3: 'centos',
+    host4: 'centos',
+    host5: 'centos',
+}
+
+env.test_repo_dir='/users/rajreddy/test/mainline/contrail-test'

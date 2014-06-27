@@ -12,12 +12,13 @@ router_asn = 64512
 public_vn_rtgt = 10000
 public_vn_subnet = "10.84.41.0/24"
 
-host_build = 'jaiminb@10.84.5.101'
+host_build = 'root@10.84.13.45'
 
 env.roledefs = {
     'all': [host1],
     'cfgm': [host1],
     'collector': [host1],
+    'openstack': [host1],
     'webui': [host1],
     'control': [host1],
     'compute': [host1],
@@ -33,7 +34,11 @@ env.passwords = {
     host_build: 'c0ntrail123',
 }
 
-env.test_repo_dir='/home/jaiminb/test'
-env.mail_from='jaiminb@juniper.net'
-env.mail_to='jaiminb@juniper.net'
+env.ostypes = {
+    host1:'centos'
+}
+
+env.test_repo_dir='/users/rajreddy/test/git-test/'
+env.mail_from='rajreddy@juniper.net'
+env.mail_to='rajreddy@juniper.net'
 
