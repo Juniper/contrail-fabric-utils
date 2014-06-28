@@ -76,6 +76,7 @@ host=10.204.216.50
 username=bhushana
 password=bhu@123
 path=/home/bhushana/Documents/technical/logs/
+reportpath=/home/bhushana/Documents/technical/sanity
 webRoot=Docs
 
 [Mail]
