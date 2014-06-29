@@ -395,7 +395,6 @@ def setup_cfgm_node(*args):
                     run('rm /etc/init/supervisor-config.override')
                     run('rm /etc/init/neutron-server.override')
             with cd(INSTALLER_DIR):
-                redis_ip = first_cfgm_ip
                 run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-cfgm.py --self_ip %s %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --quantum_port %s --nworkers %d --keystone_auth_protocol %s --keystone_auth_port %s --keystone_admin_token %s --keystone_insecure %s %s %s %s" %(
                      cfgm_host_password,
                      openstack_admin_password, 
