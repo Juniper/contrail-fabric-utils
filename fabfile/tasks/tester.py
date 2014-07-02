@@ -160,6 +160,7 @@ fab_revision=$__fab_revision__
 #For debugging
 [debug]
 stop_on_fail=no
+verify_on_setup=$__test_verify_on_setup__
 """)
 
     if CONTROLLER_TYPE == 'Openstack':
@@ -263,6 +264,7 @@ stop_on_fail=no
         public_vn_rtgt = getattr(testbed, 'public_vn_rtgt','0')
         public_vn_subnet = getattr(testbed, 'public_vn_subnet',None)
         ext_routers = getattr(testbed, 'ext_routers', [])
+        test_verify_on_setup = getattr(env,'test_verify_on_setup','True')
         mail_server = '10.204.216.49'
         mail_port = '25'
         webui = getattr(testbed, 'webui','False')
@@ -295,6 +297,7 @@ stop_on_fail=no
              '__webui__': webui,
              '__openstack__': openstack_host_name,
              '__http_proxy__': env.get('http_proxy'),
+             '__test_verify_on_setup__': test_verify_on_setup,
             })
         
         fd, fname = tempfile.mkstemp()
