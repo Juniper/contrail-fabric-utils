@@ -786,6 +786,13 @@ def setup_vrouter_node(*args):
         amqp_server_ip = get_openstack_amqp_server()
 
         with  settings(host_string=host_string):
+            vmware = False
+            compute_vm_info = getattr(testbed, 'compute_vm', None)
+            if compute_vm_info:
+                hosts = compute_vm_info.keys()
+                if host_string in hosts:
+                    vmware = True
+                    vmware_info = compute_vm_info[host_string]
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-vrouter.override')
@@ -798,6 +805,9 @@ def setup_vrouter_node(*args):
                     cmd = cmd + " --public_subnet %s --public_vn_name %s --vgw_intf %s" %(public_subnet,public_vn_name,vgw_intf_list)
                     if gateway_routes != []:
                         cmd = cmd + " --gateway_routes %s" %(gateway_routes)
+                if vmware:
+                    cmd = cmd + " --vmware %s --vmware_username %s --vmware_passwd %s --vmware_vmpg_vswitch %s" % (vmware_info['esxi']['ip'], vmware_info['esxi']['username'], \
+                                vmware_info['esxi']['password'], vmware_info['vswitch'])
                 print cmd
                 run(cmd)
 #end setup_vrouter
