@@ -12,6 +12,7 @@ from fabfile.utils.host import *
 from fabfile.utils.interface import *
 from fabfile.utils.multitenancy import *
 from fabfile.utils.fabos import detect_ostype
+from fabric.contrib.files import exists
 
 
 @roles('build')
@@ -405,7 +406,12 @@ def run_sanity(feature='sanity', test=None):
                 put(test,"/tmp/temp/")
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
-    pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
+    with settings(host_string = env.roledefs['cfgm'][0]):
+        if exists('/opt/contrail/api-venv/bin/activate'):
+            pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
+        else :
+            pre_cmd = ''
+
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
     cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
             'quick_sanity' : pre_cmd + '%s python quick_sanity_suite.py' % (env_vars),
