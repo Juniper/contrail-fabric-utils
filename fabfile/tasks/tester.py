@@ -321,7 +321,10 @@ verify_on_setup=$__test_verify_on_setup__
                 run('yum --disablerepo=base,extras,updates -y install python-extras python-testtools python-fixtures python-pycrypto python-ssh fabric')
         else:
             with settings(warn_only = True):
-                run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay")
+                if exists('/opt/contrail/api-venv/bin/activate'):
+                    run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay")
+                else:
+                    run("pip install fixtures testtools testresources selenium pyvirtualdisplay")
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
