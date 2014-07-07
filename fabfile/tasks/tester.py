@@ -337,7 +337,7 @@ verify_on_setup=$__test_verify_on_setup__
                 run('python-pip install fixtures testtools fabric')
         else:
             with settings(warn_only = True):
-                if detect_ostype() in ['centos']:
+                if exists('/opt/contrail/api-venv/bin/activate'):
                     run('source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay')
                 else:
                     run("pip install fixtures testtools testresources selenium pyvirtualdisplay")
