@@ -724,6 +724,49 @@ def setup_control_node(*args):
 @task
 @EXECUTE_TASK
 @roles('compute')
+def setup_agent_config():
+    if env.roledefs['compute']:
+        execute("setup_agent_config_in_node", env.host_string)
+
+@task
+def setup_agent_config_in_node(*args):
+    agent_conf_file = "/etc/contrail/contrail-vrouter-agent.conf"
+    # Set flow cache timeout in secs, default is 180...
+    for host_string in args:
+        if (getattr(env, 'flow_cache_timeout', None)):
+            flow_cache_timeout = env.flow_cache_timeout
+        else:
+            flow_cache_timeout = 180
+        flow_cache_set_cmd = "flow_cache_timeout=%s" %(flow_cache_timeout)
+
+        with settings(host_string=host_string):
+            out = run("grep flow_cache_timeout %s" %(agent_conf_file))
+            run("sed -i \"s|%s|%s|\" %s" %(out, flow_cache_set_cmd, agent_conf_file))
+            run("grep flow_cache_timeout %s" %(agent_conf_file))
+    # Set per_vm_flow_limit as %, default is 100...
+    for host_string in args:
+        if (getattr(env, 'max_vm_flows', None)):
+            max_vm_flows = env.max_vm_flows
+        else:
+            max_vm_flows = 100
+        max_vm_flows_set_cmd = "max_vm_flows=%s" %(max_vm_flows)
+
+        with settings(host_string=host_string):
+            out = run("grep max_vm_flows %s" %(agent_conf_file))
+            run("sed -i \"s|%s|%s|\" %s" %(out, max_vm_flows_set_cmd, agent_conf_file))
+            run("grep max_vm_flows %s" %(agent_conf_file))
+
+
+    # After setting all agent parameters, restart service...
+    for host_string in args:
+        with settings(host_string=host_string):
+            out = run("service supervisor-vrouter restart")
+
+# end setup_agent_config_in_node
+
+@task
+@EXECUTE_TASK
+@roles('compute')
 def setup_vrouter():
     """Provisions vrouter services in all nodes defined in vrouter role."""
     execute("setup_vrouter_node", env.host_string)
