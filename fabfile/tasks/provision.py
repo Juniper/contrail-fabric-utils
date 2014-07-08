@@ -791,29 +791,23 @@ def setup_agent_config_in_node(*args):
 
     # Set flow cache timeout in secs, default is 180...
     for host_string in args:
-        try:
-            if (getattr(env, 'flow_cache_timeout', None)):
-                flow_cache_set_cmd = "flow_cache_timeout=%s" %(env.flow_cache_timeout)
-                restart_service = True
-                with settings(host_string=host_string):
-                    out = run("grep flow_cache_timeout %s" %(agent_conf_file))
-                    run("sed -i \"s|%s|%s|\" %s" %(out, flow_cache_set_cmd, agent_conf_file))
-                    run("grep flow_cache_timeout %s" %(agent_conf_file))
-        except Exception:
-            pass
+        if (getattr(env, 'flow_cache_timeout', None)):
+            flow_cache_set_cmd = "flow_cache_timeout=%s" %(env.flow_cache_timeout)
+            restart_service = True
+            with settings(host_string=host_string):
+                out = run("grep flow_cache_timeout %s" %(agent_conf_file))
+                run("sed -i \"s|%s|%s|\" %s" %(out, flow_cache_set_cmd, agent_conf_file))
+                run("grep flow_cache_timeout %s" %(agent_conf_file))
 
     # Set per_vm_flow_limit as %, default is 100...
     for host_string in args:
-        try:
-            if (getattr(env, 'max_vm_flows', None)):
-                max_vm_flows_set_cmd = "max_vm_flows=%s" %(env.max_vm_flows)
-                restart_service = True
-                with settings(host_string=host_string):
-                    out = run("grep max_vm_flows %s" %(agent_conf_file))
-                    run("sed -i \"s|%s|%s|\" %s" %(out, max_vm_flows_set_cmd, agent_conf_file))
-                    run("grep max_vm_flows %s" %(agent_conf_file))
-        except Exception:
-            pass
+        if (getattr(env, 'max_vm_flows', None)):
+            max_vm_flows_set_cmd = "max_vm_flows=%s" %(env.max_vm_flows)
+            restart_service = True
+            with settings(host_string=host_string):
+                out = run("grep max_vm_flows %s" %(agent_conf_file))
+                run("sed -i \"s|%s|%s|\" %s" %(out, max_vm_flows_set_cmd, agent_conf_file))
+                run("grep max_vm_flows %s" %(agent_conf_file))
 
     # After setting all agent parameters, restart service...
     if restart_service:
