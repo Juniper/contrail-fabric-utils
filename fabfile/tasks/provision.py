@@ -731,36 +731,39 @@ def setup_agent_config():
 @task
 def setup_agent_config_in_node(*args):
     agent_conf_file = "/etc/contrail/contrail-vrouter-agent.conf"
+    restart_service = False
+
     # Set flow cache timeout in secs, default is 180...
     for host_string in args:
-        if (getattr(env, 'flow_cache_timeout', None)):
-            flow_cache_timeout = env.flow_cache_timeout
-        else:
-            flow_cache_timeout = 180
-        flow_cache_set_cmd = "flow_cache_timeout=%s" %(flow_cache_timeout)
+        try:
+            if (getattr(env, 'flow_cache_timeout', None)):
+                flow_cache_set_cmd = "flow_cache_timeout=%s" %(env.flow_cache_timeout)
+                restart_service = True
+                with settings(host_string=host_string):
+                    out = run("grep flow_cache_timeout %s" %(agent_conf_file))
+                    run("sed -i \"s|%s|%s|\" %s" %(out, flow_cache_set_cmd, agent_conf_file))
+                    run("grep flow_cache_timeout %s" %(agent_conf_file))
+        except Exception:
+            pass
 
-        with settings(host_string=host_string):
-            out = run("grep flow_cache_timeout %s" %(agent_conf_file))
-            run("sed -i \"s|%s|%s|\" %s" %(out, flow_cache_set_cmd, agent_conf_file))
-            run("grep flow_cache_timeout %s" %(agent_conf_file))
     # Set per_vm_flow_limit as %, default is 100...
     for host_string in args:
-        if (getattr(env, 'max_vm_flows', None)):
-            max_vm_flows = env.max_vm_flows
-        else:
-            max_vm_flows = 100
-        max_vm_flows_set_cmd = "max_vm_flows=%s" %(max_vm_flows)
-
-        with settings(host_string=host_string):
-            out = run("grep max_vm_flows %s" %(agent_conf_file))
-            run("sed -i \"s|%s|%s|\" %s" %(out, max_vm_flows_set_cmd, agent_conf_file))
-            run("grep max_vm_flows %s" %(agent_conf_file))
-
+        try:
+            if (getattr(env, 'max_vm_flows', None)):
+                max_vm_flows_set_cmd = "max_vm_flows=%s" %(env.max_vm_flows)
+                restart_service = True
+                with settings(host_string=host_string):
+                    out = run("grep max_vm_flows %s" %(agent_conf_file))
+                    run("sed -i \"s|%s|%s|\" %s" %(out, max_vm_flows_set_cmd, agent_conf_file))
+                    run("grep max_vm_flows %s" %(agent_conf_file))
+        except Exception:
+            pass
 
     # After setting all agent parameters, restart service...
-    for host_string in args:
-        with settings(host_string=host_string):
-            out = run("service supervisor-vrouter restart")
+    if restart_service:
+        for host_string in args:
+            with settings(host_string=host_string):
+                out = run("service supervisor-vrouter restart")
 
 # end setup_agent_config_in_node
 
