@@ -208,3 +208,25 @@ def create_default_secgrp_rules():
             vnc_lib.security_group_update(sg_obj)
             print "Updated default security group rules in project %s" % proj_obj.name
 # end create_default_secgrp_rules
+
+@task
+@roles('build')
+def setup_passwordless_ssh(*args):
+    id_rsa_pubs = {}
+    for host_string in args:
+        with settings(host_string=host_string):
+            if files.exists('/root/.ssh'):
+                run('chmod 700 /root/.ssh')
+            if not files.exists('/root/.ssh/id_rsa') and not files.exists('/root/.ssh/id_rsa.pub'):
+                run('ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""')
+            elif not files.exists('/root/.ssh/id_rsa') or not files.exists('/root/.ssh/id_rsa.pub'):
+                run('rm -rf /root/.ssh/id_rsa*')
+                run('ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""')
+            id_rsa_pubs.update({host_string : run('cat /root/.ssh/id_rsa.pub')})
+    for host_string in args:
+        with settings(host_string=host_string):
+            for host, id_rsa_pub in id_rsa_pubs.items():
+                if host != host_string:
+                    files.append('/root/.ssh/authorized_keys', id_rsa_pub)
+            run('chmod 640 /root/.ssh/authorized_keys')
+# end setup_passwordless_ssh

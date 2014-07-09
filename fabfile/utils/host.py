@@ -45,14 +45,26 @@ def get_region_name_opt():
     region_name = get_region_name()
     return '--region_name %s' %(region_name)
 
-def get_keystone_ip():
-    svc_opt = ''
+def get_keystone_ip(ignore_vip=False):
     openstack_host = get_control_host_string(testbed.env.roledefs['openstack'][0])
     openstack_ip = hstr_to_ip(openstack_host)
-    keystone_ip1 = getattr(testbed, 'keystone_ip', openstack_ip)
+    keystone_ip1 = getattr(testbed, 'keystone_ip', None)
     keystone_ip = get_from_testbed_dict('keystone', 'keystone_ip', keystone_ip1)
-        
-    return keystone_ip
+    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+
+    if ignore_vip:
+        return keystone_ip or openstack_ip
+    else:
+        if internal_vip and keystone_ip:
+            print "Openstack HA setup, Keystone running in different node other than [%s]" % ','.join(testbed.env.roledefs['openstack'])
+            return keystone_ip
+        elif keystone_ip:
+            print "Keystone running in different node other than [%s]" % ','.join(testbed.env.roledefs['openstack'])
+            return keystone_ip
+        elif internal_vip:
+            print "Openstack HA setup, Keystone running in nodes [%s]" % ','.join(testbed.env.roledefs['openstack'])
+            return internal_vip
+        return openstack_ip
 
 def get_keystone_ip_opt():
     keystone_ip = get_keystone_ip()
@@ -75,7 +87,7 @@ def get_keystone_auth_port():
     return get_from_testbed_dict('keystone', 'auth_port','35357')
 
 def get_keystone_admin_token():
-    keystone_ip = get_keystone_ip()
+    keystone_ip = get_keystone_ip(ignore_vip=True)
     cmd = 'grep "^[ ]*admin_token" /etc/keystone/keystone.conf | tr -d \' \'| awk -F"=" {\'print $2\'}'
     with settings(host_string='root@%s' %(keystone_ip)):
         token = run(cmd)
@@ -100,7 +112,7 @@ def get_keystone_admin_tenant_name():
     return get_from_testbed_dict('keystone', 'admin_tenant', 'admin')
 
 def get_openstack_amqp_server():
-    return get_from_testbed_dict('openstack','amqp_host',get_keystone_ip())
+    return get_from_testbed_dict('openstack','amqp_host', hstr_to_ip(env.roledefs['cfgm'][0]))
 
 def get_quantum_service_protocol():
     return get_from_testbed_dict('neutron', 'protocol', 'http')

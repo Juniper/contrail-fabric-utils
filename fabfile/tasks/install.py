@@ -5,6 +5,7 @@ import tempfile
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
+from fabfile.utils.host import get_from_testbed_dict
 from fabfile.tasks.helpers import reboot_node
 
 @task
@@ -231,6 +232,8 @@ def install_openstack_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack']
+            if len(env.roledefs['openstack']) > 1 and get_from_testbed_dict('ha', 'internal_vip', None):
+                pkg.append('contrail-openstack-ha')
             if detect_ostype() == 'Ubuntu':
                 apt_install(pkg)
             else:
@@ -369,6 +372,7 @@ def create_install_repo_node(*args):
 def install_contrail(reboot='True'):
     """Installs required contrail packages in all nodes as per the role definition.
     """
+    execute('pre_check')
     execute(create_install_repo)
     execute(install_database)
     execute(install_openstack)
