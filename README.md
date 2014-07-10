@@ -16,7 +16,7 @@ limitations under the License.
 ### Overview
 
 The Contrail Fabirc-utils repository contains the code for installing and setting up Contrail network virtualization solution.
-All fabric tasks in this repository is dreiven by the input file ``fabfile/testbeds/testbed.py``, Example testbed.py files are at ``fabfile/testbeds/testbed_singlebox_example.py`` and ``fabfile/testbeds/testbed_multibox_example.py``
+All fabric tasks in this repository is dreiven by the input file ``fabfile/testbeds/testbed.py``, Example testbed.py files are at [fabfile/testbeds/testbed_singlebox_example.py](fabfile/testbeds/testbed_singlebox_example.py) and [fabfile/testbeds/testbed_multibox_example.py](fabfile/testbeds/testbed_multibox_example.py)
 
 The contrail provisioning code is avaialable in a separate code repository (http://github.com/Juniper/contrail-provisioning).
 
