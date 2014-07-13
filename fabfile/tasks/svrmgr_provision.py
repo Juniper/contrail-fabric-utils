@@ -26,6 +26,7 @@ SERVER_RETRY_TIME=1000
 def svrmgr_reimage_all():
     """ using svrmgr, reimage all the nodes """
 
+    pdb.set_trace()
     image_id = get_image_id()
     pkg_id = get_pkg_id()
     vns_id = get_vns_id()
@@ -45,6 +46,7 @@ def svrmgr_reimage_all():
     server_dict = json.loads(in_data)
 
     for retry in range(SERVER_RETRY_TIME):
+      server_ip = {}
       for  node in server_dict['server']:
         server_ip = node['ip']
         if not verify_sshd(server_ip, user, env.password):
@@ -53,8 +55,29 @@ def svrmgr_reimage_all():
            server_state[server_ip] = False
         else:
            print "Node %s is UP" %(server_ip)
-           server_state[server_ip] = True
+           if  server_state[server_ip] == False:
+               target_node = '%s@%s' %(user,server_ip)
+               with settings( host_string = target_node ):
+                   connections.connect(env.host_string)
+               with settings( host_string = target_node ) :
+                   output = run('uptime')
+                   uptime = int(output.split()[2])
+                   if uptime > 2 :
+                       raise RuntimeError('Restart failed for Host (%s)' %server_ip)
+                   else :
+                       print "Node %s has rebooted and UP now" %(server_ip)
+                       output = run('dpkg -l | grep contrail')
+                       match = re.search('contrail-fabric-utils\s+(\S+)\s+', output, re.M)
+                       if pkg_id not in match.group(1) :
+                           raise RuntimeError('Reimage not able to download package %s on targetNode (%s)' \
+                                              %(pkg_id, server_ip) )
+                       match = re.search('contrail-install-packages\s+(\S+)\s+', output, re.M)
+                       if pkg_id not in match.group(1) :
+                           raise RuntimeError('Reimage not able to download package %s on targetNode (%s)' \
+                                              %(pkg_id, server_ip) )
+                       server_state[server_ip] = True
 
+      #End for  node in server_dict['server']:
       
       result = True
       for key in server_state:
@@ -67,20 +90,7 @@ def svrmgr_reimage_all():
     #End for retry in range(SERVER_RETRY_TIME):
 
     if not result:
-      raise RuntimeError('Unable to SSH to one or more Host ' )
-
-    for  node in server_dict['server']:
-      server_ip = node['ip']
-      target_node = '%s@%s' %(user,server_ip)
-
-      with settings( host_string = target_node ):
-        connections.connect(env.host_string)
-
-      with settings( host_string = target_node ) :
-         output = run('uptime')
-         uptime = int(output.split()[2])
-         if uptime > 6 :
-            raise RuntimeError('Restart failed for Host (%s)' %server_ip)
+        raise RuntimeError('Unable to SSH to one or more Host ' )
 
 
 
@@ -88,6 +98,7 @@ def svrmgr_reimage_all():
 @EXECUTE_TASK
 def svrmgr_add_all():
     """ Add vns , image , server detail to svrmgr database. """
+    pdb.set_trace()
     add_vns()
     add_image()
     add_pkg()
@@ -247,3 +258,17 @@ def add_server():
 
             run('server-manager add  server -f %s/%s' %(temp_dir, file_name) )
             run('server-manager show all | python -m json.tool')
+
+
+@task
+@EXECUTE_TASK
+def svrmgr_verify_all_roles():
+
+    execute(verify_database)
+    execute(verify_cfgm)
+    execute(verify_control)
+    execute(verify_collector)
+    execute(verify_webui)
+    execute(verify_compute)
+
+
