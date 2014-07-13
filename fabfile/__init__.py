@@ -27,6 +27,8 @@ from tasks.services import *
 from tasks.misc import *
 from tasks.storage.misc import *
 from tasks.rabbitmq import *
+from tasks.svrmgr_provision import *
+
 
 # For contrail use
 try:
