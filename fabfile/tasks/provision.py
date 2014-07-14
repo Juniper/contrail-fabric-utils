@@ -1032,20 +1032,33 @@ def run_setup_demo():
     execute(compute_reboot)
 #end run_setup_demo
 
-@roles('build')
 @task
+@roles('build')
 def setup_interface():
+    execute('setup_interface_node')
+
+@task
+def setup_interface_node(*args):
     '''
     Configure the IP address, netmask, gateway and vlan information
     based on parameter passed in 'control_data' stanza of testbed file.
     Also generate ifcfg file for the interface if the file is not present.
     '''
     hosts = getattr(testbed, 'control_data', None)
-    bondinfo = getattr(testbed, 'bond', None)
     if not hosts:
         print 'WARNING: \'interface\' block is not defined in testbed file.',\
               'Skipping setup-interface...'
         return
+    # setup interface for only the required nodes.
+    if args:
+        for host in args:
+            if host not in hosts.keys():
+                raise AttributeError("control_data interface details for host"
+                                      "%s not defined in testbed file." % host)
+        hosts = dict((key, val) for (key, val) in
+                     getattr(testbed, 'control_data', None).items()
+                     if key in args)
+    bondinfo = getattr(testbed, 'bond', None)
 
     for host in hosts.keys():
         cmd = 'python setup-vnc-interfaces.py'
