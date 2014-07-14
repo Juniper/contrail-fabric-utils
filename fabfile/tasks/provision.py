@@ -1045,6 +1045,10 @@ def setup_interface_node(*args):
     Also generate ifcfg file for the interface if the file is not present.
     '''
     hosts = getattr(testbed, 'control_data', None)
+    if not hosts:
+        print 'WARNING: \'interface\' block is not defined in testbed file.',\
+              'Skipping setup-interface...'
+        return
     # setup interface for only the required nodes.
     if args:
         for host in args:
@@ -1055,10 +1059,6 @@ def setup_interface_node(*args):
                      getattr(testbed, 'control_data', None).items()
                      if key in args)
     bondinfo = getattr(testbed, 'bond', None)
-    if not hosts:
-        print 'WARNING: \'interface\' block is not defined in testbed file.',\
-              'Skipping setup-interface...'
-        return
 
     for host in hosts.keys():
         cmd = 'python setup-vnc-interfaces.py'
