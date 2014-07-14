@@ -22,6 +22,7 @@ def add_vrouter_node(*args):
                 execute("install_interface_name_node", env.host_string)
                 #Clear the connections cache
                 connections.clear()
+            execute("setup_interface_node", env.host_string)
             execute("upgrade_pkgs_node", env.host_string)
             execute("setup_vrouter_node", env.host_string)
             execute("reboot_node", env.host_string)
