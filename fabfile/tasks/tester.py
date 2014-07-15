@@ -337,10 +337,13 @@ verify_on_setup=$__test_verify_on_setup__
                 run('python-pip install fixtures testtools fabric')
         else:
             with settings(warn_only = True):
+                pkg = 'fixtures testtools testresources selenium pyvirtualdisplay'
+                if os.environ.has_key('CIRROS_IMAGE'):
+                    pkg = pkg + ' pexpect'
                 if exists('/opt/contrail/api-venv/bin/activate'):
-                    run('source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay')
+                    run('source /opt/contrail/api-venv/bin/activate && pip install %s' %pkg)
                 else:
-                    run("pip install fixtures testtools testresources selenium pyvirtualdisplay")
+                    run("pip install %s" %pkg)
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
@@ -390,6 +393,8 @@ def run_sanity(feature='sanity', test=None):
     test_retry_factor = os.environ.get("TEST_RETRY_FACTOR") or "1.0"
 
     env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../fixtures' TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s" % (test_delay_factor, test_retry_factor)
+    if os.environ.has_key('CIRROS_IMAGE'):
+        env_vars = env_vars + ' ci_image=%s' %(os.environ['CIRROS_IMAGE'])
     suites = {'svc_firewall' : ['%s/scripts/servicechain/firewall/sanity.py' % repo,
                                 '%s/scripts/servicechain/firewall/regression.py' % repo],
               'floating_ip'  : ['%s/scripts/floating_ip_tests.py' % repo],
