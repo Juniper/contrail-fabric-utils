@@ -272,7 +272,7 @@ verify_on_setup=$__test_verify_on_setup__
         if 'mail_server' in env.keys():
             mail_server = env.mail_server
             mail_port = env.mail_port
-        
+
         for ext_bgp in ext_routers:
             ext_bgp_names = ext_bgp_names + '%s_router_name=%s\n' % (ext_bgp[0], ext_bgp[0])
             ext_bgp_ips = ext_bgp_ips + '%s_router_ip=%s\n' % (ext_bgp[0], ext_bgp[1])
@@ -321,10 +321,13 @@ verify_on_setup=$__test_verify_on_setup__
                 run('yum --disablerepo=base,extras,updates -y install python-extras python-testtools python-fixtures python-pycrypto python-ssh fabric')
         else:
             with settings(warn_only = True):
+                pkg = 'fixtures testtools testresources selenium pyvirtualdisplay'
+                if os.environ.has_key('CIRROS_IMAGE'):
+                    pkg = pkg + ' pexpect'
                 if exists('/opt/contrail/api-venv/bin/activate'):
-                    run("source /opt/contrail/api-venv/bin/activate && pip install fixtures testtools testresources selenium pyvirtualdisplay")
+                    run("source /opt/contrail/api-venv/bin/activate && pip install %s" %pkg)
                 else:
-                    run("pip install fixtures testtools testresources selenium pyvirtualdisplay")
+                    run("pip install %s" %pkg)
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
@@ -372,8 +375,10 @@ def run_sanity(feature='sanity', test=None):
     repo = env.test_repo_dir
     test_delay_factor = os.environ.get("TEST_DELAY_FACTOR") or "1.0"
     test_retry_factor = os.environ.get("TEST_RETRY_FACTOR") or "1.0"
-
+    
     env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../fixtures' TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s" % (test_delay_factor, test_retry_factor)
+    if os.environ.has_key('CIRROS_IMAGE'):
+        env_vars = env_vars + ' ci_image=%s' %(os.environ['CIRROS_IMAGE'])
     suites = {'svc_firewall' : ['%s/scripts/servicechain/firewall/sanity.py' % repo,
                                 '%s/scripts/servicechain/firewall/regression.py' % repo],
               'floating_ip'  : ['%s/scripts/floating_ip_tests.py' % repo],
