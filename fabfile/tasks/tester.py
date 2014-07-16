@@ -14,6 +14,8 @@ from fabfile.utils.multitenancy import *
 from fabfile.utils.fabos import detect_ostype
 from fabric.contrib.files import exists
 
+from fabfile.tasks.install import pkg_install
+
 devstack_flag = False
 
 @roles('build')
@@ -321,29 +323,31 @@ verify_on_setup=$__test_verify_on_setup__
         of = os.fdopen(fd, 'w')
         of.write(sanity_testbed_json)
         of.close()
-        put(fname, "%s/scripts/sanity_testbed.json" %(repo_path))
-        local ("cp %s %s/scripts/sanity_testbed.json" %(fname, env.test_repo_dir))
+        put(fname, "%s/sanity_testbed.json" %(repo_path))
+        local ("cp %s %s/sanity_testbed.json" %(fname, env.test_repo_dir))
         os.remove(fname)
 
         fd, fname = tempfile.mkstemp()
         of = os.fdopen(fd, 'w')
         of.write(sanity_params)
         of.close()
-        put(fname, "%s/scripts/sanity_params.ini" %(repo_path))
-        local ("cp %s %s/scripts/sanity_params.ini" %(fname, env.test_repo_dir))
+        put(fname, "%s/sanity_params.ini" %(repo_path))
+        local ("cp %s %s/sanity_params.ini" %(fname, env.test_repo_dir))
         os.remove(fname)
         if CONTROLLER_TYPE == 'Cloudstack':
             with settings(warn_only = True):
                 run('python-pip install fixtures testtools fabric')
         else:
             with settings(warn_only = True):
-                pkg = 'fixtures testtools testresources selenium pyvirtualdisplay'
+                pkg = 'fixtures testtools testresources selenium pyvirtualdisplay testrepository six'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
                 if exists('/opt/contrail/api-venv/bin/activate'):
                     run('source /opt/contrail/api-venv/bin/activate && pip install %s' %pkg)
                 else:
                     run("pip install %s" %pkg)
+                if not exists('/usr/bin/ant'):
+                    pkg_install(['ant'])
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
@@ -392,7 +396,7 @@ def run_sanity(feature='sanity', test=None):
     test_delay_factor = os.environ.get("TEST_DELAY_FACTOR") or "1.0"
     test_retry_factor = os.environ.get("TEST_RETRY_FACTOR") or "1.0"
 
-    env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../fixtures' TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s" % (test_delay_factor, test_retry_factor)
+    env_vars = " TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s" % (test_delay_factor, test_retry_factor)
     if os.environ.has_key('GUESTVM_IMAGE'):
         env_vars = env_vars + ' ci_image=%s' %(os.environ['GUESTVM_IMAGE'])
     suites = {'svc_firewall' : ['%s/scripts/servicechain/firewall/sanity.py' % repo,
@@ -437,7 +441,7 @@ def run_sanity(feature='sanity', test=None):
         else :
             pre_cmd = ''
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
-    cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
+    cmds = {'sanity'       : pre_cmd + '%s run_tests.sh --sanity --send-mail' % (env_vars),
             'quick_sanity' : pre_cmd + '%s python quick_sanity_suite.py' % (env_vars),
             'ci_sanity'    : pre_cmd + '%s python ci_sanity_suite.py' % (env_vars),
             'ci_svc_sanity': pre_cmd + '%s python ci_svc_sanity_suite.py' % (env_vars),
@@ -486,7 +490,7 @@ def run_sanity(feature='sanity', test=None):
     execute(setup_test_env)
     cfgm_host = env.roledefs['cfgm'][0]
     with settings(host_string = cfgm_host):
-        with cd('%s/scripts' %(get_remote_path(env.test_repo_dir))):
+        with cd('%s/' %(get_remote_path(env.test_repo_dir))):
             if feature in cmds.keys():
                 run(cmds[feature])
                 return

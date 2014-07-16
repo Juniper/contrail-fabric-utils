@@ -175,6 +175,12 @@ def apt_install(debs):
         for deb in debs:
             run(cmd + deb)
 
+def pkg_install(pkgs):
+    if detect_ostype() in ['Ubuntu']:
+        apt_install(pkgs)
+    elif detect_ostype() in ['centos', 'fedora', 'redhat']:
+        yum_install(pkgs)
+
 @task
 @parallel(pool_size=20)
 @roles('compute')
