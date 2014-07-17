@@ -27,6 +27,7 @@ from tasks.services import *
 from tasks.misc import *
 from tasks.storage.misc import *
 from tasks.rabbitmq import *
+from tasks.ha import *
 
 # For contrail use
 try:

@@ -10,6 +10,7 @@ from fabric.api import *
 from fabric.state import output, connections
 from fabric.operations import get, put
 from fabric.exceptions import CommandTimeout
+from fabric.contrib import files
 
 # Don't add any new testbeds here. Create new files under fabfile/testbeds
 # and copy/link the testbed.py file from/to the one you want to use.

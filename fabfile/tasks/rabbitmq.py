@@ -2,7 +2,10 @@ import uuid
 import re
 
 from fabfile.config import *
+from fabfile.templates import rabbitmq_config
 from fabfile.utils.fabos import detect_ostype
+from fabfile.utils.host import get_from_testbed_dict, get_control_host_string,\
+                               hstr_to_ip
 
 
 def verfiy_and_update_hosts(host_name, host_string):
@@ -12,6 +15,20 @@ def verfiy_and_update_hosts(host_name, host_string):
         run("echo '%s          %s' >> /etc/hosts" % (host_string.split('@')[1], host_name))
 
 @task
+@EXECUTE_TASK
+@roles('cfgm')
+def listen_at_supervisor_config_port():
+    with settings(hide('everything'), warn_only=True):
+        run("service supervisor-config start")
+        run("supervisorctl -s http://localhost:9004 stop all")
+
+@task
+@EXECUTE_TASK
+@roles('cfgm')
+def remove_mnesia_database():
+    run("rm -rf /var/lib/rabbitmq/mnesia")
+
+@task
 @parallel
 @roles('cfgm')
 def set_guest_user_permissions():
@@ -19,14 +36,26 @@ def set_guest_user_permissions():
         run('rabbitmqctl set_permissions guest ".*" ".*" ".*"')
 
 @task
-@parallel
+@serial
 @roles('cfgm')
 def config_rabbitmq():
+    rabbit_hosts = []
     rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
-    run('sudo echo "[" > %s' % rabbit_conf)
-    run("sudo echo '   {rabbit, [ {tcp_listeners, [{\"0.0.0.0\", 5672}]}, {cluster_partition_handling, autoheal} ]' >> %s" % rabbit_conf)
-    run('sudo echo "    }" >> %s' % rabbit_conf)
-    run('sudo echo "]." >> %s' % rabbit_conf)
+    for host_string in env.roledefs['cfgm']:
+        with settings(host_string=host_string, password=env.passwords[host_string]):
+            host_name = run('hostname')
+        rabbit_hosts.append("\'rabbit@%s\'" % host_name)
+    rabbit_hosts = ', '.join(rabbit_hosts)
+    rabbitmq_configs = rabbitmq_config.template.safe_substitute({
+           '__control_intf_ip__' : hstr_to_ip(get_control_host_string(env.host_string)),
+           '__rabbit_hosts__' : rabbit_hosts,
+           })
+    tmp_fname = "/tmp/rabbitmq_%s.config" % env.host_string
+    cfg_file = open(tmp_fname, 'a')
+    cfg_file.write(rabbitmq_configs)
+    cfg_file.close()
+    put(tmp_fname, "/etc/rabbitmq/rabbitmq.config")
+    local("rm %s" %(tmp_fname))
 
 @task
 @parallel
@@ -43,14 +72,15 @@ def stop_rabbitmq_and_set_cookie(uuid):
      with settings(warn_only=True):
          run("service rabbitmq-server stop")
          run("epmd -kill")
+         run("rm -rf /var/lib/rabbitmq/mnesia/")
      run("echo '%s' > /var/lib/rabbitmq/.erlang.cookie" % uuid)
 
 
 @task
-@parallel
+@serial
 @roles('cfgm')
 def start_rabbitmq():
-     run("service rabbitmq-server start")
+     run("service rabbitmq-server restart")
 
 @task
 @parallel
@@ -90,10 +120,7 @@ def add_cfgm_to_rabbitmq_cluster():
     with settings(host_string=env.roledefs['cfgm'][0]):
         cfgm1 = run('hostname')
     this_cfgm = run('hostname')
-    if detect_ostype() in ['Ubuntu']:
-        run("rabbitmqctl cluster rabbit@%s rabbit@%s" % (cfgm1, this_cfgm))
-    else:
-        run("rabbitmqctl join_cluster rabbit@%s" % cfgm1)
+    run("rabbitmqctl join_cluster rabbit@%s" % cfgm1)
 
 @task
 @roles('cfgm')
@@ -118,6 +145,12 @@ def verify_cluster_status():
     return True
 
 @task
+@roles('cfgm')
+@task
+def set_ha_policy_in_rabbitmq():
+    run("rabbitmqctl set_policy HA-all \"\" '{\"ha-mode\":\"all\",\"ha-sync-mode\":\"automatic\"}'")
+
+@task
 @roles('build')
 def setup_rabbitmq_cluster(force=False):
     """Task to cluster the rabbit servers."""
@@ -136,17 +169,21 @@ def setup_rabbitmq_cluster(force=False):
     if not rabbitmq_cluster_uuid:
         rabbitmq_cluster_uuid = uuid.uuid4()
 
+    execute(listen_at_supervisor_config_port)
+    execute(remove_mnesia_database)
     execute(verify_cfgm_hostname)
     execute(allow_rabbitmq_port)
     execute(config_rabbitmq)
     execute("stop_rabbitmq_and_set_cookie", rabbitmq_cluster_uuid)
     execute(start_rabbitmq)
-    execute(rabbitmqctl_stop_app)
-    execute(rabbitmqctl_reset)
-    execute("rabbitmqctl_start_app_node", env.roledefs['cfgm'][0])
-    execute(add_cfgm_to_rabbitmq_cluster)
-    execute(rabbitmqctl_start_app) 
+    #execute(rabbitmqctl_stop_app)
+    #execute(rabbitmqctl_reset)
+    #execute("rabbitmqctl_start_app_node", env.roledefs['cfgm'][0])
+    #execute(add_cfgm_to_rabbitmq_cluster)
+    #execute(rabbitmqctl_start_app)
+    if get_from_testbed_dict('ha', 'internal_vip', None):
+        execute('set_ha_policy_in_rabbitmq')
     result = execute(verify_cluster_status)
     if False in result.values():
-        print "RabbitMQ cluster is not setup properly"
+        print "Unable to setup RabbitMQ cluster...."
         exit(1)

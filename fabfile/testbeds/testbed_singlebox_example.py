@@ -137,6 +137,14 @@ env.ostypes = {
 #}
 #
 
+# In High Availability setups.
+#env.ha = {
+#    'internal_vip'   : '1.1.1.1',               #Internal Virtual IP of the HA setup.
+#    'external_vip'   : '2.2.2.2',               #External Virtual IP of the HA setup.
+#    'nfs_server'      : '3.3.3.3',               #IP address of the NFS Server which will be mounted to /var/lib/glance/images of openstack Node, Defaults to env.roledefs['compute'][0]
+#    'nfs_glance_path' : '/var/tmp/images/',      #NFS Server path to save images, Defaults to /var/tmp/glance-images/
+#}
+
 # In environments where openstack services are deployed independently 
 # from contrail, you can use the below options 
 # service_token : Common service token for for all services like nova,

@@ -258,7 +258,7 @@ def config_demo():
 #end config_demo
 
 
-@roles('openstack')
+@hosts(*env.roledefs['openstack'][0:1])
 @task
 def add_images(image=None):
     mount=None
@@ -301,7 +301,7 @@ def add_images(image=None):
         run("rm "+remote)
 #end add_images
 
-@roles('openstack')
+@hosts(*env.roledefs['openstack'][0:1])
 @task
 def add_basic_images(image=None):
     mount=None
@@ -590,7 +590,8 @@ def increase_ulimits():
             run("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql") 
             run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
             run("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
-            run("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/mysql/my.cnf")
+            run("sed -i '/\[mysqld\]/a\max_connections = 10000' /etc/mysql/my.cnf")
+            run("echo 'ulimit -n 10240' >> /etc/default/rabbitmq-server")
         else:
             run("sed -i '/start(){/ a\    ulimit -n 10240' /etc/init.d/mysqld")
             run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
@@ -605,7 +606,10 @@ def increase_limits():
     limits_conf = '/etc/security/limits.conf'
     with settings(warn_only = True):
         pattern='^root\s*soft\s*nproc\s*.*'
-        line = 'root soft nproc 65535'
+        if detect_ostype() in ['Ubuntu']:
+            line = 'root soft nofile 65535\nroot hard nofile 65535'
+        else:
+            line = 'root soft nproc 65535'
         insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
 
         pattern='^*\s*hard\s*nofile\s*.*'
@@ -738,3 +742,10 @@ def delete_cassandra_db_files():
     run('rm -rf %s/data' %(db_path))
     run('rm -rf %s/saved_caches' %(db_path))
 
+
+@task
+@roles('build')
+def pre_check():
+    if len(env.roledefs['openstack']) > 1 and not get_from_testbed_dict('ha', 'internal_vip', None):
+        print "keystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
+        exit(1)
