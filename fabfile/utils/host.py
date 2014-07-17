@@ -112,7 +112,9 @@ def get_keystone_admin_tenant_name():
     return get_from_testbed_dict('keystone', 'admin_tenant', 'admin')
 
 def get_openstack_amqp_server():
-    return get_from_testbed_dict('openstack','amqp_host', hstr_to_ip(env.roledefs['cfgm'][0]))
+    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+    return get_from_testbed_dict('openstack','amqp_host',
+                         (internal_vip or hstr_to_ip(env.roledefs['cfgm'][0])))
 
 def get_quantum_service_protocol():
     return get_from_testbed_dict('neutron', 'protocol', 'http')
