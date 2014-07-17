@@ -19,8 +19,9 @@ def verfiy_and_update_hosts(host_name, host_string):
 @roles('cfgm')
 def listen_at_supervisor_config_port():
     with settings(hide('everything'), warn_only=True):
-        run("service supervisor-config start")
-        run("supervisorctl -s http://localhost:9004 stop all")
+        if run("service supervisor-config status | grep running").failed:
+            run("service supervisor-config start")
+            run("supervisorctl -s http://localhost:9004 stop all")
 
 @task
 @EXECUTE_TASK
