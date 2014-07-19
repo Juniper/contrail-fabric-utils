@@ -118,7 +118,7 @@ $__contrail_disc_backend_servers__
             get("/etc/haproxy/haproxy.cfg", tmp_fname)
             with settings(warn_only=True):
                 local("sed -i -e '/^#contrail-config-marker-start/,/^#contrail-config-marker-end/d' %s" %(tmp_fname))
-                local("sed -i -e 's/frontend  main*:5000/frontend  main*:5001/' %s" %(tmp_fname))
+                local("sed -i -e 's/frontend\s*main\s*\*:5000/frontend  main *:5001/' %s" %(tmp_fname))
                 local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" %(tmp_fname))
             # ...generate new ones
             cfg_file = open(tmp_fname, 'a')
