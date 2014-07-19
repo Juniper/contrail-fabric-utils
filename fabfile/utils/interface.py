@@ -16,7 +16,7 @@ def copy_dir(dir_name, tgt_host):
             continue
         with settings(host_string=tgt_host):
             run('mkdir -p ~/%s' % dir_name.replace(user_home,''))
-            put(os.path.join(dir_name, elem), remote_dir)
+            put(os.path.join(dir_name, elem), remote_dir, mirror_local_mode=True)
 
 def get_data_ip(host_str):
     tgt_ip = None

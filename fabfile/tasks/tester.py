@@ -81,7 +81,7 @@ username=bhushana
 password=bhu@123
 path=/home/bhushana/Documents/technical/logs/
 reportpath=/home/bhushana/Documents/technical/sanity
-webRoot=Docs
+webRoot=Docs/logs
 
 [Mail]
 server=$__mail_server__
@@ -339,7 +339,7 @@ verify_on_setup=$__test_verify_on_setup__
                 run('python-pip install fixtures testtools fabric')
         else:
             with settings(warn_only = True):
-                pkg = 'fixtures testtools testresources selenium pyvirtualdisplay testrepository six'
+                pkg = 'fixtures testtools testresources selenium pyvirtualdisplay testrepository six junitxml'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
                 if exists('/opt/contrail/api-venv/bin/activate'):
