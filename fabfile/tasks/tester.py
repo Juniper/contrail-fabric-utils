@@ -99,8 +99,8 @@ http=$__http_proxy__
 [webui]
 webui=$__webui__
 
-[openstack_host_name]
-openstack_host_name =$__openstack__
+[webui_config]
+webui_config=$__webui_config__
 
 [logger_root]
 handlers=screen
@@ -268,7 +268,8 @@ verify_on_setup=$__test_verify_on_setup__
         test_verify_on_setup = getattr(env,'test_verify_on_setup','True')
         mail_server = '10.204.216.49'
         mail_port = '25'
-        webui = getattr(testbed, 'webui','False')
+        webui = getattr(testbed, 'webui', False)
+        webui_config = getattr(testbed, 'webui_config', False)
         if 'mail_server' in env.keys():
             mail_server = env.mail_server
             mail_port = env.mail_port
@@ -296,7 +297,7 @@ verify_on_setup=$__test_verify_on_setup__
              '__mail_port__': mail_port,
              '__test_repo__': get_remote_path(env.test_repo_dir),
              '__webui__': webui,
-             '__openstack__': openstack_host_name,
+             '__webui_config__': webui_config,
              '__http_proxy__': env.get('http_proxy'),
              '__test_verify_on_setup__': test_verify_on_setup,
             })
@@ -390,7 +391,7 @@ def run_sanity(feature='sanity', test=None):
                                 '%s/scripts/NewPolicyTestsBase.py' % repo],
               'analytics'    : ['%s/scripts/analytics_tests_with_setup.py' % repo],
               'basic_vn_vm'  : ['%s/scripts/vm_vn_tests.py' % repo],
-              'webui'       : ['%s/scripts/tests_with_setup_base_webui.py' % repo],
+              'webui'       : ['%s/scripts/webui/tests_with_setup_base_webui.py' % repo],
               'svc_mirror'   : ['%s/scripts/servicechain/mirror/sanity.py' % repo,
                                 '%s/scripts/servicechain/mirror/regression.py' % repo],
               'vpc'          : ['%s/scripts/vpc/sanity.py' % repo],
@@ -427,6 +428,7 @@ def run_sanity(feature='sanity', test=None):
             'ci_svc_sanity': pre_cmd + '%s python ci_svc_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
             'upgrade'      : pre_cmd + '%s python upgrade/upgrade_test.py' % (env_vars),
+            'ci_webui_sanity' : pre_cmd + '%s python ci_webui_sanity.py' % (env_vars),
             'webui_sanity' : pre_cmd + '%s python webui_tests_suite.py' % (env_vars)
              }
     if CONTROLLER_TYPE == 'Cloudstack':
