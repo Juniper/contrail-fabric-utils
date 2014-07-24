@@ -88,6 +88,9 @@ def get_keystone_auth_port():
 
 def get_keystone_admin_token():
     keystone_ip = get_keystone_ip(ignore_vip=True)
+    if keystone_ip == hstr_to_ip(get_control_host_string(testbed.env.roledefs['openstack'][0])):
+        # Use Management interface IP to ssh
+        keystone_ip = hstr_to_ip(testbed.env.roledefs['openstack'][0])
     cmd = 'grep "^[ ]*admin_token" /etc/keystone/keystone.conf | tr -d \' \'| awk -F"=" {\'print $2\'}'
     with settings(host_string='root@%s' %(keystone_ip)):
         token = run(cmd)
