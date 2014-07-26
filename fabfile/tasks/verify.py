@@ -63,8 +63,8 @@ def verify_control():
 def verify_collector():
     verify_service("supervisor-analytics")
     verify_service("contrail-collector")
-    verify_service("contrail-opserver")
-    verify_service("contrail-qe")
+    verify_service("contrail-analytics-api")
+    verify_service("contrail-query-engine")
 
 @task
 @roles('compute')
