@@ -7,7 +7,21 @@ template = string.Template("""[
               {disk_free_limit,50000000},
               {log_levels,[{connection, info},{mirroring, info}]},
               {heartbeat,600},
-              {delegate_count,20}
+              {delegate_count,20},
+              {channel_max,5000},
+              {tcp_listen_options,
+                        [binary,
+                          {packet, raw},
+                          {reuseaddr, true},
+                          {backlog, 128},
+                          {nodelay, true},
+                          {exit_on_close, false},
+                          {keepalive, true}
+                         ]
+              },
+              {collect_statistics_interval, 60000}
             ]
-   }
+   },
+   {rabbitmq_management_agent, [ {force_fine_statistics, true} ] },
+   {kernel, [{net_ticktime,  120}]}
 ].""")

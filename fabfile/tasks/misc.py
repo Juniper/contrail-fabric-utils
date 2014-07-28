@@ -227,7 +227,6 @@ def setup_passwordless_ssh(*args):
     for host_string in args:
         with settings(host_string=host_string):
             for host, id_rsa_pub in id_rsa_pubs.items():
-                if host != host_string:
-                    files.append('/root/.ssh/authorized_keys', id_rsa_pub)
+                files.append('/root/.ssh/authorized_keys', id_rsa_pub)
             run('chmod 640 /root/.ssh/authorized_keys')
 # end setup_passwordless_ssh
