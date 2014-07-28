@@ -17,6 +17,26 @@ def verfiy_and_update_hosts(host_name, host_string):
 @task
 @EXECUTE_TASK
 @roles('cfgm')
+def set_tcp_keepalive():
+    with settings(hide('stderr'), warn_only=True):
+        if run("grep '^net.ipv4.tcp_keepalive_time' /etc/sysctl.conf").failed:
+            run("echo 'net.ipv4.tcp_keepalive_time = 5' >> /etc/sysctl.conf")
+        else:
+            run("sed -i 's/net.ipv4.tcp_keepalive_time\s\s*/net.ipv4.tcp_keepalive_time = 5/' /etc/sysctl.conf")
+
+        if run("grep '^net.ipv4.tcp_keepalive_probes' /etc/sysctl.conf").failed:
+            run("echo 'net.ipv4.tcp_keepalive_probes = 5' >> /etc/sysctl.conf")
+        else:
+            run("sed -i 's/net.ipv4.tcp_keepalive_probes\s\s*/net.ipv4.tcp_keepalive_probes = 5/' /etc/sysctl.conf")
+
+        if run("grep '^net.ipv4.tcp_keepalive_intvl' /etc/sysctl.conf").failed:
+            run("echo 'net.ipv4.tcp_keepalive_intvl = 1' >> /etc/sysctl.conf")
+        else:
+            run("sed -i 's/net.ipv4.tcp_keepalive_intvl\s\s*/net.ipv4.tcp_keepalive_intvl = 1/' /etc/sysctl.conf")
+
+@task
+@EXECUTE_TASK
+@roles('cfgm')
 def listen_at_supervisor_config_port():
     with settings(hide('everything'), warn_only=True):
         if run("service supervisor-config status | grep running").failed:
@@ -184,6 +204,7 @@ def setup_rabbitmq_cluster(force=False):
     #execute(rabbitmqctl_start_app)
     if get_from_testbed_dict('ha', 'internal_vip', None):
         execute('set_ha_policy_in_rabbitmq')
+        execute('set_tcp_keepalive')
     result = execute(verify_cluster_status)
     if False in result.values():
         print "Unable to setup RabbitMQ cluster...."
