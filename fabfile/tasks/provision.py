@@ -438,8 +438,8 @@ def setup_openstack():
     execute("setup_openstack_node", env.host_string)
     # Blindly run setup_openstack twice for Ubuntu
     #TODO Need to remove this finally
-    if detect_ostype() == 'Ubuntu':
-        execute("setup_openstack_node", env.host_string)
+    #if detect_ostype() == 'Ubuntu':
+    #    execute("setup_openstack_node", env.host_string)
     if is_package_installed('contrail-openstack-dashboard'):
         execute('setup_contrail_horizon_node', env.host_string)
 
@@ -459,7 +459,7 @@ def setup_openstack_node(*args):
         self_host = get_control_host_string(host_string)
         self_ip = hstr_to_ip(self_host)
         openstack_host_password = env.passwords[host_string]
-        keystone_ip = get_keystone_ip()
+        keystone_ip = get_keystone_ip(ignore_vip=True)
 
         openstack_admin_password = get_keystone_admin_password()
 
@@ -844,7 +844,7 @@ def setup_vrouter_node(*args):
             fixup_restart_haproxy_in_one_compute(host_string)
     
         openstack_admin_password = get_keystone_admin_password()
-        amqp_server_ip = get_openstack_amqp_server()
+        amqp_server_ip = ' '.join([hstr_to_ip(get_control_host_string(cfgm_host)) for cfgm_host in env.roledefs['cfgm']])
 
         with  settings(host_string=host_string):
             vmware = False
@@ -858,7 +858,7 @@ def setup_vrouter_node(*args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-vrouter.override')
             with cd(INSTALLER_DIR):
-                cmd= "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-vrouter.py --self_ip %s --cfgm_ip %s --keystone_ip %s --openstack_mgmt_ip %s --ncontrols %s --keystone_auth_protocol %s --keystone_auth_port %s --amqp_server_ip %s --quantum_service_protocol %s %s %s" \
+                cmd= "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-vrouter.py --self_ip %s --cfgm_ip %s --keystone_ip %s --openstack_mgmt_ip %s --ncontrols %s --keystone_auth_protocol %s --keystone_auth_port %s --amqp_server_ip_list %s --quantum_service_protocol %s %s %s" \
                          %(cfgm_host_password, openstack_admin_password, compute_control_ip, cfgm_ip, keystone_ip, openstack_mgmt_ip, ncontrols, ks_auth_protocol, ks_auth_port, amqp_server_ip, get_quantum_service_protocol(), get_service_token_opt(), haproxy)
                 if tgt_ip != compute_mgmt_ip: 
                     cmd = cmd + " --non_mgmt_ip %s --non_mgmt_gw %s" %( tgt_ip, tgt_gw )
