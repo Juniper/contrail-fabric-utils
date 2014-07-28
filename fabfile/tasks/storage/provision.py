@@ -213,6 +213,14 @@ def setup_nfs_livem():
 
 @roles('build')
 @task
+def setup_nfs_livem_global():
+    """Provisions required contrail services in all nodes as per the role definition.
+    """
+    execute("setup_nfs_live_migration", "setup_global")
+#end setup_nfs_livem_global
+
+@roles('build')
+@task
 def unconfigure_nfs_livem():
     """UnProvisions required contrail services in all nodes as per the role definition.
     """
