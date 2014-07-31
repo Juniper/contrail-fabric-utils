@@ -19,7 +19,7 @@ def install_storage_master_node(*args):
     """Installs storage pkgs in one or list of nodes. USAGE:fab install_openstack_storage_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            pkg = ['contrail-storage']
+            pkg = ['contrail-storage','contrail-web-storage']
             if detect_ostype() == 'Ubuntu':
                 apt_install(pkg)
             else:
