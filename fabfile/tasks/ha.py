@@ -70,6 +70,14 @@ def bootstrap_galera_cluster():
 @task
 @EXECUTE_TASK
 @roles('openstack')
+def setup_cluster_monitors():
+    """Task to start manage the contrail cluster manitor."""
+    run("service contrail-hamon start")
+    run("chkconfig contrail-hamon on")
+
+@task
+@EXECUTE_TASK
+@roles('openstack')
 def setup_galera_cluster():
     """Task to cluster the openstack nodes with galera"""
     if len(env.roledefs['openstack']) <= 1:
@@ -219,12 +227,8 @@ def fixup_restart_haproxy_in_openstack_node(*args):
 
         # haproxy enable
         with settings(host_string=host_string, warn_only=True):
-            services = ['openstack-keystone', 'openstack-glance-api', 'openstack-cinder-api', 'openstack-nova-api']
-            if detect_ostype() in ['Ubuntu']:
-                services = ['keystone', 'glance-api', 'cinder-api', 'nova-api']
             run("chkconfig haproxy on")
-            for svc in services:
-                run("service %s stop" % svc)
+            run("service supervisor-openstack stop")
             enable_haproxy()
             run("service haproxy restart")
             #Change the keystone admin/public port

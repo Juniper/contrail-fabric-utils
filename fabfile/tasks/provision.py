@@ -964,6 +964,7 @@ def setup_all(reboot='True'):
     execute('setup_openstack')
     if get_from_testbed_dict('ha', 'internal_vip', None):
         execute('sync_keystone_ssl_certs')
+        execute('setup_cluster_monitors')
     execute('setup_cfgm')
     execute('verify_cfgm')
     execute('setup_control')
