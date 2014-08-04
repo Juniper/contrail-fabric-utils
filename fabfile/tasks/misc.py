@@ -23,6 +23,7 @@ def add_vrouter_node(*args):
                 #Clear the connections cache
                 connections.clear()
             execute("setup_interface_node", env.host_string)
+            execute("add_static_route_node", env.host_string)
             execute("upgrade_pkgs_node", env.host_string)
             execute("setup_vrouter_node", env.host_string)
             execute("reboot_node", env.host_string)
