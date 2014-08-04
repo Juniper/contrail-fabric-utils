@@ -1064,26 +1064,30 @@ def run_setup_demo():
 @task
 @roles('build')
 def setup_interface():
+    '''
+    Configure the IP address, netmask, gateway and vlan information
+    based on parameter passed in 'control_data' stanza of testbed file.
+    Also generate ifcfg file for the interface if the file is not present.
+    '''
     execute('setup_interface_node')
 
 @task
 def setup_interface_node(*args):
     '''
     Configure the IP address, netmask, gateway and vlan information
-    based on parameter passed in 'control_data' stanza of testbed file.
-    Also generate ifcfg file for the interface if the file is not present.
+    in one or list of nodes based on parameter passed to this task.
     '''
     hosts = getattr(testbed, 'control_data', None)
     if not hosts:
-        print 'WARNING: \'interface\' block is not defined in testbed file.',\
+        print 'WARNING: \'control_data\' block is not defined in testbed file.',\
               'Skipping setup-interface...'
         return
     # setup interface for only the required nodes.
     if args:
         for host in args:
             if host not in hosts.keys():
-                raise AttributeError("control_data interface details for host"
-                                      "%s not defined in testbed file." % host)
+                print "\n\n*** WARNING: control_data interface details for host " +\
+                      "%s not defined in testbed file. Skipping! ***\n\n" % host
         hosts = dict((key, val) for (key, val) in
                      getattr(testbed, 'control_data', None).items()
                      if key in args)
@@ -1183,6 +1187,7 @@ def prov_vmware_compute_vm():
 #end prov_compute_vm
 
 @task
+@roles('build')
 def add_static_route():
     '''
     Add static route in the node based on parameter provided in the testbed file
@@ -1193,36 +1198,59 @@ def add_static_route():
     host3 : [{ 'ip': '4.4.4.0', 'netmask' : '255.255.255.0', 'gw':'192.168.20.254', 'intf': 'p6p0p1' }],
     }
     '''
+    execute('add_static_route_node')
+
+@task
+def add_static_route_node(*args):
+    '''
+    Add static route in one or list of nodes based on parameter provided in the testbed file
+    '''
     route_info = getattr(testbed, 'static_route', None)
-    if route_info:
-        for tgt_host in route_info.keys():
-            dest = ' --network'; gw = ' --gw'; netmask = ' --netmask'
-            device = route_info[tgt_host][0]['intf']
-            intf = ' --device %s' %device
-            vlan = get_vlan_tag(device)
-            for index in range(len(route_info[tgt_host])):
-                dest += ' %s' %route_info[tgt_host][index]['ip']
-                gw += ' %s' %route_info[tgt_host][index]['gw']
-                netmask += ' %s' %route_info[tgt_host][index]['netmask']
-            cmd = 'python setup-vnc-static-routes.py' +\
-                          dest + gw + netmask + intf
-            if vlan:
-                cmd += ' --vlan %s'%vlan
-            with settings(host_string=tgt_host):
-                with cd(INSTALLER_DIR):
-                    run(cmd)
-    else:
-        print 'WARNING: No Static routes defined in testbed. Skipping...'
+    if not route_info:
+        print 'WARNING: \'static_route\' block is not defined in testbed file.',\
+              'Skipping add_static_route...'
         return
+    # add static route for only the required nodes.
+    if args:
+        for host in args:
+            if host not in route_info.keys():
+                print "\n\n*** WARNING: static_route interface details for host " +\
+                      "%s not defined in testbed file. Skipping! ***\n\n" % host
+        route_info = dict((key, val) for (key, val) in
+                     getattr(testbed, 'static_route', None).items()
+                     if key in args)
+    for tgt_host in route_info.keys():
+        dest = ' --network'; gw = ' --gw'; netmask = ' --netmask'
+        device = route_info[tgt_host][0]['intf']
+        intf = ' --device %s' %device
+        vlan = get_vlan_tag(device)
+        for index in range(len(route_info[tgt_host])):
+            dest += ' %s' %route_info[tgt_host][index]['ip']
+            gw += ' %s' %route_info[tgt_host][index]['gw']
+            netmask += ' %s' %route_info[tgt_host][index]['netmask']
+        cmd = 'python setup-vnc-static-routes.py' +\
+                      dest + gw + netmask + intf
+        if vlan:
+            cmd += ' --vlan %s'%vlan
+        with settings(host_string=tgt_host):
+            with cd(INSTALLER_DIR):
+                run(cmd)
 # end add_static_route
 
 @task
-@EXECUTE_TASK
 @roles('build')
 def setup_network():
     '''
     Setup the underlay network based on parameters provided in the tested file
     '''
-    execute(setup_interface)
-    execute(add_static_route)
+    execute('setup_network_node')
+
+@task
+def setup_network_node(*args):
+    if args:
+        execute('setup_interface_node', *args)
+        execute('add_static_route_node', *args)
+    else:
+        execute('setup_interface_node')
+        execute('add_static_route_node')
 # end setup_network
