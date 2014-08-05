@@ -87,6 +87,9 @@ def get_keystone_auth_port():
     return get_from_testbed_dict('keystone', 'auth_port','35357')
 
 def get_keystone_admin_token():
+    token = get_from_testbed_dict('keystone', 'admin_token', None)
+    if token:
+        return token
     keystone_ip = get_keystone_ip(ignore_vip=True)
     if keystone_ip == hstr_to_ip(get_control_host_string(testbed.env.roledefs['openstack'][0])):
         # Use Management interface IP to ssh
