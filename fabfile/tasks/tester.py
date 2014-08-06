@@ -399,6 +399,7 @@ def run_sanity(feature='sanity', test=None):
                                 '%s/scripts/servicechain/firewall/regression.py' % repo],
               'floating_ip'  : ['%s/scripts/floating_ip_tests.py' % repo],
               'mx'           : ['%s/scripts/mx_test.py' % repo],
+              'headless'     : ['%s/scripts/headless_vrouter/sdn_headless_vrouter_tests.py' % repo],
               'policy'       : ['%s/scripts/NewPolicyTests.py' % repo,
                                 '%s/scripts/policyTrafficTests.py' % repo,
                                 '%s/scripts/policy_api_test.py' % repo,
