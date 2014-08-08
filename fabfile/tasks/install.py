@@ -304,7 +304,8 @@ def install_ceilometer_node(*args):
         	'ceilometer-agent-notification',
         	'ceilometer-alarm-evaluator',
         	'ceilometer-alarm-notifier',
-        	'python-ceilometerclient']
+		'python-ceilometerclient',
+                'ceilometer-plugin-contrail']
             act_os_type = detect_ostype()
             if act_os_type == 'ubuntu':
                 #if not is_package_installed('mongodb-server'):

@@ -505,6 +505,70 @@ def setup_cfgm_node(*args):
         fixup_restart_haproxy_in_all_openstack()
 #end setup_cfgm_node
 
+def get_openstack_sku():
+    output = sudo("dpkg-query --show nova-api")
+    if output.find('2013.2') != -1:
+        openstack_sku = 'havana'
+    elif output.find('2014.1') != -1:
+        openstack_sku = 'icehouse'
+    else:
+        print "openstack dist unknown.. assuming icehouse.."
+        openstack_sku = 'icehouse'
+    return openstack_sku
+#end get_openstack_sku
+
+def fixup_ceilometer_conf_common():
+    conf_file = '/etc/ceilometer/ceilometer.conf'
+    amqp_server_ip = get_openstack_amqp_server()
+    sudo("openstack-config --set %s DEFAULT rabbit_host %s" % (conf_file, amqp_server_ip))
+    value = "/var/log/ceilometer"
+    sudo("openstack-config --set %s DEFAULT log_dir %s" % (conf_file, value))
+    value = "a74ca26452848001921c"
+    openstack_sku = get_openstack_sku()
+    if openstack_sku == 'havana':
+        sudo("openstack-config --set %s DEFAULT metering_secret %s" % (conf_file, value))
+    else:
+        sudo("openstack-config --set %s publisher metering_secret %s" % (conf_file, value))
+    sudo("openstack-config --set %s DEFAULT auth_strategy keystone" % conf_file)
+#end fixup_ceilometer_conf_common
+
+def fixup_ceilometer_conf_keystone(openstack_ip):
+    conf_file = '/etc/ceilometer/ceilometer.conf'
+    with settings(warn_only=True):
+        authtoken_config = sudo("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
+    if not authtoken_config:
+        config_cmd = "openstack-config --set %s keystone_authtoken" % conf_file
+        sudo("%s admin_password CEILOMETER_PASS" % config_cmd)
+        sudo("%s admin_user ceilometer" % config_cmd)
+        sudo("%s admin_tenant_name service" % config_cmd)
+        sudo("%s auth_uri http://%s:5000" % (config_cmd, openstack_ip))
+        sudo("%s auth_protocol http" % config_cmd)
+        sudo("%s auth_port 35357" % config_cmd)
+        sudo("%s auth_host %s" % (config_cmd, openstack_ip))
+        config_cmd = "openstack-config --set %s service_credentials" % conf_file
+        sudo("%s os_password CEILOMETER_PASS" % config_cmd)
+        sudo("%s os_tenant_name service" % config_cmd)
+        sudo("%s os_username ceilometer" % config_cmd)
+        sudo("%s os_auth_url http://%s:5000/v2.0" % (config_cmd, openstack_ip))
+#end fixup_ceilometer_conf_keystone
+
+def setup_ceilometer_mongodb(ip):
+    with settings(warn_only=True):
+        sudo("service mongodb stop")
+        sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/mongodb.conf")
+        sudo("service mongodb start")
+        # check if the mongodb is running, if not, issue start again
+        count = 1
+        while run("service mongodb status | grep not").succeeded:
+            count += 1
+            if count > 10:
+                break
+            sleep(1)
+            run("service mongodb restart")
+        cmd = "mongo --host " + ip + " --eval 'db = db.getSiblingDB(\"ceilometer\"); db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", roles: [ \"readWrite\", \"dbAdmin\" ]})'"
+        sudo(cmd);
+#end setup_ceilometer_mongodb
+
 @task
 @roles('compute')
 def setup_ceilometer_compute():
@@ -515,7 +579,6 @@ def setup_ceilometer_compute():
 @task
 def setup_ceilometer_compute_node(*args):
     """Provisions ceilometer compute services in one or list of nodes. USAGE: fab setup_ceilometer_compute_node:user@1.1.1.1,user@2.2.2.2"""
-    amqp_server_ip = get_openstack_amqp_server()
     openstack_host = get_control_host_string(env.roledefs['openstack'][0])
     openstack_ip = hstr_to_ip(openstack_host)
     for host_string in args:
@@ -533,29 +596,8 @@ def setup_ceilometer_compute_node(*args):
 
             if host_string != openstack_host:
                 #ceilometer.conf updates
-                conf_file = "/etc/ceilometer/ceilometer.conf"
-                sudo("openstack-config --set %s DEFAULT rabbit_host %s" % (conf_file, amqp_server_ip))
-                value = "/var/log/ceilometer"
-                sudo("openstack-config --set %s DEFAULT log_dir %s" % (conf_file, value))
-                value = "a74ca26452848001921c"
-                sudo("openstack-config --set %s DEFAULT metering_secret %s" % (conf_file, value))
-                sudo("openstack-config --set %s DEFAULT auth_strategy keystone" % conf_file)
-                with settings(warn_only=True):
-                    authtoken_config = sudo("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
-                if not authtoken_config:
-                    config_cmd = "openstack-config --set %s keystone_authtoken" % conf_file
-                    sudo("%s admin_password CEILOMETER_PASS" % config_cmd)
-                    sudo("%s admin_user ceilometer" % config_cmd)
-                    sudo("%s admin_tenant_name service" % config_cmd)
-                    sudo("%s auth_uri http://%s:5000" % (config_cmd, openstack_ip))
-                    sudo("%s auth_protocol http" % config_cmd)
-                    sudo("%s auth_port 35357" % config_cmd)
-                    sudo("%s auth_host %s" % (config_cmd, openstack_ip))
-                    config_cmd = "openstack-config --set %s service_credentials" % conf_file
-                    sudo("%s os_password CEILOMETER_PASS" % config_cmd)
-                    sudo("%s os_tenant_name service" % config_cmd)
-                    sudo("%s os_username ceilometer" % config_cmd)
-                    sudo("%s os_auth_url http://%s:5000/v2.0" % (config_cmd, openstack_ip))
+                fixup_ceilometer_conf_common()
+                fixup_ceilometer_conf_keystone(openstack_ip)
 
             sudo("service ceilometer-agent-compute restart")
 
@@ -571,21 +613,12 @@ def setup_ceilometer():
 @task
 def setup_ceilometer_node(*args):
     """Provisions ceilometer services in one or list of nodes. USAGE: fab setup_ceilometer_node:user@1.1.1.1,user@2.2.2.2"""
-    amqp_server_ip = get_openstack_amqp_server()
     for host_string in args:
         self_host = get_control_host_string(host_string)
         self_ip = hstr_to_ip(self_host)
 
         with  settings(host_string=host_string):
-
-            output = sudo("dpkg-query --show nova-api")
-            if output.find('2013.2') != -1:
-                openstack_sku = 'havana'
-            elif output.find('2014.1') != -1:
-                openstack_sku = 'icehouse'
-            else:
-                print "setup_ceilometer_node: openstack dist unknown.. assuming icehouse.."
-                openstack_sku = 'icehouse'
+            openstack_sku = get_openstack_sku()
 
             if openstack_sku == 'havana':
                 ceilometer_services = ['ceilometer-agent-central',
@@ -598,19 +631,14 @@ def setup_ceilometer_node(*args):
                                        'ceilometer-collector',
                                        'ceilometer-alarm-evaluator',
                                        'ceilometer-alarm-notifier']
-            with settings(warn_only=True):
-                cmd = "mongo --host " + self_ip + " --eval 'db = db.getSiblingDB(\"ceilometer\"); db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", roles: [ \"readWrite\", \"dbAdmin\" ]})'"
-                sudo(cmd);
-
+            setup_ceilometer_mongodb(self_ip)
             conf_file = "/etc/ceilometer/ceilometer.conf"
             value = "mongodb://ceilometer:CEILOMETER_DBPASS@" + self_ip + ":27017/ceilometer"
-            sudo("openstack-config --set %s DEFAULT connection %s" % (conf_file, value))
-            sudo("openstack-config --set %s DEFAULT rabbit_host %s" % (conf_file, amqp_server_ip))
-            value = "/var/log/ceilometer"
-            sudo("openstack-config --set %s DEFAULT log_dir %s" % (conf_file, value))
-            value = "a74ca26452848001921c"
-            sudo("openstack-config --set %s DEFAULT metering_secret %s" % (conf_file, value))
-            sudo("openstack-config --set %s DEFAULT auth_strategy keystone" % conf_file)
+            if openstack_sku == 'havana':
+                sudo("openstack-config --set %s DEFAULT connection %s" % (conf_file, value))
+            else:
+                sudo("openstack-config --set %s database connection %s" % (conf_file, value))
+            fixup_ceilometer_conf_common()
             #keystone auth params
             with settings(warn_only=True):
                 ceilometer_user_exists = sudo("source /etc/contrail/openstackrc;keystone user-list | grep ceilometer").succeeded
@@ -618,29 +646,14 @@ def setup_ceilometer_node(*args):
                 sudo("source /etc/contrail/openstackrc;keystone user-create --name=ceilometer --pass=CEILOMETER_PASS --tenant=service --email=ceilometer@example.com")
                 sudo("source /etc/contrail/openstackrc;keystone user-role-add --user=ceilometer --tenant=service --role=admin")
 
-            with settings(warn_only=True):
-                authtoken_config = sudo("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
-            if not authtoken_config:
-                config_cmd = "openstack-config --set %s keystone_authtoken" % conf_file
-                sudo("%s admin_password CEILOMETER_PASS" % config_cmd)
-                sudo("%s admin_user ceilometer" % config_cmd)
-                sudo("%s admin_tenant_name service" % config_cmd)
-                sudo("%s auth_uri http://%s:5000" % (config_cmd, self_ip))
-                sudo("%s auth_protocol http" % config_cmd)
-                sudo("%s auth_port 35357" % config_cmd)
-                sudo("%s auth_host %s" % (config_cmd, self_ip))
-                config_cmd = "openstack-config --set %s service_credentials" % conf_file
-                sudo("%s os_password CEILOMETER_PASS" % config_cmd)
-                sudo("%s os_tenant_name service" % config_cmd)
-                sudo("%s os_username ceilometer" % config_cmd)
-                sudo("%s os_auth_url http://%s:5000/v2.0" % (config_cmd, self_ip))
+            fixup_ceilometer_conf_keystone(self_ip)
 
             #create keystone service and endpoint
             with settings(warn_only=True):
                 ceilometer_service_exists = sudo("source /etc/contrail/openstackrc;keystone service-list | grep ceilometer").succeeded
             if not ceilometer_service_exists:
                 sudo("source /etc/contrail/openstackrc;keystone service-create --name=ceilometer --type=metering --description=\"Telemetry\"")
-                sudo("source /etc/contrail/openstackrc;keystone endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777" %(self_ip, self_ip, self_ip))
+                sudo("source /etc/contrail/openstackrc;keystone endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777 --region=RegionOne" %(self_ip, self_ip, self_ip))
             for svc in ceilometer_services:
                 sudo("service %s restart" %(svc))
 #end setup_ceilometer_node
@@ -650,14 +663,7 @@ def setup_image_service_node(*args):
     """Provisions image services in one or list of nodes. USAGE: fab setup_image_service_node:user@1.1.1.1,user@2.2.2.2"""
     amqp_server_ip = get_openstack_amqp_server()
     for host_string in args:
-        output = sudo("dpkg-query --show nova-api")
-        if output.find('2013.2') != -1:
-            openstack_sku = 'havana'
-        elif output.find('2014.1') != -1:
-            openstack_sku = 'icehouse'
-        else:
-            print "setup_image_service_node: openstack dist unknown.. assuming icehouse.."
-            openstack_sku = 'icehouse'
+        openstack_sku = get_openstack_sku()
 
         glance_configs = {'DEFAULT' : {'notification_driver' : 'messaging',
                                        'rpc_backend' : 'rabbit',
