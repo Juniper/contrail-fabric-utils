@@ -14,6 +14,10 @@ def get_collector_syslog_port():
         return None
 # end get_collector_syslog_port
 
+def get_analytics_protobuf_port():
+    return getattr(testbed, 'analytics_protobuf_port', None)
+#end get_analytics_protobuf_port
+
 def get_database_ttl():
     return getattr(testbed, 'database_ttl', None)
 #end get_database_ttl

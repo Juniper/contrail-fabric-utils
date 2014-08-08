@@ -9,7 +9,7 @@ host1 = 'root@10.84.13.23'
 ext_routers = []
 router_asn = 64512
 public_vn_rtgt = 10000
-host_build = 'meghb@10.84.5.111'
+host_build = 'meghb@10.84.5.31'
 database_ttl = 24
 database_dir = '/home/cassandra/megh'
 collector_syslog_port = 8514
@@ -26,13 +26,17 @@ env.roledefs = {
     'build': [host_build],
 }
 
+env.ostypes = {
+    host1: 'ubuntu',
+}
+
 env.hostnames = {
     'all': ['a6s23']
 }
 
 env.passwords = {
     host1: 'c0ntrail123',
-
     host_build: 'meghb123',
 }
-env.test_repo_dir = '/home/meghb/build/test'
+
+env.test_repo_dir = '/users/meghb/build/test-github'

@@ -608,15 +608,18 @@ def setup_collector_node(*args):
                     analytics_syslog_port = get_collector_syslog_port()
                     if analytics_syslog_port is not None:
                         run_cmd += "--analytics_syslog_port %d " % (analytics_syslog_port)
+                    analytics_protobuf_port = get_analytics_protobuf_port()
+                    if analytics_protobuf_port is not None:
+                        run_cmd += "--analytics_protobuf_port %d " % (analytics_protobuf_port)
+                    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+                    if internal_vip:
+                        run_cmd += "--internal_vip %s " % internal_vip
                 analytics_database_ttl = get_database_ttl()
                 if analytics_database_ttl is not None:
                     run_cmd += "--analytics_data_ttl %d " % (analytics_database_ttl)
                 else:
                     #if nothing is provided we default to 48h
                     run_cmd += "--analytics_data_ttl 48 "
-                internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
-                if internal_vip:
-                    run_cmd += " --internal_vip %s" % internal_vip
                 print run_cmd
                 run(run_cmd)
 #end setup_collector
