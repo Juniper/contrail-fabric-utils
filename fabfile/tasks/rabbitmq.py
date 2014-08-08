@@ -177,7 +177,7 @@ def setup_rabbitmq_cluster(force=False):
     """Task to cluster the rabbit servers."""
     if len(env.roledefs['cfgm']) <= 1:
         print "Single cfgm cluster, skipping rabbitmq cluster setup."
-        return 
+        return
 
     if not force:
         with settings(warn_only=True):

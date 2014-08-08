@@ -29,8 +29,13 @@ def stop_database():
 @roles('cfgm')
 def stop_cfgm():
     """stops the contrail config services."""
-    with settings(warn_only=True):
-        run('service supervisor-config stop')
+    execute('stop_cfgm_node', env.host_string)
+
+@task
+def stop_cfgm_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            run('service supervisor-config stop')
 
 @task
 @roles('cfgm')
@@ -73,7 +78,8 @@ def stop_control():
 @roles('collector')
 def stop_collector():
     """stops the contrail collector services."""
-    run('service supervisor-analytics stop')
+    with settings(warn_only=True):
+        run('service supervisor-analytics stop')
 
 @task
 @roles('compute')
@@ -121,11 +127,13 @@ def restart_openstack_node(*args):
                           'openstack-nova-scheduler', 'openstack-nova-cert',
                           'openstack-nova-consoleauth', 'openstack-nova-novncproxy',
                           'openstack-nova-conductor', 'openstack-nova-compute']
+    openstack_services = [ 'httpd', 'memcached', 'supervisor-openstack']
     if detect_ostype() in ['Ubuntu']:
         openstack_services = ['rabbitmq-server', 'memcached', 'nova-api',
                               'nova-scheduler', 'glance-api',
                               'glance-registry', 'keystone',
                               'nova-conductor', 'cinder-api', 'cinder-scheduler']
+        openstack_services = ['memcached', 'supervisor-openstack']
 
     for host_string in args:
         with  settings(host_string=host_string):
@@ -153,14 +161,7 @@ def restart_cfgm_node(*args):
     """Restarts the contrail config services in once cfgm node. USAGE:fab restart_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with  settings(host_string=host_string):
-            run('supervisorctl -s http://localhost:9004 restart contrail-config-nodemgr')
-            if detect_ostype() not in ['Ubuntu']:
-                run('service ifmap restart')
-            run('supervisorctl -s http://localhost:9004 restart contrail-api:0')
-            run('supervisorctl -s http://localhost:9004 restart contrail-discovery:0')
-            run('service contrail-schema restart')
-            run('service contrail-svc-monitor restart')
-            #run('service redis-config restart')
+            run('service supervisor-config restart')
 
 @task
 @roles('control')
