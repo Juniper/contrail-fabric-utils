@@ -16,7 +16,8 @@ R1_05_TO_R1_10 = {
                   },
     'database'  : {'upgrade'       : ['contrail-openstack-database'],
                    'remove'        : [],
-                   'install'       : ['supervisor=1:3.0a8-1.2'],
+                   'install'       : ['supervisor=1:3.0a8-1.2',
+                                      'python-contrail'],
                    'backup_files'  : [],
                    'remove_files'  : [],
                   },
@@ -25,19 +26,20 @@ R1_05_TO_R1_10 = {
                                       'contrail-config-extension',
                                       'contrail-libs'],
                    'install'       : ['ifmap-server=0.3.2-1contrail1',
-                                      'rabbitmq-server=3.3.2-1',
                                       'euca2ools=1:2.1.3-2',
                                       'supervisor=1:3.0a8-1.2',
-                                      'python-boto=1:2.12.0'],
-                   'backup_files'  : ['/etc/contrail/discovery.conf',
-                                      '/etc/contrail/vnc_api_lib.ini'],
-                   'remove_files'  : [],
+                                      'python-boto=1:2.12.0',
+                                      'python-six=1.5.2-1~cloud0'],
+                   'backup_files'  : [],
+                   'remove_files'  : ['/etc/rabbitmq/rabbitmq.config'],
                   },
     'collector' : {'upgrade'       : ['contrail-openstack-analytics'],
                    'remove'        : ['contrail-analytics-venv'],
                    'install'       : ['supervisor=1:3.0a8-1.2'],
                    'backup_files'  : [],
-                   'remove_files'  : ['/etc/contrail/supervisord_analytics_files/redis-*.ini'],
+                   'remove_files'  : ['/etc/contrail/supervisord_analytics_files/redis-*.ini',
+                                      '/etc/contrail/supervisord_analytics_files/contrail-qe.ini',
+                                      '/etc/contrail/supervisord_analytics_files/contrail-opserver.ini'],
                   },
     'control'   : {'upgrade'       : ['contrail-openstack-control'],
                    'remove'        : [],
@@ -58,14 +60,14 @@ R1_05_TO_R1_10 = {
                    'install'       : ['supervisor=1:3.0a8-1.2',
                                       'python-contrail'],
                    'backup_files'  : [],
-                   'remove_files'  : [],
+                   'remove_files'  : ['/etc/contrail/supervisord_vrouter_files/contrail-vrouter.ini']
                   },
 }
 
-# Upgrade data for upgrade from 1.05 to 1.10 mainline
-R1_05_TO_R1_10main = R1_05_TO_R1_10
-# Upgrade data for upgrade from 1.06 to 1.10 mainline
-R1_06_TO_R1_10main = R1_05_TO_R1_10
+# Upgrade data for upgrade from 1.05 to 1.11 mainline
+R1_05_TO_R1_11 = R1_05_TO_R1_10
+# Upgrade data for upgrade from 1.06 to 1.11 mainline
+R1_06_TO_R1_11 = R1_05_TO_R1_10
 # Upgrade data for upgrade from 1.06 to R1.10
 R1_06_TO_R1_10 = R1_05_TO_R1_10
 
@@ -314,7 +316,24 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             upgrade(from_rel, 'openstack')
             execute('increase_item_size_max_node', host_string)
             execute('upgrade_pkgs_node', host_string)
+            # Set the rabbit_host as from 1.10 the rabbit listens at the control_data ip
+            amqp_server_ip = get_openstack_amqp_server()
+            run("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" % amqp_server_ip)
+            run("openstack-config --set /etc/glance/glance-api.conf DEFAULT rabbit_host %s" % amqp_server_ip)
+            run("openstack-config --set /etc/neutron/neutron.conf DEFAULT rabbit_host %s" % amqp_server_ip)
             execute('restart_openstack_node', host_string)
+
+@task
+@roles('cfgm')
+def fix_rabbitmq_conf():
+    rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
+    amqp_listen_ip = get_openstack_amqp_server()
+    run('sudo echo "[" >> %s' % rabbit_conf)
+    run("sudo echo '   {rabbit, [ {tcp_listeners, [{\"%s\", 5672}]},' >> %s" % (amqp_listen_ip, rabbit_conf))
+    run('sudo echo "   {loopback_users, []}," >> %s' % rabbit_conf)
+    run('sudo echo "   {log_levels,[{connection, info},{mirroring, info}]} ]" >> %s' % rabbit_conf)
+    run('sudo echo "    }" >> %s' % rabbit_conf)
+    run('sudo echo "]." >> %s' % rabbit_conf)
 
 @task
 @EXECUTE_TASK
@@ -323,6 +342,13 @@ def fix_discovery_conf():
     cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host)) for cassandra_host in env.roledefs['database']]
     cassandra_srv_list = 'cassandra_server_list=' + ':9160'.join(cassandra_ip_list) + ':9160'
     run('sed -i "/\[DEFAULTS\]/a\%s" /etc/contrail/discovery.conf' % cassandra_srv_list)
+
+@task
+@serial
+@roles('cfgm')
+def upgrade_rabbitmq():
+    with settings(warn_only=True):
+        upgrade_package(['rabbitmq-server=3.3.2-1'], detect_ostype())
 
 @task
 @EXECUTE_TASK
@@ -341,6 +367,8 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'cfgm')
+            if len(env.roledefs['cfgm']) == 1:
+                execute('fix_rabbitmq_conf')
             execute('upgrade_pkgs_node', host_string)
 
 @task
@@ -360,10 +388,7 @@ def upgrade_control_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'control')
             execute('upgrade_pkgs_node', host_string)
-            # If necessary, migrate to new ini format based configuration.
-            run("/opt/contrail/contrail_installer/contrail_config_templates/control-node.conf.sh")
-            run("/opt/contrail/contrail_installer/contrail_config_templates/dns.conf.sh")
-            execute('restart_control_node', host_string)
+            execute('setup_control_node', host_string)
 
 
 @task
@@ -383,9 +408,7 @@ def upgrade_collector_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'collector')
             execute('upgrade_pkgs_node', host_string)
-            # If necessary, migrate to new ini format based configuration.
-            run("/opt/contrail/contrail_installer/contrail_config_templates/collector.conf.sh")
-            execute('restart_collector_node', host_string)
+            execute('setup_collector_node', host_string)
 
 
 @task
@@ -424,7 +447,6 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'compute')
-            import pdb; pdb.set_trace()
             # If necessary, migrate to new ini format based configuration.
             run("/opt/contrail/contrail_installer/contrail_config_templates/vrouter-agent.conf.sh")
 
@@ -464,14 +486,15 @@ def upgrade_contrail(from_rel, pkg):
     """Upgrades all the contrail pkgs in all nodes."""
     execute('install_pkg_all', pkg)
     #execute('zookeeper_rolling_restart')
-    execute('fix_discovery_conf')
+    #execute('fix_discovery_conf')
     execute('backup_config', from_rel)
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
+    execute('upgrade_rabbitmq')
     execute('upgrade_cfgm', from_rel, pkg)
     execute('setup_rabbitmq_cluster', True)
-    execute('restart_cfgm')
+    execute('setup_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
@@ -490,14 +513,15 @@ def upgrade_without_openstack(pkg):
     """
     execute('install_pkg_all', pkg)
     #execute('zookeeper_rolling_restart')
+    #execute('fix_discovery_conf')
     execute('backup_config')
-    execute('fix_discovery_conf')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
+    execute('upgrade_rabbitmq')
     execute('upgrade_cfgm', from_rel, pkg)
     execute('setup_rabbitmq_cluster')
-    execute('restart_cfgm')
+    execute('setup_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)

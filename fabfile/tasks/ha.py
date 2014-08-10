@@ -160,8 +160,8 @@ def fixup_restart_haproxy_in_openstack_node(*args):
     mysql_server_lines = ''
     space = ' ' * 3 
 
-    for host_string in env.roledefs['cfgm']:
-        server_index = env.roledefs['cfgm'].index(host_string) + 1
+    for host_string in env.roledefs['openstack']:
+        server_index = env.roledefs['openstack'].index(host_string) + 1
         host_ip = hstr_to_ip(get_control_host_string(host_string))
         keystone_server_lines +=\
             '%s server %s %s:6000 check inter 2000 rise 2 fall 3\n'\
@@ -193,7 +193,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
              % (space, server_index, host_ip)
 
 
-    for host_string in env.roledefs['cfgm']:
+    for host_string in env.roledefs['openstack']:
         haproxy_config = openstack_haproxy.template.safe_substitute({
             '__keystone_backend_servers__' : keystone_server_lines,
             '__keystone_admin_backend_servers__' : keystone_admin_server_lines,
