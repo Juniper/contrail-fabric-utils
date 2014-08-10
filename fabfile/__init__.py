@@ -36,3 +36,11 @@ try:
     from contraillabs.rdo import *
 except ImportError:
     pass
+
+@task
+def help(task_name):
+    try:
+       print("\n\nTask is at module: %s" % globals()[task_name].__module__)
+       print("\n\nUse: %s" % globals()[task_name].__doc__)
+    except KeyError:
+        print("\n\nUnknown task: %s" % task_name)
