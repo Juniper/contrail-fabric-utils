@@ -769,12 +769,6 @@ def pre_check():
         get_openstack_internal_vip() != get_openstack_internal_vip()):
         print "\nERROR: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
         exit(1)
-    if (len(env.roledefs['openstack']) > 1 and
-        env.roledefs['openstack'].sort() != env.roledefs['cfgm'].sort() and
-        get_openstack_internal_vip() == get_openstack_internal_vip()):
-        print "\nERROR: \n\tOpenstack and cfgm nodes are different, Need to specify  contrail_internal_vip testbed.py."
-        exit(1)
-        print "\nERROR: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
 
 def role_to_ip_dict(role=None):
     role_to_ip_dict = {}

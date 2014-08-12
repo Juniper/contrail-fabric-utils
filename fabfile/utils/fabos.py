@@ -21,6 +21,8 @@ def detect_ostype():
             dist = 'redhat'
         else:
             dist = 'centos'
+    elif 'el7' in output:
+        dist = 'redhat'
     elif 'fc17' in output:
         dist = 'fedora'
     elif 'xen' in output:

@@ -2,6 +2,7 @@ import os
 import re
 import copy
 import tempfile
+from time import sleep
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
@@ -217,7 +218,7 @@ def install_database_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-database']
             if detect_ostype() == 'Ubuntu':
-                run('echo "manual" >> /etc/init/supervisord-contrail-database.override')
+                run('echo "manual" >> /etc/init/supervisor-database.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -351,7 +352,7 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
         ostype = detect_ostype()
         with  settings(host_string=host_string):
             pkg = ['contrail-openstack-vrouter']
-            if (manage_nova_compute == 'no' and ostype in ['centos']):
+            if (manage_nova_compute == 'no' and ostype in ['centos', 'redhat']):
                 pkg = ['contrail-vrouter',
                        'abrt',
                        #'openstack-nova-compute',
@@ -448,6 +449,7 @@ def install_without_openstack(manage_nova_compute='yes'):
     execute(install_webui)
     execute('install_vrouter', manage_nova_compute)
     execute(upgrade_pkgs_without_openstack)
+    sleep(20)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name)
@@ -543,9 +545,23 @@ def uninstall_contrail(full=False):
 @roles('cfgm')
 @task
 def install_webui_packages(source_dir):
+    webui = getattr(testbed, 'webui', False)
     if detect_ostype() in ['Ubuntu']:
         run('cp ' + source_dir + '/contrail-test/scripts/ubuntu_repo/sources.list /etc/apt')
         run('sudo apt-get -y update')
+        if webui == 'firefox':
+            run('sudo apt-get install -y firefox')
+        elif webui == 'chrome':
+            run('echo "deb http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list')
+            run('wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -')
+            run('sudo apt-get -y update')
+            run('sudo apt-get -y install unzip')
+            run('wget -c http://chromedriver.storage.googleapis.com/2.10/chromedriver_linux64.zip')
+            run('unzip chromedriver_linux64.zip')
+            run('sudo cp ./chromedriver /usr/bin/')
+            run('sudo chmod ugo+rx /usr/bin/chromedriver')
+            run('sudo apt-get -y install libxpm4 libxrender1 libgtk2.0-0 libnss3 libgconf-2-4')
+            run('sudo apt-get -y install google-chrome-stable')
         run('sudo apt-get install -y xvfb')
     elif detect_ostype() in ['centos', 'fedora', 'redhat']:
         run('yum install -y xorg-x11-server-Xvfb')
@@ -574,33 +590,7 @@ def upgrade_kernel_all():
     """creates repo and upgrades kernel in Ubuntu"""
     execute('pre_check')
     execute(create_install_repo)
-    nodes = get_nodes_to_upgrade('linux-image-3.13.0-34-generic', 'Ubuntu', *env.roledefs['all'])
-    execute(upgrade_kernel_node, *nodes)
-    node_list_except_build = list(nodes)
-    if env.host_string in nodes:
-        node_list_except_build.remove(env.host_string)
-        execute("reboot_nodes", *node_list_except_build)
-        execute("reboot_nodes", env.host_string)
-    else:
-        execute("reboot_nodes", *nodes)
-
-@task
-def get_nodes_to_upgrade(package, os_type, *args):
-    """get the list of nodes in which kernel needs to be upgraded"""
-    nodes = []
-    for host_string in args:
-        with settings(host_string=host_string, warn_only=True):
-            act_os_type = detect_ostype()
-            if act_os_type == os_type:
-                version = run("dpkg -l | grep %s" % package)
-                if not version:
-                    nodes.append(host_string)
-                else:
-                    print 'Has required Kernel. Skipping!'
-            else:
-                raise RuntimeError('Actual OS Type (%s) != Expected OS Type (%s)'
-                                    'Aborting!' % (act_os_type, os_type))
-    return nodes
+    execute(upgrade_kernel)
 
 @task
 @EXECUTE_TASK
@@ -614,21 +604,22 @@ def upgrade_kernel_node(*args):
     """upgrades the kernel image in given nodes."""
     for host_string in args:
         with settings(host_string=host_string):
-            print "upgrading apparmor before upgrading kernel"
-            apt_install(["apparmor"])
-            print "Installing 3.13.0-34 kernel headers"
-            apt_install(["linux-headers-3.13.0-34"])
-            apt_install(["linux-headers-3.13.0-34-generic"])
-            print "Upgrading the kernel to 3.13.0-34"
-            apt_install(["linux-image-3.13.0-34-generic"])
-
-@task
-def reboot_nodes(*args):
-    """reboots the given nodes"""
-    for host_string in args:
-        with settings(host_string=host_string):
-            print "Rebooting (%s) to boot with new kernel version" % host_string
-            try:
-                sudo('reboot --force', timeout=3)
-            except CommandTimeout:
-                pass
+            if detect_ostype() == 'Ubuntu':
+                version = run("dpkg -p linux-image-3.11.0-22-generic | grep Version | cut -d: -f2")
+                if version == "3.11.0-22.38~precise1":
+                    print "Kernel already upggraded"
+                    continue
+                else:
+                    print "upgrading apparmor before upgrading kernel"
+                    apt_install(["apparmor"])
+                    print "Installing 3.11.0-22 kernel headers"
+                    apt_install(["linux-headers-3.11.0-22"])
+                    apt_install(["linux-headers-3.11.0-22-generic"])
+                    print "Upgrading the kernel to 3.11.0-22"
+                    apt_install(["linux-image-3.11.0-22-generic"])
+                    try:
+                        sudo('reboot --force', timeout=3)
+                    except CommandTimeout:
+                        pass
+            else:
+                print "INFO: Kernel upgrade is required only in Ubuntu for now"

@@ -671,7 +671,7 @@ def setup_database_node(*args):
         with  settings(host_string=host_string):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
-                    run('rm /etc/init/supervisord-contrail-database.override')
+                    run('rm /etc/init/supervisor-database.override')
             with cd(INSTALLER_DIR):
                 run_cmd = "PASSWORD=%s python setup-vnc-database.py --self_ip %s --cfgm_ip %s " % (database_host_password, tgt_ip, cfgm_ip)
                 database_dir = get_database_dir()
@@ -753,13 +753,10 @@ def fixup_irond_config(control_host_string):
     control_ip = hstr_to_ip(get_control_host_string(control_host_string))
     for config_host_string in env.roledefs['cfgm']:
         with settings(host_string=config_host_string):
-            if detect_ostype() == 'Ubuntu':
-                pfl = "/etc/ifmap-server/basicauthusers.properties"
-            else:
-                pfl = "/etc/irond/basicauthusers.properties"
+            pfl = "/etc/ifmap-server/basicauthusers.properties"
             # replace control-node and dns proc creds
             run("sed -i -e '/%s:/d' -e '/%s.dns:/d' %s" \
-                      %(control_ip, control_ip, pfl))
+                              %(control_ip, control_ip, pfl))
             run("echo '%s:%s' >> %s" \
                          %(control_ip, control_ip, pfl))
             run("echo '%s.dns:%s.dns' >> %s" \
@@ -1214,11 +1211,11 @@ def setup_without_openstack(manage_nova_compute='yes'):
     execute('setup_webui')
     execute('verify_webui')
     execute('setup_vrouter', manage_nova_compute)
-    execute('prov_control_bgp')
-    execute('prov_external_bgp')
-    execute('prov_metadata_services')
-    execute('prov_encap_type')
-    execute('setup_remote_syslog')
+    execute(prov_control_bgp)
+    execute(prov_external_bgp)
+    execute(prov_metadata_services)
+    execute(prov_encap_type)
+    execute(setup_remote_syslog)
     print "Rebooting the compute nodes after setup all."
     execute(compute_reboot)
     #Clear the connections cache
