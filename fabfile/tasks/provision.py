@@ -456,6 +456,7 @@ def setup_openstack_node(*args):
    
     amqp_server_ip = get_openstack_amqp_server()
     for host_string in args:
+        openstack_ip_list = []
         self_host = get_control_host_string(host_string)
         self_ip = hstr_to_ip(self_host)
         openstack_host_password = env.passwords[host_string]
@@ -471,7 +472,11 @@ def setup_openstack_node(*args):
                     openstack_host_password, openstack_admin_password, self_ip, keystone_ip, cfgm_ip, get_keystone_auth_protocol(), amqp_server_ip, get_quantum_service_protocol(), get_service_token_opt(), get_haproxy_opt())
         cmd += ' --openstack_index %s' % (env.roledefs['openstack'].index(host_string) + 1)
         if internal_vip:
+            openstack_host_list = [get_control_host_string(openstack_host) for openstack_host in env.roledefs['openstack']]
+            openstack_ip_list = [hstr_to_ip(openstack_host) for openstack_host in openstack_host_list]
             cmd += ' --internal_vip %s' % (internal_vip)
+        if openstack_ip_list:
+            cmd += ' --openstack_ip_list %s' % openstack_ip_list
         with  settings(host_string=host_string):
             with cd(INSTALLER_DIR):
                 run(cmd)
