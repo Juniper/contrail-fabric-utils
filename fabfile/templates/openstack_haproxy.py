@@ -67,6 +67,15 @@ backend nova-meta-backend
     balance   roundrobin
 $__nova_meta_backend_servers__
 
+frontend openstack-nova-vnc *:6080
+    default_backend  nova-vnc-backend
+
+backend nova-vnc-backend
+    option tcpka
+    option nolinger
+    srvtimeout 5h
+    balance  roundrobin
+    $__nova_vnc_backend_servers__
 
 listen memcached 0.0.0.0:11222
    mode tcp
