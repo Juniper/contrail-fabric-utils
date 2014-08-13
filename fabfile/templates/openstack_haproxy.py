@@ -106,7 +106,7 @@ listen  mysql 0.0.0.0:33306
     option tcpka
     option nolinger
     option redispatch
-    maxconn 2000
+    maxconn 10000
     contimeout 5s
     clitimeout 24h
     srvtimeout 24h
