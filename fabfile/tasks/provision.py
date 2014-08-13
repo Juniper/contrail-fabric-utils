@@ -460,7 +460,7 @@ def setup_openstack_node(*args):
         self_host = get_control_host_string(host_string)
         self_ip = hstr_to_ip(self_host)
         openstack_host_password = env.passwords[host_string]
-        keystone_ip = get_keystone_ip(ignore_vip=True)
+        keystone_ip = get_keystone_ip(ignore_vip=True, openstack_node=env.host_string)
 
         openstack_admin_password = get_keystone_admin_password()
 
@@ -472,8 +472,7 @@ def setup_openstack_node(*args):
                     openstack_host_password, openstack_admin_password, self_ip, keystone_ip, cfgm_ip, get_keystone_auth_protocol(), amqp_server_ip, get_quantum_service_protocol(), get_service_token_opt(), get_haproxy_opt())
         cmd += ' --openstack_index %s' % (env.roledefs['openstack'].index(host_string) + 1)
         if internal_vip:
-            openstack_host_list = [get_control_host_string(openstack_host) for openstack_host in env.roledefs['openstack']]
-            openstack_ip_list = [hstr_to_ip(openstack_host) for openstack_host in openstack_host_list]
+            openstack_ip_list = ' '.join([hstr_to_ip(get_control_host_string(openstack_host)) for openstack_host in env.roledefs['openstack']])
             cmd += ' --internal_vip %s' % (internal_vip)
         if openstack_ip_list:
             cmd += ' --openstack_ip_list %s' % openstack_ip_list
@@ -482,7 +481,6 @@ def setup_openstack_node(*args):
                 run(cmd)
 #end setup_openstack_node
 
-@roles('openstack')
 @task
 def setup_contrail_horizon_node(*args):
     '''
@@ -513,6 +511,27 @@ def setup_contrail_horizon_node(*args):
         web_restart = 'service httpd restart'
 
     insert_line_to_file(pattern = pattern, line = line, file_name = file_name)
+
+    #HA settings
+    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+    if internal_vip:
+        with settings(warn_only=True):
+            hash_key = run("grep 'def hash_key' %s" % file_name).succeeded
+        if not hash_key:
+            # Add a hash generating function
+            run('sed -i "/^SECRET_KEY.*/a\    return new_key" %s' % file_name)
+            run('sed -i "/^SECRET_KEY.*/a\        new_key = m.hexdigest()" %s' % file_name)
+            run('sed -i "/^SECRET_KEY.*/a\        m.update(new_key)" %s' % file_name)
+            run('sed -i "/^SECRET_KEY.*/a\        m = hashlib.md5()" %s' % file_name)
+            run('sed -i "/^SECRET_KEY.*/a\    if len(new_key) > 250:" %s' % file_name)
+            run('sed -i "/^SECRET_KEY.*/a\    new_key = \':\'.join([key_prefix, str(version), key])" %s' % file_name)
+            run('sed -i "/^SECRET_KEY.*/a\def hash_key(key, key_prefix, version):" %s' % file_name)
+            run('sed -i "/^SECRET_KEY.*/a\import hashlib" %s' % file_name)
+        run("sed  -i \"s/'LOCATION' : '127.0.0.1:11211',/'LOCATION' : '%s:11211',/\" %s" % (hstr_to_ip(env.host_string), file_name))
+        with settings(warn_only=True):
+            if run("grep '\'KEY_FUNCTION\': hash_key' %s" % file_name).failed:
+                run('sed -i "/\'LOCATION\'.*/a\       \'KEY_FUNCTION\': hash_key" %s' % file_name)
+        run("sed -i -e 's/OPENSTACK_HOST = \"127.0.0.1\"/OPENSTACK_HOST = \"%s\"/' %s" % (internal_vip,file_name))
 
     sudo(web_restart)
 #end setup_contrail_horizon_node
@@ -671,8 +690,12 @@ def setup_webui_node(*args):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-webui.override')
+            cmd = "PASSWORD=%s python setup-vnc-webui.py --cfgm_ip %s --keystone_ip %s --openstack_ip %s --collector_ip %s --cassandra_ip_list %s" %(cfgm_host_password, cfgm_ip, keystone_ip, openstack_ip, collector_ip, ' '.join(cassandra_ip_list))
+            internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+            if internal_vip:
+                cmd += " --internal_vip %s" % internal_vip
             with cd(INSTALLER_DIR):
-                run("PASSWORD=%s python setup-vnc-webui.py --cfgm_ip %s --keystone_ip %s --openstack_ip %s --collector_ip %s --cassandra_ip_list %s" %(cfgm_host_password, cfgm_ip, keystone_ip, openstack_ip, collector_ip, ' '.join(cassandra_ip_list)))
+                run(cmd)
 #end setup_webui
 
 @task
@@ -949,15 +972,7 @@ def prov_encap_type():
 def setup_all(reboot='True'):
     """Provisions required contrail services in all nodes as per the role definition.
     """
-    execute('pre_check')
-    if get_from_testbed_dict('ha', 'internal_vip', None):
-        print "Multi Openstack setup, provisioning openstack HA."
-        execute('setup_keepalived')
-        execute('setup_galera_cluster')
-        execute('fix_wsrep_cluster_address')
-        execute('fixup_restart_haproxy_in_openstack')
-        execute('setup_glance_images_loc')
-
+    execute('setup_ha')
     execute('setup_rabbitmq_cluster')
     execute('increase_limits')
     execute('increase_ulimits')
