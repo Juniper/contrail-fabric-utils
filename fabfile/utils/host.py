@@ -45,8 +45,12 @@ def get_region_name_opt():
     region_name = get_region_name()
     return '--region_name %s' %(region_name)
 
-def get_keystone_ip(ignore_vip=False):
-    openstack_host = get_control_host_string(testbed.env.roledefs['openstack'][0])
+
+def get_keystone_ip(ignore_vip=False, openstack_node=None):
+    if openstack_node:
+        openstack_host = get_control_host_string(openstack_node)
+    else:
+        openstack_host = get_control_host_string(testbed.env.roledefs['openstack'][0])
     openstack_ip = hstr_to_ip(openstack_host)
     keystone_ip1 = getattr(testbed, 'keystone_ip', None)
     keystone_ip = get_from_testbed_dict('keystone', 'keystone_ip', keystone_ip1)
