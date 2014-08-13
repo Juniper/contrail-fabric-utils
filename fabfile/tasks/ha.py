@@ -10,6 +10,54 @@ from fabfile.utils.host import get_keystone_ip, get_control_host_string,\
 @task
 @EXECUTE_TASK
 @roles('openstack')
+def fix_memcache_conf():
+    """Increases the memcached memory to 2048 and listen address to mgmt ip"""
+    execute('fix_memcache_conf_node', env.host_string)
+
+@task
+def fix_memcache_conf_node(*args):
+    """Increases the memcached memory to 2048 and listen address to mgmt ip. USAGE:fab fix_memcache_conf_node:user@1.1.1.1,user@2.2.2.2"""
+    memory = '2048'
+    for host_string in args:
+        listen_ip = hstr_to_ip(env.host_string)
+        with settings(host_string=host_string, warn_only=True):
+            if detect_ostype() == 'Ubuntu':
+                memcache_conf='/etc/memcached.conf'
+                if run('grep "\-m " %s' % memcache_conf).failed:
+                    #Write option to memcached config file
+                    run('echo "-m %s" >> %s' % (memory, memcache_conf))
+                else:
+                    run("sed -i -e 's/\-m.*/\-m %s/' %s" % (memory, memcache_conf))
+                if run('grep "\-l " %s' % memcache_conf).failed:
+                    #Write option to memcached config file
+                    run('echo "-l %s" >> %s' % (listen_ip, memcache_conf))
+                else:
+                    run("sed -i -e 's/\-l.*/\-l %s/' %s" % (listen_ip, memcache_conf))
+            else:
+                memcache_conf='/etc/sysconfig/memcached'
+                # Need to implement when HA supported in centos.
+
+@task
+@EXECUTE_TASK
+@roles('cfgm')
+def tune_tcp():
+    with settings(hide('stderr'), warn_only=True):
+        if run("grep '^net.netfilter.nf_conntrack_max' /etc/sysctl.conf").failed:
+            run('echo "net.netfilter.nf_conntrack_max = 256000" >> /etc/sysctl.conf')
+        if run("grep '^net.netfilter.nf_conntrack_tcp_timeout_time_wait' /etc/sysctl.conf").failed:
+            run('echo "net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30" >> /etc/sysctl.conf')
+        if run("grep '^net.ipv4.tcp_syncookies' /etc/sysctl.conf").failed:
+            run('echo "net.ipv4.tcp_syncookies = 1" >> /etc/sysctl.conf')
+        if run("grep '^net.ipv4.tcp_tw_recycle' /etc/sysctl.conf").failed:
+            run('echo "net.ipv4.tcp_tw_recycle = 1" >> /etc/sysctl.conf')
+        if run("grep '^net.ipv4.tcp_tw_reuse' /etc/sysctl.conf").failed:
+            run('echo "net.ipv4.tcp_tw_reuse = 1" >> /etc/sysctl.conf')
+        if run("grep '^net.ipv4.tcp_fin_timeout' /etc/sysctl.conf").failed:
+            run('echo "net.ipv4.tcp_fin_timeout = 30" >> /etc/sysctl.conf')
+
+@task
+@EXECUTE_TASK
+@roles('openstack')
 def mount_glance_images():
     nfs_server = get_from_testbed_dict('ha', 'nfs_server', hstr_to_ip(env.roledefs['compute'][0]))
     nfs_glance_path = get_from_testbed_dict('ha', 'nfs_glance_path', '/var/tmp/glance-images/')
@@ -72,7 +120,7 @@ def bootstrap_galera_cluster():
 @roles('openstack')
 def setup_cluster_monitors():
     """Task to start manage the contrail cluster manitor."""
-    run("service contrail-hamon start")
+    run("service contrail-hamon restart")
     run("chkconfig contrail-hamon on")
 
 @task
@@ -155,6 +203,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
     cinder_server_lines = ''
     nova_api_server_lines = ''
     nova_meta_server_lines = ''
+    nova_vnc_server_lines = ''
     memcached_server_lines = ''
     rabbitmq_server_lines = ''
     mysql_server_lines = ''
@@ -164,22 +213,22 @@ def fixup_restart_haproxy_in_openstack_node(*args):
         server_index = env.roledefs['openstack'].index(host_string) + 1
         host_ip = hstr_to_ip(get_control_host_string(host_string))
         keystone_server_lines +=\
-            '%s server %s %s:6000 check inter 2000 rise 2 fall 3\n'\
+            '%s server %s %s:6000 check port 3337 observe layer7 check inter 2000 rise 2 fall 3\n'\
              % (space, host_ip, host_ip)
         keystone_admin_server_lines +=\
-            '%s server %s %s:35358 check inter 2000 rise 2 fall 3\n'\
+            '%s server %s %s:35358 check port 3337 observe layer7 check inter 2000 rise 2 fall 3\n'\
              % (space, host_ip, host_ip)
         glance_server_lines +=\
-            '%s server %s %s:9393 check inter 2000 rise 2 fall 3\n'\
+            '%s server %s %s:9393 check port 3337 observe layer7 check inter 2000 rise 2 fall 3\n'\
              % (space, host_ip, host_ip)
         cinder_server_lines +=\
             '%s server %s %s:9776 check inter 2000 rise 2 fall 3\n'\
              % (space, host_ip, host_ip)
         nova_api_server_lines +=\
-            '%s server %s %s:9774 check inter 2000 rise 2 fall 3\n'\
+            '%s server %s %s:9774 check port 3337 observe layer7 check inter 2000 rise 2 fall 3\n'\
              % (space, host_ip, host_ip)
         nova_meta_server_lines +=\
-            '%s server %s %s:9775 check inter 2000 rise 2 fall 3\n'\
+            '%s server %s %s:9775 check port 3337 observe layer7 check inter 2000 rise 2 fall 3\n'\
              % (space, host_ip, host_ip)
         nova_vnc_server_lines  +=\
             '%s server %s %s:6999 check inter 2000 rise 2 fall 3\n'\
@@ -218,19 +267,25 @@ def fixup_restart_haproxy_in_openstack_node(*args):
             tmp_fname = "/tmp/haproxy-%s-config" % (host_string)
             get("/etc/haproxy/haproxy.cfg", tmp_fname)
             with settings(warn_only=True):
-                local("sed -i -e '/^#contrail-openstack-marker-start/,/^#contrail-openstack-marker-end/d' %s" % (tmp_fname))
-                local("sed -i -e 's/*:5000/*:5001/' %s" % (tmp_fname))
-                local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" % (tmp_fname))
-                local("sed -i -e 's/option\shttplog/option                  tcplog/' %s" % (tmp_fname))
+                run("sed -i -e '/^#contrail-openstack-marker-start/,/^#contrail-openstack-marker-end/d' %s" % (tmp_fname))
+                run("sed -i -e 's/*:5000/*:5001/' %s" % (tmp_fname))
+                run("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" % (tmp_fname))
+                run("sed -i -e 's/option\shttplog/option                  tcplog/' %s" % (tmp_fname))
+                run("sed -i -e 's/maxconn 4096/maxconn 100000/' %s" % (tmp_fname))
+                run('sed -i "/^global/a\\        tune.bufsize 16384" %s' % tmp_fname)
+                run('sed -i "/^global/a\\        tune.maxrewrite 1024" %s' % tmp_fname)
+                run('sed -i "/^global/a\        spread-checks 4" %s' % tmp_fname)
             # ...generate new ones
             cfg_file = open(tmp_fname, 'a')
             cfg_file.write(haproxy_config)
             cfg_file.close()
             put(tmp_fname, "/etc/haproxy/haproxy.cfg")
-            local("rm %s" %(tmp_fname))
+            run("rm %s" %(tmp_fname))
 
         # haproxy enable
         with settings(host_string=host_string, warn_only=True):
+            run("service xinetd on")
+            run("service xinetd restart")
             run("chkconfig haproxy on")
             run("service supervisor-openstack stop")
             enable_haproxy()
@@ -238,3 +293,20 @@ def fixup_restart_haproxy_in_openstack_node(*args):
             #Change the keystone admin/public port
             run("openstack-config --set /etc/keystone/keystone.conf DEFAULT public_port 6000")
             run("openstack-config --set /etc/keystone/keystone.conf DEFAULT admin_port 35358")
+
+
+@task
+@roles('build')
+def setup_ha():
+    execute('pre_check')
+    if get_from_testbed_dict('ha', 'internal_vip', None):
+        print "Multi Openstack setup, provisioning openstack HA."
+        execute('setup_keepalived')
+        execute('setup_galera_cluster')
+        execute('fix_wsrep_cluster_address')
+        execute('fixup_restart_haproxy_in_openstack')
+        execute('setup_glance_images_loc')
+        execute('fix_memcache_conf')
+        execute('tune_tcp')
+
+
