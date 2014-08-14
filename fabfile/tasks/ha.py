@@ -1,11 +1,27 @@
 import tempfile
 
 from fabfile.config import *
-from fabfile.templates import openstack_haproxy
+from fabfile.templates import openstack_haproxy, collector_haproxy
 from fabfile.tasks.helpers import enable_haproxy
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.host import get_keystone_ip, get_control_host_string,\
                                hstr_to_ip, get_from_testbed_dict
+
+@task
+@EXECUTE_TASK
+@roles('openstack')
+def fix_restart_xinetd_conf():
+    """Fix contrail-mysqlprobe to accept connection only from this node"""
+    execute('fix_restart_xinetd_conf_node', env.host_string)
+
+@task
+def fix_restart_xinetd_conf_node(*args):
+    """Fix contrail-mysqlprobe to accept connection only from this node, USAGE:fab fix_restart_xinetd_conf_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        self_ip = hstr_to_ip(get_control_host_string(host_string))
+        run("sed -i -e 's#only_from       = 0.0.0.0/0#only_from       = %s 127.0.0.1#' /etc/xinetd.d/contrail-mysqlprobe" % self_ip)
+        run("service xinetd restart")
+        run("chkconfig xinetd on")
 
 @task
 @EXECUTE_TASK
@@ -182,9 +198,9 @@ def setup_keepalived():
     with cd(INSTALLER_DIR):
         cmd = "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-keepalived.py\
                --self_ip %s --internal_vip %s --mgmt_self_ip %s\
-               --openstack_index %d" % (openstack_host_password,
+               --openstack_index %d --num_nodes %d" % (openstack_host_password,
                openstack_admin_password, self_ip, internal_vip, mgmt_ip,
-               (openstack_host_list.index(self_host) + 1))
+               (openstack_host_list.index(self_host) + 1), len(env.roledefs['openstack']))
         if external_vip:
              cmd += ' --external_vip %s' % external_vip
         run(cmd)
@@ -211,6 +227,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
 
     for host_string in env.roledefs['openstack']:
         server_index = env.roledefs['openstack'].index(host_string) + 1
+        mgmt_host_ip = hstr_to_ip(host_string)
         host_ip = hstr_to_ip(get_control_host_string(host_string))
         keystone_server_lines +=\
             '%s server %s %s:6000 check port 3337 observe layer7 check inter 2000 rise 2 fall 3\n'\
@@ -232,7 +249,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
              % (space, host_ip, host_ip)
         nova_vnc_server_lines  +=\
             '%s server %s %s:6999 check inter 2000 rise 2 fall 3\n'\
-             % (space, host_ip, host_ip)
+             % (space, mgmt_host_ip, mgmt_host_ip)
         if server_index <= 2:
             memcached_server_lines +=\
                 '%s server repcache%s %s:11211 check inter 2000 rise 2 fall 3\n'\
@@ -284,7 +301,6 @@ def fixup_restart_haproxy_in_openstack_node(*args):
 
         # haproxy enable
         with settings(host_string=host_string, warn_only=True):
-            run("service xinetd restart")
             run("chkconfig haproxy on")
             run("service supervisor-openstack stop")
             enable_haproxy()
@@ -295,6 +311,56 @@ def fixup_restart_haproxy_in_openstack_node(*args):
 
 
 @task
+@EXECUTE_TASK
+@roles('openstack')
+def fixup_restart_haproxy_in_collector():
+    execute('fixup_restart_haproxy_in_collector_node', env.host_string)
+
+@task
+def fixup_restart_haproxy_in_collector_node(*args):
+    contrail_analytics_api_server_lines = ''
+    space = ' ' * 3
+
+    for host_string in env.roledefs['collector']:
+        server_index = env.roledefs['collector'].index(host_string) + 1
+        mgmt_host_ip = hstr_to_ip(host_string)
+        host_ip = hstr_to_ip(get_control_host_string(host_string))
+        contrail_analytics_api_server_lines +=\
+            '%s server %s %s:9081 check inter 2000 rise 2 fall 3\n'\
+             % (space, host_ip, host_ip)
+
+    for host_string in env.roledefs['collector']:
+        haproxy_config = collector_haproxy.template.safe_substitute({
+            '__contrail_analytics_api_backend_servers__' : contrail_analytics_api_server_lines,
+            '__contrail_hap_user__': 'haproxy',
+            '__contrail_hap_passwd__': 'contrail123',
+            })
+
+    for host_string in args:
+        with settings(host_string=host_string):
+            # chop old settings including pesky default from pkg...
+            tmp_fname = "/tmp/haproxy-%s-config" % (host_string)
+            get("/etc/haproxy/haproxy.cfg", tmp_fname)
+            with settings(warn_only=True):
+                local("sed -i -e '/^#contrail-collector-marker-start/,/^#contrail-collector-marker-end/d' %s" % (tmp_fname))
+                local("sed -i -e 's/*:5000/*:5001/' %s" % (tmp_fname))
+                local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" % (tmp_fname))
+                local("sed -i -e 's/option\shttplog/option                  tcplog/' %s" % (tmp_fname))
+                local("sed -i -e 's/maxconn 4096/maxconn 100000/' %s" % (tmp_fname))
+            # ...generate new ones
+            cfg_file = open(tmp_fname, 'a')
+            cfg_file.write(haproxy_config)
+            cfg_file.close()
+            put(tmp_fname, "/etc/haproxy/haproxy.cfg")
+            local("rm %s" %(tmp_fname))
+
+        # haproxy enable
+        with settings(host_string=host_string, warn_only=True):
+            run("chkconfig haproxy on")
+            enable_haproxy()
+            run("service haproxy restart")
+
+@task
 @roles('build')
 def setup_ha():
     execute('pre_check')
@@ -303,7 +369,9 @@ def setup_ha():
         execute('setup_keepalived')
         execute('setup_galera_cluster')
         execute('fix_wsrep_cluster_address')
+        execute('fix_restart_xinetd_conf')
         execute('fixup_restart_haproxy_in_openstack')
+        execute('fixup_restart_haproxy_in_collector')
         execute('setup_glance_images_loc')
         execute('fix_memcache_conf')
         execute('tune_tcp')
