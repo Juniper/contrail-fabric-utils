@@ -35,7 +35,8 @@ def bash_autocomplete_systemd():
 @task
 def setup_cfgm():
     """Provisions config services in all nodes defined in cfgm role."""
-    execute("setup_cfgm_node", env.host_string)
+    if env.roledefs['cfgm']:
+        execute("setup_cfgm_node", env.host_string)
 
 def get_openstack_credentials():
     ks_admin_user = get_keystone_admin_user()
@@ -435,19 +436,21 @@ def setup_cfgm_node(*args):
 @roles('openstack')
 def setup_openstack():
     """Provisions openstack services in all nodes defined in openstack role."""
-    execute("setup_openstack_node", env.host_string)
-    # Blindly run setup_openstack twice for Ubuntu
-    #TODO Need to remove this finally
-    if detect_ostype() == 'Ubuntu':
+    if env.roledefs['openstack']:
         execute("setup_openstack_node", env.host_string)
-    if is_package_installed('contrail-openstack-dashboard'):
-        execute('setup_contrail_horizon_node', env.host_string)
+        # Blindly run setup_openstack twice for Ubuntu
+        #TODO Need to remove this finally
+        if detect_ostype() == 'Ubuntu':
+            execute("setup_openstack_node", env.host_string)
+        if is_package_installed('contrail-openstack-dashboard'):
+            execute('setup_contrail_horizon_node', env.host_string)
 
 @roles('openstack')
 @task
 def setup_contrail_horizon():
-    if is_package_installed('contrail-openstack-dashboard'):
-        execute('setup_contrail_horizon_node', env.host_string)
+    if env.roledefs['openstack']:
+        if is_package_installed('contrail-openstack-dashboard'):
+            execute('setup_contrail_horizon_node', env.host_string)
 
 @task
 def setup_openstack_node(*args):
@@ -540,7 +543,8 @@ def setup_contrail_horizon_node(*args):
 @roles('collector')
 def setup_collector():
     """Provisions collector services in all nodes defined in collector role."""
-    execute("setup_collector_node", env.host_string)
+    if env.roledefs['collector']:
+        execute("setup_collector_node", env.host_string)
 
 @task
 def setup_collector_node(*args):
@@ -612,7 +616,8 @@ def setup_collector_node(*args):
 @roles('database')
 def setup_database():
     """Provisions database services in all nodes defined in database role."""
-    execute("setup_database_node", env.host_string)
+    if env.roledefs['database']:
+        execute("setup_database_node", env.host_string)
 
 @task
 def setup_database_node(*args):
@@ -656,7 +661,8 @@ def setup_database_node(*args):
 @roles('webui')
 def setup_webui():
     """Provisions webui services in all nodes defined in webui role."""
-    execute("setup_webui_node", env.host_string)
+    if env.roledefs['webui']:
+        execute("setup_webui_node", env.host_string)
 
 @task
 def setup_webui_node(*args):
@@ -702,7 +708,8 @@ def setup_webui_node(*args):
 @roles('control')
 def setup_control():
     """Provisions control services in all nodes defined in control role."""
-    execute("setup_control_node", env.host_string)
+    if env.roledefs['control']:
+        execute("setup_control_node", env.host_string)
 
 def fixup_irond_config(control_host_string):
     control_ip = hstr_to_ip(get_control_host_string(control_host_string))
@@ -813,13 +820,23 @@ def setup_agent_config_in_node(*args):
 @task
 @EXECUTE_TASK
 @roles('compute')
-def setup_vrouter():
-    """Provisions vrouter services in all nodes defined in vrouter role."""
-    execute("setup_vrouter_node", env.host_string)
+def setup_vrouter(manage_nova_compute='yes'):
+    """Provisions vrouter services in all nodes defined in vrouter role.
+       If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute provisioning will be skipped.
+    """
+    if env.roledefs['compute']:
+       execute("setup_only_vrouter_node", manage_nova_compute,  env.host_string)
 
 @task
 def setup_vrouter_node(*args):
-    """Provisions vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
+    """Provisions nova-compute and vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
+    execute("setup_only_vrouter_node", 'yes', args)
+
+@task
+def setup_only_vrouter_node(manage_nova_compute='yes', *args):
+    """Provisions only vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2
+       If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute provisioning will be skipped.
+    """
     # make sure an agent pkg has been installed
     #try:
     #    run("yum list installed | grep contrail-agent")
@@ -900,6 +917,8 @@ def setup_vrouter_node(*args):
                 internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
                 if internal_vip:
                     cmd += " --internal_vip %s" % internal_vip
+                if manage_nova_compute == 'no':
+                    cmd = cmd + "  --no_contrail_openstack"
                 print cmd
                 run(cmd)
 #end setup_vrouter
@@ -1008,9 +1027,10 @@ def setup_all(reboot='True'):
 
 @roles('build')
 @task
-def setup_without_openstack():
+def setup_without_openstack(manage_nova_compute='yes'):
     """Provisions required contrail packages in all nodes as per the role definition except the openstack.
        User has to provision the openstack node with their custom openstack pakckages.
+       If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute will be skipped in the compute node.
     """
     execute(setup_rabbitmq_cluster)
     execute(increase_limits)
@@ -1019,7 +1039,7 @@ def setup_without_openstack():
     execute(setup_control)
     execute(setup_collector)
     execute(setup_webui)
-    execute(setup_vrouter)
+    execute('setup_vrouter', manage_nova_compute)
     execute(prov_control_bgp)
     execute(prov_external_bgp)
     execute(prov_metadata_services)
