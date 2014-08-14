@@ -15,6 +15,8 @@ backend keystone-backend
     option nolinger
     srvtimeout 24h
     balance    roundrobin
+    option httpchk
+    default-server error-limit 1 on-error mark-down
 $__keystone_backend_servers__
 
 frontend openstack-keystone-admin *:35357
@@ -25,6 +27,8 @@ backend keystone-admin-backend
     option nolinger
     srvtimeout 24h
     balance    roundrobin
+    option httpchk
+    default-server error-limit 1 on-error mark-down
 $__keystone_admin_backend_servers__
 
 frontend openstack-glance *:9292
@@ -35,6 +39,8 @@ backend glance-backend
     option nolinger
     srvtimeout 24h
     balance   roundrobin
+    option httpchk
+    default-server error-limit 1 on-error mark-down
 $__glance_backend_servers__
 
 frontend openstack-cinder *:8776
@@ -55,6 +61,8 @@ backend nova-api-backend
     option nolinger
     srvtimeout 24h
     balance   roundrobin
+    option httpchk
+    default-server error-limit 1 on-error mark-down
 $__nova_api_backend_servers__
 
 frontend openstack-nova-meta *:8775
@@ -65,6 +73,8 @@ backend nova-meta-backend
     option nolinger
     srvtimeout 24h
     balance   roundrobin
+    option httpchk
+    default-server error-limit 1 on-error mark-down
 $__nova_meta_backend_servers__
 
 frontend openstack-nova-vnc *:6080
