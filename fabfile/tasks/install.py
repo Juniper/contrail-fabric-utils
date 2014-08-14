@@ -181,6 +181,8 @@ def apt_install(debs):
 @roles('compute')
 def install_interface_name(reboot='True'):
     """Installs interface name package in all nodes defined in compute role."""
+    if not env.roledefs['compute']:
+        return
     if detect_ostype() == 'Ubuntu':
         print "[%s]: Installing interface rename package not required for Ubuntu..Skipping it" %env.host_string
     else:
@@ -205,7 +207,8 @@ def install_interface_name_node(*args, **kwargs):
 @roles('database')
 def install_database():
     """Installs database pkgs in all nodes defined in database."""
-    execute("install_database_node", env.host_string)
+    if env.roledefs['database']:
+        execute("install_database_node", env.host_string)
 
 @task
 def install_database_node(*args):
@@ -224,7 +227,8 @@ def install_database_node(*args):
 @roles('openstack')
 def install_openstack():
     """Installs openstack pkgs in all nodes defined in openstack role."""
-    execute("install_openstack_node", env.host_string)
+    if env.roledefs['openstack']:
+        execute("install_openstack_node", env.host_string)
 
 @task
 def install_openstack_node(*args):
@@ -244,7 +248,8 @@ def install_openstack_node(*args):
 @roles('cfgm')
 def install_cfgm():
     """Installs config pkgs in all nodes defined in cfgm role."""
-    execute("install_cfgm_node", env.host_string)
+    if env.roledefs['cfgm']:
+        execute("install_cfgm_node", env.host_string)
 
 @task
 def install_cfgm_node(*args):
@@ -265,7 +270,8 @@ def install_cfgm_node(*args):
 @roles('control')
 def install_control():
     """Installs control pkgs in all nodes defined in control role."""
-    execute("install_control_node", env.host_string)
+    if env.roledefs['control']:
+        execute("install_control_node", env.host_string)
 
 @task
 def install_control_node(*args):
@@ -286,7 +292,8 @@ def install_control_node(*args):
 @roles('collector')
 def install_collector():
     """Installs analytics pkgs in all nodes defined in collector role."""
-    execute("install_collector_node", env.host_string)
+    if env.roledefs['collector']:
+        execute("install_collector_node", env.host_string)
 
 @task
 def install_collector_node(*args):
@@ -306,7 +313,8 @@ def install_collector_node(*args):
 @roles('webui')
 def install_webui():
     """Installs webui pkgs in all nodes defined in webui role."""
-    execute("install_webui_node", env.host_string)
+    if env.roledefs['webui']:
+        execute("install_webui_node", env.host_string)
 
 @task
 def install_webui_node(*args):
@@ -324,19 +332,50 @@ def install_webui_node(*args):
 @task
 @EXECUTE_TASK
 @roles('compute')
-def install_vrouter():
+def install_vrouter(manage_nova_compute='yes'):
     """Installs vrouter pkgs in all nodes defined in vrouter role."""
-    execute("install_vrouter_node", env.host_string)
+    if env.roledefs['compute']:
+        execute("install_only_vrouter_node", manage_nova_compute, env.host_string)
 
 @task
 def install_vrouter_node(*args):
-    """Installs vrouter pkgs in one or list of nodes. USAGE:fab install_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
+    """Installs nova compute and vrouter pkgs in one or list of nodes. USAGE:fab install_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
+    execute('install_only_vrouter_node', 'yes', args)
+
+@task
+def install_only_vrouter_node(manage_nova_compute='yes', *args):
+    """Installs only vrouter pkgs in one or list of nodes. USAGE:fab install_vrouter_node:user@1.1.1.1,user@2.2.2.2
+       If manage_nova_compute = no, User has to install nova-compute in the compute node.
+    """
     for host_string in args:
+        ostype = detect_ostype()
         with  settings(host_string=host_string):
             pkg = ['contrail-openstack-vrouter']
+            if (not manage_nova_compute == 'no' and ostype in ['centos']):
+                pkg = ['contrail-api-lib',
+                       'contrail-vrouter',
+                       'abrt',
+                       #'openstack-nova-compute',
+                       'openstack-utils',
+                       'python-thrift',
+                       #'librabbitmq',
+                       'contrail-nova-vif',
+                       'contrail-setup'
+                      ]
+            elif (manage_nova_compute== 'no' and ostype in ['Ubuntu']):
+                pkg = ['contrail-nodemgr',
+                       'contrail-setup',
+                       'contrail-vrouter-init',
+                       #'nova-compute',
+                       'python-iniparse',
+                       #'python-novaclient',
+                       'contrail-nova-vif',
+                       #'librabbitmq0',
+                       'linux-crashdump'
+                      ]
             if getattr(testbed, 'haproxy', False):
                 pkg.append('haproxy')
-            if detect_ostype() == 'Ubuntu':
+            if ostype == 'Ubuntu':
                 run('echo "manual" >> /etc/init/supervisor-vrouter.override')
                 apt_install(pkg)
             else:
@@ -394,9 +433,10 @@ def install_contrail(reboot='True'):
 
 @roles('build')
 @task
-def install_without_openstack():
+def install_without_openstack(manage_nova_compute='yes'):
     """Installs required contrail packages in all nodes as per the role definition except the openstack.
        User has to install the openstack node with their custom openstack pakckages.
+       If manage_nova_compute = no, User has to install nova-compute in the compute node.
     """
     execute(create_install_repo_without_openstack)
     execute(install_database)
@@ -404,7 +444,7 @@ def install_without_openstack():
     execute(install_control)
     execute(install_collector)
     execute(install_webui)
-    execute(install_vrouter)
+    execute('install_vrouter', manage_nova_compute)
     execute(upgrade_pkgs_without_openstack)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
