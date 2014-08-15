@@ -176,7 +176,7 @@ def setup_galera_cluster():
 
 
 @task
-@EXECUTE_TASK
+@serial
 @roles('openstack')
 def setup_keepalived():
     """Task to provision VIP for openstack nodes with keepalived"""
