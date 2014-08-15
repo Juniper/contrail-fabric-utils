@@ -924,6 +924,9 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                 if internal_vip:
                     cmd += " --internal_vip %s" % internal_vip
                     cmd += " --mgmt_self_ip %s" % compute_mgmt_ip
+                external_vip = get_from_testbed_dict('ha', 'external_vip', None)
+                if external_vip:
+                    cmd += ' --external_vip %s' % external_vip
                 if manage_nova_compute == 'no':
                     cmd = cmd + "  --no_contrail_openstack"
                 print cmd

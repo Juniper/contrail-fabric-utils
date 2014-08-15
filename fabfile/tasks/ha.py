@@ -372,7 +372,11 @@ def fixup_restart_haproxy_in_collector_node(*args):
 @roles('openstack')
 def fix_cmon_param_and_add_keys_to_compute():
     cmon_param = '/etc/contrail/ha/cmon_param'
-    compute_host_list = [hstr_to_ip(get_control_host_string(compute_host)) for compute_host in env.roledefs['compute']]
+    compute_host_list = []
+    for host_string in env.roledefs['compute']:
+        with settings(host_string=host_string, password=env.passwords[host_string]):
+            host_name = run('hostname')
+        compute_host_list.append(host_name)
     computes = 'COMPUTES=("' + '" "'.join(compute_host_list) + '")'
     run("echo '%s' >> %s" % (computes, cmon_param))
     run("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
@@ -399,7 +403,10 @@ def create_and_copy_service_token():
     service_token = get_service_token() or run("openssl rand -hex 10")
     for host_string in env.roledefs['openstack']:
         with settings(host_string=host_string):
-            run("echo '%s' > /etc/contrail/service.token" % service_token)
+            if (files.exists('/etc/contrail/service.token') and env.roledefs['openstack'].index(host_string) == 0):
+                service_token = run("cat /etc/contrail/service.token")
+            else:
+                run("echo '%s' > /etc/contrail/service.token" % service_token)
 
 @task
 @roles('build')
