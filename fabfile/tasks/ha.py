@@ -5,7 +5,7 @@ from fabfile.templates import openstack_haproxy, collector_haproxy
 from fabfile.tasks.helpers import enable_haproxy
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.host import get_keystone_ip, get_control_host_string,\
-                               hstr_to_ip, get_from_testbed_dict
+                               hstr_to_ip, get_from_testbed_dict, get_service_token
 
 @task
 @EXECUTE_TASK
@@ -176,7 +176,7 @@ def setup_galera_cluster():
 
 
 @task
-@EXECUTE_TASK
+@serial
 @roles('openstack')
 def setup_keepalived():
     """Task to provision VIP for openstack nodes with keepalived"""
@@ -194,6 +194,14 @@ def setup_keepalived():
     external_vip = get_from_testbed_dict('ha', 'external_vip', None)
     openstack_host_list = [get_control_host_string(openstack_host)\
                            for openstack_host in env.roledefs['openstack']]
+    myindex = openstack_host_list.index(self_host)
+    if myindex >= 1:
+        # Wait for VIP to be assiciated to MASTER
+        with settings(host_string=env.roledefs['openstack'][0], warn_only=True):
+            while run("ip addr | grep %s" % internal_vip).failed:
+                sleep(2)
+                print "Waiting for VIP to be associated to MASTER VRRP."
+                continue
  
     with cd(INSTALLER_DIR):
         cmd = "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-keepalived.py\
@@ -360,6 +368,40 @@ def fixup_restart_haproxy_in_collector_node(*args):
             run("service haproxy restart")
 
 @task
+@serial
+@roles('openstack')
+def fix_cmon_param_and_add_keys_to_compute():
+    cmon_param = '/etc/contrail/ha/cmon_param'
+    compute_host_list = [hstr_to_ip(get_control_host_string(compute_host)) for compute_host in env.roledefs['compute']]
+    computes = 'COMPUTES=("' + '" "'.join(compute_host_list) + '")'
+    run("echo '%s' >> %s" % (computes, cmon_param))
+    run("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
+    run("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
+    id_rsa_pubs = {}
+    if files.exists('/root/.ssh'):
+        run('chmod 700 /root/.ssh')
+    if not files.exists('/root/.ssh/id_rsa') and not files.exists('/root/.ssh/id_rsa.pub'):
+        run('ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""')
+    elif not files.exists('/root/.ssh/id_rsa') or not files.exists('/root/.ssh/id_rsa.pub'):
+        run('rm -rf /root/.ssh/id_rsa*')
+        run('ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""')
+    id_rsa_pubs.update({env.host_string : run('cat /root/.ssh/id_rsa.pub')})
+    for host_string in env.roledefs['compute']:
+        with settings(host_string=host_string):
+            run("mkdir -p /root/.ssh/")
+            for host, id_rsa_pub in id_rsa_pubs.items():
+                files.append('/root/.ssh/authorized_keys', id_rsa_pub)
+            run('chmod 640 /root/.ssh/authorized_keys')
+
+@task
+@roles('build')
+def create_and_copy_service_token():
+    service_token = get_service_token() or run("openssl rand -hex 10")
+    for host_string in env.roledefs['openstack']:
+        with settings(host_string=host_string):
+            run("echo '%s' > /etc/contrail/service.token" % service_token)
+
+@task
 @roles('build')
 def setup_ha():
     execute('pre_check')
@@ -374,5 +416,7 @@ def setup_ha():
         execute('setup_glance_images_loc')
         execute('fix_memcache_conf')
         execute('tune_tcp')
+        execute('fix_cmon_param_and_add_keys_to_compute')
+        execute('create_and_copy_service_token')
 
 
