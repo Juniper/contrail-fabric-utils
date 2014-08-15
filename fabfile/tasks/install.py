@@ -418,6 +418,8 @@ def create_install_repo_node(*args):
 def install_contrail(reboot='True'):
     """Installs required contrail packages in all nodes as per the role definition.
     """
+    execute('pre_check')
+    execute(create_install_repo)
     execute(install_database)
     execute(install_openstack)
     execute(install_cfgm)
