@@ -750,3 +750,17 @@ def pre_check():
     if len(env.roledefs['openstack']) > 1 and not get_from_testbed_dict('ha', 'internal_vip', None):
         print "keystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
         exit(1)
+
+def role_to_ip_dict(role=None):
+    role_to_ip_dict = {}
+    for each_key in env.roledefs:
+        role_to_ip_dict[each_key] = [
+            hstr_to_ip(
+                get_control_host_string(each_host)) for each_host in env.roledefs[each_key]]
+    if role is not None:
+        print role_to_ip_dict[role]
+        return role_to_ip_dict[role]
+    print role_to_ip_dict
+    return role_to_ip_dict
+# end role_to_ip_dict_utility
+
