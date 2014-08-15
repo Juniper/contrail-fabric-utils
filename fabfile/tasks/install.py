@@ -552,3 +552,43 @@ def install_webui_packages(source_dir):
         run('yum install -y firefox')
         run('yum install -y xorg-x11-server-Xvfb')
 #end install_webui_packages
+
+@task
+@roles('build')
+def upgrade_kernel_all():
+    """creates repo and upgrades kernel in Ubuntu"""
+    execute('pre_check')
+    execute(create_install_repo)
+    execute(upgrade_kernel)
+
+@task
+@EXECUTE_TASK
+@roles('all')
+def upgrade_kernel():
+    """upgrades the kernel image in all nodes."""
+    execute("upgrade_kernel_node", env.host_string)
+
+@task
+def upgrade_kernel_node(*args):
+    """upgrades the kernel image in given nodes."""
+    for host_string in args:
+        with settings(host_string=host_string):
+            if detect_ostype() == 'Ubuntu':
+                version = run("dpkg -p linux-image-3.11.0-22-generic | grep Version | cut -d: -f2")
+                if version == "3.11.0-22.38~precise1":
+                    print "Kernel already upggraded"
+                    continue
+                else:
+                    print "upgrading apparmor before upgrading kernel"
+                    apt_install(["apparmor"])
+                    print "Installing 3.11.0-22 kernel headers"
+                    apt_install(["linux-headers-3.11.0-22"])
+                    apt_install(["linux-headers-3.11.0-22-generic"])
+                    print "Upgrading the kernel to 3.11.0-22"
+                    apt_install(["linux-image-3.11.0-22-generic"])
+                    try:
+                        sudo('reboot --force', timeout=3)
+                    except CommandTimeout:
+                        pass
+            else:
+                print "INFO: Kernel upgrade is required only in Ubuntu for now"
