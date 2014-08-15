@@ -462,6 +462,7 @@ def setup_openstack_node(*args):
         openstack_ip_list = []
         self_host = get_control_host_string(host_string)
         self_ip = hstr_to_ip(self_host)
+        mgmt_self_ip = hstr_to_ip(host_string)
         openstack_host_password = env.passwords[host_string]
         keystone_ip = get_keystone_ip(ignore_vip=True, openstack_node=env.host_string)
 
@@ -475,8 +476,9 @@ def setup_openstack_node(*args):
                     openstack_host_password, openstack_admin_password, self_ip, keystone_ip, cfgm_ip, get_keystone_auth_protocol(), amqp_server_ip, get_quantum_service_protocol(), get_service_token_opt(), get_haproxy_opt())
         cmd += ' --openstack_index %s' % (env.roledefs['openstack'].index(host_string) + 1)
         if internal_vip:
-            openstack_ip_list = ' '.join([hstr_to_ip(get_control_host_string(openstack_host)) for openstack_host in env.roledefs['openstack']])
+            openstack_ip_list = ' '.join([hstr_to_ip(openstack_host) for openstack_host in env.roledefs['openstack']])
             cmd += ' --internal_vip %s' % (internal_vip)
+            cmd += ' --mgmt_self_ip %s' % mgmt_self_ip
         if openstack_ip_list:
             cmd += ' --openstack_ip_list %s' % openstack_ip_list
         with  settings(host_string=host_string):
@@ -530,10 +532,11 @@ def setup_contrail_horizon_node(*args):
             run('sed -i "/^SECRET_KEY.*/a\    new_key = \':\'.join([key_prefix, str(version), key])" %s' % file_name)
             run('sed -i "/^SECRET_KEY.*/a\def hash_key(key, key_prefix, version):" %s' % file_name)
             run('sed -i "/^SECRET_KEY.*/a\import hashlib" %s' % file_name)
+            run('sed -i "/^SECRET_KEY.*/a\# To ensure key size of 250" %s' % file_name)
         run("sed  -i \"s/'LOCATION' : '127.0.0.1:11211',/'LOCATION' : '%s:11211',/\" %s" % (hstr_to_ip(env.host_string), file_name))
         with settings(warn_only=True):
-            if run("grep '\'KEY_FUNCTION\': hash_key' %s" % file_name).failed:
-                run('sed -i "/\'LOCATION\'.*/a\       \'KEY_FUNCTION\': hash_key" %s' % file_name)
+            if run("grep '\'KEY_FUNCTION\': hash_key,' %s" % file_name).failed:
+                run('sed -i "/\'LOCATION\'.*/a\       \'KEY_FUNCTION\': hash_key," %s' % file_name)
         run("sed -i -e 's/OPENSTACK_HOST = \"127.0.0.1\"/OPENSTACK_HOST = \"%s\"/' %s" % (internal_vip,file_name))
 
     sudo(web_restart)
@@ -608,6 +611,9 @@ def setup_collector_node(*args):
                 else:
                     #if nothing is provided we default to 48h
                     run_cmd += "--analytics_data_ttl 48 "
+                internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+                if internal_vip:
+                    run_cmd += " --internal_vip %s" % internal_vip
                 print run_cmd
                 run(run_cmd)
 #end setup_collector
@@ -914,6 +920,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                 internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
                 if internal_vip:
                     cmd += " --internal_vip %s" % internal_vip
+                    cmd += " --mgmt_self_ip %s" % compute_mgmt_ip
                 if manage_nova_compute == 'no':
                     cmd = cmd + "  --no_contrail_openstack"
                 print cmd
