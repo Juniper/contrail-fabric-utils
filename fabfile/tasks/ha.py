@@ -176,7 +176,7 @@ def setup_galera_cluster():
 
 
 @task
-@EXECUTE_TASK
+@serial
 @roles('openstack')
 def setup_keepalived():
     """Task to provision VIP for openstack nodes with keepalived"""
@@ -360,6 +360,32 @@ def fixup_restart_haproxy_in_collector_node(*args):
             run("service haproxy restart")
 
 @task
+@serial
+@roles('openstack')
+def fix_cmon_param_and_add_keys_to_compute():
+    cmon_param = '/etc/contrail/ha/cmon_param'
+    compute_host_list = [hstr_to_ip(get_control_host_string(compute_host)) for compute_host in env.roledefs['compute']]
+    computes = 'COMPUTES=("' + '" "'.join(compute_host_list) + '")'
+    run("echo '%s' >> %s" % (computes, cmon_param))
+    run("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
+    run("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
+    id_rsa_pubs = {}
+    if files.exists('/root/.ssh'):
+        run('chmod 700 /root/.ssh')
+    if not files.exists('/root/.ssh/id_rsa') and not files.exists('/root/.ssh/id_rsa.pub'):
+        run('ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""')
+    elif not files.exists('/root/.ssh/id_rsa') or not files.exists('/root/.ssh/id_rsa.pub'):
+        run('rm -rf /root/.ssh/id_rsa*')
+        run('ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""')
+    id_rsa_pubs.update({env.host_string : run('cat /root/.ssh/id_rsa.pub')})
+    for host_string in env.roledefs['compute']:
+        with settings(host_string=host_string):
+            run("mkdir -p /root/.ssh/")
+            for host, id_rsa_pub in id_rsa_pubs.items():
+                files.append('/root/.ssh/authorized_keys', id_rsa_pub)
+            run('chmod 640 /root/.ssh/authorized_keys')
+
+@task
 @roles('build')
 def setup_ha():
     execute('pre_check')
@@ -374,5 +400,6 @@ def setup_ha():
         execute('setup_glance_images_loc')
         execute('fix_memcache_conf')
         execute('tune_tcp')
+        execute('fix_cmon_param_and_add_keys_to_compute')
 
 
