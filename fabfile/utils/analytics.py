@@ -5,11 +5,12 @@ def get_collector_syslog_port():
     env_obj = getattr(testbed, 'env')
     rsyslog_dict = getattr(env_obj, 'rsyslog_params', None)
 
-    if rsyslog_dict['status'].lower() == 'enable':
+    if (rsyslog_dict is not None) and \
+       (rsyslog_dict['status'].lower() == 'enable')):
         if 'port' in rsyslog_dict:
             return rsyslog_dict['port']
         else:
-            return 8765  # default port number.
+            return 514 # default port number.
     else:
         return None
 # end get_collector_syslog_port
