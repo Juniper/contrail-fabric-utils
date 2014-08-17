@@ -409,8 +409,8 @@ def create_install_repo_node(*args):
             contrail_setup_pkg = run("ls /opt/contrail/contrail_install_repo/contrail-setup*")
             contrail_setup_pkgs = contrail_setup_pkg.split('\n')
             if (len(contrail_setup_pkgs) == 1 and get_release() in contrail_setup_pkgs[0]):
-                print "Contrail install repo created already."
-                return
+                print "Contrail install repo created already in node: %s." % host_string
+                continue
             run("sudo /opt/contrail/contrail_packages/setup.sh")
 
 @roles('build')
