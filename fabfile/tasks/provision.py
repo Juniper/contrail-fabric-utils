@@ -477,9 +477,10 @@ def setup_openstack_node(*args):
         cmd += ' --openstack_index %s' % (env.roledefs['openstack'].index(host_string) + 1)
         if internal_vip:
             openstack_ip_list = ' '.join([hstr_to_ip(openstack_host) for openstack_host in env.roledefs['openstack']])
+            amqp_server_ip_list = ' '.join([hstr_to_ip(get_control_host_string(cfgm_host)) for cfgm_host in env.roledefs['cfgm']])
             cmd += ' --internal_vip %s' % (internal_vip)
             cmd += ' --mgmt_self_ip %s' % mgmt_self_ip
-        if openstack_ip_list:
+            cmd += ' --amqp_server_ip_list %s' % amqp_server_ip_list
             cmd += ' --openstack_ip_list %s' % openstack_ip_list
         with  settings(host_string=host_string):
             with cd(INSTALLER_DIR):
