@@ -300,6 +300,9 @@ def fixup_restart_haproxy_in_openstack_node(*args):
                 local('sed -i "/^global/a\\        tune.bufsize 16384" %s' % tmp_fname)
                 local('sed -i "/^global/a\\        tune.maxrewrite 1024" %s' % tmp_fname)
                 local('sed -i "/^global/a\        spread-checks 4" %s' % tmp_fname)
+                # Remove default HA config
+                local("sed -i '/listen\sappli1-rewrite/,/rspidel/d' %s" % tmp_fname)
+                local("sed -i '/listen\sappli3-relais/,/rspidel/d' %s" % tmp_fname)
             # ...generate new ones
             cfg_file = open(tmp_fname, 'a')
             cfg_file.write(haproxy_config)
@@ -354,6 +357,9 @@ def fixup_restart_haproxy_in_collector_node(*args):
                 local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" % (tmp_fname))
                 local("sed -i -e 's/option\shttplog/option                  tcplog/' %s" % (tmp_fname))
                 local("sed -i -e 's/maxconn 4096/maxconn 100000/' %s" % (tmp_fname))
+                # Remove default HA config
+                local("sed -i '/listen\sappli1-rewrite/,/rspidel/d' %s" % tmp_fname)
+                local("sed -i '/listen\sappli3-relais/,/rspidel/d' %s" % tmp_fname)
             # ...generate new ones
             cfg_file = open(tmp_fname, 'a')
             cfg_file.write(haproxy_config)
