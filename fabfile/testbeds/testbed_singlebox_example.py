@@ -175,3 +175,21 @@ env.ostypes = {
 
 # Optional proxy settings.
 # env.http_proxy = os.environ.get('http_proxy')
+
+
+#OPTIONAL REMOTE SYSLOG CONFIGURATION
+#===================================
+#For R1.10 this needs to be specified to enable rsyslog.
+#For Later releases this would be enabled as part of provisioning,
+#with following default values.
+#
+#port = 19876
+#protocol = tcp
+#collector = dynamic i.e. rsyslog clients will connect to servers in a round
+#                         robin fasion. For static collector all clients will
+#                         connect to a single collector. static - is a test
+#                         only option.
+#status = enable
+#
+#env.rsyslog_params = {'port':19876, 'proto':'tcp', 'collector':'dynamic', 'status':'enable'}
+
