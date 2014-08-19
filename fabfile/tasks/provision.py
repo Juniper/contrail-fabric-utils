@@ -999,6 +999,74 @@ def prov_encap_type():
     sleep(10)
 #end prov_encap_type
 
+@roles('cfgm')
+@task
+def setup_remote_syslog():
+    """Provisions all the configs needed to bring up rsyslog as per the options mentioned in the testbed file. USAGE: fab setup_remote_syslog."""
+    try:
+        env.rsyslog_params
+
+        cfgm1 = env.roledefs['cfgm'][0]
+        cfgm = env.host_string
+        if cfgm == cfgm1:
+            rsyslog_port = -1
+            rsyslog_proto = 'transport protocol for rsyslog'
+            def_port = 514
+            def_protocol = 'udp'
+            try:
+                if env.rsyslog_params['status'].lower() == 'enable':
+                    try:
+                        env.rsyslog_params['port']
+                        rsyslog_port = env.rsyslog_params['port']
+                    except:
+                        # Hard codded default port number.
+                        rsyslog_port = def_port
+                    try:
+                        env.rsyslog_params['proto']
+                        rsyslog_proto = env.rsyslog_params['proto']
+                    except:
+                        # Hard codded default protocol udp.
+                        rsyslog_proto = def_proto
+                    with cd(UTILS_DIR):
+                        collector_ips = role_to_ip_dict_utility(
+                            role='collector')
+                        all_node_ips = role_to_ip_dict_utility(role='all')
+
+                        run_cmd = "PASSWORD=%s python provision_rsyslog_connect.py --rsyslog_port_number %s --rsyslog_transport_protocol %s --collector_ips %s --all_node_ips %s" \
+                            % (env.passwords[env.roledefs['cfgm'][0]], rsyslog_port, rsyslog_proto, ' '.join(collector_ips), ' '.join(all_node_ips))
+                        run(run_cmd)
+            except:
+                if env.rsyslog_params['status'].lower() == 'disable':
+                    # Call cleanup routine
+                    print "Cleaning up rsyslog configurations as env.rsyslog_params[status] is set to disable"
+                    execute('cleanup_remote_syslog')
+                else:
+                    print "In env.rsyslog_params 'status' should be set to 'enable/disable' to setup/cleanup remote syslog."
+                return True
+    except:
+        print "env.rsyslog_params has to be defined and 'status' set to 'enable/disable' to setup/cleanup remote syslog."
+        return True
+# end setup_remote_syslog
+
+@roles('cfgm')
+@task
+def cleanup_remote_syslog():
+    """Cleans up all the configs needed for rsyslog on the server and the client side and restarts collector service
+    and rsyslog clients. USAGE: fab cleanup_remote_syslog."""
+    cfgm1 = env.roledefs['cfgm'][0]
+    cfgm = env.host_string
+    if cfgm == cfgm1:
+        def_port = 9876
+        def_protocol = 'udp'
+        with cd(UTILS_DIR):
+            collector_ips = role_to_ip_dict_utility(role='collector')
+            all_node_ips = role_to_ip_dict_utility(role='all')
+
+            run_cmd = "PASSWORD=%s python provision_rsyslog_connect.py --rsyslog_port_number %s --rsyslog_transport_protocol %s --collector_ips %s --all_node_ips %s --cleanup True" \
+                % (env.passwords[env.roledefs['cfgm'][0]], def_port, def_protocol, ' '.join(collector_ips), ' '.join(all_node_ips))
+            run(run_cmd)
+ # end cleanup_remote_syslog
+
 @roles('build')
 @task
 def setup_all(reboot='True'):
@@ -1027,6 +1095,7 @@ def setup_all(reboot='True'):
     execute('prov_external_bgp')
     execute('prov_metadata_services')
     execute('prov_encap_type')
+    execute('setup_remote_syslog')
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute('compute_reboot')
@@ -1054,6 +1123,7 @@ def setup_without_openstack(manage_nova_compute='yes'):
     execute(prov_external_bgp)
     execute(prov_metadata_services)
     execute(prov_encap_type)
+    execute(setup_remote_syslog)
     print "Rebooting the compute nodes after setup all."
     execute(compute_reboot)
 
@@ -1084,6 +1154,7 @@ def setup_all_with_images():
     execute(prov_external_bgp)
     execute(prov_metadata_services)
     execute(prov_encap_type)
+    execute(setup_remote_syslog)
     execute(add_images)
     print "Rebooting the compute nodes after setup all."
     execute(compute_reboot)
@@ -1106,6 +1177,7 @@ def run_setup_demo():
     execute(prov_external_bgp)
     execute(prov_metadata_services)
     execute(prov_encap_type)
+    execute(setup_remote_syslog)
     execute(config_demo)
     execute(add_images)
     execute(compute_reboot)
@@ -1220,6 +1292,7 @@ def reset_config():
     execute(prov_external_bgp)
     execute(prov_metadata_services)
     execute(prov_encap_type)
+    execute(setup_remote_syslog)
     execute(setup_vrouter)
     execute(compute_reboot)
 #end reset_config
