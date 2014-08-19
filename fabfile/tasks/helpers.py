@@ -775,3 +775,41 @@ def pre_check():
         print "\nERROR: \n\tOpenstack and cfgm nodes are different, Need to specify  contrail_internal_vip testbed.py."
         exit(1)
         print "\nERROR: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
+
+def role_to_ip_dict(role=None):
+    role_to_ip_dict = {}
+    for each_key in env.roledefs:
+        role_to_ip_dict[each_key] = [
+            hstr_to_ip(
+                get_control_host_string(each_host)) for each_host in env.roledefs[each_key]]
+    if role is not None:
+        print role_to_ip_dict[role]
+        return role_to_ip_dict[role]
+    print role_to_ip_dict
+    return role_to_ip_dict
+# end role_to_ip_dict_utility
+
+def round_robin_collector_ip_assignment(all_node_ips, collector_ips):
+    '''
+    From the node IP and collector IPs create a dictionary to do a static mapping of remote nodes to connect to collectors
+    which can be refered to by rsyslog clients. The connection principle followed here for remote clients is on a round robin
+    basis of servers.
+    '''
+    mapping_dict = {}
+    ind = -1
+    for node_ip in all_node_ips:
+        flag = 0
+        for coll_ip in collector_ips:
+            if node_ip == coll_ip:
+                mapping_dict[node_ip] = coll_ip
+                flag = 1
+                break
+        if flag != 1:
+            ind += 1
+            if ind == len(collector_ips):
+                ind = 0
+            mapping_dict[node_ip] = collector_ips[ind]
+
+    return mapping_dict
+# end of round_robin_collector_ip_assignment
+
