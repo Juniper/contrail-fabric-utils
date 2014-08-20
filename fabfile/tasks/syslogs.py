@@ -28,8 +28,9 @@ def tar_logs_cores():
             if "core" in corename:
                 core = corename.split()[8]
                 name = core.split('.')[1]
-                core_new = core.rstrip('\r')        
-                sudo("gdb %s /var/crashes/%s --eval-command bt > /var/log/gdb_%s.log --eval-command quit"%(name, core_new, core_new))
+                core_new = core.rstrip('\r')
+                with settings(warn_only=True):
+                    sudo("gdb %s /var/crashes/%s --eval-command bt > /var/log/gdb_%s.log --eval-command quit"%(name, core_new, core_new))
         sudo ("mkdir -p /var/crashes/saved")
         sudo ("cp /var/crashes/core* /var/crashes/saved/")
         sudo ("gzip /var/crashes/core*")
