@@ -421,6 +421,9 @@ def setup_cfgm_node(*args):
             internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
             if internal_vip:
                 cmd += ' --internal_vip %s' % (internal_vip)
+            manage_neutron = get_manage_neutron()
+            if manage_neutron == 'no':
+                cmd += ' --manage_neutron %s' % manage_neutron
             with cd(INSTALLER_DIR):
                 run(cmd)
 
