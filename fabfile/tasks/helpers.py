@@ -139,6 +139,20 @@ def all_version():
 
 @roles('all')
 @task
+def check_reimage_state():
+    failed_host = []
+    for host in env.hostnames["all"]:
+        if exists('/opt/contrail'):
+            failed_host.append(host)
+    if failed_host:
+        print "reimage failed on hosts: %s, aborting..." %failed_host
+        sys.exit(1)
+    else:
+        print "reimage successful, continue..."
+#end check_reimage_state
+
+@roles('all')
+@task
 def all_crash():
     sudo("ls -l /var/crashes")
 
