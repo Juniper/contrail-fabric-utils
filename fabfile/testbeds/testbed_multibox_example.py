@@ -175,6 +175,7 @@ env.ostypes = {
 #    'admin_tenant'  : 'admin',                 #Default is admin
 #    'region_name'   : 'RegionOne',             #Default is RegionOne
 #    'insecure'      : 'True',                  #Default = False
+#    'manage_neutron': 'no',                    #Default = 'yes' , Does configure neutron user/role in keystone required.
 #}
 #
 

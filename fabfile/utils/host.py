@@ -19,6 +19,9 @@ def get_control_host_string(mgmt_host):
         host_details= mgmt_host
     return host_details
 
+def get_manage_neutron():
+    return get_from_testbed_dict('keystone','manage_neutron', 'yes')
+
 def get_service_token():
     service_token = getattr(testbed, 'service_token', '')
     testbed.service_token = get_from_testbed_dict('openstack','service_token',
