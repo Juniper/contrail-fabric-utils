@@ -977,6 +977,10 @@ def prov_metadata_services():
     cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
     openstack_host = get_control_host_string(env.roledefs['openstack'][0])
     openstack_ip = hstr_to_ip(openstack_host)
+    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+    if internal_vip:
+	openstack_ip = internal_vip
+        cfgm_ip = internal_vip
     ks_admin_user, ks_admin_password = get_openstack_credentials()
     metadata_args = "--admin_user %s\
          --admin_password %s --linklocal_service_name metadata\
@@ -984,7 +988,7 @@ def prov_metadata_services():
          --linklocal_service_port 80\
          --ipfabric_service_ip %s\
          --ipfabric_service_port 8775\
-         --oper add" %(ks_admin_user, ks_admin_password, openstack_ip)
+         --oper add --api_server_ip %s" %(ks_admin_user, ks_admin_password, openstack_ip, cfgm_ip)
     run("python /opt/contrail/utils/provision_linklocal.py %s" %(metadata_args))
 #end prov_metadata_services
 
