@@ -42,7 +42,8 @@ def setup_test_env():
 
     sanity_testbed_dict = {
         'hosts': [],
-        'vgw': []
+        'vgw': [],
+        'hosts_ipmi': []
     }
 
     sanity_ini_templ = string.Template("""[Basic]
@@ -162,6 +163,12 @@ fip_pool_name=public-pool
 test_revision=$__test_revision__
 fab_revision=$__fab_revision__
 
+[HA]
+# HA config 
+ha_setup=$__ha_setup__
+ipmi_username=$__ipmi_username__
+ipmi_password=$__ipmi_password__
+
 #For debugging
 [debug]
 stop_on_fail=no
@@ -251,6 +258,10 @@ verify_on_setup=$__test_verify_on_setup__
 
         sanity_testbed_dict['hosts'].append(host_dict)
         if env.has_key('vgw'): sanity_testbed_dict['vgw'].append(env.vgw)
+    # get host ipmi list
+    if env.has_key('hosts_ipmi') :
+        sanity_testbed_dict['hosts_ipmi'].append(env.hosts_ipmi)
+
     # for every host_string
 
     with settings(host_string = cfgm_host):
@@ -295,7 +306,7 @@ verify_on_setup=$__test_verify_on_setup__
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__timestamp__': dt.now().strftime('%Y-%m-%d-%H:%M:%S'),
              '__multi_tenancy__': get_mt_enable(),
-             '__keystone_ip__': getattr(testbed, 'keystone_ip', None),
+             '__keystone_ip__': get_keystone_ip(),
              '__mail_to__': mail_to,
              '__log_scenario__': log_scenario,
              '__test_revision__': revision,
@@ -315,6 +326,7 @@ verify_on_setup=$__test_verify_on_setup__
              '__webui_config__': webui_config,
              '__http_proxy__': env.get('http_proxy'),
              '__test_verify_on_setup__': test_verify_on_setup,
+             '__ha_setup__': getattr(testbed, 'ha_setup', None),
             })
         
         fd, fname = tempfile.mkstemp()
@@ -408,6 +420,8 @@ def run_sanity(feature='sanity', test=None):
                                 '%s/scripts/NewPolicyTestsBase.py' % repo],
               'analytics'    : ['%s/scripts/analytics_tests_with_setup.py' % repo],
               'basic_vn_vm'  : ['%s/scripts/vm_vn_tests.py' % repo],
+              'ha_service_sanity'  : ['%s/scripts/ha/ha_service_sanity.py' % repo],
+              'ha_reboot_sanity'  : ['%s/scripts/ha/ha_reboot_sanity.py' % repo],
               'webui'       : ['%s/scripts/webui/tests_with_setup_base_webui.py' % repo],
               'devstack'       : ['%s/scripts/devstack_sanity_tests_with_setup.py' % repo],
               'svc_mirror'   : ['%s/scripts/servicechain/mirror/sanity.py' % repo,
