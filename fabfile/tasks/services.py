@@ -23,7 +23,7 @@ def stop_and_disable_qpidd_node(*args):
 @roles('database')
 def stop_database():
     """stops the contrail database services."""
-    run('service supervisord-contrail-database stop')
+    run('service supervisor-database stop')
 
 @task
 @roles('cfgm')
@@ -48,7 +48,7 @@ def start_cfgm():
 @roles('database')
 def start_database():
     """Starts the contrail database services."""
-    run('service supervisord-contrail-database start')
+    run('service supervisor-database start')
 
 @task
 @roles('control')
@@ -110,7 +110,7 @@ def restart_database_node(*args):
 
     for host_string in args:
         with  settings(host_string=host_string):
-            run('service supervisord-contrail-database restart')
+            run('service supervisor-database restart')
 
 @task
 @roles('openstack')

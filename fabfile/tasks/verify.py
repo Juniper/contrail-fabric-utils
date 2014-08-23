@@ -20,7 +20,7 @@ def verify_service(service):
 def verify_database():
     zoo_svc = 'zookeeper'
     verify_service(zoo_svc)
-    verify_service("supervisord-contrail-database")
+    verify_service("supervisor-database")
     verify_service("contrail-database")
 
 @task
@@ -78,8 +78,8 @@ def verify_compute():
 def remove_startup_files():
     compute = env.host_string
     if compute not in env.roledefs['database']:
-        run("rm /etc/init/supervisord-contrail-database.conf")
-        run("rm /etc/contrail/supervisord_contrail_database.conf")
+        run("rm /etc/init/supervisor-database.conf")
+        run("rm /etc/contrail/supervisor_database.conf")
     if compute not in env.roledefs['collector']:
         run("rm /etc/init/supervisor-analytics.conf")
         run("rm /etc/contrail/supervisord_analytics.conf")
