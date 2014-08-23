@@ -105,9 +105,7 @@ def restart_database_node(*args):
     for host_string in args:
         with  settings(host_string=host_string):
             execute('zoolink_node', host_string)
-            zoo_svc = 'contrail-zookeeper'
-            if detect_ostype() in ['Ubuntu']:
-                zoo_svc = 'zookeeper'
+            zoo_svc = 'zookeeper'
             run('service %s restart' % zoo_svc)
 
     for host_string in args:
