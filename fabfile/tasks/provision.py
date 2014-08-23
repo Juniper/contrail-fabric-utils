@@ -645,7 +645,7 @@ def setup_database_node(*args):
         with  settings(host_string=host_string):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
-                    run('rm /etc/init/supervisord-contrail-database.override')
+                    run('rm /etc/init/supervisor-database.override')
             with cd(INSTALLER_DIR):
                 run_cmd = "PASSWORD=%s python setup-vnc-database.py --self_ip %s --cfgm_ip %s " % (database_host_password, tgt_ip, cfgm_ip)
                 database_dir = get_database_dir()
