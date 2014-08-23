@@ -217,7 +217,7 @@ def install_database_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-database']
             if detect_ostype() == 'Ubuntu':
-                run('echo "manual" >> /etc/init/supervisord-contrail-database.override')
+                run('echo "manual" >> /etc/init/supervisor-database.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
