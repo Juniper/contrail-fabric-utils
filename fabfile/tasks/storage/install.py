@@ -23,7 +23,7 @@ def install_storage_pkg_node(pkg, *args):
     """Installs any rpm/deb in storage-master/storage-compute node."""
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            build = get_build()
+            build = get_build('contrail-storage-packages')
             if build and build in pkg:
                 print "Package %s already installed in the node(%s)." % (pkg, host_string)
                 continue
