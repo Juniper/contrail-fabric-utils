@@ -55,7 +55,7 @@ env.ostypes = {
     host6:'ubuntu',
 }
 
-env.test_repo_dir='/home/stack/ubuntu_regr/contrail-test'
+env.test_repo_dir='/home/stack/regression/contrail-test'
 env.mail_from='contrail-build@juniper.net'
 env.mail_to='dl-contrail-sw@juniper.net'
 multi_tenancy=True
