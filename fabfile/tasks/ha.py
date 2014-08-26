@@ -5,7 +5,9 @@ from fabfile.templates import openstack_haproxy, collector_haproxy
 from fabfile.tasks.helpers import enable_haproxy
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.host import get_keystone_ip, get_control_host_string,\
-                               hstr_to_ip, get_from_testbed_dict, get_service_token
+                               hstr_to_ip, get_from_testbed_dict, get_service_token,\
+                               get_openstack_internal_vip, get_openstack_external_vip,\
+                               get_contrail_internal_vip, get_contrail_external_vip
 
 @task
 @EXECUTE_TASK
@@ -164,7 +166,7 @@ def setup_galera_cluster():
     galera_ip_list = [hstr_to_ip(galera_host)\
                       for galera_host in openstack_host_list]
     keystone_ip = get_keystone_ip()
-    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+    internal_vip = get_openstack_internal_vip()
 
     with cd(INSTALLER_DIR):
         run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-galera.py\
@@ -174,12 +176,34 @@ def setup_galera_cluster():
                 ' '.join(galera_ip_list), internal_vip,
                 (openstack_host_list.index(self_host) + 1)))
 
+@task
+def setup_keepalived():
+    """Task to provision VIP for openstack/cfgm nodes with keepalived"""
+    if get_openstack_internal_vip():
+        execute('setup_openstack_keepalived')
+    if get_contrail_internal_vip() != get_openstack_internal_vip():
+        execute('setup_contrail_keepalived')
 
 @task
 @serial
 @roles('openstack')
-def setup_keepalived():
+def setup_openstack_keepalived():
     """Task to provision VIP for openstack nodes with keepalived"""
+    enable_haproxy()
+    run("service haproxy restart")
+    setup_keepalived_node('openstack')
+
+@task
+@serial
+@roles('cfgm')
+def setup_contrail_keepalived():
+    """Task to provision VIP for cfgm nodes with keepalived"""
+    enable_haproxy()
+    run("service haproxy restart")
+    setup_keepalived_node('cfgm')
+
+def setup_keepalived_node(role):
+    """Task to provision VIP for node with keepalived"""
     mgmt_ip = hstr_to_ip(env.host_string)
     self_host = get_control_host_string(env.host_string)
     self_ip = hstr_to_ip(self_host)
@@ -190,14 +214,17 @@ def setup_keepalived():
     else:
         openstack_admin_password = 'contrail123'
         
-    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
-    external_vip = get_from_testbed_dict('ha', 'external_vip', None)
-    openstack_host_list = [get_control_host_string(openstack_host)\
-                           for openstack_host in env.roledefs['openstack']]
-    myindex = openstack_host_list.index(self_host)
+    internal_vip = get_openstack_internal_vip()
+    external_vip = get_openstack_external_vip()
+    if role == 'cfgm':
+        internal_vip = get_contrail_internal_vip()
+        external_vip = get_contrail_external_vip()
+    keepalived_host_list = [get_control_host_string(keepalived_host)\
+                           for keepalived_host in env.roledefs[role]]
+    myindex = keepalived_host_list.index(self_host)
     if myindex >= 1:
         # Wait for VIP to be assiciated to MASTER
-        with settings(host_string=env.roledefs['openstack'][0], warn_only=True):
+        with settings(host_string=env.roledefs[role][0], warn_only=True):
             while run("ip addr | grep %s" % internal_vip).failed:
                 sleep(2)
                 print "Waiting for VIP to be associated to MASTER VRRP."
@@ -206,9 +233,10 @@ def setup_keepalived():
     with cd(INSTALLER_DIR):
         cmd = "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-keepalived.py\
                --self_ip %s --internal_vip %s --mgmt_self_ip %s\
-               --openstack_index %d --num_nodes %d" % (openstack_host_password,
+               --self_index %d --num_nodes %d --role %s" % (openstack_host_password,
                openstack_admin_password, self_ip, internal_vip, mgmt_ip,
-               (openstack_host_list.index(self_host) + 1), len(env.roledefs['openstack']))
+               (keepalived_host_list.index(self_host) + 1), len(env.roledefs[role]),
+               role)
         if external_vip:
              cmd += ' --external_vip %s' % external_vip
         run(cmd)
@@ -323,7 +351,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
 
 @task
 @EXECUTE_TASK
-@roles('openstack')
+@roles('cfgm')
 def fixup_restart_haproxy_in_collector():
     execute('fixup_restart_haproxy_in_collector_node', env.host_string)
 
@@ -418,7 +446,7 @@ def create_and_copy_service_token():
 @roles('build')
 def setup_ha():
     execute('pre_check')
-    if get_from_testbed_dict('ha', 'internal_vip', None):
+    if get_openstack_internal_vip():
         print "Multi Openstack setup, provisioning openstack HA."
         execute('setup_keepalived')
         execute('setup_galera_cluster')

@@ -151,10 +151,14 @@ env.ostypes = {
 # service_token : Common service token for for all services like nova,
 #                 neutron, glance, cinder etc
 # amqp_host     : IP of AMQP Server to be used in openstack
+# manage_amqp   : Default = 'no', if set to 'yes' provision's amqp in openstack nodes and
+#                 openstack services uses the amqp in openstack nodes instead of config nodes.
+#                 amqp_host is neglected if manage_amqp is set
 #
 #env.openstack = {
-#    'service_token' : '33c57636fbc2c5552fd2', 
-#    'amqp_host' : '10.204.217.19',
+#    'service_token' : '33c57636fbc2c5552fd2', #Common service token for for all openstack services
+#    'amqp_host' : '10.204.217.19',            #IP of AMQP Server to be used in openstack
+#    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
 #}
 
 # Neutron specific configuration 
