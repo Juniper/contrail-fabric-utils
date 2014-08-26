@@ -209,6 +209,10 @@ verify_on_setup=$__test_verify_on_setup__
             role_dict = {'type': 'bgp', 'params': {'collector': cfgm_host_name, 'cfgm': cfgm_host_name}}
             host_dict['roles'].append(role_dict)
 
+        if 'database' in env.roledefs.keys() and host_string in env.roledefs['database']:
+            role_dict = { 'type': 'database', 'params': {'cassandra': ' '.join(cassandra_host_names)} }
+            host_dict['roles'].append(role_dict)
+
         if host_string in env.roledefs['compute']:
             role_dict = {'type': 'compute', 'params': {'collector': cfgm_host_name, 'cfgm': cfgm_host_name}}
             role_dict['params']['bgp'] = []
