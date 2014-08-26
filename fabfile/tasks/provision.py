@@ -81,6 +81,8 @@ backend contrail-discovery-backend
 $__contrail_disc_backend_servers__
     #server  10.84.14.2 10.84.14.2:9110 check
     #server  10.84.14.2 10.84.14.2:9111 check
+
+$__rabbitmq_config__
 #contrail-config-marker-end
 """)
 
@@ -90,7 +92,18 @@ $__contrail_disc_backend_servers__
     api_server_lines = ''
     disc_listen_port = 9110
     disc_server_lines = ''
+    rabbitmq_config = """
+listen  rabbitmq 0.0.0.0:5673
+    mode tcp
+    maxconn 10000
+    balance roundrobin
+    option tcpka
+    option redispatch
+    timeout client 48h
+    timeout server 48h"""
+    space = ' ' * 3
     for host_string in env.roledefs['cfgm']:
+        server_index = env.roledefs['cfgm'].index(host_string) + 1
         host_ip = hstr_to_ip(get_control_host_string(host_string))
         q_server_lines = q_server_lines + \
         '    server %s %s:%s check inter 2000 rise 2 fall 3\n' \
@@ -102,7 +115,14 @@ $__contrail_disc_backend_servers__
             disc_server_lines = disc_server_lines + \
             '    server %s %s:%s check inter 2000 rise 2 fall 3\n' \
                         %(host_ip, host_ip, str(disc_listen_port + i))
+        rabbitmq_config +=\
+            '%s server rabbit%s %s:5672 check inter 2000 rise 2 fall 3 weight 1 maxconn 500\n'\
+             % (space, server_index, host_ip)
 
+    if get_contrail_internal_vip() == get_openstack_internal_vip():
+        # Openstack and cfgm are same nodes.
+        # Dont add rabbitmq confing twice in haproxy, as setup_ha has added already.
+        rabbitmq_config = ''
 
     for host_string in env.roledefs['cfgm']:
         haproxy_config = template.safe_substitute({
@@ -111,6 +131,7 @@ $__contrail_disc_backend_servers__
             '__contrail_disc_backend_servers__': disc_server_lines,
             '__contrail_hap_user__': 'haproxy',
             '__contrail_hap_passwd__': 'contrail123',
+            '__rabbitmq_config__': rabbitmq_config,
             })
 
         with settings(host_string=host_string):
@@ -369,7 +390,8 @@ def setup_cfgm_node(*args):
 
     for host_string in args:
         # Enable settings for Ubuntu
-        enable_haproxy()
+        with  settings(host_string=host_string):
+            enable_haproxy()
         #qpidd_changes_for_ubuntu()
         #cfgm_host = env.host_string
         cfgm_host=get_control_host_string(host_string)
@@ -393,7 +415,7 @@ def setup_cfgm_node(*args):
             collector_ip = hstr_to_ip(collector_host)
         mt_opt = '--multi_tenancy' if get_mt_enable() else ''
         cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host)) for cassandra_host in env.roledefs['database']]
-        amqp_server_ip = get_openstack_amqp_server()
+        amqp_server_ip = get_contrail_amqp_server()
         with  settings(host_string=host_string):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
@@ -418,7 +440,7 @@ def setup_cfgm_node(*args):
                  get_haproxy_opt(),
                  get_region_name_opt(),
                  amqp_server_ip)
-            internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+            internal_vip = get_contrail_internal_vip()
             if internal_vip:
                 cmd += ' --internal_vip %s' % (internal_vip)
             manage_neutron = get_manage_neutron()
@@ -474,7 +496,7 @@ def setup_openstack_node(*args):
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_ip = hstr_to_ip(cfgm_host)
 
-        internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+        internal_vip = get_openstack_internal_vip()
         cmd = "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-openstack.py --self_ip %s --keystone_ip %s --cfgm_ip %s --keystone_auth_protocol %s --amqp_server_ip %s --quantum_service_protocol %s %s %s" %(
                     openstack_host_password, openstack_admin_password, self_ip, keystone_ip, cfgm_ip, get_keystone_auth_protocol(), amqp_server_ip, get_quantum_service_protocol(), get_service_token_opt(), get_haproxy_opt())
         cmd += ' --openstack_index %s' % (env.roledefs['openstack'].index(host_string) + 1)
@@ -482,6 +504,9 @@ def setup_openstack_node(*args):
             openstack_ip_list = ' '.join([hstr_to_ip(openstack_host) for openstack_host in env.roledefs['openstack']])
             cmd += ' --internal_vip %s' % (internal_vip)
             cmd += ' --mgmt_self_ip %s' % mgmt_self_ip
+        contrail_internal_vip = get_contrail_internal_vip()
+        if contrail_internal_vip:
+            cmd += ' --contrail_internal_vip %s' % (contrail_internal_vip)
         if openstack_ip_list:
             cmd += ' --openstack_ip_list %s' % openstack_ip_list
         with  settings(host_string=host_string):
@@ -521,7 +546,7 @@ def setup_contrail_horizon_node(*args):
     insert_line_to_file(pattern = pattern, line = line, file_name = file_name)
 
     #HA settings
-    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+    internal_vip = get_openstack_internal_vip()
     if internal_vip:
         with settings(warn_only=True):
             hash_key = run("grep 'def hash_key' %s" % file_name).succeeded
@@ -570,7 +595,7 @@ def setup_collector_node(*args):
                     run("service redis start")
         
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_ip = get_from_testbed_dict('ha', 'internal_vip', hstr_to_ip(cfgm_host))
+        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         collector_host_password = env.passwords[host_string]
         collector_host = get_control_host_string(host_string)
         ncollectors = len(env.roledefs['collector'])
@@ -614,7 +639,7 @@ def setup_collector_node(*args):
                 else:
                     #if nothing is provided we default to 48h
                     run_cmd += "--analytics_data_ttl 48 "
-                internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+                internal_vip = get_contrail_internal_vip()
                 if internal_vip:
                     run_cmd += " --internal_vip %s" % internal_vip
                 print run_cmd
@@ -633,7 +658,7 @@ def setup_database_node(*args):
     """Provisions database services in one or list of nodes. USAGE: fab setup_database_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_ip = get_from_testbed_dict('ha', 'internal_vip', hstr_to_ip(cfgm_host))
+        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         database_host = host_string
         database_host_list=[]
         for entry in env.roledefs['database']:
@@ -706,9 +731,12 @@ def setup_webui_node(*args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-webui.override')
             cmd = "PASSWORD=%s python setup-vnc-webui.py --cfgm_ip %s --keystone_ip %s --openstack_ip %s --collector_ip %s --cassandra_ip_list %s" %(cfgm_host_password, cfgm_ip, keystone_ip, openstack_ip, collector_ip, ' '.join(cassandra_ip_list))
-            internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+            internal_vip = get_contrail_internal_vip()
             if internal_vip:
                 cmd += " --internal_vip %s" % internal_vip
+            contrail_internal_vip = get_contrail_internal_vip()
+            if contrail_internal_vip:
+                cmd += " --contrail_internal_vip %s" % contrail_internal_vip
             with cd(INSTALLER_DIR):
                 run(cmd)
 #end setup_webui
@@ -744,7 +772,7 @@ def setup_control_node(*args):
         fixup_irond_config(host_string)
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_host_password=env.passwords[env.roledefs['cfgm'][0]]
-        cfgm_ip = get_from_testbed_dict('ha', 'internal_vip', hstr_to_ip(cfgm_host))
+        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         control_host = get_control_host_string(host_string)
         tgt_ip = hstr_to_ip(control_host)
         collector_host_list=[]
@@ -850,12 +878,13 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
     
     for host_string in args:
         # Enable haproxy for Ubuntu
-        enable_haproxy()
+        with  settings(host_string=host_string):
+            enable_haproxy()
         #qpidd_changes_for_ubuntu()
         ncontrols = len(env.roledefs['control'])
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
-        cfgm_ip = get_from_testbed_dict('ha', 'internal_vip', hstr_to_ip(cfgm_host))
+        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         openstack_mgmt_ip = hstr_to_ip(env.roledefs['openstack'][0])
         keystone_ip = get_keystone_ip()
         ks_auth_protocol = get_keystone_auth_protocol()
@@ -893,6 +922,8 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
     
         openstack_admin_password = get_keystone_admin_password()
         amqp_server_ip = ' '.join([hstr_to_ip(get_control_host_string(cfgm_host)) for cfgm_host in env.roledefs['cfgm']])
+        if get_from_testbed_dict('openstack','manage_amqp', 'no') == 'yes':
+            amqp_server_ip = ' '.join([hstr_to_ip(get_control_host_string(openstack_host)) for openstack_host in env.roledefs['openstack']])
 
         with  settings(host_string=host_string):
             vmware = False
@@ -917,7 +948,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                 if vmware:
                     cmd = cmd + " --vmware %s --vmware_username %s --vmware_passwd %s --vmware_vmpg_vswitch %s" % (vmware_info['esxi']['ip'], vmware_info['esxi']['username'], \
                                 vmware_info['esxi']['password'], vmware_info['vswitch'])
-                internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+                internal_vip = get_contrail_internal_vip()
                 if internal_vip:
                     cmd += " --internal_vip %s" % internal_vip
                     cmd += " --mgmt_self_ip %s" % compute_mgmt_ip
@@ -968,13 +999,9 @@ def prov_external_bgp():
 @roles('cfgm')
 @task
 def prov_metadata_services():
-    cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+    cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
     openstack_host = get_control_host_string(env.roledefs['openstack'][0])
-    openstack_ip = hstr_to_ip(openstack_host)
-    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
-    if internal_vip:
-	openstack_ip = internal_vip
-        cfgm_ip = internal_vip
+    openstack_ip = get_openstack_internal_vip() or hstr_to_ip(openstack_host)
     ks_admin_user, ks_admin_password = get_openstack_credentials()
     metadata_args = "--admin_user %s\
          --admin_password %s --linklocal_service_name metadata\
@@ -1012,7 +1039,7 @@ def setup_all(reboot='True'):
     execute('setup_database')
     execute('verify_database')
     execute('setup_openstack')
-    if get_from_testbed_dict('ha', 'internal_vip', None):
+    if get_openstack_internal_vip():
         execute('sync_keystone_ssl_certs')
         execute('setup_cluster_monitors')
     execute('setup_cfgm')

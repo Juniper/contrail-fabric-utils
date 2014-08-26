@@ -388,7 +388,7 @@ def upgrade_openstack_node(from_rel, pkg, *args):
 def fix_rabbitmq_conf():
     rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
     run("rm -rf %s" % rabbit_conf)
-    amqp_listen_ip = get_openstack_amqp_server()
+    amqp_listen_ip = get_contrail_amqp_server()
     run('sudo echo "[" >> %s' % rabbit_conf)
     run("sudo echo '   {rabbit, [ {tcp_listeners, [{\"%s\", 5672}]},' >> %s" % (amqp_listen_ip, rabbit_conf))
     run('sudo echo "   {loopback_users, []}," >> %s' % rabbit_conf)
