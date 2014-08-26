@@ -7,16 +7,16 @@ from fabfile.config import *
 from fabfile.tasks.helpers import insert_line_to_file
 
 # Upgrade data from 1.05 to 1.10
-R1_05_TO_R1_10 = {
+UBUNTU_R1_05_TO_R1_10 = {
     'openstack' : {'upgrade'       : ['contrail-openstack'],
                    'remove'        : [],
-                   'install'       : ['supervisor=1:3.0a8-1.2'],
+                   'downgrade'     : ['supervisor=1:3.0a8-1.2'],
                    'backup_files'  : [],
                    'remove_files'  : [],
                   },
     'database'  : {'upgrade'       : ['contrail-openstack-database'],
                    'remove'        : [],
-                   'install'       : ['supervisor=1:3.0a8-1.2',
+                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
                                       'python-contrail'],
                    'backup_files'  : [],
                    'remove_files'  : [],
@@ -25,7 +25,7 @@ R1_05_TO_R1_10 = {
                    'remove'        : ['contrail-api-venv',
                                       'contrail-config-extension',
                                       'contrail-libs'],
-                   'install'       : ['ifmap-server=0.3.2-1contrail1',
+                   'downgrade'     : ['ifmap-server=0.3.2-1contrail1',
                                       'euca2ools=1:2.1.3-2',
                                       'supervisor=1:3.0a8-1.2',
                                       'python-boto=1:2.12.0',
@@ -35,7 +35,7 @@ R1_05_TO_R1_10 = {
                   },
     'collector' : {'upgrade'       : ['contrail-openstack-analytics'],
                    'remove'        : ['contrail-analytics-venv'],
-                   'install'       : ['supervisor=1:3.0a8-1.2'],
+                   'downgrade'     : ['supervisor=1:3.0a8-1.2'],
                    'backup_files'  : [],
                    'remove_files'  : ['/etc/contrail/supervisord_analytics_files/redis-*.ini',
                                       '/etc/contrail/supervisord_analytics_files/contrail-qe.ini',
@@ -43,7 +43,7 @@ R1_05_TO_R1_10 = {
                   },
     'control'   : {'upgrade'       : ['contrail-openstack-control'],
                    'remove'        : [],
-                   'install'       : ['supervisor=1:3.0a8-1.2',
+                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
                                       'python-redis=2.8.0-1contrail1'],
                    'backup_files'  : [],
                    'remove_files'  : [],
@@ -51,13 +51,13 @@ R1_05_TO_R1_10 = {
     'webui'     : {'upgrade'       : ['contrail-openstack-webui'],
                    'remove'        : ['contrail-webui',
                                       'contrail-nodejs'],
-                   'install'       : ['supervisor=1:3.0a8-1.2'],
+                   'downgrade'     : ['supervisor=1:3.0a8-1.2'],
                    'backup_files'  : [],
                    'remove_files'  : [],
                   },
     'compute'   : {'upgrade'       : ['contrail-openstack-vrouter'],
                    'remove'        : ['contrail-vrouter'],
-                   'install'       : ['supervisor=1:3.0a8-1.2',
+                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
                                       'python-contrail'],
                    'backup_files'  : [],
                    'remove_files'  : ['/etc/contrail/supervisord_vrouter_files/contrail-vrouter.ini']
@@ -65,11 +65,66 @@ R1_05_TO_R1_10 = {
 }
 
 # Upgrade data for upgrade from 1.05 to 1.11 mainline
-R1_05_TO_R1_11 = R1_05_TO_R1_10
+UBUNTU_R1_05_TO_R1_11 = UBUNTU_R1_05_TO_R1_10
 # Upgrade data for upgrade from 1.06 to 1.11 mainline
-R1_06_TO_R1_11 = R1_05_TO_R1_10
+UBUNTU_R1_06_TO_R1_11 = UBUNTU_R1_05_TO_R1_10
 # Upgrade data for upgrade from 1.06 to R1.10
-R1_06_TO_R1_10 = R1_05_TO_R1_10
+UBUNTU_R1_06_TO_R1_10 = UBUNTU_R1_05_TO_R1_10
+
+# Upgrade data from 1.05 to 1.10(Centos)
+CENTOS_R1_05_TO_R1_10 = {
+    'openstack' : {'upgrade'       : ['contrail-openstack'],
+                   'remove'        : ['python-pycassa'],
+                   'downgrade'     : [],
+                   'backup_files'  : [],
+                   'remove_files'  : [],
+                  },
+    'database'  : {'upgrade'       : ['contrail-openstack-database'],
+                   'remove'        : ['contrail-database-venv'],
+                   'downgrade'     : ['python-contrail'],
+                   'backup_files'  : [],
+                   'remove_files'  : [],
+                  },
+    'cfgm'      : {'upgrade'       : ['contrail-openstack-config'],
+                   'remove'        : ['contrail-api-venv',
+                                      'contrail-config-extension',
+                                      'contrail-libs',
+                                      'python-pycassa'],
+                   'downgrade'     : [],
+                   'backup_files'  : [],
+                   'remove_files'  : ['/etc/rabbitmq/rabbitmq.config'],
+                  },
+    'collector' : {'upgrade'       : ['contrail-openstack-analytics'],
+                   'remove'        : ['contrail-analytics-venv',
+                                      'python-pycassa'],
+                   'downgrade'     : [],
+                   'backup_files'  : [],
+                   'remove_files'  : ['/etc/contrail/supervisord_analytics_files/redis-*.ini',
+                                      '/etc/contrail/supervisord_analytics_files/contrail-qe.ini',
+                                      '/etc/contrail/supervisord_analytics_files/contrail-opserver.ini'],
+                  },
+    'control'   : {'upgrade'       : ['contrail-openstack-control'],
+                   'remove'        : ['python-pycassa',
+                                      'contrail-control-venv'],
+                   'downgrade'     : [],
+                   'backup_files'  : [],
+                   'remove_files'  : [],
+                  },
+    'webui'     : {'upgrade'       : ['contrail-openstack-webui'],
+                   'remove'        : ['contrail-webui',
+                                      'contrail-nodejs'],
+                   'downgrade'     : [],
+                   'backup_files'  : [],
+                   'remove_files'  : [],
+                  },
+    'compute'   : {'upgrade'       : ['contrail-openstack-vrouter'],
+                   'remove'        : ['python-pycassa',
+                                      'contrail-vrouter-venv'],
+                   'downgrade'     : [],
+                   'backup_files'  : [],
+                   'remove_files'  : ['/etc/contrail/supervisord_vrouter_files/contrail-vrouter.ini']
+                  },
+}
 
 @task
 @EXECUTE_TASK
@@ -208,7 +263,7 @@ def backup_config(from_rel):
     ostype = detect_ostype()
     to_rel = get_release()
     try:
-        upgrade_data = eval(('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
+        upgrade_data = eval(ostype.upper() + '_' + ('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
     except NameError:
         raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
     run('mkdir -p /tmp/contrail')
@@ -226,10 +281,10 @@ def restore_config(role, upgrade_data):
         cfg_file_name = os.path.basename(config_file)
         run('cp /tmp/contrail/%s.upgradesave %s' % (cfg_file_name, config_file))
 
-def install_package(pkgs, ostype):
+def downgrade_package(pkgs, ostype):
     for pkg in pkgs:
         if ostype in ['centos', 'fedora']:
-            run('yum -y --disablerepo=* --enablerepo=contrail_install_repo install %s' % pkg)
+            run('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo downgrade %s' % pkg)
         elif ostype in ['Ubuntu']:
             run('DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install %s' % pkg)
 
@@ -237,7 +292,7 @@ def remove_package(pkgs, ostype):
     with settings(warn_only=True):
         for pkg in pkgs:
             if ostype in ['centos', 'fedora']:
-                run('yum -y --disablerepo=* --enablerepo=contrail_install_repo erase %s' % pkg)
+                run('rpm -e --nodeps %s' % pkg)
             elif ostype in ['Ubuntu']:
                 run('DEBIAN_FRONTEND=noninteractive apt-get -y remove --purge  %s' % pkg)
 
@@ -250,13 +305,18 @@ def upgrade(from_rel, role):
     ostype = detect_ostype()
     to_rel = get_release()
     try:
-        upgrade_data = eval(('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
+        upgrade_data = eval(ostype.upper() + '_' + ('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
     except NameError:
         raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
     #backup_config(role, upgrade_data)
-    install_package(upgrade_data[role]['install'], ostype)
+    downgrade_package(upgrade_data[role]['downgrade'], ostype)
+    if ostype == 'centos':
+        buildid = get_build('contrail-setup')
+        downgrade_package(['supervisor-0.1-%s' % buildid], ostype)
+        remove_package(upgrade_data[role]['remove'], ostype)
     upgrade_package(upgrade_data[role]['upgrade'], ostype)
-    remove_package(upgrade_data[role]['remove'], ostype)
+    if ostype == 'Ubuntu':
+        remove_package(upgrade_data[role]['remove'], ostype)
     restore_config(role, upgrade_data)
     remove_old_files(role, upgrade_data)
 
@@ -461,10 +521,12 @@ def fix_vrouter_configs():
 @task
 def fix_vrouter_configs_node(*args):
     """Fix the vrouter config files as per 1.10 standard in one or list of nodes. USAGE:fab fix_vrouter_configs_node:user@1.1.1.1,user@2.2.2.2"""
-    with settings(warn_only=True):
-        if_vhost0 = run('grep "pre-up /opt/contrail/bin/if-vhost0" /etc/network/interfaces')
-    if if_vhost0.failed:
-        run('sed -i "/iface vhost0 inet static/a\    pre-up /opt/contrail/bin/if-vhost0" /etc/network/interfaces')
+    ostype = detect_ostype()
+    if ostype in ['Ubuntu']:
+        with settings(warn_only=True):
+            if_vhost0 = run('grep "pre-up /opt/contrail/bin/if-vhost0" /etc/network/interfaces')
+        if if_vhost0.failed:
+            run('sed -i "/iface vhost0 inet static/a\    pre-up /opt/contrail/bin/if-vhost0" /etc/network/interfaces')
     agent_param = '/etc/contrail/agent_param'
     # Replace the vrouter binary name
     old_prog = '^prog=/usr/bin/vnswad'
@@ -477,9 +539,10 @@ def fix_vrouter_configs_node(*args):
     insert_line_to_file(pattern=old_pname, line=new_pname, file_name=agent_param)
 
     # Replace the vrouter kernal module
-    old_kmod = '^kmod=.*'
-    new_kmod = 'kmod=vrouter'
-    insert_line_to_file(pattern=old_kmod, line=new_kmod, file_name=agent_param)
+    if ostype in ['Ubuntu']:
+        old_kmod = '^kmod=.*'
+        new_kmod = 'kmod=vrouter'
+        insert_line_to_file(pattern=old_kmod, line=new_kmod, file_name=agent_param)
 
 @task
 @roles('build')

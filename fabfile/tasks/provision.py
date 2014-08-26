@@ -725,19 +725,17 @@ def fixup_irond_config(control_host_string):
     tmp_fname = "/tmp/basicauthusers-%s" %(control_host_string)
     for config_host_string in env.roledefs['cfgm']:
         with settings(host_string=config_host_string):
-            pfl = "/etc/ifmap-server/basicauthusers.properties"
-            get(pfl, tmp_fname)
+            if detect_ostype() == 'Ubuntu':
+                pfl = "/etc/ifmap-server/basicauthusers.properties"
+            else:
+                pfl = "/etc/irond/basicauthusers.properties"
             # replace control-node and dns proc creds
-            local("sed -i -e '/%s:/d' -e '/%s.dns:/d' %s" \
-                              %(control_ip, control_ip, tmp_fname))
-            local("echo '%s:%s' >> %s" \
-                         %(control_ip, control_ip, tmp_fname))
-            local("echo '%s.dns:%s.dns' >> %s" \
-                         %(control_ip, control_ip, tmp_fname))
-            put("%s" %(tmp_fname), pfl)
-
-            local("rm %s" %(tmp_fname))
-
+            run("sed -i -e '/%s:/d' -e '/%s.dns:/d' %s" \
+                              %(control_ip, control_ip, pfl))
+            run("echo '%s:%s' >> %s" \
+                         %(control_ip, control_ip, pfl))
+            run("echo '%s.dns:%s.dns' >> %s" \
+                         %(control_ip, control_ip, pfl))
 # end fixup_irond_config
 
 @task
@@ -836,7 +834,7 @@ def setup_vrouter(manage_nova_compute='yes'):
 @task
 def setup_vrouter_node(*args):
     """Provisions nova-compute and vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
-    execute("setup_only_vrouter_node", 'yes', args)
+    execute("setup_only_vrouter_node", 'yes', *args)
 
 @task
 def setup_only_vrouter_node(manage_nova_compute='yes', *args):
