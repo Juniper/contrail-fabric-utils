@@ -180,6 +180,8 @@ def setup_galera_cluster():
 @roles('openstack')
 def setup_keepalived():
     """Task to provision VIP for openstack nodes with keepalived"""
+    enable_haproxy()
+    run("service haproxy restart")
     mgmt_ip = hstr_to_ip(env.host_string)
     self_host = get_control_host_string(env.host_string)
     self_ip = hstr_to_ip(self_host)
