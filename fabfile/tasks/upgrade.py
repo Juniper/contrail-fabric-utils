@@ -10,7 +10,8 @@ from fabfile.tasks.helpers import insert_line_to_file
 UBUNTU_R1_05_TO_R1_10 = {
     'openstack' : {'upgrade'       : ['contrail-openstack'],
                    'remove'        : [],
-                   'downgrade'     : ['supervisor=1:3.0a8-1.2'],
+                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
+                                      'python-contrail'],
                    'backup_files'  : [],
                    'remove_files'  : [],
                   },
@@ -28,6 +29,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                                       'zookeeper'],
                    'downgrade'     : ['ifmap-server=0.3.2-1contrail1',
                                       'python-contrail',
+                                      'rabbitmq-server=3.3.2-1',
                                       'euca2ools=1:2.1.3-2',
                                       'supervisor=1:3.0a8-1.2',
                                       'python-boto=1:2.12.0',
@@ -37,7 +39,8 @@ UBUNTU_R1_05_TO_R1_10 = {
                   },
     'collector' : {'upgrade'       : ['contrail-openstack-analytics'],
                    'remove'        : ['contrail-analytics-venv'],
-                   'downgrade'     : ['supervisor=1:3.0a8-1.2'],
+                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
+                                      'python-contrail'],
                    'backup_files'  : [],
                    'remove_files'  : ['/etc/contrail/supervisord_analytics_files/redis-*.ini',
                                       '/etc/contrail/supervisord_analytics_files/contrail-qe.ini',
@@ -46,14 +49,17 @@ UBUNTU_R1_05_TO_R1_10 = {
     'control'   : {'upgrade'       : ['contrail-openstack-control'],
                    'remove'        : [],
                    'downgrade'     : ['supervisor=1:3.0a8-1.2',
-                                      'python-redis=2.8.0-1contrail1'],
+                                      'python-redis=2.8.0-1contrail1',
+                                      'python-contrail'],
                    'backup_files'  : [],
                    'remove_files'  : [],
                   },
     'webui'     : {'upgrade'       : ['contrail-openstack-webui'],
                    'remove'        : ['contrail-webui',
                                       'contrail-nodejs'],
-                   'downgrade'     : ['supervisor=1:3.0a8-1.2'],
+                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
+                                      'python-contrail'],
+
                    'backup_files'  : [],
                    'remove_files'  : [],
                   },
@@ -401,21 +407,6 @@ def fix_rabbitmq_conf():
 @task
 @EXECUTE_TASK
 @roles('cfgm')
-def fix_discovery_conf():
-    cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host)) for cassandra_host in env.roledefs['database']]
-    cassandra_srv_list = 'cassandra_server_list=' + ':9160'.join(cassandra_ip_list) + ':9160'
-    run('sed -i "/\[DEFAULTS\]/a\%s" /etc/contrail/discovery.conf' % cassandra_srv_list)
-
-@task
-@EXECUTE_TASK
-@roles('cfgm')
-def upgrade_rabbitmq():
-    with settings(warn_only=True):
-        upgrade_package(['rabbitmq-server=3.3.2-1'], detect_ostype())
-
-@task
-@EXECUTE_TASK
-@roles('cfgm')
 def stop_rabbitmq():
     run("service rabbitmq-server stop")
 
@@ -557,14 +548,12 @@ def fix_vrouter_configs_node(*args):
 def upgrade_contrail(from_rel, pkg):
     """Upgrades all the contrail pkgs in all nodes."""
     execute('install_pkg_all', pkg)
-    #execute('zookeeper_rolling_restart')
-    #execute('fix_discovery_conf')
+    execute('zookeeper_rolling_restart')
     execute('backup_config', from_rel)
+    execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
-    execute('stop_rabbitmq')
-    execute('upgrade_rabbitmq')
     execute('upgrade_cfgm', from_rel, pkg)
     execute('setup_rabbitmq_cluster', True)
     execute('setup_cfgm')
@@ -585,14 +574,12 @@ def upgrade_without_openstack(pkg):
     """Upgrades all the  contrail packages in all nodes except openstack node as per the role definition.
     """
     execute('install_pkg_all', pkg)
-    #execute('zookeeper_rolling_restart')
-    #execute('fix_discovery_conf')
+    execute('zookeeper_rolling_restart')
     execute('backup_config')
+    execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
-    execute('stop_rabbitmq')
-    execute('upgrade_rabbitmq')
     execute('upgrade_cfgm', from_rel, pkg)
     execute('setup_rabbitmq_cluster')
     execute('setup_cfgm')
