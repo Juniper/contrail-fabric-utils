@@ -446,9 +446,10 @@ def run_sanity(feature='sanity', test=None):
     if feature in ('upgrade','upgrade_only'):
         with settings(host_string = env.roledefs['cfgm'][0]):
                 put("./fabfile/testbeds/testbed.py", "/opt/contrail/utils/fabfile/testbeds/testbed.py")
-                run("cd /tmp;rm -rf temp")
-                run("cd /tmp;mkdir temp")
-                put(test,"/tmp/temp/")
+                #run("cd /tmp;rm -rf temp")
+                #run("cd /tmp;mkdir temp")
+                if not files.exists("/tmp/temp/%s" % os.path.basename(test)):
+                    put(test,"/tmp/temp/")
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
     with settings(host_string = env.roledefs['cfgm'][0]):

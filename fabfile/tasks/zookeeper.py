@@ -4,7 +4,7 @@ import tempfile
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.host import hstr_to_ip
-from fabfile.tasks.install import apt_install, yum_install
+from fabfile.tasks.upgrade import upgrade_package
 
 
 @task
@@ -13,13 +13,20 @@ def zookeeper_rolling_restart():
     zoo_cfg = "/etc/zookeeper/conf/zoo.cfg"
     cfgm_nodes = copy.deepcopy(env.roledefs['cfgm'])
     database_nodes = copy.deepcopy(env.roledefs['database'])
+    zookeeper_status = verfiy_zookeeper(*database_nodes)
     if (len(database_nodes) % 2) != 1:
         print "Recommended to run odd number of zookeeper(database) nodes."
         print "Add a new node to the existing clusters testbed,py and install contrail-install-packages in it.\n\
-Installing/Provisioning will be done as part of Upgrade"
+               Installing/Provisioning will be done as part of Upgrade"
         exit(0)
+
     if cfgm_nodes == database_nodes:
         print "No need for rolling restart."
+
+    if 'leader' in zookeeper_status.values() and 'standalone' not in zookeeper_status.values():
+        print zookeeper_status
+        print "Zookeeper quorum is already formed properly."
+        return
 
     old_nodes = list(set(cfgm_nodes).difference(set(database_nodes)))
     new_nodes = list(set(database_nodes).difference(set(cfgm_nodes)))
@@ -30,10 +37,8 @@ Installing/Provisioning will be done as part of Upgrade"
             pdist = detect_ostype()
             # Install zookeeper in the new node.
             execute('create_install_repo_node', new_node)
-            if pdist in ['centos']:
-                yum_install(['contrail-openstack-database'])
-            elif pdist in ['Ubuntu']:
-                apt_install(['contrail-openstack-database'])
+            upgrade_package(['python-contrail', 'contrail-openstack-database'], pdist)
+            if pdist in ['Ubuntu']:
                 run("ln -sf /bin/true /sbin/chkconfig")
             run("chkconfig zookeeper on")
             # Fix zookeeper configs
@@ -81,7 +86,7 @@ Installing/Provisioning will be done as part of Upgrade"
                     retries -= 1
                     if retries:
                         continue
-                    print "Zookeepr leader/follower election has problems. Fix it and retry upgrade"
+                    print "Zookeeper quorum is not formed. Fix it and retry upgrade"
                     print zookeeper_status
                     exit(1)
           
