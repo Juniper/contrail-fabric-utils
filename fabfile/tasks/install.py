@@ -2,6 +2,7 @@ import os
 import re
 import copy
 import tempfile
+from time import sleep
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
@@ -448,6 +449,7 @@ def install_without_openstack(manage_nova_compute='yes'):
     execute(install_webui)
     execute('install_vrouter', manage_nova_compute)
     execute(upgrade_pkgs_without_openstack)
+    sleep(20)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name)
