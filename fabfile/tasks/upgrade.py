@@ -28,6 +28,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                                       'zookeeper'],
                    'downgrade'     : ['ifmap-server=0.3.2-1contrail1',
                                       'python-contrail',
+                                      'rabbitmq-server=3.3.2-1',
                                       'euca2ools=1:2.1.3-2',
                                       'supervisor=1:3.0a8-1.2',
                                       'python-boto=1:2.12.0',
@@ -409,13 +410,6 @@ def fix_discovery_conf():
 @task
 @EXECUTE_TASK
 @roles('cfgm')
-def upgrade_rabbitmq():
-    with settings(warn_only=True):
-        upgrade_package(['rabbitmq-server=3.3.2-1'], detect_ostype())
-
-@task
-@EXECUTE_TASK
-@roles('cfgm')
 def stop_rabbitmq():
     run("service rabbitmq-server stop")
 
@@ -560,11 +554,10 @@ def upgrade_contrail(from_rel, pkg):
     #execute('zookeeper_rolling_restart')
     #execute('fix_discovery_conf')
     execute('backup_config', from_rel)
+    execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
-    execute('stop_rabbitmq')
-    execute('upgrade_rabbitmq')
     execute('upgrade_cfgm', from_rel, pkg)
     execute('setup_rabbitmq_cluster', True)
     execute('setup_cfgm')
@@ -588,11 +581,10 @@ def upgrade_without_openstack(pkg):
     #execute('zookeeper_rolling_restart')
     #execute('fix_discovery_conf')
     execute('backup_config')
+    execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
-    execute('stop_rabbitmq')
-    execute('upgrade_rabbitmq')
     execute('upgrade_cfgm', from_rel, pkg)
     execute('setup_rabbitmq_cluster')
     execute('setup_cfgm')
