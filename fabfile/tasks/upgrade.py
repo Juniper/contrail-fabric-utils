@@ -24,8 +24,10 @@ UBUNTU_R1_05_TO_R1_10 = {
     'cfgm'      : {'upgrade'       : ['contrail-openstack-config'],
                    'remove'        : ['contrail-api-venv',
                                       'contrail-config-extension',
-                                      'contrail-libs'],
+                                      'contrail-libs',
+                                      'zookeeper'],
                    'downgrade'     : ['ifmap-server=0.3.2-1contrail1',
+                                      'python-contrail',
                                       'euca2ools=1:2.1.3-2',
                                       'supervisor=1:3.0a8-1.2',
                                       'python-boto=1:2.12.0',
@@ -60,7 +62,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                    'downgrade'     : ['supervisor=1:3.0a8-1.2',
                                       'python-contrail'],
                    'backup_files'  : [],
-                   'remove_files'  : ['/etc/contrail/supervisord_vrouter_files/contrail-vrouter.ini']
+                   'remove_files'  : ['/etc/contrail/supervisord_vrouter_files/contrail-vrouter.ini'],
                   },
 }
 
@@ -405,11 +407,17 @@ def fix_discovery_conf():
     run('sed -i "/\[DEFAULTS\]/a\%s" /etc/contrail/discovery.conf' % cassandra_srv_list)
 
 @task
-@serial
+@EXECUTE_TASK
 @roles('cfgm')
 def upgrade_rabbitmq():
     with settings(warn_only=True):
         upgrade_package(['rabbitmq-server=3.3.2-1'], detect_ostype())
+
+@task
+@EXECUTE_TASK
+@roles('cfgm')
+def stop_rabbitmq():
+    run("service rabbitmq-server stop")
 
 @task
 @EXECUTE_TASK
@@ -433,7 +441,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
 
 @task
-@EXECUTE_TASK
+@serial
 @roles('control')
 def upgrade_control(from_rel, pkg):
     """Upgrades control pkgs in all nodes defined in control role."""
@@ -555,6 +563,7 @@ def upgrade_contrail(from_rel, pkg):
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
+    execute('stop_rabbitmq')
     execute('upgrade_rabbitmq')
     execute('upgrade_cfgm', from_rel, pkg)
     execute('setup_rabbitmq_cluster', True)
@@ -582,6 +591,7 @@ def upgrade_without_openstack(pkg):
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
+    execute('stop_rabbitmq')
     execute('upgrade_rabbitmq')
     execute('upgrade_cfgm', from_rel, pkg)
     execute('setup_rabbitmq_cluster')
