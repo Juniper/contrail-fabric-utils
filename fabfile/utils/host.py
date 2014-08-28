@@ -57,7 +57,7 @@ def get_keystone_ip(ignore_vip=False, openstack_node=None):
     openstack_ip = hstr_to_ip(openstack_host)
     keystone_ip1 = getattr(testbed, 'keystone_ip', None)
     keystone_ip = get_from_testbed_dict('keystone', 'keystone_ip', keystone_ip1)
-    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+    internal_vip = get_openstack_internal_vip()
 
     if ignore_vip:
         return keystone_ip or openstack_ip
@@ -124,10 +124,31 @@ def get_keystone_admin_tenant_name():
     admin_tenant_name = getattr(testbed, 'os_tenant_name', 'admin')
     return get_from_testbed_dict('keystone', 'admin_tenant', 'admin')
 
+def get_openstack_internal_vip():
+    return get_from_testbed_dict('ha', 'internal_vip', None)
+
+def get_openstack_external_vip():
+    return get_from_testbed_dict('ha', 'external_vip', None)
+
+def get_contrail_internal_vip():
+    vip = get_from_testbed_dict('ha', 'internal_vip', None)
+    return get_from_testbed_dict('ha', 'contrail_internal_vip', vip)
+
+def get_contrail_external_vip():
+    vip = get_from_testbed_dict('ha', 'external_vip', None)
+    return get_from_testbed_dict('ha', 'contrail_external_vip', vip)
+
 def get_openstack_amqp_server():
-    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+    amqp_in_role = 'cfgm'
+    if get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes':
+        amqp_in_role = 'openstack'
+    internal_vip = get_openstack_internal_vip()
     return get_from_testbed_dict('openstack','amqp_host',
-        (internal_vip or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))))
+        (internal_vip or hstr_to_ip(get_control_host_string(env.roledefs[amqp_in_role][0]))))
+
+def get_contrail_amqp_server():
+    internal_vip = get_contrail_internal_vip()
+    return (internal_vip or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0])))
 
 def get_quantum_service_protocol():
     return get_from_testbed_dict('neutron', 'protocol', 'http')
