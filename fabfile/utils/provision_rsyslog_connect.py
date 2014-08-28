@@ -6,7 +6,6 @@
 import sys
 import os
 import argparse
-import cfgparse
 import ConfigParser
 from time import sleep
 
@@ -35,12 +34,12 @@ class SetupRsyslogConnections(object):
 
         if self._args.cleanup == 'True':
             self.cleanup_rsyslog_client_server_configs(
-                self._args.server)
+                self._args.mode)
         else:
             self.setup_rsyslog_client_server_configs(
                 self._args.rsyslog_port_number,
                 self._args.rsyslog_transport_protocol,
-                self._args.server,
+                self._args.mode,
                 self._args.collector_ip)
 
     def configure_syslog_listening_port_on_server(self, port, collector_ips):
@@ -48,15 +47,13 @@ class SetupRsyslogConnections(object):
             cmd = "cp -f " + self.collector_conf_file + \
                 " " + self.local_conf_file
             os.system('%s' % (cmd))
-            config = cfgparse.ConfigParser()
-            conf_file = config.add_file(self.local_conf_file)
-            syslog_opt = config.add_option(
-                'syslog_port',
-                type='int',
-                keys='DEFAULT')
-            syslog_opt.set(port, conf_file)
+            cmd = "sed -i 's/^ *//g' %s" %(self.local_conf_file)
+            os.system('%s' % (cmd))
+            config = ConfigParser.ConfigParser()
+            config.read(self.local_conf_file)
+            config.set('DEFAULT', 'syslog_port', port)
             with open(self.local_copy, 'wb') as file_to_update:
-                conf_file.write(file_to_update)
+                config.write(file_to_update)
             cmd = "cp -f " + self.local_copy + \
                 " " + self.collector_conf_file_path
             os.system('%s' % (cmd))
@@ -67,23 +64,21 @@ class SetupRsyslogConnections(object):
 
     def cleanup_rsyslog_client_server_configs(
             self,
-            server):
+            mode):
         # Delete the listening port on server(vizd) side if configured and
         # restart collector service.
-        if server == 'local':
+        if mode == 'receiver':
             listen_port = -1
             cmd = "cp -f " + self.collector_conf_file + \
                 " " + self.local_conf_file
             os.system('%s' % (cmd))
-            config = cfgparse.ConfigParser()
-            conf_file = config.add_file(self.local_conf_file)
-            syslog_opt = config.add_option(
-                'syslog_port',
-                type='int',
-                keys='DEFAULT')
-            syslog_opt.set(listen_port, conf_file)
+            cmd = "sed -i 's/^ *//g' %s" %(self.local_conf_file)
+            os.system('%s' % (cmd))
+            config = ConfigParser.ConfigParser()
+            config.read(self.local_conf_file)
+            config.set('DEFAULT', 'syslog_port', listen_port)
             with open(self.local_copy, 'wb') as file_to_update:
-                conf_file.write(file_to_update)
+                config.write(file_to_update)
             cmd = "cp -f " + self.local_copy + \
                 " " + self.collector_conf_file_path
             os.system('%s' % (cmd))
@@ -134,12 +129,12 @@ class SetupRsyslogConnections(object):
             self,
             port,
             protocol,
-            server,
+            mode,
             collector_ip):
 
         # Configure the listening port on server(vizd) side if its not already
         # listening on the expected port.
-        if server == 'local':
+        if mode == 'receiver':
             self.configure_syslog_listening_port_on_server(
                 port,
                 [collector_ip])
@@ -196,11 +191,7 @@ class SetupRsyslogConnections(object):
         else:
             protocol = '@'
 
-        loop_back_ip = '127.0.0.1'
-        if server == 'local':
-            ip_address_of_server = loop_back_ip
-        else:
-            ip_address_of_server = collector_ip
+        ip_address_of_server = collector_ip
 
         connection_string = '*.* ' + protocol + \
             ip_address_of_server + ':' + str(port)
@@ -221,7 +212,7 @@ class SetupRsyslogConnections(object):
         Eg. python provision_rsyslog_connect.py
                                         --rsyslog_port_number 1234
                                         --rsyslog_transport_protocol <tcp/udp>
-                                        --server <local/remote>
+                                        --mode <generator/receiver>
                                         --collector_ip 1.1.1.1
                                         --cleanup True/False
         '''
@@ -264,8 +255,8 @@ class SetupRsyslogConnections(object):
             help="Rsyslog transport protocol",
             type=str)
         parser.add_argument(
-            "--server",
-            help="The collector is local or remote",
+            "--mode",
+            help="Syslog receiver and generator or only generator mode",
             type=str)
         parser.add_argument(
             "--collector_ip",

@@ -1065,15 +1065,15 @@ def setup_remote_syslog_node(*args):
         for host_string in args:
             host_ip = host_string.split('@')[1]
             if host_ip == connect_map_dict[host_ip]:
-                server = 'local'
+                mode = 'receiver'
             else:
-                server = 'remote'
+                mode = 'generator'
 
             with  settings(host_string=host_string):
                 with cd(UTILS_DIR):
-                    cmd = "PASSWORD=%s python provision_rsyslog_connect.py " % (env.passwords[env.host_string])
+                    cmd = "python provision_rsyslog_connect.py "
                     myopts = "--rsyslog_port_number %s --rsyslog_transport_protocol %s " % (rsyslog_port, rsyslog_proto)
-                    myargs = myopts + "--server %s --collector_ip %s" % (server, connect_map_dict[host_ip])
+                    myargs = myopts + "--mode %s --collector_ip %s" % (mode, connect_map_dict[host_ip])
                     run_cmd = cmd + myargs
                     run(run_cmd)
 
@@ -1105,32 +1105,18 @@ def cleanup_remote_syslog_node():
 
     for host_string in args:
         host_ip = host_string.split('@')[1]
-        server = 'remote'
+        mode = 'generator'
         collector_ips = role_to_ip_dict(role='collector')
         for each_collector in collector_ips:
             if host_ip == each_collector:
-                server = 'local'
+                mode = 'receiver'
 
         with  settings(host_string=host_string):
             with cd(UTILS_DIR):
-                run_cmd = "PASSWORD=%s python provision_rsyslog_connect.py --server %s --cleanup True" \
-                    % (env.passwords[env.host_string], server)
+                run_cmd = "python provision_rsyslog_connect.py --mode %s --cleanup True" \
+                    % (mode)
                 run(run_cmd)
 # end cleanup_remote_syslog
-
-@task
-@roles('build')
-def copy_testbed_file_to_cfgms():
-    """Copy the testbed file to all the cfgms when run from a build machine.
-    When run from a cfgm node, this copies the testbed file to all other cfgm
-    nodes."""
-    testbed_file = env.real_fabfile + "/testbeds/testbed.py"
-    copy_location = "/opt/contrail/utils/fabfile/testbeds/"
-    for cfgm_string in env.roledefs['cfgm']:
-        if env.host_string != cfgm_string:
-            with settings (host_string=cfgm_string):
-                put(testbed_file, copy_location)
-# end copy_testbed_file_to_cfgms
 
 @roles('build')
 @task
@@ -1161,7 +1147,6 @@ def setup_all(reboot='True'):
     execute('prov_metadata_services')
     execute('prov_encap_type')
     execute('setup_remote_syslog')
-    execute('copy_testbed_file_to_cfgms')
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute('compute_reboot')
@@ -1190,7 +1175,6 @@ def setup_without_openstack(manage_nova_compute='yes'):
     execute(prov_metadata_services)
     execute(prov_encap_type)
     execute(setup_remote_syslog)
-    execute(copy_testbed_file_to_cfgms)
     print "Rebooting the compute nodes after setup all."
     execute(compute_reboot)
 
@@ -1222,7 +1206,6 @@ def setup_all_with_images():
     execute(prov_metadata_services)
     execute(prov_encap_type)
     execute(setup_remote_syslog)
-    execute(copy_testbed_file_to_cfgms)
     execute(add_images)
     print "Rebooting the compute nodes after setup all."
     execute(compute_reboot)
@@ -1246,7 +1229,6 @@ def run_setup_demo():
     execute(prov_metadata_services)
     execute(prov_encap_type)
     execute(setup_remote_syslog)
-    execute(copy_testbed_file_to_cfgms)
     execute(config_demo)
     execute(add_images)
     execute(compute_reboot)
@@ -1362,7 +1344,6 @@ def reset_config():
     execute(prov_metadata_services)
     execute(prov_encap_type)
     execute(setup_remote_syslog)
-    execute(copy_testbed_file_to_cfgms)
     execute(setup_vrouter)
     execute(compute_reboot)
 #end reset_config
