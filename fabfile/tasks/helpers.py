@@ -761,6 +761,17 @@ def delete_cassandra_db_files():
 @task
 @roles('build')
 def pre_check():
-    if len(env.roledefs['openstack']) > 1 and not get_from_testbed_dict('ha', 'internal_vip', None):
-        print "keystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
+    if len(env.roledefs['openstack']) > 1 and not get_openstack_internal_vip():
+        print "\nERROR: \n\tkeystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
         exit(1)
+    if (len(env.roledefs['openstack']) > 1 and
+        env.roledefs['openstack'].sort() == env.roledefs['cfgm'].sort() and
+        get_openstack_internal_vip() != get_openstack_internal_vip()):
+        print "\nERROR: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
+        exit(1)
+    if (len(env.roledefs['openstack']) > 1 and
+        env.roledefs['openstack'].sort() != env.roledefs['cfgm'].sort() and
+        get_openstack_internal_vip() == get_openstack_internal_vip()):
+        print "\nERROR: \n\tOpenstack and cfgm nodes are different, Need to specify  contrail_internal_vip testbed.py."
+        exit(1)
+        print "\nERROR: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
