@@ -56,7 +56,7 @@ control_data= {
     host5 : { 'ip': '192.168.10.5/24', 'gw' : '192.168.10.254', 'device':'eth0' },
 }
 
-env.test_repo_dir="/home/stack/multi_interface-ubuntu/contrail-test"
+env.test_repo_dir="/root/ubuntu_sanity/contrail-test"
 env.mail_from='vjoshi@juniper.net'
 env.mail_to='dl-contrail-sw@juniper.net'
 multi_tenancy=True
