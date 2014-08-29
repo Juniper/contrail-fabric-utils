@@ -461,6 +461,7 @@ def setup_cfgm_node(*args):
 @roles('openstack')
 def setup_openstack():
     """Provisions openstack services in all nodes defined in openstack role."""
+    execute('add_openstack_reserverd_ports')
     if env.roledefs['openstack']:
         execute("setup_openstack_node", env.host_string)
         # Blindly run setup_openstack twice for Ubuntu
