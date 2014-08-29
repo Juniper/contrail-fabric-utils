@@ -23,7 +23,15 @@ def zookeeper_rolling_restart():
     if cfgm_nodes == database_nodes:
         print "No need for rolling restart."
 
-    if 'leader' in zookeeper_status.values() and 'standalone' not in zookeeper_status.values():
+    if (len(database_nodes) > 1 and
+        'leader' in zookeeper_status.values() and
+        'not running' in zookeeper_status.values() and
+        'standalone' not in zookeeper_status.values()):
+        print zookeeper_status
+        print "Zookeeper quorum is already formed properly."
+        return
+    elif (len(database_nodes) == 1 and
+        'standalone' in zookeeper_status.values()):
         print zookeeper_status
         print "Zookeeper quorum is already formed properly."
         return
@@ -79,8 +87,17 @@ def zookeeper_rolling_restart():
             retries = 3
             while retries:
                 zookeeper_status = verfiy_zookeeper(*zoo_nodes)
-                if 'leader' in zookeeper_status.values() and 'standalone' not in zookeeper_status.values():
+                if (len(zoo_nodes) > 1 and
+                    'leader' in zookeeper_status.values() and
+                    'not running' in zookeeper_status.values() and
+                    'standalone' not in zookeeper_status.values()):
                     print zookeeper_status
+                    print "Zookeeper quorum is already formed properly."
+                    break
+                elif (len(zoo_nodes) == 1 and
+                    'standalone' in zookeeper_status.values()):
+                    print zookeeper_status
+                    print "Zookeeper quorum is already formed properly."
                     break
                 else:
                     retries -= 1
@@ -132,9 +149,11 @@ def zookeeper_rolling_restart():
 
 def verfiy_zookeeper(*zoo_nodes):
     zookeeper_status = {}
-    status_cmd = "/usr/share/zookeeper/bin/zkServer.sh status"
     for host_string in zoo_nodes:
         with settings(host_string=host_string, warn_only=True):
+            status_cmd = "/usr/lib/zookeeper/bin/zkServer.sh status"
+            if detect_ostype() in ['Ubuntu']:
+                status_cmd = "/usr/share/zookeeper/bin/zkServer.sh status"
             retries = 5
             for i in range(retries):
                 status = run(status_cmd)
