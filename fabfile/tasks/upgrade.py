@@ -391,6 +391,9 @@ def downgrade_package(pkgs, ostype):
 def remove_package(pkgs, ostype):
     with settings(warn_only=True):
         for pkg in pkgs:
+            if pkg == 'zookeeper' and env.host_string in env.roledefs['database']:
+                print "need not remove zookeeper, cfgm and database in same nodes."
+                return
             if ostype in ['centos', 'fedora']:
                 run('rpm -e --nodeps %s' % pkg)
             elif ostype in ['Ubuntu']:
@@ -463,13 +466,24 @@ def fix_nova_conf_node(*args):
 @roles('openstack')
 def upgrade_openstack(from_rel, pkg):
     """Upgrades openstack pkgs in all nodes defined in openstack role."""
+    execute('add_openstack_reserverd_ports')
     execute("upgrade_openstack_node", from_rel, pkg, env.host_string)
 
 @task
 def upgrade_openstack_node(from_rel, pkg, *args):
     """Upgrades openstack pkgs in one or list of nodes. USAGE:fab upgrade_openstack_node:user@1.1.1.1,user@2.2.2.2"""
+    openstack_services = ['openstack-nova-api', 'openstack-nova-scheduler', 'openstack-nova-cert',
+                          'openstack-nova-consoleauth', 'openstack-nova-novncproxy',
+                          'openstack-nova-conductor', 'openstack-nova-compute']
+    if detect_ostype() in ['Ubuntu']:
+        openstack_services = ['nova-api', 'nova-scheduler', 'glance-api',
+                              'glance-registry', 'keystone',
+                              'nova-conductor', 'cinder-api', 'cinder-scheduler']
     for host_string in args:
         with settings(host_string=host_string):
+            for svc in openstack_services:
+                with settings(warn_only=True):
+                    run("service %s stop" % svc)
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
@@ -528,7 +542,8 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
 @roles('control')
 def upgrade_control(from_rel, pkg):
     """Upgrades control pkgs in all nodes defined in control role."""
-    execute('stop_control')
+    with settings(warn_only=True):
+        execute('stop_control')
     execute("upgrade_control_node", from_rel, pkg, env.host_string)
 
 @task

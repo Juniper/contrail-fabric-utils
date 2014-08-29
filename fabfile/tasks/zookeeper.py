@@ -25,12 +25,14 @@ def zookeeper_rolling_restart():
 
     if (len(database_nodes) > 1 and
         'leader' in zookeeper_status.values() and
-        'not running' in zookeeper_status.values() and
+        'notrunning' not in zookeeper_status.values() and
+        'notinstalled' not in zookeeper_status.values() and
         'standalone' not in zookeeper_status.values()):
         print zookeeper_status
         print "Zookeeper quorum is already formed properly."
         return
     elif (len(database_nodes) == 1 and
+        'No such file' not in zookeeper_status.values() and
         'standalone' in zookeeper_status.values()):
         print zookeeper_status
         print "Zookeeper quorum is already formed properly."
@@ -45,7 +47,7 @@ def zookeeper_rolling_restart():
             pdist = detect_ostype()
             # Install zookeeper in the new node.
             execute('create_install_repo_node', new_node)
-            upgrade_package(['python-contrail', 'contrail-openstack-database'], pdist)
+            upgrade_package(['python-contrail', 'contrail-openstack-database', 'zookeeper'], pdist)
             if pdist in ['Ubuntu']:
                 run("ln -sf /bin/true /sbin/chkconfig")
             run("chkconfig zookeeper on")
@@ -71,8 +73,11 @@ def zookeeper_rolling_restart():
     for zookeeper_node in cfgm_nodes + new_nodes:
         with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
             put(tmp_dir+'/zoo.cfg', zoo_cfg)
+            restart_cmd = "/usr/lib/zookeeper/bin/zkServer.sh restart"
+            if detect_ostype() in ['Ubuntu']:
+                restart_cmd = "/usr/share/zookeeper/bin/zkServer.sh restart"
             # Start Zookeeper in new database node
-            run("service zookeeper restart")
+            run(restart_cmd)
 
     print "Waiting 5 seconds for the new nodes in the zookeeper quorum to be synced."
     sleep(5)
@@ -127,8 +132,11 @@ def zookeeper_rolling_restart():
     # Restart all the zookeeper nodes in the new quorum
     for zookeeper_node in database_nodes:
         with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
+            restart_cmd = "/usr/lib/zookeeper/bin/zkServer.sh restart"
+            if detect_ostype() in ['Ubuntu']:
+                restart_cmd = "/usr/share/zookeeper/bin/zkServer.sh restart"
             put(tmp_dir+'/zoo.cfg', zoo_cfg)
-            run("service zookeeper restart")
+            run(restart_cmd)
 
     # Mkae sure leader/folower election is complete
     with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
@@ -157,6 +165,10 @@ def verfiy_zookeeper(*zoo_nodes):
             retries = 5
             for i in range(retries):
                 status = run(status_cmd)
+                if 'not running' in status:
+                    status = 'notrunning'
+                elif 'No such file' in status:
+                    status = 'notinstalled'
                 if 'Error contacting service' not in status:
                     break
                 sleep(2)
