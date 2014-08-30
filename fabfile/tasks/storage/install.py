@@ -13,10 +13,7 @@ from fabfile.tasks.install import yum_install,  apt_install
 @roles('all')
 def install_storage_pkg_all(pkg):
     """Installs any rpm/deb in storage-master/storage-compute nodes."""
-    host_strings = copy.deepcopy(env.roledefs['storage-master'])
-    dummy = [host_strings.append(storage_compute_node)
-             for storage_compute_node in env.roledefs['storage-compute']]
-    execute('install_storage_pkg_node', pkg, *host_strings)
+    execute('install_storage_pkg_node', pkg, env.host_string)
 
 @task
 def install_storage_pkg_node(pkg, *args):
@@ -78,10 +75,7 @@ def install_storage_compute_node(*args):
 @EXECUTE_TASK
 @roles('all')
 def create_storage_repo():
-    host_strings = copy.deepcopy(env.roledefs['storage-master'])
-    dummy = [host_strings.append(storage_compute_node)
-             for storage_compute_node in env.roledefs['storage-compute']]
-    execute('create_storage_repo_node', *host_strings)
+    execute('create_storage_repo_node', env.host_string)
 
 @task
 def create_storage_repo_node(*args):
