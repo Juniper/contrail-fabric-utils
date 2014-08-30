@@ -25,6 +25,7 @@ def zookeeper_rolling_restart():
 
     if (len(database_nodes) > 1 and
         'leader' in zookeeper_status.values() and
+        'follower' in zookeeper_status.values() and
         'notrunning' not in zookeeper_status.values() and
         'notinstalled' not in zookeeper_status.values() and
         'standalone' not in zookeeper_status.values()):
@@ -32,7 +33,7 @@ def zookeeper_rolling_restart():
         print "Zookeeper quorum is already formed properly."
         return
     elif (len(database_nodes) == 1 and
-        'No such file' not in zookeeper_status.values() and
+        'notinstalled' not in zookeeper_status.values() and
         'standalone' in zookeeper_status.values()):
         print zookeeper_status
         print "Zookeeper quorum is already formed properly."
@@ -94,12 +95,15 @@ def zookeeper_rolling_restart():
                 zookeeper_status = verfiy_zookeeper(*zoo_nodes)
                 if (len(zoo_nodes) > 1 and
                     'leader' in zookeeper_status.values() and
-                    'not running' in zookeeper_status.values() and
+                    'follower' in zookeeper_status.values() and
+                    'notrunning' not in zookeeper_status.values() and
+                    'notinstalled' not in zookeeper_status.values() and
                     'standalone' not in zookeeper_status.values()):
                     print zookeeper_status
                     print "Zookeeper quorum is already formed properly."
                     break
                 elif (len(zoo_nodes) == 1 and
+                    'notinstalled' not in zookeeper_status.values() and
                     'standalone' in zookeeper_status.values()):
                     print zookeeper_status
                     print "Zookeeper quorum is already formed properly."
@@ -143,8 +147,19 @@ def zookeeper_rolling_restart():
         retries = 3
         while retries:
             zookeeper_status = verfiy_zookeeper(*database_nodes)
-            if 'leader' in zookeeper_status.values() and 'standalone' not in zookeeper_status.values():
+            if (len(database_nodes) > 1 and
+                'leader' in zookeeper_status.values() and
+                'follower' in zookeeper_status.values() and
+                'notrunning' not in zookeeper_status.values() and
+                'notinstalled' not in zookeeper_status.values() and
+                'standalone' not in zookeeper_status.values()):
                 print zookeeper_status
+                break
+            elif (len(database_nodes) == 1 and
+                'notinstalled' not in zookeeper_status.values() and
+                'standalone' in zookeeper_status.values()):
+                print zookeeper_status
+                print "Zookeeper quorum is already formed properly."
                 break
             else:
                 retries -= 1

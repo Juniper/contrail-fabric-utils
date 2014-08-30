@@ -545,6 +545,7 @@ def upgrade_control(from_rel, pkg):
     with settings(warn_only=True):
         execute('stop_control')
     execute("upgrade_control_node", from_rel, pkg, env.host_string)
+    execute('restart_control')
 
 @task
 def upgrade_control_node(from_rel, pkg, *args):
