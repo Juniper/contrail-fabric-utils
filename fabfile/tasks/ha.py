@@ -415,6 +415,7 @@ def fix_cmon_param_and_add_keys_to_compute():
     run("echo '%s' >> %s" % (computes, cmon_param))
     run("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
     run("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
+    run("echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % cmon_param)
     id_rsa_pubs = {}
     if files.exists('/root/.ssh'):
         run('chmod 700 /root/.ssh')
@@ -443,6 +444,53 @@ def create_and_copy_service_token():
                 run("echo '%s' > /etc/contrail/service.token" % service_token)
 
 @task
+@hosts(*env.roledefs['openstack'][:1])
+def setup_cmon_schema():
+    """Task to configure cmon schema in the openstack nodes to monitor galera cluster"""
+    if len(env.roledefs['openstack']) <= 1:
+        print "Single Openstack cluster, skipping cmon schema  setup."
+        return
+
+    openstack_host_list = [get_control_host_string(openstack_host)\
+                           for openstack_host in env.roledefs['openstack']]
+    galera_ip_list = [hstr_to_ip(galera_host)\
+                      for galera_host in openstack_host_list]
+    internal_vip = get_openstack_internal_vip()
+
+    mysql_token = run("cat /etc/contrail/mysql.token")
+    pdist = detect_ostype()
+    if pdist in ['Ubuntu']:
+        mysql_svc = 'mysql'
+    elif pdist in ['centos', 'redhat']:
+        mysql_svc = 'mysqld'
+    # Create cmon schema
+    run('mysql -u root -p%s -e "CREATE SCHEMA IF NOT EXISTS cmon"' % mysql_token)
+    run('mysql -u root -p%s < /usr/local/cmon/share/cmon/cmon_db.sql' % mysql_token)
+    run('mysql -u root -p%s < /usr/local/cmon/share/cmon/cmon_data.sql' % mysql_token)
+
+    # insert static data
+    run('mysql -u root -p%s -e "use cmon; insert into cluster(type) VALUES (\'galera\')"' % mysql_token)
+
+    host_list = galera_ip_list + ['localhost', '127.0.0.1', internal_vip]
+    # Create cmon user
+    for host in host_list:
+        mysql_cmon_user_cmd = 'mysql -u root -p%s -e "CREATE USER \'cmon\'@\'%s\' IDENTIFIED BY \'cmon\'"' % (
+                               mysql_token, host)
+        with settings(hide('everything'),warn_only=True):
+            run(mysql_cmon_user_cmd)
+
+    mysql_cmd =  "mysql -uroot -p%s -e" % mysql_token
+    # Grant privilages for cmon user.
+    for host in host_list:
+        run('%s "GRANT ALL PRIVILEGES on *.* TO cmon@%s IDENTIFIED BY \'cmon\' WITH GRANT OPTION"' %
+               (mysql_cmd, host))
+    # Restarting mysql in all openstack nodes
+    for host_string in env.roledefs['openstack']:
+        with settings(host_string=host_string):
+            run("service %s restart" % mysql_svc)
+
+
+@task
 @roles('build')
 def setup_ha():
     execute('pre_check')
@@ -451,6 +499,7 @@ def setup_ha():
         execute('setup_keepalived')
         execute('setup_galera_cluster')
         execute('fix_wsrep_cluster_address')
+        execute('setup_cmon_schema')
         execute('fix_restart_xinetd_conf')
         execute('fixup_restart_haproxy_in_openstack')
         execute('fixup_restart_haproxy_in_collector')
