@@ -508,5 +508,3 @@ def setup_ha():
         execute('tune_tcp')
         execute('fix_cmon_param_and_add_keys_to_compute')
         execute('create_and_copy_service_token')
-
-
