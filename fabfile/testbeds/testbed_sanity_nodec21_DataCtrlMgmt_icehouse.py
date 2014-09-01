@@ -8,7 +8,7 @@ host1 = 'root@10.204.217.6'
 host2 = 'root@10.204.217.4'
 host3 = 'root@10.204.217.5'
 host4 = 'root@10.204.217.101'
-host5 = 'root@10.204.217.102'
+host5 = 'root@10.204.217.100'
 host6 = 'root@10.204.217.3'
 
 ext_routers = [('blr-mx2', '192.168.10.254')]
@@ -31,7 +31,7 @@ env.roledefs = {
 }
 
 env.hostnames = {
-    'all': ['nodec21', 'nodec19', 'nodec20', 'nodec61', 'nodec62','nodec18']
+    'all': ['nodec21', 'nodec19', 'nodec20', 'nodec61', 'nodec60','nodec18']
 }
 
 bond= {
