@@ -56,11 +56,11 @@ control_data= {
     host5 : { 'ip': '192.168.10.5/24', 'gw' : '192.168.10.254', 'device':'eth0' },
 }
 
-env.test_repo_dir="/root/ubuntu_sanity/contrail-test"
+env.test_repo_dir="/home/stack/ubuntu_sanity/contrail-test"
 env.mail_from='vjoshi@juniper.net'
 env.mail_to='dl-contrail-sw@juniper.net'
 multi_tenancy=True
 env.encap_priority="'MPLSoUDP','MPLSoGRE','VXLAN'"
 env.mail_server='10.84.24.64'
 env.mail_port='4000'
-env.log_scenario='Ubuntu-Havana Five-Node Sanity[Multi Intface]'
+env.log_scenario='Ubuntu-Havana Five-Node Sanity[Multi Interface]'
