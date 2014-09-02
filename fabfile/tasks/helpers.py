@@ -737,7 +737,7 @@ def reboot_vm(vmid='all', mode='soft'):
         return
 
     print "Rebooting all the VM's"
-    nova_list = run ("source /etc/contrail/openstackrc; nova list")
+    nova_list = run ("source /etc/contrail/openstackrc; nova list --all-tenants")
     nova_list = nova_list.split('\r\n')
     nova_list = nova_list[3:-1]
     for vm_info in nova_list:
