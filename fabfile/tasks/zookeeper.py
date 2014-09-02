@@ -4,7 +4,7 @@ import tempfile
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.host import hstr_to_ip
-from fabfile.tasks.upgrade import upgrade_package
+from fabfile.tasks.upgrade import upgrade_package, remove_package
 
 
 @task
@@ -24,7 +24,7 @@ def zookeeper_rolling_restart():
         print "No need for rolling restart."
 
     stop_cmd = "/usr/lib/zookeeper/bin/zkServer.sh stop"
-    restart_cmd = "/usr/share/zookeeper/bin/zkServer.sh restart"
+    restart_cmd = "/usr/lib/zookeeper/bin/zkServer.sh restart"
     if detect_ostype() in ['Ubuntu']:
         stop_cmd = "/usr/share/zookeeper/bin/zkServer.sh stop"
         restart_cmd = "/usr/share/zookeeper/bin/zkServer.sh restart"
@@ -54,6 +54,7 @@ def zookeeper_rolling_restart():
             pdist = detect_ostype()
             print "Install zookeeper in the new node."
             execute('create_install_repo_node', new_node)
+            remove_package(['supervisor'], pdist)
             upgrade_package(['python-contrail', 'contrail-openstack-database', 'zookeeper'], pdist)
             if pdist in ['Ubuntu']:
                 run("ln -sf /bin/true /sbin/chkconfig")
