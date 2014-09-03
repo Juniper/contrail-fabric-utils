@@ -924,7 +924,8 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
         openstack_admin_password = get_keystone_admin_password()
         amqp_server_ip = ' '.join([hstr_to_ip(get_control_host_string(cfgm_host)) for cfgm_host in env.roledefs['cfgm']])
         if get_from_testbed_dict('openstack','manage_amqp', 'no') == 'yes':
-            amqp_server_ip = ' '.join([hstr_to_ip(get_control_host_string(openstack_host)) for openstack_host in env.roledefs['openstack']])
+            #amqp_server_ip = ' '.join([hstr_to_ip(get_control_host_string(openstack_host)) for openstack_host in env.roledefs['openstack']])
+            amqp_server_ip = get_openstack_amqp_server()
 
         with  settings(host_string=host_string):
             vmware = False
@@ -938,7 +939,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-vrouter.override')
             with cd(INSTALLER_DIR):
-                cmd= "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-vrouter.py --self_ip %s --cfgm_ip %s --keystone_ip %s --openstack_mgmt_ip %s --ncontrols %s --keystone_auth_protocol %s --keystone_auth_port %s --amqp_server_ip_list %s --quantum_service_protocol %s %s %s" \
+                cmd= "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-vrouter.py --self_ip %s --cfgm_ip %s --keystone_ip %s --openstack_mgmt_ip %s --ncontrols %s --keystone_auth_protocol %s --keystone_auth_port %s --amqp_server_ip %s --quantum_service_protocol %s %s %s" \
                          %(cfgm_host_password, openstack_admin_password, compute_control_ip, cfgm_ip, keystone_ip, openstack_mgmt_ip, ncontrols, ks_auth_protocol, ks_auth_port, amqp_server_ip, get_quantum_service_protocol(), get_service_token_opt(), haproxy)
                 if tgt_ip != compute_mgmt_ip: 
                     cmd = cmd + " --non_mgmt_ip %s --non_mgmt_gw %s" %( tgt_ip, tgt_gw )
