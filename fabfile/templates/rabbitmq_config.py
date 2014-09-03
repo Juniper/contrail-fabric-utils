@@ -6,7 +6,7 @@ template = string.Template("""[
               {vm_memory_high_watermark, 0.4},
               {disk_free_limit,50000000},
               {log_levels,[{connection, info},{mirroring, info}]},
-              {heartbeat,600},
+              {heartbeat,10},
               {delegate_count,20},
               {channel_max,5000},
               {tcp_listen_options,
@@ -23,5 +23,5 @@ template = string.Template("""[
             ]
    },
    {rabbitmq_management_agent, [ {force_fine_statistics, true} ] },
-   {kernel, [{net_ticktime,  120}]}
+   {kernel, [{net_ticktime,  30}]}
 ].""")
