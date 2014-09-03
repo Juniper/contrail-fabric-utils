@@ -411,11 +411,24 @@ def fix_cmon_param_and_add_keys_to_compute():
         with settings(host_string=host_string, password=env.passwords[host_string]):
             host_name = run('hostname')
         compute_host_list.append(host_name)
+
+    # Get AMQP host list
+    amqp_in_role = 'cfgm'
+    if get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes':
+        amqp_in_role = 'openstack'
+    for host_string in env.roledefs[amqp_in_role]:
+        with settings(host_string=host_string, password=env.passwords[host_string]):
+            host_name = run('hostname')
+        amqp_host_list.append(host_name)
+
     computes = 'COMPUTES=("' + '" "'.join(compute_host_list) + '")'
     run("echo '%s' >> %s" % (computes, cmon_param))
     run("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
     run("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
     run("echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % cmon_param)
+    amqps = 'DIPHOSTS=("' + '" "'.join(amqp_host_list) + '")'
+    run("echo '%s' >> %s" % (amqps, cmon_param))
+    run("echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % cmon_param)
     id_rsa_pubs = {}
     if files.exists('/root/.ssh'):
         run('chmod 700 /root/.ssh')
