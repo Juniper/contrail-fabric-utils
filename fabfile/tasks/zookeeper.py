@@ -4,8 +4,25 @@ import tempfile
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.host import hstr_to_ip
-from fabfile.tasks.upgrade import upgrade_package
+from fabfile.tasks.upgrade import upgrade_package, remove_package
 
+@task
+def restart_zookeeper():
+    restart_cmd = "/usr/lib/zookeeper/bin/zkServer.sh restart"
+    if detect_ostype() in ['Ubuntu']:
+        restart_cmd = "/usr/share/zookeeper/bin/zkServer.sh restart"
+    with settings(warn_only=True):
+        if run("service zookeeper restart").failed:
+            run(restart_cmd)
+
+@task
+def stop_zookeeper():
+    stop_cmd = "/usr/lib/zookeeper/bin/zkServer.sh stop"
+    if detect_ostype() in ['Ubuntu']:
+        stop_cmd = "/usr/share/zookeeper/bin/zkServer.sh stop"
+    with settings(warn_only=True):
+        if run("service zookeeper stop").failed:
+            run(stop_cmd)
 
 @task
 @roles('build')
@@ -22,12 +39,6 @@ def zookeeper_rolling_restart():
 
     if cfgm_nodes == database_nodes:
         print "No need for rolling restart."
-
-    stop_cmd = "/usr/lib/zookeeper/bin/zkServer.sh stop"
-    restart_cmd = "/usr/share/zookeeper/bin/zkServer.sh restart"
-    if detect_ostype() in ['Ubuntu']:
-        stop_cmd = "/usr/share/zookeeper/bin/zkServer.sh stop"
-        restart_cmd = "/usr/share/zookeeper/bin/zkServer.sh restart"
 
     if (len(database_nodes) > 1 and
         'leader' in zookeeper_status.values() and
@@ -54,6 +65,7 @@ def zookeeper_rolling_restart():
             pdist = detect_ostype()
             print "Install zookeeper in the new node."
             execute('create_install_repo_node', new_node)
+            remove_package(['supervisor'], pdist)
             upgrade_package(['python-contrail', 'contrail-openstack-database', 'zookeeper'], pdist)
             if pdist in ['Ubuntu']:
                 run("ln -sf /bin/true /sbin/chkconfig")
@@ -81,7 +93,7 @@ def zookeeper_rolling_restart():
         with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
             put(tmp_dir+'/zoo.cfg', zoo_cfg)
             print "Start Zookeeper in new database node"
-            run(restart_cmd)
+            execute('restart_zookeeper')
 
     print "Waiting 5 seconds for the new nodes in the zookeeper quorum to be synced."
     sleep(5)
@@ -91,7 +103,7 @@ def zookeeper_rolling_restart():
         zoo_nodes.remove(old_node)
         with settings(host_string=old_node, password=env.passwords[old_node]):
             print "Stop Zookeeper in old cfgm node"
-            run(stop_cmd)
+            execute('stop_zookeeper')
             retries = 3
             while retries:
                 zookeeper_status = verfiy_zookeeper(*zoo_nodes)
@@ -133,13 +145,13 @@ def zookeeper_rolling_restart():
         with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
             print "put cluster-unique zookeeper's instance id in myid"
             run('sudo echo "%s" > /var/lib/zookeeper/myid' % (zk_index))
-            run(stop_cmd)
+            execute('stop_zookeeper')
 
     print "Restart all the zookeeper nodes in the new quorum"
     for zookeeper_node in database_nodes:
         with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
             put(tmp_dir+'/zoo.cfg', zoo_cfg)
-            run(restart_cmd)
+            execute('restart_zookeeper')
 
     print "Make sure leader/folower election is complete"
     with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
@@ -183,7 +195,7 @@ def verfiy_zookeeper(*zoo_nodes):
                     status = 'notrunning'
                 elif 'No such file' in status:
                     status = 'notinstalled'
-                if 'Error contacting service' not in status:
+                elif 'Error contacting service' not in status:
                     break
                 sleep(2)
             for stat in ['leader', 'follower', 'standalone']:

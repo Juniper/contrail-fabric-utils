@@ -84,7 +84,7 @@ def all_reimage(build_param="@LATEST"):
             with settings(warn_only=True):
                 if local("/cs-shared/cf/bin/centos.reimage %s %s" %(hostname, build_param)).failed:
                     local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
-        sleep(1)
+        sleep(5)
 #end all_reimage
 
 @roles('compute')
