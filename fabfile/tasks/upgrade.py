@@ -78,6 +78,8 @@ UBUNTU_R1_05_TO_R1_11 = UBUNTU_R1_05_TO_R1_10
 UBUNTU_R1_06_TO_R1_11 = UBUNTU_R1_05_TO_R1_10
 # Upgrade data for upgrade from 1.06 to R1.10
 UBUNTU_R1_06_TO_R1_10 = UBUNTU_R1_05_TO_R1_10
+UBUNTU_R1_06_TO_R1_10['webui']['backup_files'].append('/etc/contrail/config.global.js')
+UBUNTU_R1_06_TO_R1_10['compute']['backup_files'].append('/etc/contrail/contrail-vrouter-agent.conf')
 
 # Upgrade data from 1.05 to 1.10(Centos)
 CENTOS_R1_05_TO_R1_10 = {
@@ -648,7 +650,8 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'compute')
             # If necessary, migrate to new ini format based configuration.
-            run("/opt/contrail/contrail_installer/contrail_config_templates/vrouter-agent.conf.sh")
+            if from_rel != '1.06':
+                run("/opt/contrail/contrail_installer/contrail_config_templates/vrouter-agent.conf.sh")
             if detect_ostype() in ['centos']:
                 execute('setup_vrouter_node', host_string)
 
