@@ -7,6 +7,15 @@ from fabfile.utils.host import hstr_to_ip
 from fabfile.tasks.upgrade import upgrade_package, remove_package
 
 @task
+@EXECUTE_TASK
+@roles('cfgm')
+def backup_zookeeper_database():
+    backup_dir = "/opt/contrail/backup/zookeeper"
+    with settings(warn_only=True):
+        run("mkdir -p %s" % backup_dir)
+        run("cp -r /var/lib/zookeeper/* %s" % backup_dir)
+
+@task
 def restart_zookeeper():
     restart_cmd = "/usr/lib/zookeeper/bin/zkServer.sh restart"
     if detect_ostype() in ['Ubuntu']:
@@ -56,6 +65,9 @@ def zookeeper_rolling_restart():
         print "Zookeeper quorum is already formed properly."
         return
 
+    execute('stop_cfgm')
+    execute('backup_zookeeper_database')
+
     old_nodes = list(set(cfgm_nodes).difference(set(database_nodes)))
     new_nodes = list(set(database_nodes).difference(set(cfgm_nodes)))
 
@@ -104,6 +116,9 @@ def zookeeper_rolling_restart():
         with settings(host_string=old_node, password=env.passwords[old_node]):
             print "Stop Zookeeper in old cfgm node"
             execute('stop_zookeeper')
+            for zoo_node in zoo_nodes:
+                with settings(host_string=zoo_node, password=env.passwords[zoo_node]):
+                    run("sed -i '/^server.*%s:2888:3888/d' %s" % (hstr_to_ip(zoo_node), zoo_cfg))
             retries = 3
             while retries:
                 zookeeper_status = verfiy_zookeeper(*zoo_nodes)
@@ -125,6 +140,9 @@ def zookeeper_rolling_restart():
                 else:
                     retries -= 1
                     if retries:
+                        for zoo_node in zoo_nodes:
+                            with settings(host_string=zoo_node, password=env.passwords[zoo_node]):
+                                execute('restart_zookeeper')
                         continue
                     print "Zookeeper quorum is not formed. Fix it and retry upgrade"
                     print zookeeper_status

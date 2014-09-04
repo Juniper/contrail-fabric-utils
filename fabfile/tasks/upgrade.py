@@ -73,11 +73,11 @@ UBUNTU_R1_05_TO_R1_10 = {
 }
 
 # Upgrade data for upgrade from 1.05 to 1.11 mainline
-UBUNTU_R1_05_TO_R1_11 = UBUNTU_R1_05_TO_R1_10
+UBUNTU_R1_05_TO_R1_11 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
 # Upgrade data for upgrade from 1.06 to 1.11 mainline
-UBUNTU_R1_06_TO_R1_11 = UBUNTU_R1_05_TO_R1_10
+UBUNTU_R1_06_TO_R1_11 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
 # Upgrade data for upgrade from 1.06 to R1.10
-UBUNTU_R1_06_TO_R1_10 = UBUNTU_R1_05_TO_R1_10
+UBUNTU_R1_06_TO_R1_10 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
 UBUNTU_R1_06_TO_R1_10['webui']['backup_files'].append('/etc/contrail/config.global.js')
 UBUNTU_R1_06_TO_R1_10['compute']['backup_files'].append('/etc/contrail/contrail-vrouter-agent.conf')
 
