@@ -100,7 +100,7 @@ listen  rabbitmq 0.0.0.0:5673
     option tcpka
     option redispatch
     timeout client 48h
-    timeout server 48h"""
+    timeout server 48h\n"""
     space = ' ' * 3
     for host_string in env.roledefs['cfgm']:
         server_index = env.roledefs['cfgm'].index(host_string) + 1
@@ -1195,21 +1195,30 @@ def setup_without_openstack(manage_nova_compute='yes'):
        User has to provision the openstack node with their custom openstack pakckages.
        If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute will be skipped in the compute node.
     """
-    execute(setup_rabbitmq_cluster)
-    execute(increase_limits)
-    execute(setup_database)
-    execute(setup_cfgm)
-    execute(setup_control)
-    execute(setup_collector)
-    execute(setup_webui)
+    execute('setup_ha')
+    execute('setup_rabbitmq_cluster')
+    execute('increase_limits')
+    execute('setup_database')
+    execute('verify_database')
+    execute('setup_cfgm')
+    execute('verify_cfgm')
+    execute('setup_control')
+    execute('verify_control')
+    execute('setup_collector')
+    execute('verify_collector')
+    execute('setup_webui')
+    execute('verify_webui')
     execute('setup_vrouter', manage_nova_compute)
-    execute(prov_control_bgp)
-    execute(prov_external_bgp)
-    execute(prov_metadata_services)
-    execute(prov_encap_type)
-    execute(setup_remote_syslog)
+    execute('prov_control_bgp')
+    execute('prov_external_bgp')
+    execute('prov_metadata_services')
+    execute('prov_encap_type')
+    execute('setup_remote_syslog')
     print "Rebooting the compute nodes after setup all."
     execute(compute_reboot)
+    #Clear the connections cache
+    connections.clear()
+    execute('verify_compute')
 
 @roles('build')
 @task
