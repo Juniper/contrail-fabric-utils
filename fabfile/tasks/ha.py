@@ -508,19 +508,21 @@ def setup_cmon_schema():
 @roles('build')
 def setup_ha():
     execute('pre_check')
+
+    if get_contrail_internal_vip():
+        print "Contrail HA setup, provisioning contrail HA."
+        execute('setup_keepalived')
+        execute('fixup_restart_haproxy_in_collector')
+
     if get_openstack_internal_vip():
         print "Multi Openstack setup, provisioning openstack HA."
-        execute('setup_keepalived')
         execute('setup_galera_cluster')
         execute('fix_wsrep_cluster_address')
         execute('setup_cmon_schema')
         execute('fix_restart_xinetd_conf')
         execute('fixup_restart_haproxy_in_openstack')
-        execute('fixup_restart_haproxy_in_collector')
         execute('setup_glance_images_loc')
         execute('fix_memcache_conf')
         execute('tune_tcp')
         execute('fix_cmon_param_and_add_keys_to_compute')
         execute('create_and_copy_service_token')
-
-

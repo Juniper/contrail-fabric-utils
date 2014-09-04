@@ -576,9 +576,9 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
 def upgrade_control(from_rel, pkg):
     """Upgrades control pkgs in all nodes defined in control role."""
     with settings(warn_only=True):
-        execute('stop_control')
+        execute('stop_control_node', env.host_string)
     execute("upgrade_control_node", from_rel, pkg, env.host_string)
-    execute('restart_control')
+    execute('restart_control_node', env.host_string)
 
 @task
 def upgrade_control_node(from_rel, pkg, *args):
