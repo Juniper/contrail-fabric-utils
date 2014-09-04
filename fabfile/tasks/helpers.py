@@ -71,19 +71,19 @@ def all_reimage(build_param="@LATEST"):
             elif 'ubuntu' in env.ostypes[host]:
                 with settings(warn_only=True):
                     if local("/cs-shared/cf/bin/ubuntu.reimage %s" %(hostname)).failed:
-                        local("/cs-shared/server-manager/client/server-manager reimage --server_id %s ubuntu-12.04.3" % (hostname))
+                        local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s ubuntu-12.04.3" % (hostname))
             elif 'cent63' in env.ostypes[host]:
                 local("/cs-shared/cf/bin/centos63.reimage %s" %(hostname))
             else:
                 # CentOS
                 with settings(warn_only=True):
                     if local("/cs-shared/cf/bin/centos.reimage %s %s" %(hostname, build_param)).failed:
-                        local("/cs-shared/server-manager/client/server-manager reimage --server_id %s centos-6.4" % (hostname))
+                        local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
         else:
             # CentOS
             with settings(warn_only=True):
                 if local("/cs-shared/cf/bin/centos.reimage %s %s" %(hostname, build_param)).failed:
-                    local("/cs-shared/server-manager/client/server-manager reimage --server_id %s centos-6.4" % (hostname))
+                    local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
         sleep(1)
 #end all_reimage
 
