@@ -34,6 +34,27 @@ def set_tcp_keepalive():
         else:
             run("sed -i 's/net.ipv4.tcp_keepalive_intvl\s\s*/net.ipv4.tcp_keepalive_intvl = 1/' /etc/sysctl.conf")
 
+
+@task
+@EXECUTE_TASK
+@roles('compute')
+def set_tcp_keepalive_on_compute():
+    with settings(hide('stderr'), warn_only=True):
+        if run("grep '^net.ipv4.tcp_keepalive_time' /etc/sysctl.conf").failed:
+            run("echo 'net.ipv4.tcp_keepalive_time = 10' >> /etc/sysctl.conf")
+        else:
+            run("sed -i 's/net.ipv4.tcp_keepalive_time\s\s*/net.ipv4.tcp_keepalive_time = 5/' /etc/sysctl.conf")
+
+        if run("grep '^net.ipv4.tcp_keepalive_probes' /etc/sysctl.conf").failed:
+            run("echo 'net.ipv4.tcp_keepalive_probes = 5' >> /etc/sysctl.conf")
+        else:
+            run("sed -i 's/net.ipv4.tcp_keepalive_probes\s\s*/net.ipv4.tcp_keepalive_probes = 5/' /etc/sysctl.conf")
+
+        if run("grep '^net.ipv4.tcp_keepalive_intvl' /etc/sysctl.conf").failed:
+            run("echo 'net.ipv4.tcp_keepalive_intvl = 1' >> /etc/sysctl.conf")
+        else:
+            run("sed -i 's/net.ipv4.tcp_keepalive_intvl\s\s*/net.ipv4.tcp_keepalive_intvl = 1/' /etc/sysctl.conf")
+
 @task
 @EXECUTE_TASK
 @roles('rabbit')
@@ -215,6 +236,7 @@ def setup_rabbitmq_cluster(force=False):
         if get_openstack_internal_vip():
             execute('set_ha_policy_in_rabbitmq')
             execute('set_tcp_keepalive')
+            execute('set_tcp_keepalive_on_compute')
         result = execute(verify_cluster_status)
         if False in result.values():
             print "Unable to setup RabbitMQ cluster in role[%s]...." % role
