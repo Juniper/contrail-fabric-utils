@@ -179,7 +179,18 @@ env.ostypes = {
 #}
 #
 
-# In High Availability setups.
+# In Openstack or Contrail High Availability setups.
+# internal_vip          : Virtual IP of the openstack HA Nodes in the data/control(internal) nerwork,
+#                         all the Openstack services behind this VIP are accessed using this VIP.
+# external_vip          : Virtual IP of the Openstack HA Nodes in the management(external) nerwork,
+#                         Openstack dashboard and novncproxy  services behind this VIP are accessed using this VIP.
+# contrail_internal_vip : Virtual IP of the Contrail HA Nodes in the data/control(internal) nerwork,
+#                         all the Contrail services behind this VIP is accessed using this VIP.
+# contrail_external_vip : Virtual IP of the Contrail HA Nodes in the management(external) nerwork,
+#                         Contrail introspects are are accessed using this VIP.
+# nfs_server            : NFS server to be used to store the glance images.
+# nfs_glance_path       : NFS server image path, which will be mounted on the Openstack Nodes and
+#                         the glance images will be placed/accesed in/from this location.
 #env.ha = {
 #    'internal_vip'   : '1.1.1.100',               #Internal Virtual IP of the openstack HA Nodes.
 #    'external_vip'   : '2.2.2.200',               #External Virtual IP of the openstack HA Nodes.
