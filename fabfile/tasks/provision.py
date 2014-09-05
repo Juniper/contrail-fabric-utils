@@ -951,15 +951,19 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                 if vmware:
                     cmd = cmd + " --vmware %s --vmware_username %s --vmware_passwd %s --vmware_vmpg_vswitch %s" % (vmware_info['esxi']['ip'], vmware_info['esxi']['username'], \
                                 vmware_info['esxi']['password'], vmware_info['vswitch'])
-                internal_vip = get_contrail_internal_vip()
+                internal_vip = get_openstack_internal_vip()
                 if internal_vip:
                     cmd += " --internal_vip %s" % internal_vip
-                    cmd += " --mgmt_self_ip %s" % compute_mgmt_ip
                 external_vip = get_from_testbed_dict('ha', 'external_vip', None)
                 if external_vip:
                     cmd += ' --external_vip %s' % external_vip
                 if manage_nova_compute == 'no':
                     cmd = cmd + "  --no_contrail_openstack"
+                contrail_internal_vip = get_contrail_internal_vip()
+                if contrail_internal_vip:
+                    cmd += " --contrail_internal_vip %s" % contrail_internal_vip
+                if internal_vip or contrail_internal_vip:
+                    cmd += " --mgmt_self_ip %s" % compute_mgmt_ip
                 print cmd
                 run(cmd)
 #end setup_vrouter

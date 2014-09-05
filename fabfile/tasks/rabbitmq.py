@@ -181,6 +181,8 @@ def verify_cluster_status():
     rabbit_nodes = []
     for host_string in env.roledefs['rabbit']:
         with settings(host_string=host_string):
+            if not files.exists("/etc/rabbitmq/rabbitmq.config"):
+                return False
             host_name = run('hostname')
             rabbit_nodes.append('rabbit@%s' % host_name)
     for rabbit_node in rabbit_nodes:
