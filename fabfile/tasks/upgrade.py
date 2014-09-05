@@ -60,7 +60,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                    'downgrade'     : ['supervisor=1:3.0a8-1.2',
                                       'python-contrail'],
 
-                   'backup_files'  : [],
+                   'backup_files'  : ['/etc/contrail/config.global.js'],
                    'remove_files'  : [],
                   },
     'compute'   : {'upgrade'       : ['contrail-openstack-vrouter'],
@@ -78,7 +78,6 @@ UBUNTU_R1_05_TO_R1_11 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
 UBUNTU_R1_06_TO_R1_11 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
 # Upgrade data for upgrade from 1.06 to R1.10
 UBUNTU_R1_06_TO_R1_10 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
-UBUNTU_R1_06_TO_R1_10['webui']['backup_files'].append('/etc/contrail/config.global.js')
 UBUNTU_R1_06_TO_R1_10['compute']['backup_files'].append('/etc/contrail/contrail-vrouter-agent.conf')
 
 # Upgrade data from 1.05 to 1.10(Centos)
