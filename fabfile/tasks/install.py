@@ -549,24 +549,29 @@ def install_webui_packages(source_dir):
     if detect_ostype() in ['Ubuntu']:
         run('cp ' + source_dir + '/contrail-test/scripts/ubuntu_repo/sources.list /etc/apt')
         run('sudo apt-get -y update')
+        run('sudo apt-get install -y xvfb')
         if webui == 'firefox':
             run('sudo apt-get install -y firefox')
+            run('sudo apt-get remove -y firefox')
+            run('wget https://ftp.mozilla.org/pub/mozilla.org/firefox/releases/31.0/linux-x86_64/en-US/firefox-31.0.tar.bz2')
+            run('tar -xjvf firefox-31.0.tar.bz2')
+            run('sudo mv firefox /opt/firefox')
+            run('sudo ln -sf /opt/firefox/firefox /usr/bin/firefox')
         elif webui == 'chrome':
             run('echo "deb http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list')
             run('wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -')
             run('sudo apt-get -y update')
-            run('sudo apt-get -y install unzip')
-            run('wget -c http://chromedriver.storage.googleapis.com/2.10/chromedriver_linux64.zip')
-            run('unzip chromedriver_linux64.zip')
-            run('sudo cp ./chromedriver /usr/bin/')
-            run('sudo chmod ugo+rx /usr/bin/chromedriver')
-            run('sudo apt-get -y install libxpm4 libxrender1 libgtk2.0-0 libnss3 libgconf-2-4')
+            run('sudo apt-get -y install unzip')                                                                             
+            run('wget -c http://chromedriver.storage.googleapis.com/2.10/chromedriver_linux64.zip')                          
+            run('unzip chromedriver_linux64.zip')                                                                            
+            run('sudo cp ./chromedriver /usr/bin/')                                                                          
+            run('sudo chmod ugo+rx /usr/bin/chromedriver')                                                                   
+            run('sudo apt-get -y install libxpm4 libxrender1 libgtk2.0-0 libnss3 libgconf-2-4')                              
             run('sudo apt-get -y install google-chrome-stable')
-        run('sudo apt-get install -y xvfb')
-    elif detect_ostype() in ['centos', 'fedora', 'redhat']:
-        run('yum install -y firefox')
-        run('yum install -y xorg-x11-server-Xvfb')
-#end install_webui_packages
+    elif detect_ostype() in ['centos', 'fedora', 'redhat']:                                                                  
+        run('yum install -y xorg-x11-server-Xvfb')                                                                           
+        run('yum install -y firefox')                                                                                        
+#end install_webui_packages 
 
 @task
 @roles('build')
