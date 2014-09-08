@@ -96,7 +96,7 @@ def config_rabbitmq():
            '__rabbit_hosts__' : rabbit_hosts,
            })
     tmp_fname = "/tmp/rabbitmq_%s.config" % env.host_string
-    cfg_file = open(tmp_fname, 'a')
+    cfg_file = open(tmp_fname, 'w')
     cfg_file.write(rabbitmq_configs)
     cfg_file.close()
     put(tmp_fname, "/etc/rabbitmq/rabbitmq.config")
