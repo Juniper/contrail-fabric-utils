@@ -84,7 +84,7 @@ def all_reimage(build_param="@LATEST"):
             with settings(warn_only=True):
                 if local("/cs-shared/cf/bin/centos.reimage %s %s" %(hostname, build_param)).failed:
                     local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
-        sleep(1)
+        sleep(5)
 #end all_reimage
 
 @roles('compute')
@@ -737,7 +737,7 @@ def reboot_vm(vmid='all', mode='soft'):
         return
 
     print "Rebooting all the VM's"
-    nova_list = run ("source /etc/contrail/openstackrc; nova list")
+    nova_list = run ("source /etc/contrail/openstackrc; nova list --all-tenants")
     nova_list = nova_list.split('\r\n')
     nova_list = nova_list[3:-1]
     for vm_info in nova_list:
@@ -761,9 +761,20 @@ def delete_cassandra_db_files():
 @task
 @roles('build')
 def pre_check():
-    if len(env.roledefs['openstack']) > 1 and not get_from_testbed_dict('ha', 'internal_vip', None):
-        print "keystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
+    if len(env.roledefs['openstack']) > 1 and not get_openstack_internal_vip():
+        print "\nERROR: \n\tkeystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
         exit(1)
+    if (len(env.roledefs['openstack']) > 1 and
+        env.roledefs['openstack'].sort() == env.roledefs['cfgm'].sort() and
+        get_openstack_internal_vip() != get_openstack_internal_vip()):
+        print "\nERROR: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
+        exit(1)
+    if (len(env.roledefs['openstack']) > 1 and
+        env.roledefs['openstack'].sort() != env.roledefs['cfgm'].sort() and
+        get_openstack_internal_vip() == get_openstack_internal_vip()):
+        print "\nERROR: \n\tOpenstack and cfgm nodes are different, Need to specify  contrail_internal_vip testbed.py."
+        exit(1)
+        print "\nERROR: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
 
 def role_to_ip_dict(role=None):
     role_to_ip_dict = {}

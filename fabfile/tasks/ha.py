@@ -5,7 +5,9 @@ from fabfile.templates import openstack_haproxy, collector_haproxy
 from fabfile.tasks.helpers import enable_haproxy
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.host import get_keystone_ip, get_control_host_string,\
-                               hstr_to_ip, get_from_testbed_dict, get_service_token
+                               hstr_to_ip, get_from_testbed_dict, get_service_token,\
+                               get_openstack_internal_vip, get_openstack_external_vip,\
+                               get_contrail_internal_vip, get_contrail_external_vip
 
 @task
 @EXECUTE_TASK
@@ -164,7 +166,7 @@ def setup_galera_cluster():
     galera_ip_list = [hstr_to_ip(galera_host)\
                       for galera_host in openstack_host_list]
     keystone_ip = get_keystone_ip()
-    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+    internal_vip = get_openstack_internal_vip()
 
     with cd(INSTALLER_DIR):
         run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-galera.py\
@@ -174,12 +176,34 @@ def setup_galera_cluster():
                 ' '.join(galera_ip_list), internal_vip,
                 (openstack_host_list.index(self_host) + 1)))
 
+@task
+def setup_keepalived():
+    """Task to provision VIP for openstack/cfgm nodes with keepalived"""
+    if get_openstack_internal_vip():
+        execute('setup_openstack_keepalived')
+    if get_contrail_internal_vip() != get_openstack_internal_vip():
+        execute('setup_contrail_keepalived')
 
 @task
 @serial
 @roles('openstack')
-def setup_keepalived():
+def setup_openstack_keepalived():
     """Task to provision VIP for openstack nodes with keepalived"""
+    enable_haproxy()
+    run("service haproxy restart")
+    setup_keepalived_node('openstack')
+
+@task
+@serial
+@roles('cfgm')
+def setup_contrail_keepalived():
+    """Task to provision VIP for cfgm nodes with keepalived"""
+    enable_haproxy()
+    run("service haproxy restart")
+    setup_keepalived_node('cfgm')
+
+def setup_keepalived_node(role):
+    """Task to provision VIP for node with keepalived"""
     mgmt_ip = hstr_to_ip(env.host_string)
     self_host = get_control_host_string(env.host_string)
     self_ip = hstr_to_ip(self_host)
@@ -190,14 +214,17 @@ def setup_keepalived():
     else:
         openstack_admin_password = 'contrail123'
         
-    internal_vip = get_from_testbed_dict('ha', 'internal_vip', None)
-    external_vip = get_from_testbed_dict('ha', 'external_vip', None)
-    openstack_host_list = [get_control_host_string(openstack_host)\
-                           for openstack_host in env.roledefs['openstack']]
-    myindex = openstack_host_list.index(self_host)
+    internal_vip = get_openstack_internal_vip()
+    external_vip = get_openstack_external_vip()
+    if role == 'cfgm':
+        internal_vip = get_contrail_internal_vip()
+        external_vip = get_contrail_external_vip()
+    keepalived_host_list = [get_control_host_string(keepalived_host)\
+                           for keepalived_host in env.roledefs[role]]
+    myindex = keepalived_host_list.index(self_host)
     if myindex >= 1:
         # Wait for VIP to be assiciated to MASTER
-        with settings(host_string=env.roledefs['openstack'][0], warn_only=True):
+        with settings(host_string=env.roledefs[role][0], warn_only=True):
             while run("ip addr | grep %s" % internal_vip).failed:
                 sleep(2)
                 print "Waiting for VIP to be associated to MASTER VRRP."
@@ -206,9 +233,10 @@ def setup_keepalived():
     with cd(INSTALLER_DIR):
         cmd = "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-keepalived.py\
                --self_ip %s --internal_vip %s --mgmt_self_ip %s\
-               --openstack_index %d --num_nodes %d" % (openstack_host_password,
+               --self_index %d --num_nodes %d --role %s" % (openstack_host_password,
                openstack_admin_password, self_ip, internal_vip, mgmt_ip,
-               (openstack_host_list.index(self_host) + 1), len(env.roledefs['openstack']))
+               (keepalived_host_list.index(self_host) + 1), len(env.roledefs[role]),
+               role)
         if external_vip:
              cmd += ' --external_vip %s' % external_vip
         run(cmd)
@@ -238,22 +266,22 @@ def fixup_restart_haproxy_in_openstack_node(*args):
         mgmt_host_ip = hstr_to_ip(host_string)
         host_ip = hstr_to_ip(get_control_host_string(host_string))
         keystone_server_lines +=\
-            '%s server %s %s:6000 check port 3337 observe layer7 check inter 2000 rise 2 fall 3\n'\
+            '%s server %s %s:6000 check inter 2000 rise 2 fall 1 check port 3337 observe layer7 check port 3306 observe layer4\n'\
              % (space, host_ip, host_ip)
         keystone_admin_server_lines +=\
-            '%s server %s %s:35358 check port 3337 observe layer7 check inter 2000 rise 2 fall 3\n'\
+            '%s server %s %s:35358 check inter 2000 rise 2 fall 1 check port 3337 observe layer7 check port 3306 observe layer4\n'\
              % (space, host_ip, host_ip)
         glance_server_lines +=\
-            '%s server %s %s:9393 check port 3337 observe layer7 check inter 2000 rise 2 fall 3\n'\
+            '%s server %s %s:9393 check inter 2000 rise 2 fall 1 check port 3337 observe layer7 check port 3306 observe layer4\n'\
              % (space, host_ip, host_ip)
         cinder_server_lines +=\
             '%s server %s %s:9776 check inter 2000 rise 2 fall 3\n'\
              % (space, host_ip, host_ip)
         nova_api_server_lines +=\
-            '%s server %s %s:9774 check port 3337 observe layer7 check inter 2000 rise 2 fall 3\n'\
+            '%s server %s %s:9774 check inter 2000 rise 2 fall 1 check port 3337 observe layer7 check port 3306 observe layer4\n'\
              % (space, host_ip, host_ip)
         nova_meta_server_lines +=\
-            '%s server %s %s:9775 check port 3337 observe layer7 check inter 2000 rise 2 fall 3\n'\
+            '%s server %s %s:9775 check inter 2000 rise 2 fall 1 check port 3337 observe layer7 check port 3306 observe layer4\n'\
              % (space, host_ip, host_ip)
         nova_vnc_server_lines  +=\
             '%s server %s %s:6999 check inter 2000 rise 2 fall 3\n'\
@@ -323,7 +351,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
 
 @task
 @EXECUTE_TASK
-@roles('openstack')
+@roles('cfgm')
 def fixup_restart_haproxy_in_collector():
     execute('fixup_restart_haproxy_in_collector_node', env.host_string)
 
@@ -383,10 +411,25 @@ def fix_cmon_param_and_add_keys_to_compute():
         with settings(host_string=host_string, password=env.passwords[host_string]):
             host_name = run('hostname')
         compute_host_list.append(host_name)
+
+    # Get AMQP host list
+    amqp_in_role = 'cfgm'
+    if get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes':
+        amqp_in_role = 'openstack'
+    amqp_host_list = []
+    for host_string in env.roledefs[amqp_in_role]:
+        with settings(host_string=host_string, password=env.passwords[host_string]):
+            host_name = run('hostname')
+        amqp_host_list.append(host_name)
+
     computes = 'COMPUTES=("' + '" "'.join(compute_host_list) + '")'
     run("echo '%s' >> %s" % (computes, cmon_param))
     run("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
     run("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
+    run("echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % cmon_param)
+    amqps = 'DIPHOSTS=("' + '" "'.join(amqp_host_list) + '")'
+    run("echo '%s' >> %s" % (amqps, cmon_param))
+    run("echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % cmon_param)
     id_rsa_pubs = {}
     if files.exists('/root/.ssh'):
         run('chmod 700 /root/.ssh')
@@ -415,21 +458,71 @@ def create_and_copy_service_token():
                 run("echo '%s' > /etc/contrail/service.token" % service_token)
 
 @task
+@hosts(*env.roledefs['openstack'][:1])
+def setup_cmon_schema():
+    """Task to configure cmon schema in the openstack nodes to monitor galera cluster"""
+    if len(env.roledefs['openstack']) <= 1:
+        print "Single Openstack cluster, skipping cmon schema  setup."
+        return
+
+    openstack_host_list = [get_control_host_string(openstack_host)\
+                           for openstack_host in env.roledefs['openstack']]
+    galera_ip_list = [hstr_to_ip(galera_host)\
+                      for galera_host in openstack_host_list]
+    internal_vip = get_openstack_internal_vip()
+
+    mysql_token = run("cat /etc/contrail/mysql.token")
+    pdist = detect_ostype()
+    if pdist in ['Ubuntu']:
+        mysql_svc = 'mysql'
+    elif pdist in ['centos', 'redhat']:
+        mysql_svc = 'mysqld'
+    # Create cmon schema
+    run('mysql -u root -p%s -e "CREATE SCHEMA IF NOT EXISTS cmon"' % mysql_token)
+    run('mysql -u root -p%s < /usr/local/cmon/share/cmon/cmon_db.sql' % mysql_token)
+    run('mysql -u root -p%s < /usr/local/cmon/share/cmon/cmon_data.sql' % mysql_token)
+
+    # insert static data
+    run('mysql -u root -p%s -e "use cmon; insert into cluster(type) VALUES (\'galera\')"' % mysql_token)
+
+    host_list = galera_ip_list + ['localhost', '127.0.0.1', internal_vip]
+    # Create cmon user
+    for host in host_list:
+        mysql_cmon_user_cmd = 'mysql -u root -p%s -e "CREATE USER \'cmon\'@\'%s\' IDENTIFIED BY \'cmon\'"' % (
+                               mysql_token, host)
+        with settings(hide('everything'),warn_only=True):
+            run(mysql_cmon_user_cmd)
+
+    mysql_cmd =  "mysql -uroot -p%s -e" % mysql_token
+    # Grant privilages for cmon user.
+    for host in host_list:
+        run('%s "GRANT ALL PRIVILEGES on *.* TO cmon@%s IDENTIFIED BY \'cmon\' WITH GRANT OPTION"' %
+               (mysql_cmd, host))
+    # Restarting mysql in all openstack nodes
+    for host_string in env.roledefs['openstack']:
+        with settings(host_string=host_string):
+            run("service %s restart" % mysql_svc)
+
+
+@task
 @roles('build')
 def setup_ha():
     execute('pre_check')
-    if get_from_testbed_dict('ha', 'internal_vip', None):
-        print "Multi Openstack setup, provisioning openstack HA."
+
+    if get_contrail_internal_vip():
+        print "Contrail HA setup, provisioning contrail HA."
         execute('setup_keepalived')
+        execute('fixup_restart_haproxy_in_collector')
+
+    if get_openstack_internal_vip():
+        print "Multi Openstack setup, provisioning openstack HA."
         execute('setup_galera_cluster')
         execute('fix_wsrep_cluster_address')
+        execute('setup_cmon_schema')
         execute('fix_restart_xinetd_conf')
         execute('fixup_restart_haproxy_in_openstack')
-        execute('fixup_restart_haproxy_in_collector')
         execute('setup_glance_images_loc')
         execute('fix_memcache_conf')
         execute('tune_tcp')
         execute('fix_cmon_param_and_add_keys_to_compute')
         execute('create_and_copy_service_token')
-
-

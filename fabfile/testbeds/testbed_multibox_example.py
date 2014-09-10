@@ -179,12 +179,25 @@ env.ostypes = {
 #}
 #
 
-# In High Availability setups.
+# In Openstack or Contrail High Availability setups.
+# internal_vip          : Virtual IP of the openstack HA Nodes in the data/control(internal) nerwork,
+#                         all the Openstack services behind this VIP are accessed using this VIP.
+# external_vip          : Virtual IP of the Openstack HA Nodes in the management(external) nerwork,
+#                         Openstack dashboard and novncproxy  services behind this VIP are accessed using this VIP.
+# contrail_internal_vip : Virtual IP of the Contrail HA Nodes in the data/control(internal) nerwork,
+#                         all the Contrail services behind this VIP is accessed using this VIP.
+# contrail_external_vip : Virtual IP of the Contrail HA Nodes in the management(external) nerwork,
+#                         Contrail introspects are are accessed using this VIP.
+# nfs_server            : NFS server to be used to store the glance images.
+# nfs_glance_path       : NFS server image path, which will be mounted on the Openstack Nodes and
+#                         the glance images will be placed/accesed in/from this location.
 #env.ha = {
-#    'internal_vip'   : '1.1.1.1',               #Internal Virtual IP of the HA setup.
-#    'external_vip'   : '2.2.2.2',               #External Virtual IP of the HA setup.
-#    'nfs_server'      : '3.3.3.3',               #IP address of the NFS Server which will be mounted to /var/lib/glance/images of openstack Node, Defaults to env.roledefs['compute'][0]
-#    'nfs_glance_path' : '/var/tmp/images/',      #NFS Server path to save images, Defaults to /var/tmp/glance-images/
+#    'internal_vip'   : '1.1.1.100',               #Internal Virtual IP of the openstack HA Nodes.
+#    'external_vip'   : '2.2.2.200',               #External Virtual IP of the openstack HA Nodes.
+#    'contrail_internal_vip'   : '1.1.1.10',       #Internal Virtual IP of the contrail HA Nodes.
+#    'contrail_external_vip'   : '2.2.2.20',       #External Virtual IP of the contrail HA Nodes.
+#    'nfs_server'      : '3.3.3.3',                #IP address of the NFS Server which will be mounted to /var/lib/glance/images of openstack Node, Defaults to env.roledefs['compute'][0]
+#    'nfs_glance_path' : '/var/tmp/images/',       #NFS Server path to save images, Defaults to /var/tmp/glance-images/
 #}
 
 # In environments where openstack services are deployed independently 
@@ -192,10 +205,14 @@ env.ostypes = {
 # service_token : Common service token for for all services like nova,
 #                 neutron, glance, cinder etc
 # amqp_host     : IP of AMQP Server to be used in openstack
+# manage_amqp   : Default = 'no', if set to 'yes' provision's amqp in openstack nodes and
+#                 openstack services uses the amqp in openstack nodes instead of config nodes.
+#                 amqp_host is neglected if manage_amqp is set
 #
 #env.openstack = {
-#    'service_token' : '33c57636fbc2c5552fd2', 
-#    'amqp_host' : '10.204.217.19',
+#    'service_token' : '33c57636fbc2c5552fd2', #Common service token for for all openstack services
+#    'amqp_host' : '10.204.217.19',            #IP of AMQP Server to be used in openstack
+#    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
 #}
 
 #To enable multi-tenancy feature
