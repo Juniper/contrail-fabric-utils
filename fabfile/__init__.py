@@ -30,6 +30,7 @@ from tasks.rabbitmq import *
 from tasks.ha import *
 from tasks.zookeeper import *
 
+
 # For contrail use
 try:
     from contraillabs.setup import *

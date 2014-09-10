@@ -78,8 +78,8 @@ def verify_compute():
 def remove_startup_files():
     compute = env.host_string
     if compute not in env.roledefs['database']:
-        run("rm /etc/init/supervisor-database.conf")
-        run("rm /etc/contrail/supervisor_database.conf")
+        run("rm /etc/init/supervisord-contrail-database.conf")
+        run("rm /etc/contrail/supervisord_contrail_database.conf")
     if compute not in env.roledefs['collector']:
         run("rm /etc/init/supervisor-analytics.conf")
         run("rm /etc/contrail/supervisord_analytics.conf")

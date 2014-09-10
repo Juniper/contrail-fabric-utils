@@ -36,12 +36,14 @@ Copy one of these files as testbed.py fill in the ip-addresses and root credenti
 On the server running config node:
 
     cd /opt/contrail/utils
-    fab install_rpm_all:/path/to/contrail-install-packages.rpm
+    fab install_pkg_all:/path/to/contrail-install-packages.rpm | /path/to/contrail-install-packages.deb
     
 ### Step 3: Install, Provision and start the services
 The following commands are required on the server running config node:
 
     cd /opt/contrail/utils
+    fab upgrade_kernel_all  #Only in case ofr Ubuntu to upgrade kernal(Optional)
+    <all nodes will reboot>
     fab -c fabrc install_contrail
     <compute nodes will reboot>
     <relogin if config node was also running as compute node>
@@ -72,12 +74,14 @@ Copy one of these files as testbed.py fill in the ip-addresses and root credenti
 On the server running config node:
 
     cd /opt/contrail/utils
-    fab install_rpm_all:/path/to/contrail-install-packages.rpm
+    fab install_pkg_all:/path/to/contrail-install-packages.rpm | /path/to/contrail-install-packages.deb
 
 ### Step 3: Install Packages and fixup testbed.py
 The following commands are required on the server running config node:
 
     cd /opt/contrail/utils
+    fab upgrade_kernel_all  #Only in case ofr Ubuntu to upgrade kernal(Optional)
+    <all nodes will reboot>
     fab -c fabrc install_contrail
     <Compute nodes will reboot>
     <Relogin if config node was also running as compute node>
@@ -112,12 +116,14 @@ Copy one of these files as testbed.py fill in the ip-addresses and root credenti
 On the server running config node:
 
     cd /opt/contrail/utils
-    fab install_rpm_all:/path/to/contrail-install-packages.rpm
+    fab install_pkg_all:/path/to/contrail-install-packages.rpm | /path/to/contrail-install-packages.deb
 
 ### Step 3: Install Packages and fixup testbed.py
 The following commands are required on the server running config node:
 
     cd /opt/contrail/utils
+    fab upgrade_kernel_all  #Only in case ofr Ubuntu to upgrade kernal(Optional)
+    <all nodes will reboot>
     fab -c fabrc install_contrail
     <Compute nodes will reboot>
     <Relogin if config node was also running as compute node>
@@ -146,9 +152,9 @@ A sample testbed definition consisting of a single server is at:
     
 Copy one of these files as testbed.py fill in the ip-addresses and root credentials for the servers.
 
-### Step 2: Copy the new contrail-install-packages.rpm to the server:
+### Step 2: Copy the new contrail-install-packages.rpm | contrail-install-packages.deb to the config node:
 Use SCP to do this
-    yum localinstall contrail-install-packages.rpm
+    yum localinstall contrail-install-packages.rpm | dpkg -i contrail-install-packages.deb
 Run setup script,
     /opt/contrail/contrail_packages/setup.sh
 
@@ -157,14 +163,23 @@ Run setup script,
 The following fab command upgrades the live system:
 
     cd /opt/contrail/utils
-    fab upgrade_contrail:/path/to/contrail-install-packages.rpm
+    fab upgrade_contrail:<base_release>,/path/to/contrail-install-packages.rpm | /path/to/contrail-install-packages.deb
+        <base_release> can be (1.05 or 1.06) in case of ubuntu and (1.05) in case of centos.
 Above fab command will reboot the node; so login again and issue the following command.
     cd /opt/contrail/utils
     fab restart_openstack_compute
 
 ### Step 4: Soft Reboot all the VM's through horizon dashbord.
+    To reboot  all the VM's in all tenants following is the fab task.
+    cd /opt/contrail/utils
+    fab reboot_vm:mode=hard  #Default mode is soft reboot.
 
-Upgrade multinod contrail VNS
+    To reboot any single VM following is the fab task
+    cd /opt/contrail/utils
+    fab reboot_vm:vmid=<uuid of a vm>mode=hard  #Default mode is soft reboot.
+
+
+Upgrade multinode contrail VNS
 ------------------------------
 ### Step 1: Define the testbed.py file; this file will already exists
 if the system is up and running. 
@@ -180,9 +195,9 @@ A sample testbed definition consisting of a single server is at:
 
 Copy one of these files as testbed.py fill in the ip-addresses and root credentials for the servers.
 
-### Step 2: Copy the new contrail-install-packages.rpm to the config node:
+### Step 2: Copy the new contrail-install-packages.rpm | contrail-install-packages.deb to the config node:
 Use SCP to do this
-    yum localinstall contrail-install-packages.rpm
+    yum localinstall contrail-install-packages.rpm | dpkg -i contrail-install-packages.deb
 Run setup script,
     /opt/contrail/contrail_packages/setup.sh
 
@@ -190,9 +205,32 @@ Run setup script,
 The following fab command upgrades the live system, should be run from the config node.:
 
     cd /opt/contrail/utils
-    fab upgrade_contrail:/path/to/contrail-install-packages.rpm
+    fab upgrade_contrail:<base_release>,/path/to/contrail-install-packages.rpm | /path/to/contrail-install-packages.deb
+        <base_release> can be (1.05 or 1.06) in case of ubuntu and (1.05) in case of centos.
 
 ### Step 4: Soft Reboot all the VM's through horizon dashbord.
+    To reboot  all the VM's in all tenants following is the fab task.
+    cd /opt/contrail/utils
+    fab reboot_vm:mode=hard  #Default mode is soft reboot.
+
+    To reboot any single VM following is the fab task
+    cd /opt/contrail/utils
+    fab reboot_vm:vmid=<uuid of a vm>mode=hard  #Default mode is soft reboot.
+
+
+Adding a new compute node to existing cluster
+---------------------------------------------
+    Add all the irequired infromation about the new nodes to testbed.py
+    cd /opt/contrail/utils
+    fab install_pkg_node:/path/to/contrail-install-packages.rpm | /path/to/contrail-install-packages.deb,<user@newnode1ip>,<user@newnode2ip>
+    fab add_vrouter_node:<user@newnode1ip>,<user@newnode2ip>
+
+
+Removing an existing compute node from  existing cluster
+--------------------------------------------------------
+    cd /opt/contrail/utils
+    fab detach_vrouter_node:<user@oldnode1ip>,<user@oldnode2ip>
+    Remove the infromation about the detached nodes from testbed.py
 
 Advanced Information
 --------------------
@@ -219,6 +257,7 @@ Invoke `fab list` to see the list of all tasks and a brief description. The comp
 
     install_and_setup_all
         install_contrail
+            pre_check
             create_install_repo
             install_database
             install_openstack
@@ -228,20 +267,38 @@ Invoke `fab list` to see the list of all tasks and a brief description. The comp
             install_webui
             install_vrouter
             upgrade_pkgs
+            update_keystone_log
             install_interface_name [if env.interface_rename is True]
                 => This task will reboot the compute nodes
+
         setup_all
+            setup_ha
+            setup_rabbitmq_cluster
+            increase_limits
+            increase_ulimits
             setup_database
+            verify_database
             setup_openstack
+            if Openstack HA setup,
+                sync_keystone_ssl_certs
+                setup_cluster_monitors
             setup_cfgm
+            verify_cfgm
             setup_control
+            verify_control
             setup_collector
+            verify_collector
             setup_webui
+            verify_webui
             setup_vrouter
             prov_control_bgp
             prov_external_bgp
+            prov_metadata_services
+            prov_encap_type
+            setup_remote_syslog
             compute_reboot
                 => This task will reboot the compute nodes
+            verify_compute
 
 
     The composition of tasks related to storage are as below:

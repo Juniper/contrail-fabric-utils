@@ -2,11 +2,10 @@ import os
 import re
 import copy
 import tempfile
-from time import sleep
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
-from fabfile.utils.host import get_from_testbed_dict
+from fabfile.utils.host import get_from_testbed_dict, get_openstack_internal_vip
 from fabfile.tasks.helpers import reboot_node
 
 @task
@@ -237,7 +236,7 @@ def install_openstack_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack']
-            if len(env.roledefs['openstack']) > 1 and get_from_testbed_dict('ha', 'internal_vip', None):
+            if len(env.roledefs['openstack']) > 1 and get_openstack_internal_vip():
                 pkg.append('contrail-openstack-ha')
             if detect_ostype() == 'Ubuntu':
                 apt_install(pkg)
@@ -352,7 +351,7 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
         ostype = detect_ostype()
         with  settings(host_string=host_string):
             pkg = ['contrail-openstack-vrouter']
-            if (manage_nova_compute == 'no' and ostype in ['centos', 'redhat']):
+            if (manage_nova_compute == 'no' and ostype in ['centos']):
                 pkg = ['contrail-vrouter',
                        'abrt',
                        #'openstack-nova-compute',
@@ -449,7 +448,6 @@ def install_without_openstack(manage_nova_compute='yes'):
     execute(install_webui)
     execute('install_vrouter', manage_nova_compute)
     execute(upgrade_pkgs_without_openstack)
-    sleep(20)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name)

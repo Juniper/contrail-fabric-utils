@@ -71,8 +71,15 @@ def start_collector():
 @task
 @roles('control')
 def stop_control():
-    """stops the contrail control services."""
-    run('service supervisor-control stop')
+    """Stops the contrail control services."""
+    execute('stop_control_node', env.host_string)
+
+@task
+def stop_control_node(*args):
+    """Stops the contrail control services in once control node. USAGE:fab stop_control_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        with  settings(host_string=host_string):
+            run('service supervisor-control stop')
 
 @task
 @roles('collector')
