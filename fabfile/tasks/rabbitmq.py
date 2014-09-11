@@ -235,7 +235,8 @@ def setup_rabbitmq_cluster(force=False):
         #execute("rabbitmqctl_start_app_node", env.roledefs['rabbit'][0])
         #execute(add_node_to_rabbitmq_cluster)
         #execute(rabbitmqctl_start_app)
-        if get_openstack_internal_vip():
+        if (role is 'openstack' and get_openstack_internal_vip() or
+            role is 'cfgm' and get_contrail_internal_vip()):
             execute('set_ha_policy_in_rabbitmq')
             execute('set_tcp_keepalive')
             execute('set_tcp_keepalive_on_compute')
