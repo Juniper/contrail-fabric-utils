@@ -248,14 +248,17 @@ def control_status():
 @roles('compute')
 @task
 def compute_status():
-    run("service openstack-nova-compute status")
-    run("service contrail-vrouter status")
+    nova_compute = "openstack-nova-compute"
+    if detect_ostype() in ['Ubuntu']:
+        nova_compute = "nova-compute"
+    run("service %s status" % nova_compute)
+    run("service contrail-vrouter-agent status")
 #end compute_status
 
 @roles('compute')
 @task
 def agent_restart():
-    run("service contrail-vrouter restart")
+    run("service contrail-vrouter-agent restart")
 #end agent_restart
 
 @roles('cfgm')
