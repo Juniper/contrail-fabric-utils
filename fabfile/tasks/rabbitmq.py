@@ -5,7 +5,8 @@ from fabfile.config import *
 from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.host import get_from_testbed_dict, get_control_host_string,\
-                               hstr_to_ip, get_openstack_internal_vip
+                               hstr_to_ip, get_openstack_internal_vip,\
+                               get_contrail_internal_vip
 
 
 def verfiy_and_update_hosts(host_name, host_string):
