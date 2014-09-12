@@ -5,7 +5,8 @@ from fabfile.config import *
 from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.host import get_from_testbed_dict, get_control_host_string,\
-                               hstr_to_ip, get_openstack_internal_vip
+                               hstr_to_ip, get_openstack_internal_vip,\
+                               get_contrail_internal_vip
 
 
 def verfiy_and_update_hosts(host_name, host_string):
@@ -235,7 +236,8 @@ def setup_rabbitmq_cluster(force=False):
         #execute("rabbitmqctl_start_app_node", env.roledefs['rabbit'][0])
         #execute(add_node_to_rabbitmq_cluster)
         #execute(rabbitmqctl_start_app)
-        if get_openstack_internal_vip():
+        if (role is 'openstack' and get_openstack_internal_vip() or
+            role is 'cfgm' and get_contrail_internal_vip()):
             execute('set_ha_policy_in_rabbitmq')
             execute('set_tcp_keepalive')
             execute('set_tcp_keepalive_on_compute')
