@@ -364,7 +364,7 @@ verify_on_setup=$__test_verify_on_setup__
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
                 if detect_ostype() in ['centos']:
-                    run("yum -y --disablerepo=* --enablerepo=contrail_install_repo install tcpdump")
+                    run("yum -y --disablerepo=* --enablerepo=contrail_install_repo --enablerepo=contrail_thirdparty_repo install tcpdump")
 #end setup_test_env
 
 def get_remote_path(path):

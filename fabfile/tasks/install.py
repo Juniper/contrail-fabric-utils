@@ -43,7 +43,7 @@ def install_pkg_node(pkg, *args):
     """Installs any rpm/deb in one node."""
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            build = get_build()
+            build = get_build(pkg)
             if build and build in pkg:
                 print "Package %s already installed in the node(%s)." % (pkg, host_string)
                 continue
@@ -165,7 +165,7 @@ def upgrade_pkgs_node(*args):
                 run(cmd)
 
 def yum_install(rpms):
-    cmd = "yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo install "
+    cmd = "yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo --enablerepo=contrail_thirdparty_repo install "
     if detect_ostype() in ['centos', 'fedora', 'redhat']:
         for rpm in rpms:
             run(cmd + rpm)
@@ -412,6 +412,7 @@ def create_install_repo_node(*args):
                 print "Contrail install repo created already in node: %s." % host_string
                 continue
             run("sudo /opt/contrail/contrail_packages/setup.sh")
+            run("sudo /opt/contrail/contrail_packages/thirdparty_setup.sh")
 
 @roles('build')
 @task
