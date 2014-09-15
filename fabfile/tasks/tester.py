@@ -265,6 +265,8 @@ verify_on_setup=$__test_verify_on_setup__
     # get host ipmi list
     if env.has_key('hosts_ipmi') :
         sanity_testbed_dict['hosts_ipmi'].append(env.hosts_ipmi)
+        ipmi_username = getattr(testbed,'ipmi_username',None)
+        ipmi_password = getattr(testbed,'ipmi_password',None)
 
     # for every host_string
 
@@ -331,6 +333,8 @@ verify_on_setup=$__test_verify_on_setup__
              '__http_proxy__': env.get('http_proxy'),
              '__test_verify_on_setup__': test_verify_on_setup,
              '__ha_setup__': getattr(testbed, 'ha_setup', None),
+             '__ipmi_username__': ipmi_username,
+             '__ipmi_password__': ipmi_password,
             })
         
         fd, fname = tempfile.mkstemp()
