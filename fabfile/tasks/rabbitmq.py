@@ -86,7 +86,7 @@ def config_rabbitmq():
     rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
     for host_string in env.roledefs['rabbit']:
         with settings(host_string=host_string, password=env.passwords[host_string]):
-            host_name = run('hostname')
+            host_name = run('hostname -s')
         rabbit_hosts.append("\'rabbit@%s\'" % host_name)
     rabbit_hosts = ', '.join(rabbit_hosts)
     rabbitmq_config_template = rabbitmq_config
@@ -184,7 +184,7 @@ def verify_cluster_status():
         with settings(host_string=host_string):
             if not files.exists("/etc/rabbitmq/rabbitmq.config"):
                 return False
-            host_name = run('hostname')
+            host_name = run('hostname -s')
             rabbit_nodes.append('rabbit@%s' % host_name)
     for rabbit_node in rabbit_nodes:
         if rabbit_node not in clustered_nodes:
