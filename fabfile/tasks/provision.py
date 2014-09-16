@@ -458,6 +458,216 @@ def setup_cfgm_node(*args):
 #end setup_cfgm_node
 
 @task
+@roles('compute')
+def setup_ceilometer_compute():
+    """Provisions ceilometer compute services in all nodes defined in compute role."""
+    if env.roledefs['compute']:
+        execute("setup_ceilometer_compute_node", env.host_string)
+
+@task
+def setup_ceilometer_compute_node(*args):
+    """Provisions ceilometer compute services in one or list of nodes. USAGE: fab setup_ceilometer_compute_node:user@1.1.1.1,user@2.2.2.2"""
+    amqp_server_ip = get_openstack_amqp_server()
+    openstack_host = get_control_host_string(env.roledefs['openstack'][0])
+    openstack_ip = hstr_to_ip(openstack_host)
+    for host_string in args:
+        with  settings(host_string=host_string):
+            with settings(warn_only=True):
+                compute_ceilometer_present = run("grep '^instance_usage_audit =' /etc/nova/nova.conf").succeeded
+            if not compute_ceilometer_present:
+                run("sed -i -e '/\[DEFAULT\]/a %s' /etc/nova/nova.conf" %('notification_driver = ceilometer.compute.nova_notifier'))
+                run("sed -i -e '/\[DEFAULT\]/a %s' /etc/nova/nova.conf" %('notification_driver = nova.openstack.common.notifier.rpc_notifier'))
+                run("sed -i -e '/\[DEFAULT\]/a %s' /etc/nova/nova.conf" %('notify_on_state_change = vm_and_task_state'))
+                run("sed -i -e '/\[DEFAULT\]/a %s' /etc/nova/nova.conf" %('instance_usage_audit_period = hour'))
+                run("sed -i -e '/\[DEFAULT\]/a %s' /etc/nova/nova.conf" %('instance_usage_audit = True'))
+            run("service nova-compute restart")
+
+            if host_string != openstack_host:
+                #ceilometer.conf updates
+                new_line = "rabbit_host=" + amqp_server_ip
+                run("sed -i -e 's/^#rabbit_host=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                new_line = "log_dir=\/var\/log\/ceilometer"
+                run("sed -i -e 's/^#log_dir=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                new_line = "metering_secret=a74ca26452848001921c"
+                run("sed -i -e 's/^#metering_secret=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                new_line = "auth_strategy=keystone"
+                run("sed -i -e 's/^#auth_strategy=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                with settings(warn_only=True):
+                    authtoken_config = run("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
+                if not authtoken_config:
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_password = CEILOMETER_PASS'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_user = ceilometer'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_tenant_name = service'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_uri = http://'+self_ip+':5000'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_protocol = http'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_port = 35357'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_host = ' + self_ip))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_password = CEILOMETER_PASS'))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_tenant_name = service'))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_username = ceilometer'))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_auth_url = http://'+self_ip+':5000/v2.0'))
+
+            run("service ceilometer-agent-compute restart")
+
+@task
+@roles('openstack')
+def setup_ceilometer():
+    """Provisions ceilometer services in all nodes defined in openstack role."""
+    if env.roledefs['openstack'] and env.host_string == env.roledefs['openstack'][0]:
+        execute("setup_ceilometer_node", env.host_string)
+
+    execute("setup_image_service_node", env.host_string)
+
+@task
+def setup_ceilometer_node(*args):
+    """Provisions ceilometer services in one or list of nodes. USAGE: fab setup_ceilometer_node:user@1.1.1.1,user@2.2.2.2"""
+    amqp_server_ip = get_openstack_amqp_server()
+    for host_string in args:
+        self_host = get_control_host_string(host_string)
+        self_ip = hstr_to_ip(self_host)
+
+        with  settings(host_string=host_string):
+
+            output = run("dpkg-query --show nova-api")
+            if output.find('2013.2') != -1:
+                openstack_sku = 'havana'
+            elif output.find('2014.1') != -1:
+                openstack_sku = 'icehouse'
+            else:
+                print "setup_ceilometer_node: openstack dist unknown.. assuming icehouse.."
+                openstack_sku = 'icehouse'
+
+            if openstack_sku == 'havana':
+                with settings(warn_only=True):
+                    cmd = "mongo --host " + self_ip + " --eval 'db = db.getSiblingDB(\"ceilometer\"); db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", roles: [ \"readWrite\", \"dbAdmin\" ]})'"
+                    run(cmd);
+
+                new_line = "connection=mongodb:\/\/ceilometer:CEILOMETER_DBPASS@" + self_ip + ":27017\/ceilometer"
+                run("sed -i -e 's/^connection=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                new_line = "rabbit_host=" + amqp_server_ip
+                run("sed -i -e 's/^#rabbit_host=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                new_line = "log_dir=\/var\/log\/ceilometer"
+                run("sed -i -e 's/^#log_dir=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                new_line = "metering_secret=a74ca26452848001921c"
+                run("sed -i -e 's/^#metering_secret=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                #keystone auth params
+                with settings(warn_only=True):
+                    ceilometer_user_exists = run("source /etc/contrail/openstackrc;keystone user-list | grep ceilometer").succeeded
+                if not ceilometer_user_exists:
+                    run("source /etc/contrail/openstackrc;keystone user-create --name=ceilometer --pass=CEILOMETER_PASS --tenant=service --email=ceilometer@example.com")
+                    run("source /etc/contrail/openstackrc;keystone user-role-add --user=ceilometer --tenant=service --role=admin")
+
+                new_line = "auth_strategy=keystone"
+                run("sed -i -e 's/^#auth_strategy=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                with settings(warn_only=True):
+                    authtoken_config = run("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
+                if not authtoken_config:
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_password = CEILOMETER_PASS'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_user = ceilometer'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_tenant_name = service'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_uri = http://'+self_ip+':5000'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_protocol = http'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_port = 35357'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_host = ' + self_ip))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_password = CEILOMETER_PASS'))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_tenant_name = service'))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_username = ceilometer'))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_auth_url = http://'+self_ip+':5000/v2.0'))
+
+                #create keystone service and endpoint
+                with settings(warn_only=True):
+                    ceilometer_service_exists = run("source /etc/contrail/openstackrc;keystone service-list | grep ceilometer").succeeded
+                if not ceilometer_service_exists:
+                    run("source /etc/contrail/openstackrc;keystone service-create --name=ceilometer --type=metering --description=\"Telemetry\"")
+                    run("source /etc/contrail/openstackrc;keystone endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777" %(self_ip, self_ip, self_ip))
+                for svc in ['ceilometer-agent-central',
+                            'ceilometer-api',
+                            'ceilometer-collector']:
+                    run("service %s restart" %(svc))
+            else:
+                with settings(warn_only=True):
+                    cmd = "mongo --host " + self_ip + " --eval 'db = db.getSiblingDB(\"ceilometer\"); db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", roles: [ \"readWrite\", \"dbAdmin\" ]})'"
+                    run(cmd);
+                new_line = "connection=mongodb:\/\/ceilometer:CEILOMETER_DBPASS@" + self_ip + ":27017\/ceilometer"
+                run("sed -i -e 's/^connection=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                new_line = "rabbit_host=" + amqp_server_ip
+                run("sed -i -e 's/^#rabbit_host=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                new_line = "log_dir=\/var\/log\/ceilometer"
+                run("sed -i -e 's/^#log_dir=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                new_line = "metering_secret=a74ca26452848001921c"
+                run("sed -i -e 's/^#metering_secret=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                #keystone auth params
+                with settings(warn_only=True):
+                    ceilometer_user_exists = run("source /etc/contrail/openstackrc;keystone user-list | grep ceilometer").succeeded
+                if not ceilometer_user_exists:
+                    run("source /etc/contrail/openstackrc;keystone user-create --name=ceilometer --pass=CEILOMETER_PASS --tenant=service --email=ceilometer@example.com")
+                    run("source /etc/contrail/openstackrc;keystone user-role-add --user=ceilometer --tenant=service --role=admin")
+                new_line = "auth_strategy=keystone"
+                run("sed -i -e 's/^#auth_strategy=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                with settings(warn_only=True):
+                    authtoken_config = run("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
+                if not authtoken_config:
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_password = CEILOMETER_PASS'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_user = ceilometer'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_tenant_name = service'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_uri = http://'+self_ip+':5000'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_protocol = http'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_port = 35357'))
+                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_host = ' + self_ip))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_password = CEILOMETER_PASS'))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_tenant_name = service'))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_username = ceilometer'))
+                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_auth_url = http://'+self_ip+':5000/v2.0'))
+                #create keystone service and endpoint
+                with settings(warn_only=True):
+                    ceilometer_service_exists = run("source /etc/contrail/openstackrc;keystone service-list | grep ceilometer").succeeded
+                if not ceilometer_service_exists:
+                    run("source /etc/contrail/openstackrc;keystone service-create --name=ceilometer --type=metering --description=\"Telemetry\"")
+                    run("source /etc/contrail/openstackrc;keystone endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777" %(self_ip, self_ip, self_ip))
+                for svc in ['ceilometer-agent-central',
+                            'ceilometer-agent-notification',
+                            'ceilometer-api',
+                            'ceilometer-collector',
+                            'ceilometer-alarm-evaluator',
+                            'ceilometer-alarm-notifier']:
+                    run("service %s restart" %(svc))
+#end setup_ceilometer_node
+
+@task
+def setup_image_service_node(*args):
+    """Provisions image services in one or list of nodes. USAGE: fab setup_image_service_node:user@1.1.1.1,user@2.2.2.2"""
+    amqp_server_ip = get_openstack_amqp_server()
+    for host_string in args:
+        output = run("dpkg-query --show nova-api")
+        if output.find('2013.2') != -1:
+            openstack_sku = 'havana'
+        elif output.find('2014.1') != -1:
+            openstack_sku = 'icehouse'
+        else:
+            print "setup_ceilometer_node: openstack dist unknown.. assuming icehouse.."
+            openstack_sku = 'icehouse'
+
+        if openstack_sku == 'havana':
+            run("sed -i -e '/Notification System Options/a %s\n%s\n' /etc/glance/glance-api.conf" \
+                       %('notification_driver = messaging', 'rpc_backend = rabbit'))
+            new_line = 'notifier_strategy = rabbit'
+            run("sed -i -e 's/^notifier_strategy =.*/%s/' /etc/glance/glance-api.conf" %(new_line))
+            new_line = 'rabbit_host = ' + amqp_server_ip
+            run("sed -i -e 's/^rabbit_host =.*/%s/' /etc/glance/glance-api.conf" %(new_line))
+            run("sed -i -e 's/^rabbit_userid =.*/#rabbit_userid = guest/' /etc/glance/glance-api.conf")
+            run("sed -i -e 's/^rabbit_password =.*/#rabbit_password = guest/' /etc/glance/glance-api.conf")
+            run("service glance-registry restart")
+            run("service glance-api restart")
+        else:
+            run("sed -i -e '/Notification System Options/a %s\n%s\n' /etc/glance/glance-api.conf" \
+                       %('notification_driver = messaging', 'rpc_backend = rabbit'))
+            new_line = 'rabbit_host = ' + amqp_server_ip
+            run("sed -i -e 's/^rabbit_host =.*/%s/' /etc/glance/glance-api.conf" %(new_line))
+            run("sed -i -e 's/^rabbit_password =.*/#rabbit_password = guest/' /etc/glance/glance-api.conf")
+            run("service glance-registry restart")
+            run("service glance-api restart")
+
+@task
 @roles('openstack')
 def setup_openstack():
     """Provisions openstack services in all nodes defined in openstack role."""
