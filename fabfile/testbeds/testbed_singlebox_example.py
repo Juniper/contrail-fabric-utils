@@ -3,6 +3,10 @@ from fabric.api import env
 #Management ip addresses of hosts in the cluster
 host1 = 'root@1.1.1.1'
 
+#Optional,Backup Host configuration if it is not available then it will put in localhost
+#backup_node = 'root@2.2.2.2'
+
+
 #External routers if any
 #for eg. 
 #ext_routers = [('mx1', '10.204.216.253')]
@@ -13,6 +17,7 @@ router_asn = 64512
 
 #Host from which the fab commands are triggered to install and provision
 host_build = 'root@1.1.1.1'
+
 
 #Role definition of the hosts.
 env.roledefs = {
@@ -27,6 +32,7 @@ env.roledefs = {
     'build': [host_build],
     'storage-master': [host1],
     'storage-compute': [host1],
+ #   'backup':[backup_node],  # only if the backup_node is defined
 }
 
 #Openstack admin password
@@ -41,7 +47,7 @@ env.password = 'secret'
 #Passwords of each host
 env.passwords = {
     host1: 'secret',
-
+  #  backup_node: 'secret',
     host_build: 'secret',
 }
 
@@ -49,6 +55,21 @@ env.passwords = {
 env.ostypes = {
     host1:'centos',
 }
+
+
+# INFORMATION FOR DB BACKUP/RESTORE ..
+#=======================================================
+# Optional, Local/Remote location of backup_data path 
+# if it is not passed it will use default path 
+#backup_db_path= ['/home/','/root/']
+#cassandra backup can be defined either "full" or "custom"  
+#full -> take complete snapshot of cassandra DB 
+#custom -> take snapshot except defined in skip_keyspace 
+#cassandra_backup='custom'  [ MUST OPTION] 
+#skip_keyspace=["ContrailAnalytics"]  IF cassandra_backup is selected as custom
+#service token need to define to do  restore of  backup data
+#service_token = '53468cf7552bbdc3b94f'
+
 
 #OPTIONAL ANALYTICS CONFIGURATION
 #================================

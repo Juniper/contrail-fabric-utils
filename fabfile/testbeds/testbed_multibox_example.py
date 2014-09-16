@@ -11,6 +11,9 @@ host7 = 'root@1.1.1.7'
 host8 = 'root@1.1.1.8'
 host9 = 'root@1.1.1.9'
 host10 = 'root@1.1.1.10'
+#Optional,Backup Host configuration if it is not available then it will put in localhost
+#backup_node = 'root@2.2.2.2'
+
 
 #External routers if any
 #for eg. 
@@ -22,6 +25,7 @@ router_asn = 64512
 
 #Host from which the fab commands are triggered to install and provision
 host_build = 'root@1.1.1.1'
+
 
 #Role definition of the hosts.
 env.roledefs = {
@@ -36,10 +40,11 @@ env.roledefs = {
     'build': [host_build],
     'storage-master': [host1],
     'storage-compute': [host4, host5, host6, host7, host8, host9, host10],
+    #   'backup':[backup_node],  # only if the backup_node is defined
 }
 
 env.hostnames = {
-    'all': ['a0s1', 'a0s2', 'a0s3','a0s4', 'a0s5', 'a0s6', 'a0s7', 'a0s8', 'a0s9', 'a0s10']
+    'all': ['a0s1', 'a0s2', 'a0s3','a0s4', 'a0s5', 'a0s6', 'a0s7', 'a0s8', 'a0s9', 'a0s10','backup_node']
 }
 
 #Openstack admin password
@@ -58,7 +63,7 @@ env.passwords = {
     host8: 'secret',
     host9: 'secret',
     host10: 'secret',
-
+    #  backup_node: 'secret',
     host_build: 'secret',
 }
 
@@ -75,6 +80,23 @@ env.ostypes = {
     host9: 'centos',
     host10: 'centos',
 }
+
+
+# INFORMATION FOR DB BACKUP/RESTORE ..
+#=======================================================
+# Optional, Local/Remote location of backup_data path
+# if it is not passed then it will use default path
+#backup_db_path= ['/home/','/root/']
+#cassandra backup can be defined either "full" or "custom"
+#full -> take complete snapshot of cassandra DB
+#custom -> take snapshot except defined in skip_keyspace
+#cassandra_backup='custom'  [ MUST OPTION]
+#skip_keyspace=["ContrailAnalytics"]  IF cassandra_backup is selected as custom
+#service token need to define to do  restore of backup data
+#service_token = '53468cf7552bbdc3b94f'
+
+
+
 
 #OPTIONAL ANALYTICS CONFIGURATION
 #================================
