@@ -331,6 +331,8 @@ verify_on_setup=$__test_verify_on_setup__
              '__http_proxy__': env.get('http_proxy'),
              '__test_verify_on_setup__': test_verify_on_setup,
              '__ha_setup__': getattr(testbed, 'ha_setup', None),
+             '__ipmi_username__': getattr(testbed,'ipmi_username',None),
+             '__ipmi_password__': getattr(testbed,'ipmi_password',None)
             })
         
         fd, fname = tempfile.mkstemp()
