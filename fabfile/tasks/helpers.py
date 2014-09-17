@@ -84,6 +84,38 @@ def all_reimage(build_param="@LATEST"):
         sleep(1)
 #end all_reimage
 
+@roles('build')
+@task
+def all_sm_reimage(build_param=None):
+    for host in env.roledefs["all"]:
+        for i in range(5):
+            try:
+                hostname = socket.gethostbyaddr(hstr_to_ip(host))[0].split('.')[0]
+            except socket.herror:
+                sleep(5)
+                continue
+            else:
+                break
+        if build_param is not None:
+            with settings(warn_only=True):
+                local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (hostname,build_param))
+        else:
+
+            if 'ostypes' in env.keys():
+                if 'ubuntu' in env.ostypes[host]:
+                    with settings(warn_only=True):
+                        local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s ubuntu-12.04.3" % (hostname))
+                else:
+                    # CentOS
+                    with settings(warn_only=True):
+                        local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
+            else:
+                # CentOS
+                with settings(warn_only=True):
+                    local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
+            sleep(1)
+#end all_sm_reimage
+
 @roles('compute')
 @task
 def contrail_version():
