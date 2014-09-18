@@ -6,6 +6,52 @@ from fabfile.utils.host import *
 from fabfile.config import *
 from fabfile.tasks.helpers import insert_line_to_file
 
+# upgrade schema
+UPGRADE_SCHEMA = {
+    'openstack' : {'upgrade' : ['contrail-openstack'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : [],
+                   'remove_files' : [],
+                  },
+    'database' : {'upgrade' : ['contrail-openstack-database'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : [],
+                   'remove_files' : [],
+                  },
+    'cfgm' : {'upgrade' : ['contrail-openstack-config'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : [],
+                   'remove_files' : [],
+                  },
+    'collector' : {'upgrade' : ['contrail-openstack-analytics'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : [],
+                   'remove_files' : [],
+                  },
+    'control' : {'upgrade' : ['contrail-openstack-control'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : [],
+                   'remove_files' : [],
+                  },
+    'webui' : {'upgrade' : ['contrail-openstack-webui'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : [],
+                   'remove_files' : [],
+                  },
+    'compute' : {'upgrade' : ['contrail-openstack-vrouter'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : [],
+                   'remove_files' : [],
+                  },
+}
+
 # Upgrade data from 1.05 to 1.10
 UBUNTU_R1_05_TO_R1_10 = {
     'openstack' : {'upgrade'       : ['contrail-openstack'],
@@ -72,13 +118,12 @@ UBUNTU_R1_05_TO_R1_10 = {
                   },
 }
 
-# Upgrade data for upgrade from 1.05 to 1.11 mainline
-UBUNTU_R1_05_TO_R1_11 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
-# Upgrade data for upgrade from 1.06 to 1.11 mainline
-UBUNTU_R1_06_TO_R1_11 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
 # Upgrade data for upgrade from 1.06 to R1.10
 UBUNTU_R1_06_TO_R1_10 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
 UBUNTU_R1_06_TO_R1_10['compute']['backup_files'].append('/etc/contrail/contrail-vrouter-agent.conf')
+# In Release upgrade
+UBUNTU_R1_10_TO_R1_10 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_10_TO_R1_11 = copy.deepcopy(UPGRADE_SCHEMA)
 
 # Upgrade data from 1.05 to 1.10(Centos)
 CENTOS_R1_05_TO_R1_10 = {
@@ -257,6 +302,9 @@ CENTOS_R1_05_TO_R1_10 = {
 # Add contrail-interface-name to upgrade list if interface rename enabled.
 if getattr(env, 'interface_rename', True):
     CENTOS_R1_05_TO_R1_10['compute']['upgrade'].append('contrail-interface-name')
+# In Release upgrade
+CENTOS_R1_10_TO_R1_10 = copy.deepcopy(UPGRADE_SCHEMA)
+CENTOS_R1_10_TO_R1_11 = copy.deepcopy(UPGRADE_SCHEMA)
 
 @task
 @EXECUTE_TASK
@@ -526,7 +574,6 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             amqp_server_ip = get_openstack_amqp_server()
             run("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" % amqp_server_ip)
             run("openstack-config --set /etc/glance/glance-api.conf DEFAULT rabbit_host %s" % amqp_server_ip)
-            run("openstack-config --set /etc/neutron/neutron.conf DEFAULT rabbit_host %s" % amqp_server_ip)
             execute('restart_openstack_node', host_string)
 
 @task
