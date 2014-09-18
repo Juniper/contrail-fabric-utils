@@ -5,6 +5,7 @@ host2 = 'root@10.84.13.33'
 host3 = 'root@10.84.13.38'
 host4 = 'root@10.84.13.19'
 host5 = 'root@10.84.13.22'
+host6 = 'root@10.84.13.44'
 
 ext_routers = []
 router_asn = 64512
@@ -14,10 +15,10 @@ router_asn = 64512
 host_build = 'stack@10.84.24.64'
 
 env.roledefs = {
-    'all': [host1, host2, host3, host4, host5],
+    'all': [host1, host2, host3, host4, host5, host6],
     'cfgm': [host1, host2],
-    'openstack': [host2],
-    'control': [host2, host3],
+    'openstack': [host6],
+    'control': [host1, host3],
     'compute': [host4, host5],
     'collector': [host1],
     'webui': [host1],
@@ -26,7 +27,7 @@ env.roledefs = {
 }
 
 env.hostnames = {
-    'all': ['a6s32', 'a6s33', 'a6s38', 'a6s19', 'a6s22']
+    'all': ['a6s32', 'a6s33', 'a6s38', 'a6s19', 'a6s22', 'a6s44']
 }
 
 env.password = 'c0ntrail123'
@@ -36,6 +37,7 @@ env.passwords = {
     host3: 'c0ntrail123',
     host4: 'c0ntrail123',
     host5: 'c0ntrail123',
+    host6: 'c0ntrail123',
 
     host_build: 'contrail123',
 }
@@ -46,6 +48,7 @@ env.ostypes = {
     host3:'ubuntu',
     host4:'ubuntu',
     host5:'ubuntu',
+    host6:'ubuntu',
 }
 control_data= {
 
@@ -54,6 +57,8 @@ control_data= {
     host3 : { 'ip': '192.168.10.3/24', 'gw' : '192.168.10.254', 'device':'eth0' },
     host4 : { 'ip': '192.168.10.4/24', 'gw' : '192.168.10.254', 'device':'eth0' },
     host5 : { 'ip': '192.168.10.5/24', 'gw' : '192.168.10.254', 'device':'eth0' },
+    host6 : { 'ip': '192.168.10.6/24', 'gw' : '192.168.10.254', 'device':'eth0' },
+
 }
 
 env.test_repo_dir="/home/stack/ubuntu_sanity/contrail-test"
