@@ -224,6 +224,67 @@ def install_database_node(*args):
 
 @task
 @EXECUTE_TASK
+@roles('compute')
+def install_ceilometer_compute():
+    """Installs ceilometer compute pkgs in all nodes defined in compute role."""
+    if env.roledefs['compute']:
+        execute("install_ceilometer_compute_node", env.host_string)
+
+@task
+def install_ceilometer_compute_node(*args):
+    """Installs ceilometer compute pkgs in one or list of nodes. USAGE:fab install_ceilometer_compute_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        with settings(host_string=host_string):
+            pkg = ['ceilometer-agent-compute']
+            act_os_type = detect_ostype()
+            if act_os_type == 'Ubuntu':
+                apt_install(pkg)
+            else:
+                raise RuntimeError('Actual OS Type (%s) != Expected OS Type (%s)'
+                                    'Aborting!' % (act_os_type, 'Ubuntu'))
+
+@task
+@EXECUTE_TASK
+@roles('openstack')
+def install_ceilometer():
+    """Installs ceilometer pkgs in all nodes defined in first node of openstack role."""
+    if env.roledefs['openstack'] and env.host_string == env.roledefs['openstack'][0]:
+        execute("install_ceilometer_node", env.host_string)
+
+@task
+def install_ceilometer_node(*args):
+    """Installs openstack pkgs in one or list of nodes. USAGE:fab install_ceilometer_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        with settings(host_string=host_string):
+            pkg_havana = ['mongodb', 'ceilometer-api',
+                'ceilometer-collector',
+                'ceilometer-agent-central',
+                'python-ceilometerclient']
+            pkg_icehouse = ['mongodb', 'ceilometer-api',
+                'ceilometer-collector',
+        	'ceilometer-agent-central',
+        	'ceilometer-agent-notification',
+        	'ceilometer-alarm-evaluator',
+        	'ceilometer-alarm-notifier',
+        	'python-ceilometerclient']
+            act_os_type = detect_ostype()
+            if act_os_type == 'Ubuntu':
+                #if not is_package_installed('mongodb-server'):
+                #    raise RuntimeError('install_ceilometer: mongodb-server is required to be installed for ceilometer')
+                output = run("dpkg-query --show nova-api")
+                if output.find('2013.2') != -1:
+                    apt_install(pkg_havana)
+                elif output.find('2014.1') != -1:
+                    apt_install(pkg_icehouse)
+                else:
+                    print "install_ceilometer: openstack dist unknown.. assuming icehouse.."
+                    apt_install(pkg_icehouse)
+            else:
+                raise RuntimeError('Actual OS Type (%s) != Expected OS Type (%s)'
+                                    'Aborting!' % (act_os_type, 'Ubuntu'))
+
+@task
+@EXECUTE_TASK
 @roles('openstack')
 def install_openstack():
     """Installs openstack pkgs in all nodes defined in openstack role."""
