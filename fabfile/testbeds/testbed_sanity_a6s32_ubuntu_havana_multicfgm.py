@@ -17,7 +17,7 @@ env.roledefs = {
     'all': [host1, host2, host3, host4, host5, host6],
     'cfgm': [host1, host2],
     'openstack': [host6],
-    'control': [host1, host2],
+    'control': [host1, host3],
     'compute': [host4, host5],
     'collector': [host1],
     'webui': [host1],
