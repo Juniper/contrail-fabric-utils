@@ -29,7 +29,7 @@ from tasks.storage.misc import *
 from tasks.rabbitmq import *
 from tasks.ha import *
 from tasks.zookeeper import *
-
+from tasks.backup_restore import *
 
 # For contrail use
 try:
