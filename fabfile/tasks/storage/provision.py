@@ -9,6 +9,37 @@ from fabfile.utils.analytics import *
 
 @task
 @EXECUTE_TASK
+@roles('webui')
+def setup_webui_storage(mode):
+    """Provisions storage webui services."""
+    for entry in env.roledefs['webui']:
+        #Get the webui host
+        webui_host = entry
+        #Get webui ip based on host
+        storage_webui_ip= hstr_to_ip(webui_host)
+        #get webui host password
+        storage_webui_host_password=env.passwords[entry]
+        #Get the storage master host
+        storage_master=env.roledefs['storage-master'][0]
+        #Get the storage master ip address (assuming ceph-rest-api server running)
+        storage_master_ip=hstr_to_ip(storage_master)
+
+        with  settings(host_string = storage_webui_ip, password = storage_webui_host_password):
+            with cd(INSTALLER_DIR):
+                 # Argument details
+                 # storage-setup-mode - setup/unconfigure/reconfigure
+                 # storage-webui-ip - Storage WebUI IP
+                 # storage-master-ip - storage master node where ceph-rest-api server is running
+
+                 cmd= "PASSWORD=%s python setup-vnc-storage-webui.py --storage-setup-mode %s --storage-webui-ip %s  --storage-master-ip %s --storage-disk-config %s --storage-ssd-disk-config %s"\
+                         %(storage_webui_host_password, mode, storage_webui_ip, storage_master_ip, ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), )
+                 print cmd
+                 run(cmd)
+#end setup_webui_storage
+
+
+@task
+@EXECUTE_TASK
 @roles('storage-master')
 @task
 def setup_master_storage(mode):
@@ -183,6 +214,7 @@ def unconfigure_storage():
     """
     execute("setup_master_storage", "unconfigure")
     execute(setup_compute_storage)
+    execute("setup_webui_storage", "unconfigure")
 #end unconfigure_storage
 
 @roles('build')
@@ -192,6 +224,7 @@ def reconfigure_storage():
     """
     execute("setup_master_storage", "reconfigure")
     execute(setup_compute_storage)
+    execute("setup_webui_storage", "reconfigure")
 #end reconfigure_storage
 
 @roles('build')
@@ -201,6 +234,7 @@ def setup_storage():
     """
     execute("setup_master_storage", "setup")
     execute(setup_compute_storage)
+    execute("setup_webui_storage", "setup")
 #end setup_storage
 
 @roles('build')
