@@ -37,7 +37,7 @@ def setup_master_storage(mode):
                     storage_host = get_control_host_string(entry)
                     storage_data_ip=get_data_ip(storage_host)[0]
                     storage_host_list.append(storage_data_ip)
-        storage_master=get_control_host_string(env.roledefs['storage-master'][0])
+        storage_master=env.roledefs['storage-master'][0]
         storage_master_ip=get_data_ip(storage_master)[0]
         storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
         with  settings(host_string = storage_master, password = storage_master_password):
@@ -92,7 +92,7 @@ def setup_nfs_live_migration(mode):
                     storage_host = get_control_host_string(entry)
                     storage_data_ip=get_data_ip(storage_host)[0]
                     storage_host_list.append(storage_data_ip)
-        storage_master=get_control_host_string(env.roledefs['storage-master'][0])
+        storage_master=env.roledefs['storage-master'][0]
         storage_master_ip=get_data_ip(storage_master)[0]
         storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
         with  settings(host_string = storage_master, password = storage_master_password):
@@ -139,7 +139,7 @@ def setup_add_storage_compute_node(*args):
                     storage_host_list.append(storage_data_ip)
                     if new_host_entry == entry:
                         new_storage_hostnames = sthostname
-        storage_master=get_control_host_string(env.roledefs['storage-master'][0])
+        storage_master=env.roledefs['storage-master'][0]
         storage_master_ip=get_data_ip(storage_master)[0]
         storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
         with  settings(host_string = storage_master, password = storage_master_password):
