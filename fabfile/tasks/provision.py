@@ -1131,7 +1131,8 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
         openstack_admin_password = get_keystone_admin_password()
         #amqp_server_ip = ' '.join([hstr_to_ip(get_control_host_string(cfgm_host)) for cfgm_host in env.roledefs['cfgm']])
         amqp_server_ip = get_contrail_amqp_server()
-        if get_from_testbed_dict('openstack','manage_amqp', 'no') == 'yes':
+        if get_from_testbed_dict('openstack','manage_amqp', 'no') == 'yes' or\
+           get_from_testbed_dict('openstack','amqp_host', None) != None:
             #amqp_server_ip = ' '.join([hstr_to_ip(get_control_host_string(openstack_host)) for openstack_host in env.roledefs['openstack']])
             amqp_server_ip = get_openstack_amqp_server()
 
