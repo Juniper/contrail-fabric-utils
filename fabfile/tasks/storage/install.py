@@ -50,11 +50,34 @@ def install_storage_master_node(*args):
     """Installs storage pkgs in one or list of nodes. USAGE:fab install_openstack_storage_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            pkg = ['contrail-storage','contrail-web-storage']
+            pkg = ['contrail-storage']
             if detect_ostype() == 'Ubuntu':
                 apt_install(pkg)
             else:
                 yum_install(pkg)
+
+@task
+@EXECUTE_TASK
+@roles('webui')
+def install_storage_webui():
+    """Installs storage webui pkgs in all nodes defined in webui role."""
+    if env.roledefs['webui']:
+            execute("install_storage_webui_node", env.host_string)
+
+
+@task
+def install_storage_webui_node(*args):
+    """Installs storage pkgs in one or list of nodes. USAGE:fab install_storage_webui:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        with settings(host_string=host_string):
+            pkg = ['contrail-web-storage']
+            if detect_ostype() == 'Ubuntu':
+                apt_install(pkg)
+            else:
+                yum_install(pkg)
+
+
+
 
 @task
 @EXECUTE_TASK
@@ -97,3 +120,4 @@ def install_storage():
     execute(create_storage_repo)
     execute(install_storage_master)
     execute(install_storage_compute)
+    execute(install_storage_webui)
