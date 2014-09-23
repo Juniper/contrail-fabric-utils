@@ -10,7 +10,6 @@ from fabfile.utils.analytics import *
 @task
 @EXECUTE_TASK
 @roles('storage-master')
-@task
 def setup_master_storage(mode):
     """Provisions storage master services."""
     host_string = env.host_string
@@ -65,7 +64,6 @@ def setup_master_storage(mode):
 @task
 @EXECUTE_TASK
 @roles('storage-master')
-@task
 def setup_nfs_live_migration(mode):
     """Provisions nfs vm for live migration and live migration related configuration."""
     host_string = env.host_string
@@ -165,7 +163,6 @@ def setup_add_storage_compute_node(*args):
 @task
 @EXECUTE_TASK
 @roles('storage-compute')
-@task
 def setup_compute_storage():
     """Provisions storage compute services."""
     execute("setup_storage_compute_node", env.host_string)
@@ -176,8 +173,8 @@ def setup_storage_compute_node(*args):
 	#dummy for now
 	return
 
-@roles('build')
 @task
+@roles('build')
 def unconfigure_storage():
     """UnProvisions required contrail services in all nodes as per the role definition.
     """
@@ -185,8 +182,8 @@ def unconfigure_storage():
     execute(setup_compute_storage)
 #end unconfigure_storage
 
-@roles('build')
 @task
+@roles('build')
 def reconfigure_storage():
     """ReProvisions required contrail services in all nodes as per the role definition.
     """
@@ -194,8 +191,8 @@ def reconfigure_storage():
     execute(setup_compute_storage)
 #end reconfigure_storage
 
-@roles('build')
 @task
+@roles('build')
 def setup_storage():
     """Provisions required contrail services in all nodes as per the role definition.
     """
@@ -203,24 +200,24 @@ def setup_storage():
     execute(setup_compute_storage)
 #end setup_storage
 
-@roles('build')
 @task
+@roles('build')
 def setup_nfs_livem():
     """Provisions required contrail services in all nodes as per the role definition.
     """
     execute("setup_nfs_live_migration", "setup")
 #end setup_nfs_livem
 
-@roles('build')
 @task
+@roles('build')
 def setup_nfs_livem_global():
     """Provisions required contrail services in all nodes as per the role definition.
     """
     execute("setup_nfs_live_migration", "setup_global")
 #end setup_nfs_livem_global
 
-@roles('build')
 @task
+@roles('build')
 def unconfigure_nfs_livem():
     """UnProvisions required contrail services in all nodes as per the role definition.
     """
