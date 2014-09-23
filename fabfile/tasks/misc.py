@@ -35,11 +35,15 @@ def detach_vrouter_node(*args):
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
     cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
     cfgm_ip = hstr_to_ip(cfgm_host)
+    nova_compute = "openstack-nova-compute"
+    if detect_ostype() in ['Ubuntu']:
+        nova_compute = "nova-compute"
 
     for host_string in args:
         compute_hostname = socket.gethostbyaddr(hstr_to_ip(host_string))[0].split('.')[0]
         with settings(host_string=host_string, warn_only=True):
             run("service supervisor-vrouter stop")
+            run("service %s stop" % nova_compute)
         with settings(host_string=cfgm_host, pasword=cfgm_host_password):
             run("python /opt/contrail/utils/provision_vrouter.py --host_name %s --host_ip %s --api_server_ip %s --oper del" %
                 (compute_hostname, host_string.split('@')[1], cfgm_ip))
