@@ -660,6 +660,46 @@ def upgrade_collector_node(from_rel, pkg, *args):
 
 
 @task
+def fix_config_global_js_node():
+    new_config = """
+config.featurePkg = {};
+/* Add new feature Package Config details below */
+config.featurePkg.webController = {};
+config.featurePkg.webController.path = '/usr/src/contrail/contrail-web-controller';
+config.featurePkg.webController.enable = true;
+
+/******************************************************************************
+ * Boolean flag getDomainProjectsFromApiServer indicates wheather the project
+ * list should come from API Server or Identity Manager.
+ * If Set
+ *      - true, then project list will come from API Server
+ *      - false, then project list will come from Identity Manager
+ * Default: false
+ *
+******************************************************************************/
+config.getDomainProjectsFromApiServer = false;
+/*****************************************************************************
+* Boolean flag L2_enable indicates the default forwarding-mode of a network.
+* Allowed values : true / false
+* Set this flag to true if all the networks are to be L2 networks,
+* set to false otherwise.
+*****************************************************************************/
+config.network = {};
+config.network.L2_enable = false;
+// Export this as a module.
+module.exports = config;
+"""
+    run("sed -i '$d' /etc/contrail/config.global.js")
+    run("sed -i '$d' /etc/contrail/config.global.js")
+    run("echo \"%s\" >> /etc/contrail/config.global.js" % new_config)
+    # Make sure juniper logo is set
+    logo_old = '/usr/src/contrail/contrail-webui/webroot/img/juniper-networks-logo.png';
+    logo_new = '/usr/src/contrail/contrail-web-core/webroot/img/juniper-networks-logo.png';
+    run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
+    logo_old = '/usr/src/contrail/contrail-web-core/webroot/img/opencontrail-logo.png';
+    run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
+
+@task
 @EXECUTE_TASK
 @roles('webui')
 def upgrade_webui(from_rel, pkg):
@@ -676,6 +716,7 @@ def upgrade_webui_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'webui')
             execute('upgrade_pkgs_node', host_string)
+            execute('fix_config_global_js_node', host_string)
             execute('restart_webui_node', host_string)
 
 
