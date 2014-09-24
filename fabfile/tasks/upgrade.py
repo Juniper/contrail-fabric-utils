@@ -12,45 +12,77 @@ UPGRADE_SCHEMA = {
                    'remove' : [],
                    'downgrade' : [],
                    'backup_files' : [],
+                   'backup_dirs' : ['/etc/keystone',
+                                    '/etc/glance',
+                                    '/etc/nova',
+                                    '/etc/cinder',
+                                   ],
                    'remove_files' : [],
                   },
     'database' : {'upgrade' : ['contrail-openstack-database'],
                    'remove' : [],
                    'downgrade' : [],
-                   'backup_files' : [],
+                   'backup_files' : ['/etc/contrail/database_nodemgr_param',
+                                     '/etc/contrail/contrail-nodemgr-database.conf',
+                                    ],
+                   'backup_dirs' : [],
                    'remove_files' : [],
                   },
     'cfgm' : {'upgrade' : ['contrail-openstack-config'],
                    'remove' : [],
                    'downgrade' : [],
-                   'backup_files' : [],
+                   'backup_files' : ['/etc/contrail/svc_monitor.conf',
+                                     '/etc/contrail/schema_transformer.conf',
+                                     '/etc/contrail/contrail-api.conf',
+                                     '/etc/contrail/contrail-discovery.conf',
+                                     '/etc/contrail/vnc_api_lib.ini',
+                                    ],
+                   'backup_dirs' : ['/etc/ifmap-server',
+                                    '/etc/neutron',
+                                   ],
                    'remove_files' : [],
                   },
     'collector' : {'upgrade' : ['contrail-openstack-analytics'],
                    'remove' : [],
                    'downgrade' : [],
-                   'backup_files' : [],
+                   'backup_files' : ['/etc/contrail/contrail-analytics-api.conf',
+                                     '/etc/contrail/contrail-collector.conf',
+                                     '/etc/contrail/contrail-query-engine.conf',
+                                    ],
+                   'backup_dirs' : [],
                    'remove_files' : [],
                   },
     'control' : {'upgrade' : ['contrail-openstack-control'],
                    'remove' : [],
                    'downgrade' : [],
-                   'backup_files' : [],
+                   'backup_files' : ['/etc/contrail/contrail-control.conf',
+                                     '/etc/contrail/dns.conf'],
+                   'backup_dirs' : [],
                    'remove_files' : [],
                   },
     'webui' : {'upgrade' : ['contrail-openstack-webui'],
                    'remove' : [],
                    'downgrade' : [],
-                   'backup_files' : [],
+                   'backup_files' : ['/etc/contrail/config.global.js'],
+                   'backup_dirs' : [],
                    'remove_files' : [],
                   },
     'compute' : {'upgrade' : ['contrail-openstack-vrouter'],
                    'remove' : [],
                    'downgrade' : [],
-                   'backup_files' : [],
+                   'backup_files' : ['/etc/contrail/agent_param',
+                                     '/etc/contrail/contrail-vrouter-agent.conf',
+                                     '/etc/contrail/vrouter_nodemgr_param',
+                                    ],
+                   'backup_dirs' : [],
                    'remove_files' : [],
                   },
 }
+
+if get_openstack_internal_vip():
+    ha_backup_dirs = ['/etc/mysql', '/etc/keepalived', '/etc/contrail/ha']
+    UPGRADE_SCHEMA['openstack']['backup_dirs'] += ha_backup_dirs
+    UPGRADE_SCHEMA['openstack']['upgrade'].append('contrail-openstack-ha')
 
 # Upgrade data from 1.05 to 1.10
 UBUNTU_R1_05_TO_R1_10 = {
@@ -59,6 +91,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                    'downgrade'     : ['supervisor=1:3.0a8-1.2',
                                       'python-contrail'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : [],
                   },
     'database'  : {'upgrade'       : ['contrail-openstack-database'],
@@ -66,6 +99,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                    'downgrade'     : ['supervisor=1:3.0a8-1.2',
                                       'python-contrail'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : [],
                   },
     'cfgm'      : {'upgrade'       : ['contrail-openstack-config'],
@@ -81,6 +115,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                                       'python-boto=1:2.12.0',
                                       'python-six=1.5.2-1~cloud0'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : ['/etc/rabbitmq/rabbitmq.config'],
                   },
     'collector' : {'upgrade'       : ['contrail-openstack-analytics'],
@@ -88,6 +123,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                    'downgrade'     : ['supervisor=1:3.0a8-1.2',
                                       'python-contrail'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : ['/etc/contrail/supervisord_analytics_files/redis-*.ini',
                                       '/etc/contrail/supervisord_analytics_files/contrail-qe.ini',
                                       '/etc/contrail/supervisord_analytics_files/contrail-opserver.ini'],
@@ -98,6 +134,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                                       'python-redis=2.8.0-1contrail1',
                                       'python-contrail'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : [],
                   },
     'webui'     : {'upgrade'       : ['contrail-openstack-webui'],
@@ -107,6 +144,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                                       'python-contrail'],
 
                    'backup_files'  : ['/etc/contrail/config.global.js'],
+                   'backup_dirs' : [],
                    'remove_files'  : [],
                   },
     'compute'   : {'upgrade'       : ['contrail-openstack-vrouter'],
@@ -114,6 +152,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                    'downgrade'     : ['supervisor=1:3.0a8-1.2',
                                       'python-contrail'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : ['/etc/contrail/supervisord_vrouter_files/contrail-vrouter.ini'],
                   },
 }
@@ -150,6 +189,7 @@ CENTOS_R1_05_TO_R1_10 = {
                                       'libvirt',
                                       'libvirt-python'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : [],
                   },
     'database'  : {'upgrade'       : ['contrail-openstack-database'],
@@ -167,6 +207,7 @@ CENTOS_R1_05_TO_R1_10 = {
                                       'python-bitarray',
                                       'supervisor'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : [],
                   },
     'cfgm'      : {'upgrade'       : ['contrail-openstack-config'],
@@ -209,6 +250,7 @@ CENTOS_R1_05_TO_R1_10 = {
                                       'libvirt-python',
                                       'irond-1.0-2contrail'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : ['/etc/rabbitmq/rabbitmq.config'],
                   },
     'collector' : {'upgrade'       : ['contrail-openstack-analytics'],
@@ -231,6 +273,7 @@ CENTOS_R1_05_TO_R1_10 = {
                                       'python-thrift',
                                       'python-bitarray'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : ['/etc/contrail/supervisord_analytics_files/redis-*.ini',
                                       '/etc/contrail/supervisord_analytics_files/contrail-qe.ini',
                                       '/etc/contrail/supervisord_analytics_files/contrail-opserver.ini'],
@@ -253,6 +296,7 @@ CENTOS_R1_05_TO_R1_10 = {
                                       'python-thrift',
                                       'python-bitarray'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : [],
                   },
     'webui'     : {'upgrade'       : ['contrail-openstack-webui'],
@@ -266,6 +310,7 @@ CENTOS_R1_05_TO_R1_10 = {
                                       'python-thrift',
                                       'python-bitarray'],
                    'backup_files'  : ['/etc/contrail/config.global.js'],
+                   'backup_dirs' : [],
                    'remove_files'  : [],
                   },
     'compute'   : {'upgrade'       : ['contrail-openstack-vrouter'],
@@ -296,6 +341,7 @@ CENTOS_R1_05_TO_R1_10 = {
                                       'libvirt',
                                       'libvirt-python'],
                    'backup_files'  : [],
+                   'backup_dirs' : [],
                    'remove_files'  : ['/etc/contrail/supervisord_vrouter_files/contrail-vrouter.ini']
                   },
 }
@@ -439,6 +485,31 @@ def upgrade_package(pkgs, ostype):
 @task
 @EXECUTE_TASK
 @roles('all')
+def backup_config_dir(from_rel):
+    ostype = detect_ostype()
+    to_rel = get_release()
+    try:
+        upgrade_data = eval(ostype.upper() + '_' + ('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
+    except NameError:
+        raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
+    for role in upgrade_data.keys():
+        if env.host_string in env.roledefs[role]:
+            with settings(warn_only=True):
+                for config_dir in upgrade_data[role]['backup_dirs']:
+                    cfg_dir_name = os.path.basename(config_dir)
+                    run('mkdir -p /tmp/contrail/%s.upgradesave' % cfg_dir_name)
+                    if run('cp -r %s/* /tmp/contrail/%s.upgradesave' % (config_dir, cfg_dir_name)).failed:
+                        if not files.exists('/tmp/contrail/%s.upgradesave' % cfg_dir_name):
+                            raise RuntimeError("Unable to backup config dir %s, please correct and continue upgrade." % config_dir)
+
+def restore_config_dir(role, upgrade_data):
+    for config_dir in upgrade_data[role]['backup_dirs']:
+        cfg_dir_name = os.path.basename(config_dir)
+        run('cp -r /tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
+
+@task
+@EXECUTE_TASK
+@roles('all')
 def backup_config(from_rel):
     ostype = detect_ostype()
     to_rel = get_release()
@@ -501,6 +572,7 @@ def upgrade(from_rel, role):
     if ostype == 'Ubuntu':
         remove_package(upgrade_data[role]['remove'], ostype)
     restore_config(role, upgrade_data)
+    restore_config_dir(role, upgrade_data)
     remove_old_files(role, upgrade_data)
 
 @task
@@ -524,9 +596,12 @@ def upgrade_database_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'database')
             execute('upgrade_pkgs_node', host_string)
-            # Required to setup zookeeper in database node and create database nodemgr conf
-            execute('setup_database_node', host_string)
-            execute('restart_database_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                # Required to setup zookeeper in database node and create database nodemgr conf
+                execute('setup_database_node', host_string)
+                execute('restart_database_node', host_string)
+            else:
+                execute('restart_database_node', host_string)
 
 @task
 @roles('openstack')
@@ -636,7 +711,10 @@ def upgrade_control_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'control')
             execute('upgrade_pkgs_node', host_string)
-            execute('setup_control_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                execute('setup_control_node', host_string)
+            else:
+                execute('restart_control_node', host_string)
 
 
 @task
@@ -656,7 +734,10 @@ def upgrade_collector_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'collector')
             execute('upgrade_pkgs_node', host_string)
-            execute('setup_collector_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                execute('setup_collector_node', host_string)
+            else:
+                execute('restart_collector_node', host_string)
 
 
 @task
@@ -716,7 +797,8 @@ def upgrade_webui_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'webui')
             execute('upgrade_pkgs_node', host_string)
-            execute('fix_config_global_js_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                execute('fix_config_global_js_node', host_string)
             execute('restart_webui_node', host_string)
 
 
@@ -737,7 +819,7 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'compute')
             # If necessary, migrate to new ini format based configuration.
-            if from_rel != '1.06':
+            if from_rel == '1.05':
                 run("/opt/contrail/contrail_installer/contrail_config_templates/vrouter-agent.conf.sh")
             if detect_ostype() in ['centos']:
                 execute('setup_vrouter_node', host_string)
@@ -782,13 +864,18 @@ def upgrade_contrail(from_rel, pkg):
     execute('install_pkg_all', pkg)
     execute('zookeeper_rolling_restart')
     execute('backup_config', from_rel)
+    execute('backup_config_dir', from_rel)
     execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_cfgm', from_rel, pkg)
-    execute('setup_rabbitmq_cluster', True)
-    execute('setup_cfgm')
+    if from_rel in ['1.05', '1.06']:
+        execute('setup_rabbitmq_cluster', True)
+        execute('setup_cfgm')
+    else:
+        execute('setup_rabbitmq_cluster')
+        execute('restart_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
@@ -807,14 +894,19 @@ def upgrade_without_openstack(pkg):
     """
     execute('install_pkg_all', pkg)
     execute('zookeeper_rolling_restart')
-    execute('backup_config')
+    execute('backup_config', from_rel)
+    execute('backup_config_dir', from_rel)
     execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_cfgm', from_rel, pkg)
-    execute('setup_rabbitmq_cluster')
-    execute('setup_cfgm')
+    if from_rel in ['1.05', '1.06']:
+        execute('setup_rabbitmq_cluster', True)
+        execute('setup_cfgm')
+    else:
+        execute('setup_rabbitmq_cluster')
+        execute('restart_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
