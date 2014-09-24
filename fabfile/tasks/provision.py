@@ -1520,6 +1520,7 @@ def setup_interface_node(*args):
                      if key in args)
     bondinfo = getattr(testbed, 'bond', None)
 
+    retries = 5; timeout = 5
     for host in hosts.keys():
         cmd = 'python setup-vnc-interfaces.py'
         errmsg = 'WARNING: Host ({HOST}) is defined with device ({DEVICE})'+\
@@ -1544,7 +1545,9 @@ def setup_interface_node(*args):
                 cmd += ' --vlan %s' %hosts[host]['vlan']
             if (get_control_host_string(host) == host) and hosts[host].has_key('gw'):
                 cmd += ' --gw %s' %hosts[host]['gw']
-            with settings(host_string=host):
+            with settings(host_string= host,
+                          timeout= timeout,
+                          connection_attempts= retries):
                 with cd(INSTALLER_DIR):
                     run(cmd)
         else:
