@@ -524,9 +524,12 @@ def upgrade_database_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'database')
             execute('upgrade_pkgs_node', host_string)
-            # Required to setup zookeeper in database node and create database nodemgr conf
-            execute('setup_database_node', host_string)
-            execute('restart_database_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                # Required to setup zookeeper in database node and create database nodemgr conf
+                execute('setup_database_node', host_string)
+                execute('restart_database_node', host_string)
+            else:
+                execute('restart_database_node', host_string)
 
 @task
 @roles('openstack')
@@ -636,7 +639,10 @@ def upgrade_control_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'control')
             execute('upgrade_pkgs_node', host_string)
-            execute('setup_control_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                execute('setup_control_node', host_string)
+            else:
+                execute('restart_control_node', host_string)
 
 
 @task
@@ -656,7 +662,10 @@ def upgrade_collector_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'collector')
             execute('upgrade_pkgs_node', host_string)
-            execute('setup_collector_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                execute('setup_collector_node', host_string)
+            else:
+                execute('restart_collector_node', host_string)
 
 
 @task
@@ -716,7 +725,8 @@ def upgrade_webui_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'webui')
             execute('upgrade_pkgs_node', host_string)
-            execute('fix_config_global_js_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                execute('fix_config_global_js_node', host_string)
             execute('restart_webui_node', host_string)
 
 
@@ -787,8 +797,12 @@ def upgrade_contrail(from_rel, pkg):
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_cfgm', from_rel, pkg)
-    execute('setup_rabbitmq_cluster', True)
-    execute('setup_cfgm')
+    if from_rel in ['1.05', '1.06']:
+        execute('setup_rabbitmq_cluster', True)
+        execute('setup_cfgm')
+    else:
+        execute('setup_rabbitmq_cluster')
+        execute('restart_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
@@ -813,8 +827,12 @@ def upgrade_without_openstack(pkg):
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_cfgm', from_rel, pkg)
-    execute('setup_rabbitmq_cluster')
-    execute('setup_cfgm')
+    if from_rel in ['1.05', '1.06']:
+        execute('setup_rabbitmq_cluster', True)
+        execute('setup_cfgm')
+    else:
+        execute('setup_rabbitmq_cluster')
+        execute('restart_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
