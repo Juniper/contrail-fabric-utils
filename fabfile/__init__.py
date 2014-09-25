@@ -18,6 +18,7 @@ from  config import *
 from tasks.ntp import *
 from tasks.tester import *
 from tasks.install import *
+from tasks.uninstall import *
 from tasks.storage.install import *
 from tasks.syslogs import *
 from tasks.helpers import *
