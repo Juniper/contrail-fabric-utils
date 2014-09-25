@@ -183,8 +183,8 @@ def install_interface_name(reboot='True'):
     """Installs interface name package in all nodes defined in compute role."""
     if not env.roledefs['compute']:
         return
-    if detect_ostype() == 'Ubuntu':
-        print "[%s]: Installing interface rename package not required for Ubuntu..Skipping it" %env.host_string
+    if detect_ostype() in ['Ubuntu', 'redhat']:
+        print "[%s]: Installing interface rename package not required for Ubuntu/Redhat..Skipping it" %env.host_string
     else:
         execute("install_interface_name_node", env.host_string, reboot=reboot)
 
