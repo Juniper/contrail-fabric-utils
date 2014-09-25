@@ -558,49 +558,6 @@ def copy_install_pkgs(pkgs):
              install_pkg(tgt_host, pkg)
 #end copy_install_pkgs
 
-@roles('all')
-@task
-def uninstall_contrail(full=False):
-    '''
-    Uninstall contrail and openstack packages so that 
-    a fresh installation can be done. 
-    
-    Note that contrail-install-packages package is still 
-    retained so that a new install/setup can be run using : 
-        fab install_contrail
-        fab setup_all
-    
-    To force a full cleanup, set full=True as argument. 
-    This will remove contrail-install-packages as well
-    '''
-    run('sudo yum --disablerepo=* --enablerepo=contrail_install_repo -y remove contrail-control contrail-dns openstack-nova openstack-quantum openstack-cinder openstack-glance openstack-keystone openstack-quantum-contrail mysql qpid-cpp-server openstack-dashboard mysql-server openstack-nova-novncproxy zookeeper zookeeper-lib irond contrail-web-controller contrail-web-core contrail-analytics contrail-libs contrail-analytics-venv contrail-api-extension contrail-api-venv contrail-control-venv  contrail-database contrail-nodejs contrail-vrouter-venv contrail-setup openstack-utils redis contrail-openstack-* contrail-database-venv nodejs java java-1.7.0-openjdk libvirt contrail-vrouter euca2ools cassandra django-horizon django-staticfiles python-bitarray python-boto python-thrift libvirt-python libvirt-client python-django-openstack-auth memcached haproxy rabbitmq-server esl-erlang')
-    
-    run('sudo yum --disablerepo=* --enablerepo=contrail_install_repo -y remove *openstack* *quantum* *nova* *glance* *keystone* *cinder*')
-    with cd('/etc/'):
-        run('sudo rm -rf zookeeper glance/ cinder/ openstack_dashboard/ keystone/ quantum/ nova/ irond haproxy')
-        run('sudo rm -rf libvirt')
-        with settings(warn_only=True):
-            run('find ./contrail/* ! -iname \'contrail_ifrename.sh\' -delete')
-    with cd('/var/lib/'):
-        run('sudo rm -rf nova quantum glance quantum cassandra zookeeper keystone redis mysql haproxy')
-        run('sudo rm -rf /usr/share/cassandra /var/cassandra_log /var/crashes /home/cassandra')
-        run('sudo rm -rf /var/log/cassandra /var/log/zookeeper /var/run/keystone /opt/contrail/api-venv')
-    with cd('/opt/contrail'):
-        run('sudo rm -rf api-venv analytics-venv control-venv vrouter-venv database-venv nodejs*')
-    with cd('/var/run'):
-        run('sudo rm -rf cinder glance quantum nova keystone')
-    with cd('/usr/share'):
-        run('sudo rm -rf irond')
-    with cd('/var/log'):
-        run('sudo rm -rf contrail/* nova quantum glance cinder /root/keystone-signing /tmp/keystone-signing /tmp/keystone-signing-nova')
-    if full:
-        run('sudo yum --disablerepo=* --enablerepo=contrail_install_repo -y remove contrail-install-packages contrail-fabric-utils contrail-setup')
-        run('sudo rm -rf /opt/contrail')
-#    run('rm -f /etc/sysconfig/network-scripts/ifcfg-p*p*p*')
-    with settings(warn_only=True):
-        run('reboot')
-#end uninstall_contrail
-
 @roles('cfgm')
 @task
 def install_webui_packages(source_dir):
