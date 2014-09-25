@@ -796,6 +796,7 @@ def delete_cassandra_db_files():
 @task
 @roles('build')
 def pre_check():
+    execute('verify_time_all')
     if len(env.roledefs['openstack']) > 1 and not get_openstack_internal_vip():
         print "\nERROR: \n\tkeystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
         exit(1)

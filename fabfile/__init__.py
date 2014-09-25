@@ -15,6 +15,7 @@ This package contains tasks and utils pacakges.
 from  config import *
 
 # Fabric tasks
+from tasks.ntp import *
 from tasks.tester import *
 from tasks.install import *
 from tasks.storage.install import *
