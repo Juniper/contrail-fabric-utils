@@ -140,11 +140,12 @@ def get_contrail_external_vip():
 
 def get_openstack_amqp_server():
     amqp_in_role = 'cfgm'
+    rabbit_vip = get_contrail_internal_vip()
     if get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes':
         amqp_in_role = 'openstack'
-    internal_vip = get_openstack_internal_vip()
+        rabbit_vip = get_openstack_internal_vip()
     return get_from_testbed_dict('openstack','amqp_host',
-        (internal_vip or hstr_to_ip(get_control_host_string(env.roledefs[amqp_in_role][0]))))
+        (rabbit_vip or hstr_to_ip(get_control_host_string(env.roledefs[amqp_in_role][0]))))
 
 def get_contrail_amqp_server():
     internal_vip = get_contrail_internal_vip()
