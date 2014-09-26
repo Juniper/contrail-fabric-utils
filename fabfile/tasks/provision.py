@@ -1139,13 +1139,16 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
             amqp_server_ip = get_openstack_amqp_server()
 
         with  settings(host_string=host_string):
-            vmware = False
-            compute_vm_info = getattr(testbed, 'compute_vm', None)
-            if compute_vm_info:
-                hosts = compute_vm_info.keys()
-                if host_string in hosts:
-                    vmware = True
-                    vmware_info = compute_vm_info[host_string]
+            vmware = 0
+            esxi_info = getattr(testbed, 'esxi_hosts', None)
+            if esxi_info:
+                for host in esxi_info.keys():
+                    esxi_data = esxi_info[host]
+                    data = esxi_data['contrail_vm']
+                    if (esxi_data['contrail_vm'] == host_string):
+                        vmware = 1
+                        break
+
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-vrouter.override')
@@ -1159,8 +1162,8 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                     if gateway_routes != []:
                         cmd = cmd + " --gateway_routes %s" %(gateway_routes)
                 if vmware:
-                    cmd = cmd + " --vmware %s --vmware_username %s --vmware_passwd %s --vmware_vmpg_vswitch %s" % (vmware_info['esxi']['ip'], vmware_info['esxi']['username'], \
-                                vmware_info['esxi']['password'], vmware_info['vswitch'])
+                    cmd = cmd + " --vmware %s --vmware_username %s --vmware_passwd %s --vmware_vmpg_vswitch %s" % (esxi_data['ip'], esxi_data['username'], \
+                                esxi_data['password'], esxi_data['vm_vswitch'])
                 internal_vip = get_openstack_internal_vip()
                 if internal_vip:
                     cmd += " --internal_vip %s" % internal_vip
@@ -1607,14 +1610,12 @@ def reset_config():
 
 @roles('build')
 @task
-def prov_vmware_compute_vm():
-    compute_vm_info = getattr(testbed, 'compute_vm', None) 
-    if not compute_vm_info:
+def prov_esxi():
+    esxi_info = getattr(testbed, 'esxi_hosts', None)
+    if not esxi_info:
         return
-    for compute_node in env.roledefs['compute']:
-        if compute_node in compute_vm_info.keys():
-            configure_esxi_network(compute_vm_info[compute_node])
-            create_ovf(compute_vm_info[compute_node])
+    for host in esxi_info.keys():
+        configure_esxi_network(esxi_info[host])
 #end prov_compute_vm
 
 @task

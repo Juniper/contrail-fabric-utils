@@ -11,17 +11,17 @@ def _get_var(var, default=None):
         return default
 #end _get_var
 
-def configure_esxi_network(compute_vm_info):
+def configure_esxi_network(esxi_info):
     #ESXI Host Login
-    host_string = '%s@%s' %(compute_vm_info['esxi']['username'],
-                           compute_vm_info['esxi']['ip'])
-    password = _get_var(compute_vm_info['esxi']['password'])
+    host_string = '%s@%s' %(esxi_info['username'],
+                           esxi_info['ip'])
+    password = _get_var(esxi_info['password'])
     
-    compute_pg = _get_var(compute_vm_info['port_group'],'compute_pg')
-    fabric_pg = _get_var(compute_vm_info['esxi']['vm_port_group'],'fabric_pg')
-    vswitch0 = _get_var(compute_vm_info['esxi']['vswitch'],'vSwitch0')
-    vswitch1 = _get_var(compute_vm_info['vswitch'],'vSwitch1')
-    uplink_nic = compute_vm_info['esxi']['uplink_nic']
+    compute_pg = _get_var(esxi_info['vm_port_group'],'compute_pg')
+    fabric_pg = _get_var(esxi_info['fabric_port_group'],'fabric_pg')
+    vswitch0 = _get_var(esxi_info['fabric_vswitch'],'vSwitch0')
+    vswitch1 = _get_var(esxi_info['vm_vswitch'],'vSwitch1')
+    uplink_nic = esxi_info['uplink_nic']
     with settings(host_string = host_string, password = password, 
                     warn_only = True, shell = '/bin/sh -l -c'):
         run('esxcli network vswitch standard add --vswitch-name=%s' %(
@@ -32,6 +32,7 @@ def configure_esxi_network(compute_vm_info):
         run('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=4095' %(compute_pg))
 
 @task
+
 def create_ovf(compute_vm_info):
     compute_vm_name = _get_var(compute_vm_info['vm_name'],'Fedora-Compute-VM')
     compute_vm_vmdk = compute_vm_info['vmdk']
