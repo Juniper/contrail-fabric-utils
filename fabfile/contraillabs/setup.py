@@ -40,7 +40,7 @@ def bringup_test_node(build):
         if ftype == '.iso':
             execute('all_reimage', build)
             buildid = build.split('-')[1]
-        elif ftype == '.rpm' and env.ostypes[cfgm] == 'centos':
+        elif ftype == '.rpm' and env.ostypes[cfgm] in ['centos', 'centos65']:
             execute('all_reimage', '')
         elif ftype == '.deb' and env.ostypes[cfgm] == 'ubuntu':
             execute('all_reimage')
