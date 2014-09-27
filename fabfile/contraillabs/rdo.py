@@ -1,6 +1,7 @@
 """Private contrail task for setting up RDO in the openstack node."""
 
 from fabfile.config import *
+from fabfile.utils.host import get_keystone_ip
 
 @task
 @roles('openstack')
@@ -38,9 +39,10 @@ def setup_rdo(rdo_url='https://repos.fedorapeople.org/repos/openstack/openstack-
             run('mkdir -p /etc/contrail/')
             run("ln -s /root/keystonerc_admin /etc/contrail/openstackrc")
     cfgm_0_ip = testbed.env['roledefs']['cfgm'][0].split('@')[1]
+    keystone_ip = get_keystone_ip()
     run("openstack-config --set /etc/nova/nova.conf DEFAULT network_api_class nova.network.neutronv2.api.API")
     run("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_url http://%s:9696" % cfgm_0_ip)
-    run("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_admin_auth_url http://%s:35357/v2.0" % cfgm_0_ip)
+    run("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_admin_auth_url http://%s:35357/v2.0" % keystone_ip)
     run("openstack-config --set /etc/nova/nova.conf DEFAULT  compute_driver nova.virt.libvirt.LibvirtDriver")
     run("openstack-config --set /etc/nova/nova.conf DEFAULT  novncproxy_port 5999")
     run("iptables --flush")
