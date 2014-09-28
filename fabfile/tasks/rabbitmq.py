@@ -60,10 +60,10 @@ def set_tcp_keepalive_on_compute():
 @EXECUTE_TASK
 @roles('rabbit')
 def listen_at_supervisor_config_port():
-    with settings(hide('everything'), warn_only=True):
+    with settings(warn_only=True):
         if run("service supervisor-config status | grep running").failed:
             run("service supervisor-config start")
-            run("supervisorctl -s http://localhost:9004 stop all")
+            run("supervisorctl -s unix:///tmp/supervisord_config.sock stop all")
 
 @task
 @EXECUTE_TASK
@@ -117,7 +117,11 @@ def allow_rabbitmq_port():
 def stop_rabbitmq_and_set_cookie(uuid):
      with settings(warn_only=True):
          run("service rabbitmq-server stop")
-         run("epmd -kill")
+         if detect_ostype() in ['redhat']:
+             run("pkill beam.smp")
+             run("pkill epmd")
+         else:
+             run("epmd -kill")
          run("rm -rf /var/lib/rabbitmq/mnesia/")
      run("echo '%s' > /var/lib/rabbitmq/.erlang.cookie" % uuid)
 
@@ -228,9 +232,6 @@ def setup_rabbitmq_cluster(force=False):
         execute(config_rabbitmq)
         execute("stop_rabbitmq_and_set_cookie", rabbitmq_cluster_uuid)
         execute(start_rabbitmq)
-        if len(env.roledefs['rabbit']) <= 1:
-            print "Single cfgm cluster, Starting rabbitmq."
-            return
         #execute(rabbitmqctl_stop_app)
         #execute(rabbitmqctl_reset)
         #execute("rabbitmqctl_start_app_node", env.roledefs['rabbit'][0])
