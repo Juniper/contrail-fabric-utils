@@ -109,7 +109,7 @@ UBUNTU_R1_05_TO_R1_10 = {
                                       'zookeeper'],
                    'downgrade'     : ['ifmap-server=0.3.2-1contrail1',
                                       'python-contrail',
-                                      'rabbitmq-server=3.3.2-1',
+                                      'rabbitmq-server>=3.3.2-1',
                                       'euca2ools=1:2.1.3-2',
                                       'supervisor=1:3.0a8-1.2',
                                       'python-boto=1:2.12.0',
@@ -160,6 +160,7 @@ UBUNTU_R1_05_TO_R1_10 = {
 # Upgrade data for upgrade from 1.06 to R1.10
 UBUNTU_R1_06_TO_R1_10 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
 UBUNTU_R1_06_TO_R1_10['compute']['backup_files'].append('/etc/contrail/contrail-vrouter-agent.conf')
+UBUNTU_R1_06_TO_R1_20 = copy.deepcopy(UBUNTU_R1_06_TO_R1_10)
 # In Release upgrade
 UBUNTU_R1_10_TO_R1_10 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_10_TO_R1_20 = copy.deepcopy(UPGRADE_SCHEMA)
@@ -749,7 +750,7 @@ def upgrade_collector_node(from_rel, pkg, *args):
 
 
 @task
-def fix_config_global_js_node():
+def fix_config_global_js_node(*args):
     new_config = """
 config.featurePkg = {};
 /* Add new feature Package Config details below */
@@ -778,15 +779,17 @@ config.network.L2_enable = false;
 // Export this as a module.
 module.exports = config;
 """
-    run("sed -i '$d' /etc/contrail/config.global.js")
-    run("sed -i '$d' /etc/contrail/config.global.js")
-    run("echo \"%s\" >> /etc/contrail/config.global.js" % new_config)
-    # Make sure juniper logo is set
-    logo_old = '/usr/src/contrail/contrail-webui/webroot/img/juniper-networks-logo.png';
-    logo_new = '/usr/src/contrail/contrail-web-core/webroot/img/juniper-networks-logo.png';
-    run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
-    logo_old = '/usr/src/contrail/contrail-web-core/webroot/img/opencontrail-logo.png';
-    run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
+    for host_string in args:
+        with settings(host_string=host_string):
+            run("sed -i '$d' /etc/contrail/config.global.js")
+            run("sed -i '$d' /etc/contrail/config.global.js")
+            run("echo \"%s\" >> /etc/contrail/config.global.js" % new_config)
+            # Make sure juniper logo is set
+            logo_old = '/usr/src/contrail/contrail-webui/webroot/img/juniper-networks-logo.png';
+            logo_new = '/usr/src/contrail/contrail-web-core/webroot/img/juniper-networks-logo.png';
+            run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
+            logo_old = '/usr/src/contrail/contrail-web-core/webroot/img/opencontrail-logo.png';
+            run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
 
 @task
 @EXECUTE_TASK
