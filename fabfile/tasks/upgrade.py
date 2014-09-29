@@ -160,6 +160,7 @@ UBUNTU_R1_05_TO_R1_10 = {
 # Upgrade data for upgrade from 1.06 to R1.10
 UBUNTU_R1_06_TO_R1_10 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
 UBUNTU_R1_06_TO_R1_10['compute']['backup_files'].append('/etc/contrail/contrail-vrouter-agent.conf')
+UBUNTU_R1_06_TO_R1_20 = copy.deepcopy(UBUNTU_R1_06_TO_R1_10)
 # In Release upgrade
 UBUNTU_R1_10_TO_R1_10 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_10_TO_R1_20 = copy.deepcopy(UPGRADE_SCHEMA)
