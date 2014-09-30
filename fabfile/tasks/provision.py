@@ -1560,6 +1560,7 @@ def reset_config():
     '''
     Reset api-server and openstack config and run the setup-scripts again incase you get into issues
     '''
+    from fabfile.tasks.ha import setup_ha
     from fabfile.tasks.misc import run_cmd
     from fabfile.tasks.services import stop_cfgm, start_cfgm,\
           stop_database, start_database,\
@@ -1567,6 +1568,7 @@ def reset_config():
     try:
         execute(stop_contrail_control_services)
         execute(cleanup_os_config)
+        execute(setup_ha)
         execute(setup_rabbitmq_cluster)
         execute(increase_limits)
         execute(increase_ulimits)
