@@ -28,6 +28,10 @@ def tar_logs_cores():
             if "core" in corename:
                 core = corename.split()[8]
                 name = core.split('.')[1]
+                with settings(warn_only=True):
+                    rname = sudo("ls /usr/bin/%s*" %name)
+                    if check_file_exists(rname):
+                        name = sudo("basename %s" %rname)
                 core_new = core.rstrip('\r')
                 with settings(warn_only=True):
                     sudo("gdb %s /var/crashes/%s --eval-command bt > /var/log/gdb_%s.log --eval-command quit"%(name, core_new, core_new))
