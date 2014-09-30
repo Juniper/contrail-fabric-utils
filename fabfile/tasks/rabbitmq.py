@@ -175,6 +175,9 @@ def add_node_to_rabbitmq_cluster():
 @task
 @roles('rabbit')
 def verify_cluster_status():
+    status = run("service rabbitmq-server status")
+    if 'running' not in status.lower():
+        return False
     output = run("rabbitmqctl cluster_status")
     running_nodes = re.compile(r"running_nodes,\[([^\]]*)")
     match = running_nodes.search(output)
