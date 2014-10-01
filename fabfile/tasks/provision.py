@@ -10,6 +10,7 @@ from fabfile.utils.multitenancy import *
 from fabfile.utils.migration import *
 from fabfile.utils.storage import *
 from fabfile.utils.analytics import *
+from fabfile.utils.config import get_value
 from fabfile.tasks.install import *
 from fabfile.tasks.verify import *
 from fabfile.tasks.helpers import *
@@ -1084,6 +1085,12 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
     #    return
     
     
+    # retrieve neutron_metadata_proxy_shared_secret from openstack
+    with settings(host_string=env.roledefs['openstack'][0]):
+        metadata_secret = get_value(src_file='/etc/nova/nova.conf',
+                          section='keystone_authtoken',
+                          variable='neutron_metadata_proxy_shared_secret')
+
     for host_string in args:
         # Enable haproxy for Ubuntu
         with  settings(host_string=host_string):
@@ -1171,6 +1178,8 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                     cmd += " --contrail_internal_vip %s" % contrail_internal_vip
                 if internal_vip or contrail_internal_vip:
                     cmd += " --mgmt_self_ip %s" % compute_mgmt_ip
+                if metadata_secret:
+                    cmd += " --metadata_secret %s" % metadata_secret
                 print cmd
                 run(cmd)
 #end setup_vrouter
