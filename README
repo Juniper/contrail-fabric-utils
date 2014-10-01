@@ -154,7 +154,7 @@ Copy one of these files as testbed.py fill in the ip-addresses and root credenti
 
 ### Step 2: Copy the new contrail-install-packages.rpm | contrail-install-packages.deb to the config node:
 Use SCP to do this
-    rpm -iU --force contrail-install-packages.rpm | dpkg -i contrail-install-packages.deb
+    yum localinstall contrail-install-packages.rpm | dpkg -i contrail-install-packages.deb
 Run setup script,
     /opt/contrail/contrail_packages/setup.sh
 
@@ -197,7 +197,7 @@ Copy one of these files as testbed.py fill in the ip-addresses and root credenti
 
 ### Step 2: Copy the new contrail-install-packages.rpm | contrail-install-packages.deb to the config node:
 Use SCP to do this
-    rpm -iU --force contrail-install-packages.rpm | dpkg -i contrail-install-packages.deb
+    yum localinstall contrail-install-packages.rpm | dpkg -i contrail-install-packages.deb
 Run setup script,
     /opt/contrail/contrail_packages/setup.sh
 
