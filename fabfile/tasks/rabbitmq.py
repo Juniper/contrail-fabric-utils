@@ -118,11 +118,8 @@ def allow_rabbitmq_port():
 def stop_rabbitmq_and_set_cookie(uuid):
      with settings(warn_only=True):
          run("service rabbitmq-server stop")
-         if detect_ostype() in ['redhat']:
-             run("pkill beam.smp")
-             run("pkill epmd")
-         else:
-             run("epmd -kill")
+         run("pkill beam.smp")
+         run("pkill epmd")
          run("rm -rf /var/lib/rabbitmq/mnesia/")
      run("echo '%s' > /var/lib/rabbitmq/.erlang.cookie" % uuid)
      run("chmod 400 /var/lib/rabbitmq/.erlang.cookie")
