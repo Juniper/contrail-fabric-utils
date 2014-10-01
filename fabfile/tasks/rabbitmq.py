@@ -59,11 +59,11 @@ def set_tcp_keepalive_on_compute():
 @task
 @EXECUTE_TASK
 @roles('rabbit')
-def listen_at_supervisor_config_port():
+def listen_at_supervisor_support_port():
     with settings(hide('everything'), warn_only=True):
-        if run("service supervisor-config status | grep running").failed:
-            run("service supervisor-config start")
-            run("supervisorctl -s http://localhost:9004 stop all")
+        if run("service supervisor-support-service status | grep running").failed:
+            run("service supervisor-support-service start")
+            run("supervisorctl -s http://localhost:9011 stop all")
 
 @task
 @EXECUTE_TASK
@@ -117,7 +117,9 @@ def allow_rabbitmq_port():
 def stop_rabbitmq_and_set_cookie(uuid):
      with settings(warn_only=True):
          run("service rabbitmq-server stop")
-         run("epmd -kill")
+         if 'Killing not allowed' in run("epmd -kill"):
+             run("pkill beam.smp")
+             run("pkill epmd")
          run("rm -rf /var/lib/rabbitmq/mnesia/")
      run("echo '%s' > /var/lib/rabbitmq/.erlang.cookie" % uuid)
 
@@ -221,7 +223,7 @@ def setup_rabbitmq_cluster(force=False):
         if not rabbitmq_cluster_uuid:
             rabbitmq_cluster_uuid = uuid.uuid4()
 
-        execute(listen_at_supervisor_config_port)
+        execute(listen_at_supervisor_support_port)
         execute(remove_mnesia_database)
         execute(verify_rabbit_node_hostname)
         execute(allow_rabbitmq_port)
