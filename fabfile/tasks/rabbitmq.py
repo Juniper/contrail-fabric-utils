@@ -1,5 +1,6 @@
 import uuid
 import re
+import time
 
 from fabfile.config import *
 from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node
@@ -177,9 +178,19 @@ def add_node_to_rabbitmq_cluster():
 @task
 @roles('rabbit')
 def verify_cluster_status():
-    status = run("service rabbitmq-server status")
-    if 'running' not in status.lower():
+
+    # Retry a few times, as rabbit-mq can fail intermittently when trying to
+    # connect to AMQP server. Total wait time here is atmost a minute.
+    rabbitmq_up = False
+    for i in range(0, 6):
+        status = run("service rabbitmq-server status")
+        if 'running' in status.lower():
+            rabbitmq_up = True
+            break
+        time.sleep(10)
+    if not rabbitmq_up:
         return False
+
     output = run("rabbitmqctl cluster_status")
     running_nodes = re.compile(r"running_nodes,\[([^\]]*)")
     match = running_nodes.search(output)
