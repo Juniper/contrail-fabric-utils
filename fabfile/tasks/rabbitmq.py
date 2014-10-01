@@ -124,6 +124,8 @@ def stop_rabbitmq_and_set_cookie(uuid):
              run("epmd -kill")
          run("rm -rf /var/lib/rabbitmq/mnesia/")
      run("echo '%s' > /var/lib/rabbitmq/.erlang.cookie" % uuid)
+     run("chmod 400 /var/lib/rabbitmq/.erlang.cookie")
+     run("chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie")
 
 
 @task
