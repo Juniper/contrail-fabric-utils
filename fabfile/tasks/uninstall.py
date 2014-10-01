@@ -7,6 +7,28 @@ from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.utils.host import get_openstack_internal_vip, get_from_testbed_dict
 
+def get_pkg_list():
+    dont_remove_list = [
+                        'contrail-install-packages',
+                        'contrail-fabric-utils',
+                        'contrail-interface-name',
+                        'glib2',
+                        'glibc',
+                        'glibc-common',
+                        'libgcc',
+                        'make',
+                        'pkgconfig',
+                        'python',
+                        'python-libs',
+                       ]
+    output = run('yum list installed | grep @contrail_install_repo | cut -d" " -f1 | cut -d"."-f1')
+    pkgs = output.split("\r\n")
+    for pkg in dont_remove_list:
+        try:
+            pkgs.remove(pkg)
+        except ValueError:
+            pass
+    return pkgs
 
 @task
 @EXECUTE_TASK
@@ -50,22 +72,20 @@ def uninstall_pkg_node(pkg, *args):
             if detect_ostype() == 'Ubuntu':
                 apt_uninstall([pkg])
             else:
-                rpm_uninstall([pkg])
+                yum_uninstall([pkg])
 
 
-def rpm_uninstall(rpms):
+def yum_uninstall(rpms):
     cmd = "rpm -e "
     if detect_ostype() in ['centos', 'fedora', 'redhat']:
-        for rpm in rpms:
-            with settings(warn_only=True):
-                run(cmd + rpm)
+        with settings(warn_only=True):
+            run(cmd + ' '.join(rpms))
 
 def apt_uninstall(debs):
     cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes autoremove --purge "
     if detect_ostype() in ['Ubuntu']:
-        for deb in debs:
-            with settings(warn_only=True):
-                run(cmd + deb)
+        with settings(warn_only=True):
+            run(cmd + ' '.join(debs))
 
 @task
 @EXECUTE_TASK
@@ -91,7 +111,7 @@ def uninstall_interface_name_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             rpm = ['contrail-interface-name']
-            rpm_uninstall(rpm)
+            yum_uninstall(rpm)
             run('rm -f /etc/sysconfig/network-scripts/ifcfg-p*p*p*')
 
 @task
@@ -111,7 +131,8 @@ def uninstall_database_node(*args):
             if detect_ostype() == 'Ubuntu':
                 apt_uninstall(pkg)
             else:
-                rpm_uninstall(pkg)
+                pkgs = get_pkg_list()
+                yum_uninstall(pkgs)
             with cd('/etc/'):
                 run('sudo rm -rf zookeeper')
             with cd('/var/lib/'):
@@ -142,7 +163,8 @@ def uninstall_openstack_node(*args):
                 run("sed -i '/.*glance.*/d' /etc/fstab")
                 apt_uninstall(pkg)
             else:
-                rpm_uninstall(pkg)
+                pkgs = get_pkg_list()
+                yum_uninstall(pkgs)
             with cd('/etc/'):
                 run('sudo rm -rf glance/ cinder/ openstack_dashboard/ keystone/ quantum/ nova/ haproxy/ keepalived/')
             with cd('/var/lib/'):
@@ -169,7 +191,8 @@ def uninstall_cfgm_node(*args):
             if detect_ostype() == 'Ubuntu':
                 apt_uninstall(pkg)
             else:
-                rpm_uninstall(pkg)
+                pkgs = get_pkg_list()
+                yum_uninstall(pkgs)
             with cd('/etc/'):
                 run('sudo rm -rf irond haproxy keepalived')
             with cd('/var/lib/'):
@@ -198,7 +221,8 @@ def uninstall_control_node(*args):
             if detect_ostype() == 'Ubuntu':
                 apt_uninstall(pkg)
             else:
-                rpm_uninstall(pkg)
+                pkgs = get_pkg_list()
+                yum_uninstall(pkgs)
             with cd('/var/'):
                 run('sudo rm -rf crashes')
             with cd('/var/log'):
@@ -222,7 +246,8 @@ def uninstall_collector_node(*args):
             if detect_ostype() == 'Ubuntu':
                 apt_uninstall(pkg)
             else:
-                rpm_uninstall(pkg)
+                pkgs = get_pkg_list()
+                yum_uninstall(pkgs)
             with cd('/var/lib/'):
                 run('sudo rm -rf redis')
                 run('sudo rm -rf /var/crashes')
@@ -249,7 +274,8 @@ def uninstall_webui_node(*args):
             if detect_ostype() == 'Ubuntu':
                 apt_uninstall(pkg)
             else:
-                rpm_uninstall(pkg)
+                pkgs = get_pkg_list()
+                yum_uninstall(pkgs)
             with cd('/var/'):
                 run('sudo rm -rf crashes')
             with cd('/opt/contrail'):
@@ -310,7 +336,8 @@ def uninstall_only_vrouter_node(manage_nova_compute='yes', *args):
                 apt_uninstall(pkg)
                 run("sed -i  's/inet manual/inet dhcp/g' /etc/network/interfaces")
             else:
-                rpm_uninstall(pkg)
+                pkgs = get_pkg_list()
+                yum_uninstall(pkgs)
             with cd('/etc/'):
                 run('sudo rm -rf libvirt')
                 with settings(warn_only=True):
@@ -387,7 +414,7 @@ def uninstall_without_openstack(manage_nova_compute='yes', full='no'):
 @roles('build')
 def reboot_all_build_atlast():
     """Reboot all nodes, will reboot the node from where fab command is trrigered at last"""
-    nodes = copy.deepcopy(env.roledefs['all'])
+    nodes_list_except_build = copy.deepcopy(env.roledefs['all'])
     if env.host_string in nodes:
         #Trrigered from one of the node in cluster
         node_list_except_build.remove(env.host_string)
