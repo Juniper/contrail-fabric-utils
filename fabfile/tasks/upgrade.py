@@ -5,6 +5,7 @@ from fabfile.utils.fabos import *
 from fabfile.utils.host import *
 from fabfile.config import *
 from fabfile.tasks.helpers import insert_line_to_file
+from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 
 # upgrade schema
 UPGRADE_SCHEMA = {
@@ -658,6 +659,8 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             amqp_server_ip = get_openstack_amqp_server()
             run("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" % amqp_server_ip)
             run("openstack-config --set /etc/glance/glance-api.conf DEFAULT rabbit_host %s" % amqp_server_ip)
+            if get_openstack_internal_vip():
+                execute('fixup_restart_haproxy_in_openstack_node', host_string)
             execute('restart_openstack_node', host_string)
 
 @task
@@ -698,6 +701,8 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             upgrade(from_rel, 'cfgm')
             if len(env.roledefs['cfgm']) == 1:
                 execute('fix_rabbitmq_conf')
+            if get_contrail_internal_vip():
+                execute('fixup_restart_haproxy_in_collector_node', host_string)
             execute('upgrade_pkgs_node', host_string)
 
 @task
@@ -883,9 +888,11 @@ def upgrade_contrail(from_rel, pkg):
     execute('upgrade_cfgm', from_rel, pkg)
     if from_rel in ['1.05', '1.06']:
         execute('setup_rabbitmq_cluster', True)
+        fixup_restart_haproxy_in_all_cfgm(1)
         execute('setup_cfgm')
     else:
         execute('setup_rabbitmq_cluster')
+        fixup_restart_haproxy_in_all_cfgm(1)
         execute('restart_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
