@@ -36,6 +36,11 @@ def get_service_token_opt():
         return ''
 
 def get_haproxy_opt():
+    if get_contrail_internal_vip():
+        # Do not pass haproxy option to the provisioning scripts in HA setup,
+        # As the setup_ha task takes care of configuring VIP and VIP will be
+        # used instead of 127.0.0.1.
+        return ''
     testbed.haproxy = getattr(testbed, 'haproxy', False)
     haproxy_opt = '--haproxy' if testbed.haproxy else ''
     return haproxy_opt
