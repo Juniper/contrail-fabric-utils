@@ -321,6 +321,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
             get("/etc/haproxy/haproxy.cfg", tmp_fname)
             with settings(warn_only=True):
                 local("sed -i -e '/^#contrail-openstack-marker-start/,/^#contrail-openstack-marker-end/d' %s" % (tmp_fname))
+                local("sed -i -e 's/frontend\s*main\s*\*:5000/frontend  main *:5001/' %s" %(tmp_fname))
                 local("sed -i -e 's/*:5000/*:5001/' %s" % (tmp_fname))
                 local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" % (tmp_fname))
                 local("sed -i -e 's/option\shttplog/option                  tcplog/' %s" % (tmp_fname))
@@ -382,6 +383,7 @@ def fixup_restart_haproxy_in_collector_node(*args):
             get("/etc/haproxy/haproxy.cfg", tmp_fname)
             with settings(warn_only=True):
                 local("sed -i -e '/^#contrail-collector-marker-start/,/^#contrail-collector-marker-end/d' %s" % (tmp_fname))
+                local("sed -i -e 's/frontend\s*main\s*\*:5000/frontend  main *:5001/' %s" %(tmp_fname))
                 local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" % (tmp_fname))
                 local("sed -i -e 's/option\shttplog/option                  tcplog/' %s" % (tmp_fname))
                 local("sed -i -e 's/maxconn 4096/maxconn 100000/' %s" % (tmp_fname))
