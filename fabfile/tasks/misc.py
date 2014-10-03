@@ -125,7 +125,7 @@ def create_default_secgrp_rules():
             password=auth_passwd,
             tenant_name=auth_tenant)
     except Exception ,err:
-        print "Unable to connect to API-server %s:%s, as %s/%s" % (vnc_api_ip, vnc_api_port, auth_user, auth_password)
+        print "Unable to connect to API-server %s:%s, as %s/%s" % (vnc_api_ip, vnc_api_port, auth_user, auth_passwd)
         print "ERROR: \n%s" % err
 
     projects = vnc_lib.projects_list()['projects']
