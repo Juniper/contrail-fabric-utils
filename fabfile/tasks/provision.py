@@ -1419,6 +1419,7 @@ def setup_without_openstack(manage_nova_compute='yes'):
        User has to provision the openstack node with their custom openstack pakckages.
        If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute will be skipped in the compute node.
     """
+    execute('disable_iptables')
     execute('setup_ha')
     execute('setup_rabbitmq_cluster')
     execute('increase_limits')
