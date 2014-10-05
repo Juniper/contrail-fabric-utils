@@ -37,6 +37,7 @@ from tasks.zookeeper import *
 try:
     from contraillabs.setup import *
     from contraillabs.rdo import *
+    from contraillabs.utils import *
 except ImportError:
     pass
 
