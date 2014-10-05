@@ -143,10 +143,15 @@ env.ostypes = {
 #live migration config
 #live_migration = True
 
+#Enable this for External NFS server
+#ext_nfs_livem = True
+#ext_nfs_livem_mount = '11.1.0.1:/nfsvol'
+
+#Enable this for Ceph based NFS VM server
 #ceph_nfs_livem = True
 #ceph_nfs_livem_subnet = '192.168.10.253/24'
 #ceph_nfs_livem_image = '/ubuntu/livemnfs.qcow2'
-#ceph_nfs_livem_host = 'host4'
+#ceph_nfs_livem_host = host4
 
 #To disable installing contrail interface rename package
 #env.interface_rename = False
