@@ -571,12 +571,20 @@ def wait_till_all_up(attempts=90, interval=10, node=None, waitdown=True, contrai
 
     print 'Given Nodes are down... Waiting for nodes to come back'
     for node in nodes:
+        user, hostip = node.split('@')
+        count = 0
         with hide('everything'):
-            with settings(host_string=node, timeout=int(interval),
-                          connection_attempts=int(attempts),
-                          linewise=True, warn_only=True,
-                          password=env.passwords[node]): 
-                connections.connect(env.host_string)
+            while not verify_sshd(hostip,
+                      user,
+                      env.passwords[node]):
+                sys.stdout.write('.')
+                sleep(int(interval))
+                count+=1
+                if count <= attempts:
+                    continue
+                else:
+                    print 'Timed out waiting for node (%s) to come back up...' %node
+                    sys.exit(1)
     return 0
 
 def enable_haproxy():
