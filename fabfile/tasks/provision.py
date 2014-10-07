@@ -422,9 +422,7 @@ def setup_cfgm_node(*args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-config.override')
                     run('rm /etc/init/neutron-server.override')
-            cmd = "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-cfgm.py --self_ip %s --keystone_ip %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --quantum_port %s --nworkers %d --keystone_auth_protocol %s --keystone_auth_port %s --keystone_admin_token %s --keystone_insecure %s %s %s %s --amqp_server_ip %s" %(
-                 cfgm_host_password,
-                 openstack_admin_password,
+            cmd = "setup-vnc-config --self_ip %s --keystone_ip %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --quantum_port %s --nworkers %d --keystone_auth_protocol %s --keystone_auth_port %s --keystone_admin_token %s --keystone_insecure %s %s %s %s --amqp_server_ip %s" %(
                  tgt_ip,
                  keystone_ip,
                  collector_ip,
@@ -709,8 +707,8 @@ def setup_openstack_node(*args):
         cfgm_ip = hstr_to_ip(cfgm_host)
 
         internal_vip = get_openstack_internal_vip()
-        cmd = "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-openstack.py --self_ip %s --keystone_ip %s --cfgm_ip %s --keystone_auth_protocol %s --amqp_server_ip %s --quantum_service_protocol %s %s %s" %(
-                    openstack_host_password, openstack_admin_password, self_ip, keystone_ip, cfgm_ip, get_keystone_auth_protocol(), amqp_server_ip, get_quantum_service_protocol(), get_service_token_opt(), get_haproxy_opt())
+        cmd = "setup-vnc-openstack --self_ip %s --keystone_ip %s --keystone_admin_passwd %s --cfgm_ip %s --keystone_auth_protocol %s --amqp_server_ip %s --quantum_service_protocol %s %s %s" %(
+                    self_ip, keystone_ip, openstack_admin_password, cfgm_ip, get_keystone_auth_protocol(), amqp_server_ip, get_quantum_service_protocol(), get_service_token_opt(), get_haproxy_opt())
         cmd += ' --openstack_index %s' % (env.roledefs['openstack'].index(host_string) + 1)
         if internal_vip:
             openstack_ip_list = ' '.join([hstr_to_ip(openstack_host) for openstack_host in env.roledefs['openstack']])
@@ -832,16 +830,16 @@ def setup_collector_node(*args):
                 rls = get_release()
                 # Bitbucket - Redis UVE master slave
                 if '1.04' in rls: 
-                    run_cmd = "PASSWORD=%s python setup-vnc-collector.py --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d --redis_master_ip %s --redis_role " \
-                           % (collector_host_password, ' '.join(cassandra_ip_list), cfgm_ip, tgt_ip, ncollectors, redis_master_ip) 
+                    run_cmd = "setup-vnc-collector --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d --redis_master_ip %s --redis_role " \
+                           % (collector_host_password, ' '.join(cassandra_ip_list), cfgm_ip, tgt_ip, ncollectors, redis_master_ip)
                     if not is_redis_master:
                         run_cmd += "slave "
                     else:
                         run_cmd += "master "
                 else:
                     # Github - Independent Redis UVE and Syslog
-                    run_cmd = "PASSWORD=%s python setup-vnc-collector.py --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d " \
-                           % (collector_host_password, ' '.join(cassandra_ip_list), cfgm_ip, tgt_ip, ncollectors) 
+                    run_cmd = "setup-vnc-collector --cassandra_ip_list %s --cfgm_ip %s --self_collector_ip %s --num_nodes %d " \
+                           % (' '.join(cassandra_ip_list), cfgm_ip, tgt_ip, ncollectors)
                     analytics_syslog_port = get_collector_syslog_port()
                     if analytics_syslog_port is not None:
                         run_cmd += "--analytics_syslog_port %d " % (analytics_syslog_port)
@@ -884,7 +882,7 @@ def setup_database_node(*args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-database.override')
             with cd(INSTALLER_DIR):
-                run_cmd = "PASSWORD=%s python setup-vnc-database.py --self_ip %s --cfgm_ip %s " % (database_host_password, tgt_ip, cfgm_ip)
+                run_cmd = "setup-vnc-database --self_ip %s --cfgm_ip %s " % (tgt_ip, cfgm_ip)
                 database_dir = get_database_dir()
                 if database_dir is not None:
                     run_cmd += "--data_dir %s " % (database_dir)
@@ -942,7 +940,7 @@ def setup_webui_node(*args):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-webui.override')
-            cmd = "PASSWORD=%s python setup-vnc-webui.py --cfgm_ip %s --keystone_ip %s --openstack_ip %s --collector_ip %s --cassandra_ip_list %s" %(cfgm_host_password, cfgm_ip, keystone_ip, openstack_ip, collector_ip, ' '.join(cassandra_ip_list))
+            cmd = "setup-vnc-webui --cfgm_ip %s --keystone_ip %s --openstack_ip %s --collector_ip %s --cassandra_ip_list %s" %(cfgm_ip, keystone_ip, openstack_ip, collector_ip, ' '.join(cassandra_ip_list))
             internal_vip = get_openstack_internal_vip()
             if internal_vip:
                 cmd += " --internal_vip %s" % internal_vip
@@ -1005,10 +1003,10 @@ def setup_control_node(*args):
                     run('rm /etc/init/supervisor-control.override')
                     run('rm /etc/init/supervisor-dns.override')
             with cd(INSTALLER_DIR):
-                run("PASSWORD=%s python setup-vnc-control.py --self_ip %s --cfgm_ip %s --collector_ip %s" \
-                     %(cfgm_host_password, tgt_ip, cfgm_ip, collector_ip))
+                run("setup-vnc-control --self_ip %s --cfgm_ip %s --collector_ip %s" \
+                     %(tgt_ip, cfgm_ip, collector_ip))
                 if detect_ostype() == 'centos':
-                    run("PASSWORD=%s service contrail-control restart" % cfgm_host_password, pty=False)
+                    run("service contrail-control restart", pty=False)
 #end setup_control
 
 @task
@@ -1086,10 +1084,14 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
     
     
     # retrieve neutron_metadata_proxy_shared_secret from openstack
+    """
     with settings(host_string=env.roledefs['openstack'][0]):
         metadata_secret = get_value(src_file='/etc/nova/nova.conf',
                           section='keystone_authtoken',
                           variable='neutron_metadata_proxy_shared_secret')
+    """
+    # TODO: Remove it
+    metadata_secret = None
 
     for host_string in args:
         # Enable haproxy for Ubuntu
@@ -1100,10 +1102,13 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
+        cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
+        cfgm_passwd = env.passwords[env.roledefs['cfgm'][0]]
         openstack_mgmt_ip = hstr_to_ip(env.roledefs['openstack'][0])
         keystone_ip = get_keystone_ip()
         ks_auth_protocol = get_keystone_auth_protocol()
         ks_auth_port = get_keystone_auth_port()
+        ks_admin_user, ks_admin_password = get_openstack_credentials()
         compute_host = get_control_host_string(host_string)
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
     
@@ -1157,8 +1162,8 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-vrouter.override')
             with cd(INSTALLER_DIR):
-                cmd= "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-vrouter.py --self_ip %s --cfgm_ip %s --keystone_ip %s --openstack_mgmt_ip %s --ncontrols %s --keystone_auth_protocol %s --keystone_auth_port %s --amqp_server_ip %s --quantum_service_protocol %s %s %s" \
-                         %(cfgm_host_password, openstack_admin_password, compute_control_ip, cfgm_ip, keystone_ip, openstack_mgmt_ip, ncontrols, ks_auth_protocol, ks_auth_port, amqp_server_ip, get_quantum_service_protocol(), get_service_token_opt(), haproxy)
+                cmd= "setup-vnc-compute --self_ip %s --cfgm_ip %s --cfgm_user %s --cfgm_passwd %s --keystone_ip %s --openstack_mgmt_ip %s --ncontrols %s --keystone_auth_protocol %s --keystone_auth_port %s --amqp_server_ip %s --quantum_service_protocol %s %s %s --keystone_admin_user %s --keystone_admin_password %s" \
+                         %(compute_control_ip, cfgm_ip, cfgm_user, cfgm_passwd, keystone_ip, openstack_mgmt_ip, ncontrols, ks_auth_protocol, ks_auth_port, amqp_server_ip, get_quantum_service_protocol(), get_service_token_opt(), haproxy, ks_admin_user, ks_admin_password)
                 if tgt_ip != compute_mgmt_ip: 
                     cmd = cmd + " --non_mgmt_ip %s --non_mgmt_gw %s" %( tgt_ip, tgt_gw )
                 if set_vgw:   
@@ -1534,7 +1539,7 @@ def setup_interface_node(*args):
 
     retries = 5; timeout = 5
     for host in hosts.keys():
-        cmd = 'python setup-vnc-interfaces.py'
+        cmd = 'setup-vnc-interfaces'
         errmsg = 'WARNING: Host ({HOST}) is defined with device ({DEVICE})'+\
                  ' but its bond info is not available\n'
         if hosts[host].has_key('device') and hosts[host].has_key('ip'):
@@ -1669,7 +1674,7 @@ def add_static_route_node(*args):
             dest += ' %s' %route_info[tgt_host][index]['ip']
             gw += ' %s' %route_info[tgt_host][index]['gw']
             netmask += ' %s' %route_info[tgt_host][index]['netmask']
-        cmd = 'python setup-vnc-static-routes.py' +\
+        cmd = 'setup-vnc-static-routes' +\
                       dest + gw + netmask + intf
         if vlan:
             cmd += ' --vlan %s'%vlan

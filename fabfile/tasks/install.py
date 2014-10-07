@@ -158,9 +158,9 @@ def upgrade_pkgs_node(*args):
             # of python-paramiko(1.7.5), fabric-utils requires 1.9.0 or above.
             # ubuntu does not need this, as pycrypto and paramiko are installed as debian packages. 
             cmd = "sudo easy_install \
-                  /opt/contrail/contrail_installer/contrail_setup_utils/pycrypto-2.6.tar.gz;\
+                  /opt/contrail/python_packages/pycrypto-2.6.tar.gz;\
                   sudo easy_install \
-                  /opt/contrail/contrail_installer/contrail_setup_utils/paramiko-1.11.0.tar.gz"
+                  /opt/contrail/python_packages/paramiko-1.11.0.tar.gz"
             if detect_ostype() in ['centos', 'fedora', 'redhat']:
                 run(cmd)
 
