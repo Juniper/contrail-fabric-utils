@@ -31,7 +31,7 @@ def setup_webui_storage(mode):
                  # storage-webui-ip - Storage WebUI IP
                  # storage-master-ip - storage master node where ceph-rest-api server is running
 
-                 cmd= "PASSWORD=%s python setup-vnc-storage-webui.py --storage-setup-mode %s --storage-webui-ip %s  --storage-master-ip %s --storage-disk-config %s --storage-ssd-disk-config %s"\
+                 cmd= "PASSWORD=%s setup-vnc-storage-webui --storage-setup-mode %s --storage-webui-ip %s  --storage-master-ip %s --storage-disk-config %s --storage-ssd-disk-config %s"\
                          %(storage_webui_host_password, mode, storage_webui_ip, storage_master_ip, ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), )
                  print cmd
                  run(cmd)
@@ -97,7 +97,7 @@ def setup_master_storage(mode):
                 # live-migration - Enable/Disable live migration
                 # collector-hosts - hosts of all collector nodes
                 # collector-host-tokens - password for all collector nodes
-                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s --collector-hosts %s --collector-host-tokens %s" \
+                cmd= "PASSWORD=%s setup-vnc-storage --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s --collector-hosts %s --collector-host-tokens %s" \
                         %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), ' '.join(collector_host_list), ' '.join(collector_pass_list))
                 print cmd
                 run(cmd)
@@ -145,7 +145,7 @@ def setup_nfs_live_migration(mode):
                 # storage-host-tokens - password for all the nodes (storage master + storage compute)
                 # live-migration - Enable/Disable live migration
                 # nfs-live-migration - NFS Livemigration configuration (Image path, subnet, host)
-                cmd= "PASSWORD=%s python setup-vnc-livemigration.py --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s --nfs-live-migration %s" \
+                cmd= "PASSWORD=%s setup-vnc-livemigration --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s --nfs-live-migration %s" \
                     %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), get_nfs_live_migration_opts())
                 print cmd
                 run(cmd)
@@ -197,7 +197,7 @@ def setup_add_storage_compute_node(*args):
                 # storage-local-ssd-disk-config - Disk list for local LVM SSD pool
                 # storage-local-nfs-disk-config - NFS storage list
                 # storage-directory-config - Directory list for Ceph
-                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode addnode --add-storage-node %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s" \
+                cmd= "PASSWORD=%s setup-vnc-storage --storage-setup-mode addnode --add-storage-node %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s" \
                         %(storage_master_password, new_storage_hostnames, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts())
                 print cmd
                 run(cmd)

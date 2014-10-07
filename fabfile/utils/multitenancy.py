@@ -3,7 +3,7 @@ from fabric.api import env
 from fabfile.utils.host import *
 
 def get_mt_enable():
-    return getattr(testbed, 'multi_tenancy', False)
+    return getattr(testbed, 'multi_tenancy', True)
 #end _get_mt_ena
 
 def get_mt_opts():
