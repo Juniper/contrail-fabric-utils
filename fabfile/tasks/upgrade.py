@@ -650,7 +650,7 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
             upgrade(from_rel, 'compute')
             # If necessary, migrate to new ini format based configuration.
             if from_rel != '1.06':
-                run("/opt/contrail/contrail_installer/contrail_config_templates/vrouter-agent.conf.sh")
+                run("vrouter-agent.conf.sh")
             if detect_ostype() in ['centos']:
                 execute('setup_vrouter_node', host_string)
 

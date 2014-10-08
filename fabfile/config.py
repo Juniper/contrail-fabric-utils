@@ -65,7 +65,7 @@ sys.stdout = Logger('_'.join(fabtasks) + '_' + ts + '.log')
 sys.stderr = StdErrLogger('_'.join(fabtasks) + '_' + ts + '.log')
 
 
-INSTALLER_DIR = '/opt/contrail/contrail_installer'
+INSTALLER_DIR = '/opt/contrail/bin'
 UTILS_DIR = '/opt/contrail/utils'
 BUG_DIR = '/volume/labcores/contrail/bugs'
 RPMS_DIR = '/root/rpms'

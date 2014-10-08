@@ -23,10 +23,14 @@ def get_manage_neutron():
     return get_from_testbed_dict('keystone','manage_neutron', 'yes')
 
 def get_service_token():
-    service_token = getattr(testbed, 'service_token', '')
-    testbed.service_token = get_from_testbed_dict('openstack','service_token',
-                             service_token)
-    return testbed.service_token
+    service_token = get_from_testbed_dict('openstack','service_token',
+                             getattr(testbed, 'service_token', ''))
+    if not service_token:
+        with settings(host_string=env.roledefs['openstack'][0], warn_only=True):
+            if run("sudo ls /etc/contrail/service.token").failed:
+                run("sudo setup-service-token.sh")
+            service_token = run("sudo cat /etc/contrail/service.token")
+    return service_token
 
 def get_service_token_opt():
     service_token = get_service_token()

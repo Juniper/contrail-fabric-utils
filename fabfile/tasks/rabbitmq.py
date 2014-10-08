@@ -174,7 +174,7 @@ def add_node_to_rabbitmq_cluster():
 
 @task
 @roles('rabbit')
-def verify_cluster_status():
+def verify_cluster_status(retry='yes'):
 
     # Retry a few times, as rabbit-mq can fail intermittently when trying to
     # connect to AMQP server. Total wait time here is atmost a minute.
@@ -184,6 +184,8 @@ def verify_cluster_status():
         if 'running' in status.lower():
             rabbitmq_up = True
             break
+        elif retry == 'no':
+            return False
         time.sleep(10)
     if not rabbitmq_up:
         return False
@@ -229,7 +231,7 @@ def setup_rabbitmq_cluster(force=False):
 
         if not force:
             with settings(warn_only=True):
-                result = execute(verify_cluster_status)
+                result = execute("verify_cluster_status", retry='no')
             if result and False not in result.values():
                 print "RabbitMQ cluster is up and running in role[%s]; No need to cluster again." % role
                 continue
