@@ -5,6 +5,7 @@ import time
 from fabfile.config import *
 from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node
 from fabfile.utils.fabos import detect_ostype
+from fabfile.tasks.helpers import disable_iptables
 from fabfile.utils.host import get_from_testbed_dict, get_control_host_string,\
                                hstr_to_ip, get_openstack_internal_vip,\
                                get_contrail_internal_vip
@@ -108,9 +109,7 @@ def config_rabbitmq():
 @parallel
 @roles('rabbit')
 def allow_rabbitmq_port():
-    if detect_ostype() in ['centos']:
-        run("iptables --flush")
-        run("service iptables save")
+    execute('disable_iptables')
 
 @task
 @parallel

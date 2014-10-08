@@ -857,3 +857,22 @@ def round_robin_collector_ip_assignment(all_node_ips, collector_ips):
     return mapping_dict
 # end of round_robin_collector_ip_assignment
 
+@task
+def disable_iptables():
+    with settings(warn_only=True):
+        os_type = detect_ostype().lower()
+        if os_type in ['centos']:
+            run("iptables --flush")
+            run("service iptables save")
+        if os_type in ['redhat']:
+            run("iptables --flush")
+            run("sudo service iptables stop")
+            run("sudo service ip6tables stop")
+            run("sudo systemctl stop firewalld")
+            run("sudo systemctl status firewalld")
+            run("sudo chkconfig firewalld off")
+            run("sudo /usr/libexec/iptables/iptables.init stop")
+            run("sudo /usr/libexec/iptables/ip6tables.init stop")
+            run("sudo service iptables save")
+            run("sudo service ip6tables save")
+            run("iptables -L")
