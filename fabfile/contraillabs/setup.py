@@ -25,7 +25,7 @@ def check_reimage_status():
 
 @task
 @roles('build')
-def bringup_test_node(build):
+def bringup_test_setup(build, reimage=False):
     buildid = build
     cfgm = env.roledefs['cfgm'][0]
     if hasattr(env, 'mytestbed'):
@@ -37,16 +37,17 @@ def bringup_test_node(build):
     if os.path.isfile(build):
         fname = os.path.basename(build)
         name, ftype = os.path.splitext(fname)
-        if ftype == '.iso':
-            execute('all_reimage', build)
-            buildid = build.split('-')[1]
-        elif ftype == '.rpm' and env.ostypes[cfgm] in ['centos', 'centos65']:
-            execute('all_reimage', '')
-        elif ftype == '.deb' and env.ostypes[cfgm] == 'ubuntu':
-            execute('all_reimage')
-        else:
-            raise RuntimeError('Unsuported package or mismatch in testbed.ostypes and package.')
-        execute('check_reimage_status')
+        if reimage:
+            if ftype == '.iso':
+                execute('all_reimage', build)
+                buildid = build.split('-')[1]
+            elif ftype == '.rpm' and env.ostypes[cfgm] == 'centos':
+                execute('all_reimage', '')
+            elif ftype == '.deb' and env.ostypes[cfgm] == 'ubuntu':
+                execute('all_reimage')
+            else:
+                raise RuntimeError('Unsuported package or mismatch in testbed.ostypes and package.')
+            execute('check_reimage_status')
     else:
         print "Package %s not found." % build
         print "Specify a valid contrail-install-packages location."
