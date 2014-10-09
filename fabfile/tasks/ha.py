@@ -154,12 +154,6 @@ def setup_galera_cluster():
         execute('setup_passwordless_ssh', *env.roledefs['openstack'])
     self_host = get_control_host_string(env.host_string)
     self_ip = hstr_to_ip(self_host)
-    openstack_host_password = env.passwords[env.host_string]
-
-    if (getattr(env, 'openstack_admin_password', None)):
-        openstack_admin_password = env.openstack_admin_password
-    else:
-        openstack_admin_password = 'contrail123'
 
     openstack_host_list = [get_control_host_string(openstack_host)\
                            for openstack_host in env.roledefs['openstack']]
@@ -169,10 +163,9 @@ def setup_galera_cluster():
     internal_vip = get_openstack_internal_vip()
 
     with cd(INSTALLER_DIR):
-        run("PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-galera.py\
+        run("setup-vnc-galera.py\
             --self_ip %s --keystone_ip %s --galera_ip_list %s\
-            --internal_vip %s --openstack_index %d" % (openstack_host_password,
-                openstack_admin_password, self_ip, keystone_ip,
+            --internal_vip %s --openstack_index %d" % ( self_ip, keystone_ip,
                 ' '.join(galera_ip_list), internal_vip,
                 (openstack_host_list.index(self_host) + 1)))
 
@@ -207,13 +200,7 @@ def setup_keepalived_node(role):
     mgmt_ip = hstr_to_ip(env.host_string)
     self_host = get_control_host_string(env.host_string)
     self_ip = hstr_to_ip(self_host)
-    openstack_host_password = env.passwords[env.host_string]
-    
-    if (getattr(env, 'openstack_admin_password', None)):
-        openstack_admin_password = env.openstack_admin_password
-    else:
-        openstack_admin_password = 'contrail123'
-        
+
     internal_vip = get_openstack_internal_vip()
     external_vip = get_openstack_external_vip()
     if role == 'cfgm':
@@ -231,12 +218,11 @@ def setup_keepalived_node(role):
                 continue
  
     with cd(INSTALLER_DIR):
-        cmd = "PASSWORD=%s ADMIN_TOKEN=%s python setup-vnc-keepalived.py\
+        cmd = "setup-vnc-keepalived\
                --self_ip %s --internal_vip %s --mgmt_self_ip %s\
-               --self_index %d --num_nodes %d --role %s" % (openstack_host_password,
-               openstack_admin_password, self_ip, internal_vip, mgmt_ip,
-               (keepalived_host_list.index(self_host) + 1), len(env.roledefs[role]),
-               role)
+               --self_index %d --num_nodes %d --role %s" % ( self_ip,
+                internal_vip, mgmt_ip, (keepalived_host_list.index(self_host) + 1),
+                len(env.roledefs[role]), role)
         if external_vip:
              cmd += ' --external_vip %s' % external_vip
         run(cmd)
