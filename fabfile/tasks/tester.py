@@ -293,7 +293,10 @@ verify_on_setup=$__test_verify_on_setup__
         public_vn_rtgt = getattr(testbed, 'public_vn_rtgt','0')
         public_vn_subnet = getattr(testbed, 'public_vn_subnet',None)
         ext_routers = getattr(testbed, 'ext_routers', [])
-        test_verify_on_setup = getattr(env,'test_verify_on_setup','True')
+        if os.environ.has_key('GUESTVM_IMAGE'):
+            test_verify_on_setup = 'True'
+        else:
+            test_verify_on_setup = getattr(env,'test_verify_on_setup','True')
         mail_server = '10.204.216.49'
         mail_port = '25'
         webui = getattr(testbed, 'webui', False)
