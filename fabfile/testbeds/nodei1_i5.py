@@ -58,7 +58,7 @@ env.passwords = {
     host_build: 'stack@123',
 }
 
-env.test_repo_dir='/home/stack/ubuntu_multi_interface_parallel/contrail-test'
+env.test_repo_dir='/home/stack/multi_interface_parallel/ubuntu/icehouse/contrail-test'
 env.mail_from='contrail-build@juniper.net'
 env.mail_to='dl-contrail-sw@juniper.net'
 env.log_scenario='Ubuntu five-Node Parallel Sanity-multi-interface'
