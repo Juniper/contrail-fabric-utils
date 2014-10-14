@@ -252,22 +252,22 @@ def fixup_restart_haproxy_in_openstack_node(*args):
         mgmt_host_ip = hstr_to_ip(host_string)
         host_ip = hstr_to_ip(get_control_host_string(host_string))
         keystone_server_lines +=\
-            '%s server %s %s:6000 check inter 2000 rise 2 fall 1 check port 3337 observe layer7 check port 3306 observe layer4\n'\
+            '%s server %s %s:6000 check inter 2000 rise 2 fall 1\n'\
              % (space, host_ip, host_ip)
         keystone_admin_server_lines +=\
-            '%s server %s %s:35358 check inter 2000 rise 2 fall 1 check port 3337 observe layer7 check port 3306 observe layer4\n'\
+            '%s server %s %s:35358 check inter 2000 rise 2 fall 1\n'\
              % (space, host_ip, host_ip)
         glance_server_lines +=\
-            '%s server %s %s:9393 check inter 2000 rise 2 fall 1 check port 3337 observe layer7 check port 3306 observe layer4\n'\
+            '%s server %s %s:9393 check inter 2000 rise 2 fall 1\n'\
              % (space, host_ip, host_ip)
         cinder_server_lines +=\
             '%s server %s %s:9776 check inter 2000 rise 2 fall 3\n'\
              % (space, host_ip, host_ip)
         nova_api_server_lines +=\
-            '%s server %s %s:9774 check inter 2000 rise 2 fall 1 check port 3337 observe layer7 check port 3306 observe layer4\n'\
+            '%s server %s %s:9774 check inter 2000 rise 2 fall 1\n'\
              % (space, host_ip, host_ip)
         nova_meta_server_lines +=\
-            '%s server %s %s:9775 check inter 2000 rise 2 fall 1 check port 3337 observe layer7 check port 3306 observe layer4\n'\
+            '%s server %s %s:9775 check inter 2000 rise 2 fall 1\n'\
              % (space, host_ip, host_ip)
         nova_vnc_server_lines  +=\
             '%s server %s %s:6999 check inter 2000 rise 2 fall 3\n'\
