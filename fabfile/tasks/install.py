@@ -438,6 +438,8 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                       ]
             if getattr(testbed, 'haproxy', False):
                 pkg.append('haproxy')
+                pkg.append('iproute')
+
             if ostype == 'Ubuntu':
                 run('echo "manual" >> /etc/init/supervisor-vrouter.override')
                 apt_install(pkg)
