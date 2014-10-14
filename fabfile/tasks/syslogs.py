@@ -21,24 +21,23 @@ def tar_logs_cores():
     sudo ("cd /var/log/temp_log/ ; tar czf /var/log/logs_%s_%s.tgz *"%(e, a))
     if not check_file_exists('/usr/bin/gdb'):
         install_pkg(['gdb'])
-    if "core" in sudo("ls -lrt /var/crashes"):
-        output = sudo("ls -lrt /var/crashes")
-        core_list = output.split('\n')
-        for corename in core_list:
-            if "core" in corename:
-                core = corename.split()[8]
-                name = core.split('.')[1]
-                with settings(warn_only=True):
+    with settings(warn_only=True):
+        if "core" in sudo("ls -lrt /var/crashes"):
+            output = sudo("ls -lrt /var/crashes")
+            core_list = output.split('\n')
+            for corename in core_list:
+                if "core" in corename:
+                    core = corename.split()[8]
+                    name = core.split('.')[1]
                     rname = sudo("ls /usr/bin/%s*" %name)
                     if check_file_exists(rname):
                         name = sudo("basename %s" %rname)
-                core_new = core.rstrip('\r')
-                with settings(warn_only=True):
+                    core_new = core.rstrip('\r')
                     sudo("gdb %s /var/crashes/%s --eval-command bt > /var/log/gdb_%s.log --eval-command quit"%(name, core_new, core_new))
-        sudo ("mkdir -p /var/crashes/saved")
-        sudo ("cp /var/crashes/core* /var/crashes/saved/")
-        sudo ("gzip /var/crashes/core*")
-        sudo ("cd /var/crashes; for i in core*.gz; do mv -f $i %s_$i; done" %(e) )
+            sudo ("mkdir -p /var/crashes/saved")
+            sudo ("cp /var/crashes/core* /var/crashes/saved/")
+            sudo ("gzip /var/crashes/core*")
+            sudo ("cd /var/crashes; for i in core*.gz; do mv -f $i %s_$i; done" %(e) )
     sudo("contrail-version > /var/log/contrail_version_%s_%s.log"%(e,a))
 
 #end tar_logs_cores
