@@ -13,6 +13,9 @@ frontend  contrail-analytics-api *:8081
 backend contrail-analytics-api
     option nolinger
     balance     roundrobin
+    option tcp-check
+    tcp-check connect port 6379
+    default-server error-limit 1 on-error mark-down
 $__contrail_analytics_api_backend_servers__
 
 #contrail-collector-marker-end
