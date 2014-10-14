@@ -13,9 +13,24 @@ frontend openstack-keystone *:5000
 backend keystone-backend
     option tcpka
     option nolinger
-    srvtimeout 24h
-    balance    roundrobin
+    timeout server 24h
+    balance roundrobin
+
+    option tcp-check
+    tcp-check connect port 3306
     default-server error-limit 1 on-error mark-down
+
+    option tcp-check
+    option httpchk
+    tcp-check connect port 3337
+    tcp-check send Host:\ localhost\r\n
+    http-check expect ! rstatus ^5
+    default-server error-limit 1 on-error mark-down
+
+    option tcp-check
+    tcp-check connect port 6000
+    default-server error-limit 1 on-error mark-down
+
 $__keystone_backend_servers__
 
 frontend openstack-keystone-admin *:35357
@@ -24,9 +39,24 @@ frontend openstack-keystone-admin *:35357
 backend keystone-admin-backend
     option tcpka
     option nolinger
-    srvtimeout 24h
+    timeout server 24h
     balance    roundrobin
+
+    option tcp-check
+    tcp-check connect port 3306
     default-server error-limit 1 on-error mark-down
+
+    option tcp-check
+    option httpchk
+    tcp-check connect port 3337
+    tcp-check send Host:\ localhost\r\n
+    http-check expect ! rstatus ^5
+    default-server error-limit 1 on-error mark-down
+    
+    option tcp-check
+    tcp-check connect port 9393
+    default-server error-limit 1 on-error mark-down
+
 $__keystone_admin_backend_servers__
 
 frontend openstack-glance *:9292
@@ -46,7 +76,7 @@ frontend openstack-cinder *:8776
 backend cinder-backend
     option tcpka
     option nolinger
-    srvtimeout 24h
+    timeout server 24h
     balance   roundrobin
 $__cinder_backend_servers__
 
@@ -56,9 +86,24 @@ frontend openstack-nova-api *:8774
 backend nova-api-backend
     option tcpka
     option nolinger
-    srvtimeout 24h
+    timeout server 24h
     balance   roundrobin
+
+    option tcp-check
+    tcp-check connect port 3306
     default-server error-limit 1 on-error mark-down
+
+    option tcp-check
+    option httpchk
+    tcp-check connect port 3337
+    tcp-check send Host:\ localhost\r\n
+    http-check expect ! rstatus ^5
+    default-server error-limit 1 on-error mark-down
+    
+    option tcp-check
+    tcp-check connect port 9774
+    default-server error-limit 1 on-error mark-down
+
 $__nova_api_backend_servers__
 
 frontend openstack-nova-meta *:8775
@@ -67,9 +112,24 @@ frontend openstack-nova-meta *:8775
 backend nova-meta-backend
     option tcpka
     option nolinger
-    srvtimeout 24h
+    timeout server 24h
     balance   roundrobin
+
+    option tcp-check
+    tcp-check connect port 3306
     default-server error-limit 1 on-error mark-down
+
+    option tcp-check
+    option httpchk
+    tcp-check connect port 3337
+    tcp-check send Host:\ localhost\r\n
+    http-check expect ! rstatus ^5
+    default-server error-limit 1 on-error mark-down
+
+    option tcp-check
+    tcp-check connect port 9775
+    default-server error-limit 1 on-error mark-down
+
 $__nova_meta_backend_servers__
 
 frontend openstack-nova-vnc *:6080
@@ -78,7 +138,7 @@ frontend openstack-nova-vnc *:6080
 backend nova-vnc-backend
     option tcpka
     option nolinger
-    srvtimeout 5h
+    timeout server 5h
     balance  roundrobin
     $__nova_vnc_backend_servers__
 
@@ -100,6 +160,7 @@ listen  rabbitmq 0.0.0.0:5673
     maxconn 10000
     balance roundrobin
     option tcpka
+    option nolinger
     option redispatch
     timeout client 48h
     timeout server 48h
@@ -112,9 +173,9 @@ listen  mysql 0.0.0.0:33306
     option nolinger
     option redispatch
     maxconn 10000
-    contimeout 5s
-    clitimeout 24h
-    srvtimeout 24h
+    timeout connect 5s
+    timeout client 24h
+    timeout server 24h
     option mysql-check user root
 $__mysql_servers__
 
