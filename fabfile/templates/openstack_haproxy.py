@@ -23,7 +23,7 @@ backend keystone-backend
     option tcp-check
     option httpchk
     tcp-check connect port 3337
-    tcp-check send Host:\ localhost\r\n
+    tcp-check send Host:localhost
     http-check expect ! rstatus ^5
     default-server error-limit 1 on-error mark-down
 
@@ -49,7 +49,7 @@ backend keystone-admin-backend
     option tcp-check
     option httpchk
     tcp-check connect port 3337
-    tcp-check send Host:\ localhost\r\n
+    tcp-check send Host:localhost
     http-check expect ! rstatus ^5
     default-server error-limit 1 on-error mark-down
 
@@ -75,7 +75,7 @@ backend glance-backend
     option tcp-check
     option httpchk
     tcp-check connect port 3337
-    tcp-check send Host:\ localhost\r\n
+    tcp-check send Host:localhost
     http-check expect ! rstatus ^5
     default-server error-limit 1 on-error mark-down
 
@@ -110,7 +110,7 @@ backend nova-api-backend
     option tcp-check
     option httpchk
     tcp-check connect port 3337
-    tcp-check send Host:\ localhost\r\n
+    tcp-check send Host:localhost
     http-check expect ! rstatus ^5
     default-server error-limit 1 on-error mark-down
 
@@ -136,7 +136,7 @@ backend nova-meta-backend
     option tcp-check
     option httpchk
     tcp-check connect port 3337
-    tcp-check send Host:\ localhost\r\n
+    tcp-check send Host:localhost
     http-check expect ! rstatus ^5
     default-server error-limit 1 on-error mark-down
 
