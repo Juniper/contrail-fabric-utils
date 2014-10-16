@@ -10,7 +10,19 @@ from fabric.exceptions import CommandTimeout
 @task
 def copy_dir(dir_name, tgt_host):
     user_home = os.path.expanduser('~')
-    remote_dir = "~/%s" % dir_name.replace(user_home,'')
+    local_hostname = local('hostname -s',capture=True)
+    with settings(host_string=tgt_host):
+        remote_hostname = run('hostname -s')
+        remote_home = run('pwd')
+    print "Remote host is %s" % (remote_hostname)
+    remote_dir = "%s" % dir_name.replace(user_home,remote_home)
+    if remote_hostname in local_hostname:
+        try:
+            if os.path.samefile(remote_dir, dir_name):
+                print "No need to copy since source and dest folders are same"
+                return
+        except OSError,e:
+            pass
     for elem in os.listdir(dir_name):
         if elem.startswith('.git'):
             continue
