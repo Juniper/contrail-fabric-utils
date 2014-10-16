@@ -19,7 +19,7 @@ def setup_rdo(rdo_url='https://repos.fedorapeople.org/repos/openstack/openstack-
     execute(fix_yum_repos)
     with settings(warn_only=True):
         run('sudo yum install -y openstack-packstack')
-    run('yes %s | packstack --allinone --mysql-pw juniper123' % env.passwords[env.host_string])
+    run('yes %s | packstack --allinone --mariadb-pw=juniper123 --use-epel=y' % env.passwords[env.host_string])
     openstack_password = getattr(env, 'openstack_admin_password', 'contrail123')
     run('source keystonerc_admin && keystone user-password-update --pass %s admin' % openstack_password)
     run("sed -i -e 's/export OS_PASSWORD=.*/export OS_PASSWORD=%s/' keystonerc_admin " % openstack_password)
@@ -52,6 +52,15 @@ def setup_rdo(rdo_url='https://repos.fedorapeople.org/repos/openstack/openstack-
     run("service openstack-nova-novncproxy restart")
     run("service openstack-nova-consoleauth restart")
     run("iptables --flush")
+    run("sudo service iptables stop; echo pass")
+    run("sudo service ip6tables stop; echo pass")
+    run("sudo systemctl stop firewalld; echo pass")
+    run("sudo systemctl status firewalld; echo pass")
+    run("sudo chkconfig firewalld off; echo pass")
+    run("sudo /usr/libexec/iptables/iptables.init stop; echo pass")
+    run("sudo /usr/libexec/iptables/ip6tables.init stop; echo pass")
+    run("sudo service iptables save; echo pass")
+    run("sudo service ip6tables save; echo pass")
 
     steps = "\n\n\n"
     steps += "="*160
