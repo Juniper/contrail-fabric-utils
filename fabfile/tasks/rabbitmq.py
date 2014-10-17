@@ -3,19 +3,23 @@ import re
 import time
 
 from fabfile.config import *
-from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node
+from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node, rabbitmq_env_conf
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.host import get_from_testbed_dict, get_control_host_string,\
                                hstr_to_ip, get_openstack_internal_vip,\
                                get_contrail_internal_vip
 
+global ctrl
+ctrl = "-ctrl"
 
 def verfiy_and_update_hosts(host_name, host_string):
-    with settings(warn_only=True):
-        resolved = run("ping -c 1 %s | grep '1 received'" % host_name).succeeded
-    if not resolved:
-        run("echo '%s          %s' >> /etc/hosts" % (host_string.split('@')[1], host_name))
-
+        # Need to have the alias created to map to the hostname
+        # this is required for erlang node to cluster using
+        # the same interface that is used for rabbitMQ TCP listener
+        with settings(hide('stderr'), warn_only=True):
+             if run('grep %s /etc/hosts' % (host_name+ctrl)).failed:
+                  run("echo '%s     %s     %s' >> /etc/hosts" % (hstr_to_ip(get_control_host_string(host_string)), host_name, host_name+ctrl))
+       
 @task
 @EXECUTE_TASK
 @roles('rabbit')
@@ -79,6 +83,28 @@ def set_guest_user_permissions():
     with settings(warn_only=True):
         run('rabbitmqctl set_permissions guest ".*" ".*" ".*"')
 
+
+@task
+@serial
+@roles('rabbit')
+def rabbitmq_env():
+    erl_node_name = None
+    rabbit_env_conf = '/etc/rabbitmq/rabbitmq-env.conf'
+    with settings(host_string=env.host_string, password=env.passwords[env.host_string]):
+      host_name = run('hostname -s') + ctrl 
+      erl_node_name = "rabbit@%s" % (host_name)
+    rabbitmq_env_template = rabbitmq_env_conf
+    rmq_env_conf = rabbitmq_env_template.template.safe_substitute({
+           '__erl_node_ip__' : hstr_to_ip(get_control_host_string(env.host_string)),
+           '__erl_node_name__' : erl_node_name,
+           })
+    tmp_fname = "/tmp/rabbitmq-env-%s.conf" % env.host_string
+    cfg_file = open(tmp_fname, 'w')
+    cfg_file.write(rmq_env_conf)
+    cfg_file.close()
+    put(tmp_fname, rabbit_env_conf)
+    local("rm %s" %(tmp_fname))
+
 @task
 @serial
 @roles('rabbit')
@@ -87,7 +113,7 @@ def config_rabbitmq():
     rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
     for host_string in env.roledefs['rabbit']:
         with settings(host_string=host_string, password=env.passwords[host_string]):
-            host_name = run('hostname -s')
+            host_name = run('hostname -s') + ctrl
         rabbit_hosts.append("\'rabbit@%s\'" % host_name)
     rabbit_hosts = ', '.join(rabbit_hosts)
     rabbitmq_config_template = rabbitmq_config
@@ -162,7 +188,7 @@ def rabbitmqctl_start_app_node(*args):
 def verify_rabbit_node_hostname():
     for host_string in env.roledefs['rabbit']:
         with settings(host_string=host_string):
-            host_name = run('hostname')
+            host_name = run('hostname -s')
         verfiy_and_update_hosts(host_name, host_string)
 
 @task
@@ -243,6 +269,7 @@ def setup_rabbitmq_cluster(force=False):
         execute(remove_mnesia_database)
         execute(verify_rabbit_node_hostname)
         execute(allow_rabbitmq_port)
+        execute(rabbitmq_env)
         execute(config_rabbitmq)
         execute("stop_rabbitmq_and_set_cookie", rabbitmq_cluster_uuid)
         execute(start_rabbitmq)
@@ -259,4 +286,3 @@ def setup_rabbitmq_cluster(force=False):
         result = execute(verify_cluster_status)
         if False in result.values():
             print "Unable to setup RabbitMQ cluster in role[%s]...." % role
-            exit(1)
