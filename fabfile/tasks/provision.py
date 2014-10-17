@@ -1086,7 +1086,9 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
     # reset openstack connections to create new connections
     # when running in parallel mode
     openstack_host = env.roledefs['openstack'][0]
-    connections.pop(openstack_host + ':22')
+    openstack_host_connection = openstack_host + ':22'
+    if connections and openstack_host_connection in connections.keys():
+        connections.pop(openstack_host_connection)
     # retrieve neutron_metadata_proxy_shared_secret from openstack
     with settings(host_string=openstack_host):
         metadata_secret = get_value(src_file='/etc/nova/nova.conf',
