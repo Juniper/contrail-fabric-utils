@@ -44,6 +44,7 @@ def start_cfgm():
     """starts the contrail config services."""
     with settings(warn_only=True):
         run('service supervisor-config start')
+        run('service supervisor-support-service start')
 
 @task
 @roles('database')
@@ -169,6 +170,7 @@ def restart_cfgm_node(*args):
     for host_string in args:
         with  settings(host_string=host_string):
             run('service supervisor-config restart')
+            run('service supervisor-support-service restart')
 
 @task
 @roles('control')
