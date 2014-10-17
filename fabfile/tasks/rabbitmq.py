@@ -60,11 +60,11 @@ def set_tcp_keepalive_on_compute():
 @task
 @EXECUTE_TASK
 @roles('rabbit')
-def listen_at_supervisor_config_port():
+def listen_at_supervisor_support_port():
     with settings(warn_only=True):
-        if run("service supervisor-config status | grep running").failed:
-            run("service supervisor-config start")
-            run("supervisorctl -s unix:///tmp/supervisord_config.sock stop all")
+        if run("service supervisor-support-service status | grep running").failed:
+            run("service supervisor-support-service start")
+            run("supervisorctl -s unix:///tmp/supervisord_support_service.sock stop all")
 
 @task
 @EXECUTE_TASK
@@ -239,7 +239,7 @@ def setup_rabbitmq_cluster(force=False):
         if not rabbitmq_cluster_uuid:
             rabbitmq_cluster_uuid = uuid.uuid4()
 
-        execute(listen_at_supervisor_config_port)
+        execute(listen_at_supervisor_support_port)
         execute(remove_mnesia_database)
         execute(verify_rabbit_node_hostname)
         execute(allow_rabbitmq_port)
