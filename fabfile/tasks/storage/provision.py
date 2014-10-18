@@ -79,6 +79,8 @@ def setup_master_storage(mode):
 
         storage_master=env.roledefs['storage-master'][0]
         storage_master_ip=get_data_ip(storage_master)[0]
+        cfm = env.roledefs['cfgm'][0]
+        cfm_ip = get_data_ip(cfm)[0]
         storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
         with  settings(host_string = storage_master, password = storage_master_password):
             with cd(INSTALLER_DIR):
@@ -97,8 +99,8 @@ def setup_master_storage(mode):
                 # live-migration - Enable/Disable live migration
                 # collector-hosts - hosts of all collector nodes
                 # collector-host-tokens - password for all collector nodes
-                cmd= "PASSWORD=%s setup-vnc-storage --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s --collector-hosts %s --collector-host-tokens %s" \
-                        %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), ' '.join(collector_host_list), ' '.join(collector_pass_list))
+                cmd= "PASSWORD=%s setup-vnc-storage --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s --collector-hosts %s --collector-host-tokens %s --cfg-host %s" \
+                        %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), ' '.join(collector_host_list), ' '.join(collector_pass_list), cfm_ip)
                 print cmd
                 run(cmd)
 #end setup_storage_master
