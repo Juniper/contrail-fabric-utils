@@ -3,6 +3,7 @@ import copy
 
 from fabfile.utils.fabos import *
 from fabfile.utils.host import *
+from fabfile.utils.cluster import is_lbaas_enabled
 from fabfile.config import *
 from fabfile.tasks.helpers import insert_line_to_file
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
@@ -41,7 +42,7 @@ UPGRADE_SCHEMA = {
                    'backup_dirs' : ['/etc/ifmap-server',
                                     '/etc/neutron',
                                    ],
-                   'remove_files' : [],
+                   'remove_files' : ['/etc/contrail/supervisord_config_files/rabbitmq-server.ini'],
                   },
     'collector' : {'upgrade' : ['contrail-openstack-analytics'],
                    'remove' : [],
@@ -834,10 +835,19 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'compute')
+            ostype = detect_ostype()
+            if (ostype == 'Ubuntu' and is_lbaas_enabled()):
+                run("apt-get -o Dpkg::Options::='--force-confold' install -y haproxy iproute")
+            # Populate new params of contrail-vrouter-agent config file
+            conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
+            lbaas_svc_instance_params = {'netns_command' : '/usr/bin/opencontrail-vrouter-netns',
+                                        }
+            for param, value in lbaas_svc_instance_params.items():
+                run("openstack-config --set %s SERVICE-INSTANCE %s %s" % (conf_file, param, value))
             # If necessary, migrate to new ini format based configuration.
             if from_rel == '1.05':
                 run("/opt/contrail/contrail_installer/contrail_config_templates/vrouter-agent.conf.sh")
-            if detect_ostype() in ['centos']:
+            if ostype in ['centos']:
                 execute('setup_vrouter_node', host_string)
 
 @task
