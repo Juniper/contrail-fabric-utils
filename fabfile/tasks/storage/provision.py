@@ -138,6 +138,14 @@ def setup_nfs_live_migration(mode):
         storage_master=env.roledefs['storage-master'][0]
         storage_master_ip=get_data_ip(storage_master)[0]
         storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
+        cfm = env.roledefs['cfgm'][0]
+        cfm_ip = get_data_ip(cfm)[0]
+
+        if storage_master_ip != cfm_ip:
+            with  settings(host_string = storage_master, password = storage_master_password):
+                run('mkdir -p %s' %(os.path.dirname(get_ceph_nfs_migration_image())))
+                put(get_ceph_nfs_migration_image(), os.path.dirname(get_ceph_nfs_migration_image()))
+
         with  settings(host_string = storage_master, password = storage_master_password):
             with cd(INSTALLER_DIR):
                 # Argument details
