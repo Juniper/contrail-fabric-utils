@@ -3,7 +3,7 @@ from fabric.api import env
 os_username = 'admin'
 os_password = 'contrail123'
 os_tenant_name = 'demo'
-multi_tenancy = False
+#multi_tenancy = True
 webui = True
 host1='root@10.204.217.60'
 ext_routers = []
