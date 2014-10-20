@@ -414,7 +414,6 @@ def setup_cfgm_node(*args):
             hindex = hindex % len(env.roledefs['collector']) 
             collector_host = get_control_host_string(env.roledefs['collector'][hindex])
             collector_ip = hstr_to_ip(collector_host)
-        mt_opt = '--multi_tenancy' if get_mt_enable() else ''
         cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host)) for cassandra_host in env.roledefs['database']]
         amqp_server_ip = get_contrail_amqp_server()
         with  settings(host_string=host_string):
@@ -422,12 +421,11 @@ def setup_cfgm_node(*args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-config.override')
                     run('rm /etc/init/neutron-server.override')
-            cmd = "setup-vnc-config --self_ip %s --keystone_ip %s --keystone_admin_passwd %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --quantum_port %s --nworkers %d --keystone_auth_protocol %s --keystone_auth_port %s --keystone_admin_token %s --keystone_insecure %s %s %s %s --amqp_server_ip %s" %(
+            cmd = "setup-vnc-config --self_ip %s --keystone_ip %s --keystone_admin_passwd %s --collector_ip %s --cassandra_ip_list %s --zookeeper_ip_list %s --quantum_port %s --nworkers %d --keystone_auth_protocol %s --keystone_auth_port %s --keystone_admin_token %s --keystone_insecure %s %s %s %s --amqp_server_ip %s" %(
                  tgt_ip,
                  keystone_ip,
                  openstack_admin_password,
                  collector_ip,
-                 mt_opt,
                  ' '.join(cassandra_ip_list),
                  ' '.join(cassandra_ip_list),
                  quantum_port,
