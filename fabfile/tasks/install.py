@@ -166,7 +166,11 @@ def upgrade_pkgs_node(*args):
 
 def yum_install(rpms):
     cmd = "yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo install "
-    if detect_ostype() in ['centos', 'fedora', 'redhat']:
+    os_type = detect_ostype()
+    # redhat platform installs from multiple repos
+    if os_type in ['redhat']:
+        cmd = "yum -y --nogpgcheck install "
+    if os_type in ['centos', 'fedora', 'redhat']:
         for rpm in rpms:
             run(cmd + rpm)
 
