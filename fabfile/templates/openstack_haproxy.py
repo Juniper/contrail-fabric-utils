@@ -54,7 +54,7 @@ backend keystone-admin-backend
     default-server error-limit 1 on-error mark-down
     
     option tcp-check
-    tcp-check connect port 9393
+    tcp-check connect port 35358
     default-server error-limit 1 on-error mark-down
 
 $__keystone_admin_backend_servers__
@@ -65,9 +65,25 @@ frontend openstack-glance *:9292
 backend glance-backend
     option tcpka
     option nolinger
-    srvtimeout 24h
+    timeout server 24h
     balance   roundrobin
+
+    option tcp-check
+    tcp-check connect port 3306
     default-server error-limit 1 on-error mark-down
+
+
+    option tcp-check
+    option httpchk
+    tcp-check connect port 3337
+    tcp-check send Host: localhost
+    http-check expect ! rstatus ^5
+    default-server error-limit 1 on-error mark-down
+
+    option tcp-check
+    tcp-check connect port 9393
+    default-server error-limit 1 on-error mark-down
+
 $__glance_backend_servers__
 
 frontend openstack-cinder *:8776
