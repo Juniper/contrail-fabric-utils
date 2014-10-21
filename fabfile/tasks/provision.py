@@ -20,6 +20,8 @@ from fabfile.tasks.vmware import configure_esxi_network, create_ovf
 from time import sleep
 from fabric.contrib.files import exists
 
+FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
+
 @task
 @EXECUTE_TASK
 @roles('all')
@@ -1325,14 +1327,15 @@ def setup_remote_syslog_node(*args):
                 collector_ips)
 
         for host_string in args:
-            host_ip = host_string.split('@')[1]
+            #host_ip = host_string.split('@')[1]
+            host_ip = hstr_to_ip(get_control_host_string(host_string))
             if host_ip == connect_map_dict[host_ip]:
                 mode = 'receiver'
             else:
                 mode = 'generator'
 
             with  settings(host_string=host_string):
-                with cd(UTILS_DIR):
+                with cd(FAB_UTILS_DIR):
                     cmd = "python provision_rsyslog_connect.py "
                     myopts = "--rsyslog_port_number %s --rsyslog_transport_protocol %s " % (rsyslog_port, rsyslog_proto)
                     myargs = myopts + "--mode %s --collector_ip %s" % (mode, connect_map_dict[host_ip])
@@ -1366,7 +1369,8 @@ def cleanup_remote_syslog_node():
     default_protocol = 'udp'
 
     for host_string in args:
-        host_ip = host_string.split('@')[1]
+        #host_ip = host_string.split('@')[1]
+        host_ip = hstr_to_ip(get_control_host_string(host_string))
         mode = 'generator'
         collector_ips = role_to_ip_dict(role='collector')
         for each_collector in collector_ips:
@@ -1374,7 +1378,7 @@ def cleanup_remote_syslog_node():
                 mode = 'receiver'
 
         with  settings(host_string=host_string):
-            with cd(UTILS_DIR):
+            with cd(FAB_UTILS_DIR):
                 run_cmd = "python provision_rsyslog_connect.py --mode %s --cleanup True" \
                     % (mode)
                 run(run_cmd)

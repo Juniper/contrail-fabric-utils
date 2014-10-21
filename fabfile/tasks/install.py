@@ -5,6 +5,7 @@ import tempfile
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
+from fabfile.utils.cluster import is_lbaas_enabled
 from fabfile.utils.host import get_from_testbed_dict, get_openstack_internal_vip
 from fabfile.tasks.helpers import reboot_node
 
@@ -438,6 +439,10 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                       ]
             if getattr(testbed, 'haproxy', False):
                 pkg.append('haproxy')
+            if (ostype == 'Ubuntu' and is_lbaas_enabled()):
+                pkg.append('haproxy')
+                pkg.append('iproute')
+
             if ostype == 'Ubuntu':
                 run('echo "manual" >> /etc/init/supervisor-vrouter.override')
                 apt_install(pkg)

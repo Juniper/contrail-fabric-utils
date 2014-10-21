@@ -169,8 +169,9 @@ def restart_cfgm_node(*args):
     """Restarts the contrail config services in once cfgm node. USAGE:fab restart_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with  settings(host_string=host_string):
-            run('service supervisor-config restart')
             run('service supervisor-support-service restart')
+            run('service supervisor-config restart')
+            run('service neutron-server restart')
 
 @task
 @roles('control')
