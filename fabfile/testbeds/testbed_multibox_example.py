@@ -38,6 +38,7 @@ env.roledefs = {
     'build': [host_build],
     'storage-master': [host1],
     'storage-compute': [host4, host5, host6, host7, host8, host9, host10],
+    # 'vgw': [host4, host5], # Optional, Only to enable VGW. Only compute can support vgw
     #   'backup':[backup_node],  # only if the backup_node is defined
 }
 
@@ -274,3 +275,21 @@ env.ostypes = {
 #
 #env.rsyslog_params = {'port':19876, 'proto':'tcp', 'collector':'dynamic', 'status':'enable'}
 
+#OPTIONAL Virtual gateway CONFIGURATION
+#=======================================
+
+#Section vgw is only relevant when you want to use virtual gateway feature. 
+#You can use one of your compute node as  gateway .
+
+#Definition for the Key used
+#-------------------------------------
+#vn: Virtual Network fully qualified name. This particular VN will be used by VGW.
+#ipam-subnets: Subnets used by vn. It can be single or multiple
+#gateway-routes: If any route is present then only those routes will be published
+#by VGW or Default route (0.0.0.0) will be published
+
+
+#env.vgw = {host4: {'vgw1':{'vn':'default-domain:admin:public:public', 'ipam-subnets': ['10.204.220.128/29', '10.204.220.136/29', 'gateway-routes': ['8.8.8.0/24', '1.1.1.0/24']}]},
+#                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}},
+#           host5: {'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}}
+#          }
