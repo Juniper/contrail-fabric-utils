@@ -16,7 +16,7 @@ from fabfile.tasks.verify import *
 from fabfile.tasks.helpers import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
-from fabfile.tasks.vmware import configure_esxi_network, create_ovf
+from fabfile.tasks.vmware import provision_vcenter,provision_esxi,configure_esxi_network, create_ovf
 from time import sleep
 from fabric.contrib.files import exists
 
@@ -1159,6 +1159,12 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                     if (esxi_data['contrail_vm'] == host_string):
                         vmware = 1
                         break
+            compute_vm_info = getattr(testbed, 'compute_vm', None)
+            if compute_vm_info:
+                hosts = compute_vm_info.keys()
+                if host_string in hosts:
+                    vmware = 1
+                    vmware_info = compute_vm_info[host_string]
 
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
@@ -1173,8 +1179,12 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                     if gateway_routes != []:
                         cmd = cmd + " --gateway_routes %s" %(gateway_routes)
                 if vmware:
-                    cmd = cmd + " --vmware %s --vmware_username %s --vmware_passwd %s --vmware_vmpg_vswitch %s" % (esxi_data['ip'], esxi_data['username'], \
+		    if esxi_info:
+                    	cmd = cmd + " --vmware %s --vmware_username %s --vmware_passwd %s --vmware_vmpg_vswitch %s" % (esxi_data['ip'], esxi_data['username'], \
                                 esxi_data['password'], esxi_data['vm_vswitch'])
+		    if compute_vm_info:
+			cmd = cmd + " --vmware %s --vmware_username %s --vmware_passwd %s --vmware_vmpg_vswitch %s" % (vmware_info['esxi']['esxi_ip'], vmware_info['esxi']['esx_username'], \
+                                vmware_info['esxi']['esx_password'], vmware_info['esx_vm_vswitch'])
                 internal_vip = get_openstack_internal_vip()
                 if internal_vip:
                     cmd += " --internal_vip %s" % internal_vip
@@ -1633,6 +1643,31 @@ def prov_esxi():
     for host in esxi_info.keys():
         configure_esxi_network(esxi_info[host])
 #end prov_compute_vm
+
+@roles('build')
+@task
+def prov_vcenter():
+    vcenter_info = getattr(testbed, 'vcenter', None)
+    if not vcenter_info:
+        print 'Error: vcenter block is not defined in testbed file.Exiting'
+        return
+    esxi_info = getattr(testbed, 'compute_vm', None)
+    if not esxi_info:
+        print 'Error: compute_vm block is not defined in testbed file.Exiting'
+        return
+    provision_vcenter(vcenter_info, esxi_info)
+
+@roles('build')
+@task
+def prov_esxi_computevm():
+    compute_vm_info = getattr(testbed, 'compute_vm', None)
+    if not compute_vm_info:
+        return
+    for compute_node in env.roledefs['compute']:
+        if compute_node in compute_vm_info.keys():
+		provision_esxi(compute_vm_info[compute_node])
+
+
 
 @task
 @roles('build')
