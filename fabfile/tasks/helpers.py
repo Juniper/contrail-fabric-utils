@@ -669,6 +669,56 @@ def is_pingable(host_string, negate=False, maxwait=900):
                 time.sleep(1)
     return result
 
+@task
+def setup_hugepages_node(*args):
+    """Setup hugepages on one or list of nodes
+    USAGE: fab setup_hugepages_node:user@host1,user@host2,...
+    """
+
+    for host_string in args:
+        # get required size of hugetlbfs
+        dpdk = getattr(env, 'dpdk', None)
+        if dpdk:
+            factor = int(dpdk[env.host_string]['huge_pages'])
+        else:
+            return
+
+        if factor == 0:
+            factor = 1
+
+        with settings(host_string=host_string):
+            # set number of huge pages
+            memsize = run("grep MemTotal /proc/meminfo | tr -s ' ' | cut -d' ' -f 2")
+            pagesize = run("grep Hugepagesize /proc/meminfo | tr -s ' ' | cut -d' ' -f 2")
+            reserved = run("grep HugePages_total /proc/meminfo | tr -s ' ' | cut -d' ' -f 2")
+
+            if (reserved == ""):
+                reserved = "0"
+
+            requested = ((int(memsize) * factor) / 100) / int(pagesize)
+
+            if (requested > int(reserved)):
+                pattern = "^vm.nr_hugepages ="
+                line = "vm.nr_hugepages = %d" %requested
+                insert_line_to_file(pattern = pattern, line = line,
+                                    file_name = '/etc/sysctl.conf')
+
+            mounted = run("mount | grep hugetlbfs | cut -d' ' -f 3")
+            if (mounted != ""):
+                print "hugepages already mounted on %s" %mounted
+            else:
+                run("mkdir -p /hugepages")
+                pattern = "^hugetlbfs"
+                line = "hugetlbfs    /hugepages    hugetlbfs defaults      0       0"
+                insert_line_to_file(pattern = pattern, line = line,
+                                    file_name = '/etc/fstab')
+                run("mount -t hugetlbfs hugetlbfs /hugepages")
+
+@roles('compute')
+@task
+def setup_hugepages():
+    setup_hugepages_node(env.host_string)
+
 @roles('openstack')
 @task
 def increase_ulimits():
