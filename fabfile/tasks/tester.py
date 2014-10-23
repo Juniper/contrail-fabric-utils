@@ -365,7 +365,7 @@ verify_on_setup=$__test_verify_on_setup__
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
-                if detect_ostype() in ['centos']:
+                if detect_ostype() in ['centos', 'redhat']:
                     run("yum -y --disablerepo=* --enablerepo=contrail_install_repo install tcpdump")
 #end setup_test_env
 
