@@ -176,7 +176,7 @@ def upgrade_pkgs_node(*args):
             # commands from one of the node in the cluster(cfgm).
             # Installing packages(python-nova, python-cinder) brings in lower version
             # of python-paramiko(1.7.5), fabric-utils requires 1.9.0 or above.
-            # ubuntu does not need this, as pycrypto and paramiko are installed as debian packages. 
+            # ubuntu does not need this, as pycrypto and paramiko are installed as debian packages.
             cmd = "sudo easy_install \
                   /opt/contrail/python_packages/pycrypto-2.6.tar.gz;\
                   sudo easy_install \
@@ -461,6 +461,22 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                     contrail_vrouter_pkg = vrouter_generic_pkg or 'contrail-vrouter-dkms'
                 pkg = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
 
+            dpdk = getattr(testbed, 'dpdk', None)
+            if dpdk:
+                pkg = ['contrail-nodemgr',
+                       'contrail-setup',
+                       'contrail-nova-vif',
+                       'nova-compute',
+                       'python-iniparse',
+                       'python-novaclient',
+                       'contrail-nova-vif',
+                       'librabbitmq0',
+                       'linux-crashdump',
+                       'nfs-kernel-server',
+                       'contrail-vrouter-dpdk-init',
+                       'contrail-vrouter-dpdk',
+                       'liburcu1'
+                      ]
             if (manage_nova_compute == 'no' and ostype in ['centos', 'redhat']):
                 pkg = ['contrail-vrouter',
                        'abrt',
@@ -509,7 +525,7 @@ def create_install_repo():
 def create_install_repo_without_openstack():
     """Creates contrail install repo in all nodes excluding openstack node."""
     host_strings = copy.deepcopy(env.roledefs['all'])
-    dummy = [host_strings.remove(openstack_node) 
+    dummy = [host_strings.remove(openstack_node)
              for openstack_node in env.roledefs['openstack']]
     for host_string in host_strings:
         with settings(host_string=host_string):
@@ -525,7 +541,14 @@ def create_install_repo_node(*args):
             if (len(contrail_setup_pkgs) == 1 and get_release() in contrail_setup_pkgs[0]):
                 print "Contrail install repo created already in node: %s." % host_string
                 continue
-            sudo("sudo /opt/contrail/contrail_packages/setup.sh")
+
+            # Pass env variable on DPDK mode nodes. It causes some additional
+            # DEBs to be put into the contrail_instal_repo
+            dpdk = getattr(testbed, 'dpdk', None)
+            if dpdk and host_string in dpdk.keys():
+                run("sudo DPDK_MODE='True' /opt/contrail/contrail_packages/setup.sh")
+            else:
+                run("sudo /opt/contrail/contrail_packages/setup.sh")
 
 @roles('build')
 @task
