@@ -3,260 +3,107 @@ import copy
 
 from fabfile.utils.fabos import *
 from fabfile.utils.host import *
+from fabfile.utils.cluster import is_lbaas_enabled
 from fabfile.config import *
 from fabfile.tasks.helpers import insert_line_to_file
+from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 
-# Upgrade data from 1.05 to 1.10
-UBUNTU_R1_05_TO_R1_10 = {
-    'openstack' : {'upgrade'       : ['contrail-openstack'],
-                   'remove'        : [],
-                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
-                                      'python-contrail'],
-                   'backup_files'  : [],
-                   'remove_files'  : [],
+# upgrade schema
+UPGRADE_SCHEMA = {
+    'openstack' : {'upgrade' : ['contrail-openstack'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : [],
+                   'backup_dirs' : ['/etc/keystone',
+                                    '/etc/glance',
+                                    '/etc/nova',
+                                    '/etc/cinder',
+                                   ],
+                   'remove_files' : [],
                   },
-    'database'  : {'upgrade'       : ['contrail-openstack-database'],
-                   'remove'        : [],
-                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
-                                      'python-contrail'],
-                   'backup_files'  : [],
-                   'remove_files'  : [],
+    'database' : {'upgrade' : ['contrail-openstack-database'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : ['/etc/contrail/database_nodemgr_param',
+                                     '/etc/contrail/contrail-nodemgr-database.conf',
+                                    ],
+                   'backup_dirs' : [],
+                   'remove_files' : [],
                   },
-    'cfgm'      : {'upgrade'       : ['contrail-openstack-config'],
-                   'remove'        : ['contrail-api-venv',
-                                      'contrail-config-extension',
-                                      'contrail-libs',
-                                      'zookeeper'],
-                   'downgrade'     : ['ifmap-server=0.3.2-1contrail1',
-                                      'python-contrail',
-                                      'rabbitmq-server=3.3.2-1',
-                                      'euca2ools=1:2.1.3-2',
-                                      'supervisor=1:3.0a8-1.2',
-                                      'python-boto=1:2.12.0',
-                                      'python-six=1.5.2-1~cloud0'],
-                   'backup_files'  : [],
-                   'remove_files'  : ['/etc/rabbitmq/rabbitmq.config'],
+    'cfgm' : {'upgrade' : ['contrail-openstack-config'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : ['/etc/contrail/svc_monitor.conf',
+                                     '/etc/contrail/schema_transformer.conf',
+                                     '/etc/contrail/contrail-api.conf',
+                                     '/etc/contrail/contrail-discovery.conf',
+                                     '/etc/contrail/vnc_api_lib.ini',
+                                    ],
+                   'backup_dirs' : ['/etc/ifmap-server',
+                                    '/etc/neutron',
+                                   ],
+                   'remove_files' : ['/etc/contrail/supervisord_config_files/rabbitmq-server.ini'],
                   },
-    'collector' : {'upgrade'       : ['contrail-openstack-analytics'],
-                   'remove'        : ['contrail-analytics-venv'],
-                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
-                                      'python-contrail'],
-                   'backup_files'  : [],
-                   'remove_files'  : ['/etc/contrail/supervisord_analytics_files/redis-*.ini',
-                                      '/etc/contrail/supervisord_analytics_files/contrail-qe.ini',
-                                      '/etc/contrail/supervisord_analytics_files/contrail-opserver.ini'],
+    'collector' : {'upgrade' : ['contrail-openstack-analytics'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : ['/etc/contrail/contrail-analytics-api.conf',
+                                     '/etc/contrail/contrail-collector.conf',
+                                     '/etc/contrail/contrail-query-engine.conf',
+                                    ],
+                   'backup_dirs' : [],
+                   'remove_files' : [],
                   },
-    'control'   : {'upgrade'       : ['contrail-openstack-control'],
-                   'remove'        : [],
-                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
-                                      'python-redis=2.8.0-1contrail1',
-                                      'python-contrail'],
-                   'backup_files'  : [],
-                   'remove_files'  : [],
+    'control' : {'upgrade' : ['contrail-openstack-control'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : ['/etc/contrail/contrail-control.conf',
+                                     '/etc/contrail/dns.conf'],
+                   'backup_dirs' : [],
+                   'remove_files' : [],
                   },
-    'webui'     : {'upgrade'       : ['contrail-openstack-webui'],
-                   'remove'        : ['contrail-webui',
-                                      'contrail-nodejs'],
-                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
-                                      'python-contrail'],
-
-                   'backup_files'  : ['/etc/contrail/config.global.js'],
-                   'remove_files'  : [],
+    'webui' : {'upgrade' : ['contrail-openstack-webui'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : ['/etc/contrail/config.global.js'],
+                   'backup_dirs' : [],
+                   'remove_files' : [],
                   },
-    'compute'   : {'upgrade'       : ['contrail-openstack-vrouter'],
-                   'remove'        : ['contrail-vrouter'],
-                   'downgrade'     : ['supervisor=1:3.0a8-1.2',
-                                      'python-contrail'],
-                   'backup_files'  : [],
-                   'remove_files'  : ['/etc/contrail/supervisord_vrouter_files/contrail-vrouter.ini'],
+    'compute' : {'upgrade' : ['contrail-openstack-vrouter'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : ['/etc/contrail/agent_param',
+                                     '/etc/contrail/contrail-vrouter-agent.conf',
+                                     '/etc/contrail/vrouter_nodemgr_param',
+                                    ],
+                   'backup_dirs' : [],
+                   'remove_files' : [],
                   },
 }
 
-# Upgrade data for upgrade from 1.05 to 1.11 mainline
-UBUNTU_R1_05_TO_R1_11 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
-# Upgrade data for upgrade from 1.06 to 1.11 mainline
-UBUNTU_R1_06_TO_R1_11 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
-# Upgrade data for upgrade from 1.06 to R1.10
-UBUNTU_R1_06_TO_R1_10 = copy.deepcopy(UBUNTU_R1_05_TO_R1_10)
-UBUNTU_R1_06_TO_R1_10['compute']['backup_files'].append('/etc/contrail/contrail-vrouter-agent.conf')
+if get_openstack_internal_vip():
+    ha_backup_dirs = ['/etc/mysql', '/etc/keepalived', '/etc/contrail/ha']
+    UPGRADE_SCHEMA['openstack']['backup_dirs'] += ha_backup_dirs
+    UPGRADE_SCHEMA['openstack']['upgrade'].append('contrail-openstack-ha')
 
-# Upgrade data from 1.05 to 1.10(Centos)
-CENTOS_R1_05_TO_R1_10 = {
-    'openstack' : {'upgrade'       : ['contrail-openstack'],
-                   'remove'        : ['supervisor',
-                                      'python-pycassa',
-                                      'openstack-dashboard',
-                                      'contrail-openstack-dashboard',
-                                      'python-boto',
-                                      'python-neutronclient',
-                                      'python-bitarray',
-                                      'python-oauth2',
-                                      'libvirt-client',
-                                      'libvirt',
-                                      'libvirt-python'],
-                   'downgrade'     : ['supervisor',
-                                      'openstack-dashboard',
-                                      'contrail-openstack-dashboard',
-                                      'python-pycassa',
-                                      'python-boto',
-                                      'python-neutronclient',
-                                      'python-bitarray',
-                                      'libvirt-client',
-                                      'libvirt',
-                                      'libvirt-python'],
-                   'backup_files'  : [],
-                   'remove_files'  : [],
-                  },
-    'database'  : {'upgrade'       : ['contrail-openstack-database'],
-                   'remove'        : ['supervisor',
-                                      'contrail-api-venv',
-                                      'contrail-database-venv',
-                                      'contrail-analytics-venv',
-                                      'contrail-control-venv',
-                                      'contrail-vrouter-venv',
-                                      'xmltodict',
-                                      'python-bitarray',
-                                      'python-oauth2'],
-                   'downgrade'     : ['python-contrail',
-                                      'xmltodict',
-                                      'python-bitarray',
-                                      'supervisor'],
-                   'backup_files'  : [],
-                   'remove_files'  : [],
-                  },
-    'cfgm'      : {'upgrade'       : ['contrail-openstack-config'],
-                   'remove'        : ['supervisor',
-                                      'contrail-api-venv',
-                                      'contrail-database-venv',
-                                      'contrail-analytics-venv',
-                                      'contrail-control-venv',
-                                      'contrail-vrouter-venv',
-                                      'euca2ools',
-                                      'python-boto',
-                                      'python-thrift',
-                                      'python-lxml',
-                                      'python-neutronclient',
-                                      'xmltodict',
-                                      'python-bitarray',
-                                      'python-oauth2',
-                                      'python-zope-filesystem',
-                                      'python-zope-interface',
-                                      'contrail-config-extension',
-                                      'contrail-libs',
-                                      'libvirt-client',
-                                      'libvirt',
-                                      'libvirt-python',
-                                      'irond',
-                                      'openstack-neutron-contrail',
-                                      'python-pycassa'],
-                   'downgrade'     : ['supervisor',
-                                      'python-pycassa',
-                                      'euca2ools',
-                                      'python-boto',
-                                      'python-thrift',
-                                      'python-lxml',
-                                      'python-neutronclient',
-                                      'python-zope-interface',
-                                      'xmltodict',
-                                      'python-bitarray',
-                                      'libvirt-client',
-                                      'libvirt',
-                                      'libvirt-python',
-                                      'irond-1.0-2contrail'],
-                   'backup_files'  : [],
-                   'remove_files'  : ['/etc/rabbitmq/rabbitmq.config'],
-                  },
-    'collector' : {'upgrade'       : ['contrail-openstack-analytics'],
-                   'remove'        : ['supervisor',
-                                      'contrail-api-venv',
-                                      'contrail-database-venv',
-                                      'contrail-analytics-venv',
-                                      'contrail-control-venv',
-                                      'contrail-analytics-venv',
-                                      'xmltodict',
-                                      'redis-py',
-                                      'python-thrift',
-                                      'python-bitarray',
-                                      'python-oauth2',
-                                      'python-pycassa'],
-                   'downgrade'     : ['supervisor',
-                                      'python-pycassa',
-                                      'redis-py',
-                                      'xmltodict',
-                                      'python-thrift',
-                                      'python-bitarray'],
-                   'backup_files'  : [],
-                   'remove_files'  : ['/etc/contrail/supervisord_analytics_files/redis-*.ini',
-                                      '/etc/contrail/supervisord_analytics_files/contrail-qe.ini',
-                                      '/etc/contrail/supervisord_analytics_files/contrail-opserver.ini'],
-                  },
-    'control'   : {'upgrade'       : ['contrail-openstack-control'],
-                   'remove'        : ['supervisor',
-                                      'python-pycassa',
-                                      'xmltodict',
-                                      'python-bitarray',
-                                      'python-oauth2',
-                                      'python-thrift',
-                                      'contrail-api-venv',
-                                      'contrail-database-venv',
-                                      'contrail-analytics-venv',
-                                      'contrail-control-venv',
-                                      'contrail-vrouter-venv'],
-                   'downgrade'     : ['supervisor',
-                                      'python-pycassa',
-                                      'xmltodict',
-                                      'python-thrift',
-                                      'python-bitarray'],
-                   'backup_files'  : [],
-                   'remove_files'  : [],
-                  },
-    'webui'     : {'upgrade'       : ['contrail-openstack-webui'],
-                   'remove'        : ['supervisor',
-                                      'contrail-webui',
-                                      'python-bitarray',
-                                      'python-oauth2',
-                                      'python-thrift',
-                                      'contrail-nodejs'],
-                   'downgrade'     : ['supervisor',
-                                      'python-thrift',
-                                      'python-bitarray'],
-                   'backup_files'  : ['/etc/contrail/config.global.js'],
-                   'remove_files'  : [],
-                  },
-    'compute'   : {'upgrade'       : ['contrail-openstack-vrouter'],
-                   'remove'        : ['supervisor',
-                                      'python-pycassa',
-                                      'python-boto',
-                                      'python-thrift',
-                                      'python-neutronclient',
-                                      'xmltodict',
-                                      'python-bitarray',
-                                      'python-oauth2',
-                                      'libvirt-client',
-                                      'libvirt',
-                                      'libvirt-python',
-                                      'contrail-api-venv',
-                                      'contrail-database-venv',
-                                      'contrail-analytics-venv',
-                                      'contrail-control-venv',
-                                      'contrail-vrouter-venv'],
-                   'downgrade'     : ['supervisor',
-                                      'python-pycassa',
-                                      'python-boto',
-                                      'python-thrift',
-                                      'python-neutronclient',
-                                      'xmltodict',
-                                      'python-bitarray',
-                                      'libvirt-client',
-                                      'libvirt',
-                                      'libvirt-python'],
-                   'backup_files'  : [],
-                   'remove_files'  : ['/etc/contrail/supervisord_vrouter_files/contrail-vrouter.ini']
-                  },
-}
+# Ubuntu Release upgrade
+UBUNTU_R1_10_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_20_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_30_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R2_0_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
+
+
+CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
 # Add contrail-interface-name to upgrade list if interface rename enabled.
 if getattr(env, 'interface_rename', True):
-    CENTOS_R1_05_TO_R1_10['compute']['upgrade'].append('contrail-interface-name')
+    CENTOS_UPGRADE_SCHEMA['compute']['upgrade'].append('contrail-interface-name')
+
+# Centos Release upgrade
+CENTOS_UPGRADE_SCHEMA['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
+CENTOS_UPGRADE_SCHEMA['cfgm']['backup_dirs'].append('/etc/irond')
+CENTOS_R1_10_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R1_20_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R2_0_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 
 @task
 @EXECUTE_TASK
@@ -391,6 +238,31 @@ def upgrade_package(pkgs, ostype):
 @task
 @EXECUTE_TASK
 @roles('all')
+def backup_config_dir(from_rel):
+    ostype = detect_ostype()
+    to_rel = get_release()
+    try:
+        upgrade_data = eval(ostype.upper() + '_' + ('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
+    except NameError:
+        raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
+    for role in upgrade_data.keys():
+        if env.host_string in env.roledefs[role]:
+            with settings(warn_only=True):
+                for config_dir in upgrade_data[role]['backup_dirs']:
+                    cfg_dir_name = os.path.basename(config_dir)
+                    run('mkdir -p /tmp/contrail/%s.upgradesave' % cfg_dir_name)
+                    if run('cp -r %s/* /tmp/contrail/%s.upgradesave' % (config_dir, cfg_dir_name)).failed:
+                        if not files.exists('/tmp/contrail/%s.upgradesave' % cfg_dir_name):
+                            raise RuntimeError("Unable to backup config dir %s, please correct and continue upgrade." % config_dir)
+
+def restore_config_dir(role, upgrade_data):
+    for config_dir in upgrade_data[role]['backup_dirs']:
+        cfg_dir_name = os.path.basename(config_dir)
+        run('cp -r /tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
+
+@task
+@EXECUTE_TASK
+@roles('all')
 def backup_config(from_rel):
     ostype = detect_ostype()
     to_rel = get_release()
@@ -453,6 +325,7 @@ def upgrade(from_rel, role):
     if ostype == 'Ubuntu':
         remove_package(upgrade_data[role]['remove'], ostype)
     restore_config(role, upgrade_data)
+    restore_config_dir(role, upgrade_data)
     remove_old_files(role, upgrade_data)
 
 @task
@@ -476,9 +349,12 @@ def upgrade_database_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'database')
             execute('upgrade_pkgs_node', host_string)
-            # Required to setup zookeeper in database node and create database nodemgr conf
-            execute('setup_database_node', host_string)
-            execute('restart_database_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                # Required to setup zookeeper in database node and create database nodemgr conf
+                execute('setup_database_node', host_string)
+                execute('restart_database_node', host_string)
+            else:
+                execute('restart_database_node', host_string)
 
 @task
 @roles('openstack')
@@ -526,7 +402,8 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             amqp_server_ip = get_openstack_amqp_server()
             run("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" % amqp_server_ip)
             run("openstack-config --set /etc/glance/glance-api.conf DEFAULT rabbit_host %s" % amqp_server_ip)
-            run("openstack-config --set /etc/neutron/neutron.conf DEFAULT rabbit_host %s" % amqp_server_ip)
+            if get_openstack_internal_vip():
+                execute('fixup_restart_haproxy_in_openstack_node', host_string)
             execute('restart_openstack_node', host_string)
 
 @task
@@ -567,7 +444,16 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             upgrade(from_rel, 'cfgm')
             if len(env.roledefs['cfgm']) == 1:
                 execute('fix_rabbitmq_conf')
+            if get_contrail_internal_vip():
+                execute('fixup_restart_haproxy_in_collector_node', host_string)
             execute('upgrade_pkgs_node', host_string)
+            # Populate the new SCHEDULER section in svc_monitor.conf
+            conf_file = '/etc/contrail/svc_monitor.conf'
+            lbaas_svc_instance_params = {'analytics_server_ip' : hstr_to_ip(env.roledefs['collector'][0]),
+                                         'analytics_server_port' : '8081'
+                                        }
+            for param, value in lbaas_svc_instance_params.items():
+                run("openstack-config --set %s SCHEDULER %s %s" % (conf_file, param, value))
 
 @task
 @serial
@@ -589,7 +475,10 @@ def upgrade_control_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'control')
             execute('upgrade_pkgs_node', host_string)
-            execute('setup_control_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                execute('setup_control_node', host_string)
+            else:
+                execute('restart_control_node', host_string)
 
 
 @task
@@ -609,8 +498,53 @@ def upgrade_collector_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'collector')
             execute('upgrade_pkgs_node', host_string)
-            execute('setup_collector_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                execute('setup_collector_node', host_string)
+            else:
+                execute('restart_collector_node', host_string)
 
+
+@task
+def fix_config_global_js_node(*args):
+    new_config = """
+config.featurePkg = {};
+/* Add new feature Package Config details below */
+config.featurePkg.webController = {};
+config.featurePkg.webController.path = '/usr/src/contrail/contrail-web-controller';
+config.featurePkg.webController.enable = true;
+
+/******************************************************************************
+ * Boolean flag getDomainProjectsFromApiServer indicates wheather the project
+ * list should come from API Server or Identity Manager.
+ * If Set
+ *      - true, then project list will come from API Server
+ *      - false, then project list will come from Identity Manager
+ * Default: false
+ *
+******************************************************************************/
+config.getDomainProjectsFromApiServer = false;
+/*****************************************************************************
+* Boolean flag L2_enable indicates the default forwarding-mode of a network.
+* Allowed values : true / false
+* Set this flag to true if all the networks are to be L2 networks,
+* set to false otherwise.
+*****************************************************************************/
+config.network = {};
+config.network.L2_enable = false;
+// Export this as a module.
+module.exports = config;
+"""
+    for host_string in args:
+        with settings(host_string=host_string):
+            run("sed -i '$d' /etc/contrail/config.global.js")
+            run("sed -i '$d' /etc/contrail/config.global.js")
+            run("echo \"%s\" >> /etc/contrail/config.global.js" % new_config)
+            # Make sure juniper logo is set
+            logo_old = '/usr/src/contrail/contrail-webui/webroot/img/juniper-networks-logo.png';
+            logo_new = '/usr/src/contrail/contrail-web-core/webroot/img/juniper-networks-logo.png';
+            run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
+            logo_old = '/usr/src/contrail/contrail-web-core/webroot/img/opencontrail-logo.png';
+            run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
 
 @task
 @EXECUTE_TASK
@@ -629,6 +563,8 @@ def upgrade_webui_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'webui')
             execute('upgrade_pkgs_node', host_string)
+            if from_rel in ['1.05', '1.06']:
+                execute('fix_config_global_js_node', host_string)
             execute('restart_webui_node', host_string)
 
 
@@ -648,10 +584,19 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'compute')
+            ostype = detect_ostype()
+            if (ostype == 'Ubuntu' and is_lbaas_enabled()):
+                run("apt-get -o Dpkg::Options::='--force-confold' install -y haproxy iproute")
+            # Populate new params of contrail-vrouter-agent config file
+            conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
+            lbaas_svc_instance_params = {'netns_command' : '/usr/bin/opencontrail-vrouter-netns',
+                                        }
+            for param, value in lbaas_svc_instance_params.items():
+                run("openstack-config --set %s SERVICE-INSTANCE %s %s" % (conf_file, param, value))
             # If necessary, migrate to new ini format based configuration.
-            if from_rel != '1.06':
-                run("vrouter-agent.conf.sh")
-            if detect_ostype() in ['centos']:
+            if from_rel == '1.05':
+                run("/opt/contrail/contrail_installer/contrail_config_templates/vrouter-agent.conf.sh")
+            if ostype in ['centos']:
                 execute('setup_vrouter_node', host_string)
 
 @task
@@ -694,13 +639,20 @@ def upgrade_contrail(from_rel, pkg):
     execute('install_pkg_all', pkg)
     execute('zookeeper_rolling_restart')
     execute('backup_config', from_rel)
+    execute('backup_config_dir', from_rel)
     execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_cfgm', from_rel, pkg)
-    execute('setup_rabbitmq_cluster', True)
-    execute('setup_cfgm')
+    if from_rel in ['1.05', '1.06', '1.10']:
+        execute('setup_rabbitmq_cluster', True)
+        fixup_restart_haproxy_in_all_cfgm(1)
+        execute('setup_cfgm')
+    else:
+        execute('setup_rabbitmq_cluster')
+        fixup_restart_haproxy_in_all_cfgm(1)
+        execute('restart_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
@@ -719,14 +671,19 @@ def upgrade_without_openstack(pkg):
     """
     execute('install_pkg_all', pkg)
     execute('zookeeper_rolling_restart')
-    execute('backup_config')
+    execute('backup_config', from_rel)
+    execute('backup_config_dir', from_rel)
     execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_cfgm', from_rel, pkg)
-    execute('setup_rabbitmq_cluster')
-    execute('setup_cfgm')
+    if from_rel in ['1.05', '1.06']:
+        execute('setup_rabbitmq_cluster', True)
+        execute('setup_cfgm')
+    else:
+        execute('setup_rabbitmq_cluster')
+        execute('restart_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)

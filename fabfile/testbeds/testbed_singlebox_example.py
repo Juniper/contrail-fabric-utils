@@ -203,6 +203,9 @@ env.ostypes = {
 # Optional proxy settings.
 # env.http_proxy = os.environ.get('http_proxy')
 
+#To enable LBaaS feature
+# Default Value: False
+#env.enable_lbaas = True
 
 #OPTIONAL REMOTE SYSLOG CONFIGURATION
 #===================================
