@@ -93,6 +93,8 @@ def setup_master_storage(mode):
                 # storage-hostnames - hostnames of all the nodes (storage master + storage compute)
                 # storage-host-tokens - password for all the nodes (storage master + storage compute)
                 # storage-disk-config - Disk list for Ceph combined pool or HDD pool
+                # storage-chassis-config - Chassis information list in the form
+                #                           of 'host1:id0 host2:id0 host3:id1'
                 # storage-ssd-disk-config - Disk list for Ceph SSD pool
                 # storage-journal-config - OSD journal disk list
                 # storage-local-disk-config - Disk list for local LVM pool
@@ -102,8 +104,10 @@ def setup_master_storage(mode):
                 # live-migration - Enable/Disable live migration
                 # collector-hosts - hosts of all collector nodes
                 # collector-host-tokens - password for all collector nodes
-                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s --collector-hosts %s --collector-host-tokens %s --cfg-host %s" \
-                        %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), ' '.join(collector_host_list), ' '.join(collector_pass_list), cfm_ip)
+                # WARNING: If anything is added in the arguments, make sure it
+                # doesn't break add_storage_node task.
+                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --storage-chassis-config %s --live-migration %s --collector-hosts %s --collector-host-tokens %s --cfg-host %s" \
+                        %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), ' '.join(get_storage_chassis_config()), get_live_migration_opts(), ' '.join(collector_host_list), ' '.join(collector_pass_list), cfm_ip)
                 print cmd
                 run(cmd)
 #end setup_storage_master
@@ -204,14 +208,18 @@ def setup_add_storage_compute_node(*args):
                 # storage-hostnames - hostnames of all the nodes (storage master + storage compute)
                 # storage-host-tokens - password for all the nodes (storage master + storage compute)
                 # storage-disk-config - Disk list for Ceph combined pool or HDD pool
+                # storage-chassis-config - Chassis information list in the form
+                #                           of 'host1:id0 host2:id0 host3:id1'
                 # storage-ssd-disk-config - Disk list for Ceph SSD pool
                 # storage-journal-config - OSD journal disk list
                 # storage-local-disk-config - Disk list for local LVM pool
                 # storage-local-ssd-disk-config - Disk list for local LVM SSD pool
                 # storage-local-nfs-disk-config - NFS storage list
                 # storage-directory-config - Directory list for Ceph
-                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode addnode --add-storage-node %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s" \
-                        %(storage_master_password, new_storage_hostnames, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts())
+                # WARNING: If anything is added in the arguments, make sure it
+                # doesn't break setup storage
+                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode addnode --add-storage-node %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --storage-chassis-config %s --live-migration %s" \
+                        %(storage_master_password, new_storage_hostnames, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), ' '.join(get_storage_chassis_config()), get_live_migration_opts())
                 print cmd
                 run(cmd)
 
@@ -238,6 +246,15 @@ def unconfigure_storage():
     execute(setup_compute_storage)
     execute("setup_webui_storage", "unconfigure")
 #end unconfigure_storage
+
+@task
+@roles('build')
+def storage_chassis_configure():
+    """ReProvisions required contrail services in all nodes as per the role definition.
+    """
+    execute("setup_master_storage", "chassis_configure")
+    execute(setup_compute_storage)
+#end storage_chassis_configure
 
 @task
 @roles('build')

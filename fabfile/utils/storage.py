@@ -125,3 +125,33 @@ def get_storage_directory_config():
     return (storage_directory_node_list)
 #end get_storage_directory_config
 
+# Chassis config parser
+# Eg., chassis configuration. This has to be provided when more than one
+# node is part of a single chassis. This will avoid replication of data
+# between nodes in the same chassis to avoid data loss when chassis goes
+# down
+# storage_node_config = {
+#   host1 : { 'disks' : ['/dev/sdd:/dev/sdc'], 'chassis' : ['T0'] },
+#   host2 : { 'disks' : ['/dev/sdd:/dev/sdc'], 'chassis' : ['T0'] },
+#   host3 : { 'disks' : ['/dev/sdb:/dev/sdf'], 'chassis' : ['T1'] },
+#   host4 : { 'disks' : ['/dev/sdd:/dev/sdc'], 'chassis' : ['T1'] },
+# }
+# The function will parse the above config and returns
+# the list 'host1:T0 host2:T0 host3:T1 host4:T1'
+
+def get_storage_chassis_config():
+    storage_info = getattr(testbed, 'storage_node_config', None)
+    storage_chassis_node_list=[]
+    if storage_info:
+        for entry in storage_info.keys():
+            storage_host = get_control_host_string(entry)
+            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+                if entry == sthostentry:
+                    if 'chassis' in storage_info[entry].keys():
+                        for chassis_entry in storage_info[entry]['chassis']:
+                            storage_chassis_node = sthostname + ':' + chassis_entry
+                            storage_chassis_node_list.append(storage_chassis_node)
+    if storage_chassis_node_list == []:
+        storage_chassis_node_list.append('none')
+    return (storage_chassis_node_list)
+#end get_storage_chassis_config
