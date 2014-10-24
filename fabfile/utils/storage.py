@@ -125,3 +125,19 @@ def get_storage_directory_config():
     return (storage_directory_node_list)
 #end get_storage_directory_config
 
+def get_storage_chassis_config():
+    storage_info = getattr(testbed, 'storage_node_config', None)
+    storage_chassis_node_list=[]
+    if storage_info:
+        for entry in storage_info.keys():
+            storage_host = get_control_host_string(entry)
+            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+                if entry == sthostentry:
+                    if 'chassis' in storage_info[entry].keys():
+                        for chassis_entry in storage_info[entry]['chassis']:
+                            storage_chassis_node = sthostname + ':' + chassis_entry
+                            storage_chassis_node_list.append(storage_chassis_node)
+    if storage_chassis_node_list == []:
+        storage_chassis_node_list.append('none')
+    return (storage_chassis_node_list)
+#end get_storage_chassis_config
