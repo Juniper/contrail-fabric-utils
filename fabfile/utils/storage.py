@@ -125,3 +125,8 @@ def get_storage_directory_config():
     return (storage_directory_node_list)
 #end get_storage_directory_config
 
+def get_cinder_ha_vip():
+    ha_vip = getattr(testbed, 'cinder_ha_vip', None)
+    if ha_vip:
+        return ha_vip
+    return 'none'

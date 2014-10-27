@@ -54,6 +54,10 @@ def setup_master_storage(mode):
         storage_hostnames=[]
         collector_pass_list=[]
         collector_host_list=[]
+        cfg_host_list=[]
+        storage_os_pass_list=[]
+        storage_os_host_list=[]
+        index = 0
         for entry in env.roledefs['storage-master']:
             for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
                 if entry == sthostentry:
@@ -63,6 +67,10 @@ def setup_master_storage(mode):
                     storage_host = get_control_host_string(entry)
                     storage_data_ip=get_data_ip(storage_host)[0]
                     storage_host_list.append(storage_data_ip)
+                    if index != 0:
+                        storage_os_pass_list.append(storage_host_password)
+                        storage_os_host_list.append(storage_data_ip)
+                    index = index + 1
         for entry in env.roledefs['storage-compute']:
             for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
                 if entry == sthostentry and entry != env.roledefs['storage-master'][0]:
@@ -79,6 +87,24 @@ def setup_master_storage(mode):
                     collector_host = get_control_host_string(entry)
                     collector_data_ip=get_data_ip(collector_host)[0]
                     collector_host_list.append(collector_data_ip)
+        index = 0
+        for entry in env.roledefs['cfgm']:
+            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+                if entry == sthostentry:
+                    if index != 0:
+                        cfg_host = get_control_host_string(entry)
+                        cfg_data_ip=get_data_ip(cfg_host)[0]
+                        cfg_host_list.append(cfg_data_ip)
+                    index = index + 1
+
+        if cfg_host_list == []:
+            cfg_host_list.append('none')
+
+        if storage_os_host_list == []:
+            storage_os_host_list.append('none')
+
+        if storage_os_pass_list == []:
+            storage_os_pass_list.append('none')
 
         storage_master=env.roledefs['storage-master'][0]
         storage_master_ip=get_data_ip(storage_master)[0]
@@ -102,8 +128,8 @@ def setup_master_storage(mode):
                 # live-migration - Enable/Disable live migration
                 # collector-hosts - hosts of all collector nodes
                 # collector-host-tokens - password for all collector nodes
-                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s --collector-hosts %s --collector-host-tokens %s --cfg-host %s" \
-                        %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), ' '.join(collector_host_list), ' '.join(collector_pass_list), cfm_ip)
+                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s --collector-hosts %s --collector-host-tokens %s --cfg-host %s --cinder-vip %s --cfg-hostlist %s --storage-os-hosts %s --storage-os-host-tokens %s" \
+                        %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), ' '.join(collector_host_list), ' '.join(collector_pass_list), cfm_ip, get_cinder_ha_vip(), ' '.join(cfg_host_list), ' '.join(storage_os_host_list), ' '.join(storage_os_pass_list))
                 print cmd
                 run(cmd)
 #end setup_storage_master
@@ -172,6 +198,9 @@ def setup_add_storage_compute_node(*args):
         storage_pass_list=[]
         storage_host_list=[]
         storage_hostnames=[]
+        storage_os_pass_list=[]
+        storage_os_host_list=[]
+        index = 0
         for entry in env.roledefs['storage-master']:
             for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
                 if entry == sthostentry:
@@ -181,6 +210,10 @@ def setup_add_storage_compute_node(*args):
                     storage_host = get_control_host_string(entry)
                     storage_data_ip=get_data_ip(storage_host)[0]
                     storage_host_list.append(storage_data_ip)
+                    if index != 0:
+                        storage_os_pass_list.append(storage_host_password)
+                        storage_os_host_list.append(storage_data_ip)
+                    index = index + 1
         new_host_entry = args[0]
         for entry in env.roledefs['storage-compute']:
             for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
@@ -193,6 +226,12 @@ def setup_add_storage_compute_node(*args):
                     storage_host_list.append(storage_data_ip)
                     if new_host_entry == entry:
                         new_storage_hostnames = sthostname
+        if storage_os_host_list == []:
+            storage_os_host_list.append('none')
+
+        if storage_os_pass_list == []:
+            storage_os_pass_list.append('none')
+
         storage_master=env.roledefs['storage-master'][0]
         storage_master_ip=get_data_ip(storage_master)[0]
         storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
@@ -210,8 +249,8 @@ def setup_add_storage_compute_node(*args):
                 # storage-local-ssd-disk-config - Disk list for local LVM SSD pool
                 # storage-local-nfs-disk-config - NFS storage list
                 # storage-directory-config - Directory list for Ceph
-                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode addnode --add-storage-node %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s" \
-                        %(storage_master_password, new_storage_hostnames, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts())
+                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode addnode --add-storage-node %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --live-migration %s  --cinder-vip %s --storage-os-hosts %s --storage-os-host-tokens %s" \
+                        %(storage_master_password, new_storage_hostnames, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(),  get_cinder_ha_vip(), ' '.join(storage_os_host_list), ' '.join(storage_os_pass_list))
                 print cmd
                 run(cmd)
 
