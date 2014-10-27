@@ -125,3 +125,16 @@ def get_storage_directory_config():
     return (storage_directory_node_list)
 #end get_storage_directory_config
 
+def get_from_testbed_dict( dictionary, key,default_value):
+    try:
+        val = env[dictionary][key]
+    except KeyError:
+        val = default_value
+    return val
+
+def get_cinder_ha_vip():
+    ha_vip = get_from_testbed_dict('ha', 'internal_vip', None)
+    if ha_vip:
+        return ha_vip
+    return 'none'
+#end get_cinder_ha_vip
