@@ -21,7 +21,7 @@ def get_pkg_list():
                         'python',
                         'python-libs',
                        ]
-    output = run('yum list installed | grep @contrail_install_repo | cut -d" " -f1 | cut -d"."-f1')
+    output = run('yum list installed | grep @contrail_install_repo | cut -d" " -f1 | cut -d"." -f1')
     pkgs = output.split("\r\n")
     for pkg in dont_remove_list:
         try:
@@ -414,7 +414,7 @@ def uninstall_without_openstack(manage_nova_compute='yes', full='no'):
 @roles('build')
 def reboot_all_build_atlast():
     """Reboot all nodes, will reboot the node from where fab command is trrigered at last"""
-    if env.host_string in nodes:
+    if env.host_string in env.roledefs['all']:
         #Trrigered from one of the node in cluster
         node_list_except_build = copy.deepcopy(env.roledefs['all'])
         node_list_except_build.remove(env.host_string)
