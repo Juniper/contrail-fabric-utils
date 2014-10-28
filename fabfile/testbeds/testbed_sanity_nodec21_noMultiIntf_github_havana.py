@@ -48,7 +48,7 @@ env.passwords = {
 env.test_repo_dir='/home/stack/centos_multi_node_github_sanity/contrail-test'
 env.mail_from='contrail-build@juniper.net'
 env.mail_to='dl-contrail-sw@juniper.net'
-env.log_scenario='CentOS-Havana Openstack Six-Node Sanity[mgmt= ctrl= data]-Serial'
+env.log_scenario='CentOS-Havana Openstack Six-Node Sanity[mgmt= ctrl= data]'
 multi_tenancy=True
 env.interface_rename = False 
 env.encap_priority =  "'MPLSoUDP','MPLSoGRE','VXLAN'"
