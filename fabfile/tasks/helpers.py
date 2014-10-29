@@ -90,8 +90,19 @@ def all_reimage(build_param="@LATEST"):
 @roles('build')
 @task
 def all_sm_reimage(build_param=None):
-    for host in env.hostnames['all']:
-        hostname = host.split('.')[0]
+    for host in env.roledefs["all"]:
+        hostname = None
+        for i in range(5):
+            try:
+                hostname = socket.gethostbyaddr( hstr_to_ip(host))[0].split('.')[0]
+            except socket.herror:
+                sleep(5)
+                continue
+            else:
+                break
+        if not hostname:
+            print "Unable to resolve %s" % (host)
+            sys.exit(1)
         if build_param is not None:
             with settings(warn_only=True):
                 local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (hostname,build_param))
