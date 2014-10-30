@@ -540,6 +540,8 @@ def export_testbed_details(filename='testbed_vars'):
     public_network_rt = getattr(testbed, 'public_vn_rtgt', None)
     public_network_subnet = getattr(testbed, 'public_vn_subnet', None)
     router_asn = getattr(testbed, 'router_asn', '64512')
+    mx_gw_test = int(getattr(env, 'mx_gw_test', False))
+    testbed_location = getattr(env, 'testbed_location', None)
     fh = open(filename,'w')
     fh.write('export KEYSTONE_SERVICE_HOST=%s\n' % (keystone_ip))
     fh.write('export API_SERVER_IP=%s\n' % (api_server_host_ip))
@@ -549,5 +551,8 @@ def export_testbed_details(filename='testbed_vars'):
     fh.write('export PUBLIC_NETWORK_RT=%s\n' % (public_network_rt))
     fh.write('export ROUTER_ASN=%s\n' % (router_asn))
     fh.write('export NODEHOME=~%s\n' % (api_server_host_user))
+    fh.write('export MX_GW_TEST=%s\n' % (mx_gw_test))
+    if testbed_location:
+        fh.write('export TESTBED_LOCATION=%s\n' % (testbed_location))
     fh.close()
 # end export_testbed_details
