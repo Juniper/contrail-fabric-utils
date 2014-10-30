@@ -424,9 +424,27 @@ def setup_cfgm_node(*args):
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-config.override')
                     run('rm /etc/init/neutron-server.override')
-            cmd = "setup-vnc-config --self_ip %s --keystone_ip %s --keystone_admin_passwd %s --collector_ip %s %s --cassandra_ip_list %s --zookeeper_ip_list %s --quantum_port %s --nworkers %d --keystone_auth_protocol %s --keystone_auth_port %s --keystone_admin_token %s --keystone_insecure %s %s %s %s --amqp_server_ip %s" %(
+            cmd = "setup-vnc-config --self_ip %s \
+                                    --keystone_ip %s \
+                                    --keystone_service_tenant_name %s \
+                                    --keystone_admin_passwd %s \
+                                    --collector_ip %s \
+                                    %s \
+                                    --cassandra_ip_list %s \
+                                    --zookeeper_ip_list %s \
+                                    --quantum_port %s \
+                                    --nworkers %d \
+                                    --keystone_auth_protocol %s \
+                                    --keystone_auth_port %s \
+                                    --keystone_admin_token %s \
+                                    --keystone_insecure %s \
+                                    %s \
+                                    %s \
+                                    %s \
+                                    --amqp_server_ip %s" %(
                  tgt_ip,
                  keystone_ip,
+                 get_keystone_service_tenant_name(),
                  openstack_admin_password,
                  collector_ip,
                  mt_opt,
