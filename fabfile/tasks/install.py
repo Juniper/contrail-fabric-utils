@@ -593,9 +593,12 @@ def install_webui_packages(source_dir):
             run('sudo chmod ugo+rx /usr/bin/chromedriver')                                                                   
             run('sudo apt-get -y install libxpm4 libxrender1 libgtk2.0-0 libnss3 libgconf-2-4')                              
             run('sudo apt-get -y install google-chrome-stable')
-    elif detect_ostype() in ['centos', 'fedora', 'redhat']:                                                                  
-        run('yum install -y xorg-x11-server-Xvfb')                                                                           
-        run('yum install -y firefox')                                                                                        
+    elif detect_ostype() in ['centos', 'fedora', 'redhat']:
+        run('yum install -y xorg-x11-server-Xvfb')
+        run('cd /usr/local')
+        run('wget http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/33.0/linux-x86_64/en-US/firefox-33.0.tar.bz2')
+        run('tar xvjf firefox-33.0.tar.bz2')
+        run('ln -s /usr/local/firefox/firefox /usr/bin/firefox')
 #end install_webui_packages 
 
 @task
