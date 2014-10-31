@@ -164,12 +164,16 @@ def get_quantum_service_protocol():
     return get_from_testbed_dict('neutron', 'protocol', 'http')
     
 def verify_sshd(host, user, password):
-    try:
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(host, username=user, password=password, timeout=5)
-    except Exception:
-        return False
 
-    client.close()
-    return True
+    import socket
+    port = 22
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.settimeout(2)
+        s.connect((host, int(port)))
+        s.shutdown(2)
+        return True
+    except socket.error as e:
+        return False
+    s.close()
+
