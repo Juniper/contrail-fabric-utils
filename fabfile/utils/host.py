@@ -172,6 +172,15 @@ def verify_sshd(host, user, password):
         s.settimeout(2)
         s.connect((host, int(port)))
         s.shutdown(2)
+        # Now check if paramiko connect passes
+        # This is needed since during reimage, connect to port 22 
+        # may still work, but it would still be in the process of reimage
+        try:
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(host, username=user, password=password, timeout=5)
+        except Exception,e:
+            return False
         return True
     except socket.error as e:
         return False
