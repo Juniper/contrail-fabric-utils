@@ -90,7 +90,13 @@ if get_openstack_internal_vip():
 UBUNTU_R1_10_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_20_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_30_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
-UBUNTU_R2_0_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
+UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
+UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
+UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
+UBUNTU_R1_30_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
+UBUNTU_R1_30_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
+UBUNTU_R2_0_TO_R2_0 = copy.deepcopy(UBUNTU_R1_30_TO_R2_0)
 
 
 CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
@@ -104,6 +110,12 @@ CENTOS_UPGRADE_SCHEMA['cfgm']['backup_dirs'].append('/etc/irond')
 CENTOS_R1_10_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R1_20_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R2_0_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
+CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
+CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
+CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
+CENTOS_R2_0_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
+CENTOS_R2_0_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
 
 @task
 @EXECUTE_TASK
@@ -329,10 +341,6 @@ def upgrade(from_rel, role):
     remove_old_files(role, upgrade_data)
 
 @task
-def testing():
-    upgrade('contrail-openstack')
-
-@task
 @EXECUTE_TASK
 @roles('database')
 def upgrade_database(from_rel, pkg):
@@ -383,7 +391,8 @@ def upgrade_openstack_node(from_rel, pkg, *args):
     openstack_services = ['openstack-nova-api', 'openstack-nova-scheduler', 'openstack-nova-cert',
                           'openstack-nova-consoleauth', 'openstack-nova-novncproxy',
                           'openstack-nova-conductor', 'openstack-nova-compute']
-    if detect_ostype() in ['Ubuntu']:
+    ostype = detect_ostype()
+    if ostype in ['Ubuntu']:
         openstack_services = ['nova-api', 'nova-scheduler', 'glance-api',
                               'glance-registry', 'keystone',
                               'nova-conductor', 'cinder-api', 'cinder-scheduler']
@@ -396,6 +405,12 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'openstack')
+            if from_rel in ['1.10', '1.20', '1.30']:
+                # Workaround for bug https://bugs.launchpad.net/juniperopenstack/+bug/1383927
+                if ostype in ['Ubuntu']:
+                    rel = get_release('contrail-openstack')
+                    buildid = get_build('contrail-openstack')
+                    downgrade_package(['contrail-openstack-dashboard=%s-%s' % (rel, buildid)], ostype)
             execute('increase_item_size_max_node', host_string)
             execute('upgrade_pkgs_node', host_string)
             # Set the rabbit_host as from 1.10 the rabbit listens at the control_data ip
@@ -454,6 +469,32 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                                         }
             for param, value in lbaas_svc_instance_params.items():
                 run("openstack-config --set %s SCHEDULER %s %s" % (conf_file, param, value))
+            if from_rel in ['1.10', '1.20', '1.30']:
+                # Create Keystone auth config ini
+                api_conf_file = '/etc/contrail/contrail-api.conf'
+                conf_file = '/etc/contrail/contrail-keystone-auth.conf'
+                run("sed -n -e '/[KEYSTONE]/,$p' %s > %s" % (api_conf_file, conf_file))
+                # delete [KEYSTONE] section from config files
+                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-api.log" % api_conf_file)
+                run("openstack-config --del %s KEYSTONE" % api_conf_file)
+                run("openstack-config --set %s DEFAULT log_local 1" % api_conf_file)
+                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % api_conf_file)
+                conf_file = '/etc/contrail/contrail-schema.conf'
+                run("mv /etc/contrail/schema_transformer.conf %s" % conf_file)
+                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-schema.log" % conf_file)
+                run("openstack-config --del %s KEYSTONE" % conf_file)
+                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                conf_file = '/etc/contrail/contrail-svc-monitor.conf'
+                run("mv /etc/contrail/svc_monitor.conf %s" % conf_file)
+                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-svc-monitor.log" % conf_file)
+                run("openstack-config --del %s KEYSTONE" % conf_file)
+                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                conf_file = '/etc/contrail/contrail-discovery.conf'
+                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-discovery.log" % conf_file)
+                run("openstack-config --set %s DEFAULT log_local True" % conf_file)
+                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
 
 @task
 @serial
@@ -475,10 +516,14 @@ def upgrade_control_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'control')
             execute('upgrade_pkgs_node', host_string)
-            if from_rel in ['1.05', '1.06']:
-                execute('setup_control_node', host_string)
-            else:
-                execute('restart_control_node', host_string)
+            if from_rel in ['1.10', '1.20', '1.30']:
+                conf_file = '/etc/contrail/contrail-control.conf'
+                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                conf_file = '/etc/contrail/dns/dns.conf'
+                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+            execute('restart_control_node', host_string)
 
 
 @task
@@ -498,8 +543,18 @@ def upgrade_collector_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'collector')
             execute('upgrade_pkgs_node', host_string)
-            if from_rel in ['1.05', '1.06']:
-                execute('setup_collector_node', host_string)
+            if from_rel in ['1.10', '1.20', '1.30']:
+                conf_file = '/etc/contrail/contrail-collector.conf'
+                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-collector.log" % conf_file)
+                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                conf_file = '/etc/contrail/contrail-query-engine.conf'
+                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-query-engine.log" % conf_file)
+                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                conf_file = '/etc/contrail/contrail-analytics-api.conf'
+                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             else:
                 execute('restart_collector_node', host_string)
 
@@ -593,9 +648,9 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
                                         }
             for param, value in lbaas_svc_instance_params.items():
                 run("openstack-config --set %s SERVICE-INSTANCE %s %s" % (conf_file, param, value))
-            # If necessary, migrate to new ini format based configuration.
-            if from_rel == '1.05':
-                run("/opt/contrail/contrail_installer/contrail_config_templates/vrouter-agent.conf.sh")
+            if from_rel in ['1.10', '1.20', '1.30']:
+                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             if ostype in ['centos']:
                 execute('setup_vrouter_node', host_string)
 
@@ -645,14 +700,9 @@ def upgrade_contrail(from_rel, pkg):
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_cfgm', from_rel, pkg)
-    if from_rel in ['1.05', '1.06', '1.10']:
-        execute('setup_rabbitmq_cluster', True)
-        fixup_restart_haproxy_in_all_cfgm(1)
-        execute('setup_cfgm')
-    else:
-        execute('setup_rabbitmq_cluster')
-        fixup_restart_haproxy_in_all_cfgm(1)
-        execute('restart_cfgm')
+    execute('setup_rabbitmq_cluster', True)
+    fixup_restart_haproxy_in_all_cfgm(1)
+    execute('restart_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
@@ -678,12 +728,9 @@ def upgrade_without_openstack(pkg):
     execute('upgrade_openstack', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_cfgm', from_rel, pkg)
-    if from_rel in ['1.05', '1.06']:
-        execute('setup_rabbitmq_cluster', True)
-        execute('setup_cfgm')
-    else:
-        execute('setup_rabbitmq_cluster')
-        execute('restart_cfgm')
+    execute('setup_rabbitmq_cluster', True)
+    fixup_restart_haproxy_in_all_cfgm(1)
+    execute('restart_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
