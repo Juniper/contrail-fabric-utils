@@ -75,6 +75,18 @@ def get_storage_local_ssd_disk_config():
     return (storage_local_ssd_disk_node_list)
 #end get_storage_local_disk_config
 
+# NFS config parser
+# Eg., nfs configuration. This is for NFS storage support for cinder.
+# Cinder can create volumes from the NFS store.
+# storage_node_config = {
+#   host1 : { 'disks' : ['/dev/sdd:/dev/sdc'], 'nfs' : ['11.1.0.1:/nfsvol'] },
+#   host2 : { 'disks' : ['/dev/sdd:/dev/sdc'], 'nfs' : ['11.1.0.3:/nfsvol'] },
+#   host3 : { 'disks' : ['/dev/sdb:/dev/sdf'] },
+#   host4 : { 'disks' : ['/dev/sdd:/dev/sdc'] },
+# }
+# The function will parse the above config and returns
+# the list '11.1.0.1:/nfsvol' '11.1.0.3:/nfsvol'
+# Note: The host entry is not needed.
 def get_storage_nfs_disk_config():
     storage_info = getattr(testbed, 'storage_node_config', None)
     storage_nfs_disk_node_list=[]
@@ -85,7 +97,7 @@ def get_storage_nfs_disk_config():
                 if entry == sthostentry:
                     if 'nfs' in storage_info[entry].keys():
                         for nfs_disk_entry in storage_info[entry]['nfs']:
-                            storage_nfs_disk_node = sthostname + ':' + nfs_disk_entry
+                            storage_nfs_disk_node = nfs_disk_entry
                             storage_nfs_disk_node_list.append(storage_nfs_disk_node)
     if storage_nfs_disk_node_list == []:
         storage_nfs_disk_node_list.append('none')
