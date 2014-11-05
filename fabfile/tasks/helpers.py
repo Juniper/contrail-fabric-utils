@@ -879,3 +879,11 @@ def disable_iptables():
             run("sudo service iptables save")
             run("sudo service ip6tables save")
             run("iptables -L")
+
+@task
+@roles('all')
+def set_allow_unsupported_sfp():
+    with settings(warn_only=True):
+        sudo("sed -i '/options ixgbe allow_unsupported_sfp/d' /etc/modprobe.d/ixgbe.conf")
+        sudo('echo "options ixgbe allow_unsupported_sfp=1" >> /etc/modprobe.d/ixgbe.conf')
+        sudo('rmmod ixgbe; modprobe ixgbe')
