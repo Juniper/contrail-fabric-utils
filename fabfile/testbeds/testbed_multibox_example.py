@@ -29,7 +29,7 @@ host_build = 'root@1.1.1.1'
 env.roledefs = {
     'all': [host1, host2, host3, host4, host5, host6, host7, host8, host9, host10],
     'cfgm': [host1, host2, host3],
-    'openstack': [host1],
+    'openstack': [host1],  #Optional, if orchestrator is vcenter
     'control': [host1, host2, host3],
     'compute': [host4, host5, host6, host7, host8, host9, host10],
     'collector': [host1, host2, host3],
@@ -38,7 +38,6 @@ env.roledefs = {
     'build': [host_build],
     'storage-master': [host1],
     'storage-compute': [host4, host5, host6, host7, host8, host9, host10],
-    # 'vgw': [host4, host5], # Optional, Only to enable VGW. Only compute can support vgw
     #   'backup':[backup_node],  # only if the backup_node is defined
 }
 
@@ -48,7 +47,7 @@ env.hostnames = {
 
 #Openstack admin password
 env.openstack_admin_password = 'secret123'
-
+env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 env.password = 'secret'
 #Passwords of each host
 env.passwords = {
@@ -259,10 +258,6 @@ env.ostypes = {
 # Optional proxy settings.
 # env.http_proxy = os.environ.get('http_proxy')
 
-#To enable LBaaS feature
-# Default Value: False
-#env.enable_lbaas = True
-
 #OPTIONAL REMOTE SYSLOG CONFIGURATION
 #===================================
 #For R1.10 this needs to be specified to enable rsyslog.
@@ -279,21 +274,87 @@ env.ostypes = {
 #
 #env.rsyslog_params = {'port':19876, 'proto':'tcp', 'collector':'dynamic', 'status':'enable'}
 
-#OPTIONAL Virtual gateway CONFIGURATION
-#=======================================
+#######################################
+#vcenter provisioning
+#server is the vcenter server ip
+#port is the port on which vcenter is listening for connection
+#username is the vcenter username credentials
+#password is the vcenter password credentials
+#auth is the autentication type used to talk to vcenter, http or https
+#datacenter is the datacenter name we are operating on
+#cluster is the clustername we are operating on
+#dvswitch section contains distributed switch related para,s
+#	dv_switch_name and the nic which will be put on it
+#dvportgroup section contains the distributed port group info
+#	dv_portgroupname and the number of ports the group has
+######################################
+env.vcenter = {
+        'server':'2.2.2.2',
+        'port': '443'
+        'username': 'administrator@vsphere.local',
+        'password': 'Contrail123!',
+        'auth': 'https',
+        'datacenter': 'ui_dc',
+        'cluster': 'ui_cluster',
+        'dv_switch': { 'dv_switch_name': 'ui_dvswitch',
+                        'nic': 'vmnic1',
+                     },
+        'dv_port_group': { 'dv_portgroup_name': 'ui_dvportgroup',
+                           'number_of_ports': '3',
+                     },
+}
+#######################################
+#The compute vm provisioning on ESXI host
+#This section is used to copy a vmdk on to the ESXI box and bring it up# . the contrailVM which comes up will be setup as a compute node with 
+# only vrouter running on it.
+# Each host has an associated esxi to it. For example in the below
+# section host1 is associated with esxi inside that section.
+# esx_ip: the esxi ip on which the contrailvm(host/compute) runs
+# esx_username: username used to login to esxi
+# esx_password: password for esxi
+# esx_uplinck_nic: the nic usedfor underlay
+# esx_fab_vswitch: the name of the underlay vswitch that runs on esxi
+# esx_fab_port_group: the name of the underlay port group for esxi
+# esx_ssl_thumbprint: the ssl thumbprint on esxi host,needed by vcenter
+# 		Run this and get the ssl thumbprint on host: openssl x509 -in /etc/vmware/ssl/rui.crt -fingerprint -sha1 -noout
+# server_mac: the virt mac address for the contrail vm
+# server_ip the contrailvm ip to be associated with the virtual mac
+# esx_vm_name: the contrailvm name which is brought up on esxi
+# esx_data_store: the datastore on esxi where the vmdk is copied to
+# esx_vmdk: the absolute path of the contrail-vmdk used to spawn vm
+# vm: the name used by esxi for vmdk changes, same as esx_vm_name
+# vmdk: name of the vmdk file without the vmdk extension
+# vm_deb: absolute path of the contrail package installed on contrailvm
+# esx_vm_switch: name of vswitch crated for vm interaction
+# esx_vm_portgroup: name of port group for vm interaction
+# server_id: hostname of the contrailvm
+# password: root password for the contrailvm
+# domain: domain of the contrailvm
+##############################################
 
-#Section vgw is only relevant when you want to use virtual gateway feature. 
-#You can use one of your compute node as  gateway .
 
-#Definition for the Key used
-#-------------------------------------
-#vn: Virtual Network fully qualified name. This particular VN will be used by VGW.
-#ipam-subnets: Subnets used by vn. It can be single or multiple
-#gateway-routes: If any route is present then only those routes will be published
-#by VGW or Default route (0.0.0.0) will be published
+env.compute_vm = {
+    host1: { 'esxi': {'esx_ip': '3.3.3.3',
+                      'esx_username': 'root',
+                      'esx_password': 'c0ntrail123',
+                      'esx_uplink_nic': 'vmnic0',
+                      'esx_fab_vswitch' : 'vSwitch0',
+                      'esx_fab_port_group' : 'contrail-fab-pg',
+                      'esx_ssl_thumbprint' : "94:B7:64:36:7D:FE:D8:5C:A6:3D:13:24:DC:C1:92:01:AA:72:58:E7",
+                     },
+             'server_mac' : "00:50:56:01:BA:BA",
+             'server_ip': "10.84.24.223",
+             'esx_vm_name' : "ContrailVM",
+             'esx_datastore' : "/vmfs/volumes/b4s4-root/",
+             'esx_vmdk' : '/cs-shared/contrail_fcs_images/v1.10/ubuntu/havana/ContrailVM-disk1.vmdk',
+             'vm' : "ContrailVM",
+             'vmdk' : "ContrailVM-disk1",
+             'vm_deb' : '/github-build/mainline/2420/ubuntu-12-04/havana/contrail-install-packages_2.0-2420~havana_all.deb',
+             'esx_vm_vswitch': 'vSwitch1',
+             'esx_vm_port_group' : 'ui_dvportgroup',
+             'server_id' : 'contrail-vm',
+             'password' : 'c0ntrail123',
+             'domain' : 'englab.juniper.net',
+    },
+}
 
-
-#env.vgw = {host4: {'vgw1':{'vn':'default-domain:admin:public:public', 'ipam-subnets': ['10.204.220.128/29', '10.204.220.136/29', 'gateway-routes': ['8.8.8.0/24', '1.1.1.0/24']}]},
-#                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}},
-#           host5: {'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}}
-#          }
