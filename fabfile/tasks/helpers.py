@@ -857,3 +857,10 @@ def round_robin_collector_ip_assignment(all_node_ips, collector_ips):
     return mapping_dict
 # end of round_robin_collector_ip_assignment
 
+@task
+@roles('all')
+def set_allow_unsupported_sfp():
+    with settings(warn_only=True):
+        sudo("sed -i '/options ixgbe allow_unsupported_sfp/d' /etc/modprobe.d/ixgbe.conf")
+        sudo('echo "options ixgbe allow_unsupported_sfp=1" >> /etc/modprobe.d/ixgbe.conf')
+        sudo('rmmod ixgbe; modprobe ixgbe')
