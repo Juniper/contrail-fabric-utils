@@ -315,7 +315,7 @@ env.ostypes = {
 ######################################
 env.vcenter = {
         'server':'2.2.2.2',
-        'port': '443'
+        'port': '443',
         'username': 'administrator@vsphere.local',
         'password': 'Contrail123!',
         'auth': 'https',
