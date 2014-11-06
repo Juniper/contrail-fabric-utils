@@ -6,8 +6,6 @@ def get_orchestrator():
     orch = None
     if 'openstack' in env.roledefs.keys():
         orch = 'openstack'
-    elif 'vcenter' in env.keys():
-	orch = 'vcenter'
     return orch
 
 def is_lbaas_enabled():
@@ -52,7 +50,7 @@ def get_vmware_details(compute_host_string):
                 vmware = True
                 break
 
-    compute_vm_info = getattr(env, 'compute_vm', None)
+    compute_vm_info = getattr(testbed, 'compute_vm', None)
     if compute_vm_info:
         hosts = compute_vm_info.keys()
         if compute_host_string in hosts:

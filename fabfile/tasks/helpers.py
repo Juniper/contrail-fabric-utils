@@ -328,7 +328,7 @@ def add_images(image=None):
                ("precise-server-cloudimg-amd64-disk1.img", "ubuntu"),
                ("traffic/ubuntu-traffic.img", "ubuntu-traffic"),
                ("vsrx/junos-vsrx-12.1-in-network.img", "nat-service"),
-               ("vsrx/junos-vsrx-12.1-transparent.img", "vsrxbridge"),
+               ("vsrx/junos-vsrx-12.1-transparent.img", "vsrx-bridge"),
                ("ubuntu-netperf.img", "ubuntu-netperf"),
                ("analyzer/analyzer-vm-console.qcow2", "analyzer"),
                ("ddos.qcow2", "ddos"),
@@ -370,8 +370,10 @@ def add_basic_images(image=None):
                ("traffic/ubuntu-traffic.img", "ubuntu-traffic"),
                ("cirros/cirros-0.3.0-x86_64-uec", "cirros"),
                ("vsrx/junos-vsrx-12.1-in-network.img", "nat-service"),
-               ("vsrx/junos-vsrx-12.1-transparent.img", "vsrxbridge"),
+               ("vsrx/junos-vsrx-12.1-transparent.img", "vsrx-bridge"),
+               ("vsrx/junos-vsrx-12.1-in-network.img", "vsrx"),
                ("analyzer/analyzer-vm-console.qcow2", "analyzer"),
+               ("ubuntu-in-net.img", "ubuntu-in-net"),
              ]
 
     for (loc, name) in images:

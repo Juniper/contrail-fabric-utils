@@ -112,7 +112,8 @@ def attach_logs_cores(bug_id, timestamp=None):
     execute(get_cassandra_db_files)
     with hide('everything'):
         for host in env.roledefs['all']:
-            with settings( host_string= host, password= env.passwords[host], warn_only=True):
+            with settings( host_string= host, password= env.passwords[host],
+                           connection_attempts=3, timeout=20, warn_only=True):
                 get('/var/log/logs_*.tgz', '%s/' %( folder ) )
                 get('/var/crashes/*gz', '%s/' %( folder ) )
                 get('/var/log/gdb_*.log','%s/' %( folder ) )
