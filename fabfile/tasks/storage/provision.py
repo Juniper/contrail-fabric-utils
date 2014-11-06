@@ -12,32 +12,35 @@ from fabfile.utils.analytics import *
 @roles('webui')
 def setup_webui_storage(mode):
     """Provisions storage webui services."""
-    for entry in env.roledefs['webui']:
-        #Get the webui host
-        webui_host = entry
+    #Get the webui host
+    host_string = env.host_string
 
-        #Get webui ip based on host
-        storage_webui_ip = hstr_to_ip(webui_host)
+    #Get webui ip based on host
+    storage_webui_ip = hstr_to_ip(host_string)
 
-        #get webui host password
-        storage_webui_host_password = env.passwords[entry]
+    #get webui host password
+    storage_webui_host_password = env.passwords[host_string]
 
+    cinder_vip = get_cinder_ha_vip()
+    if cinder_vip != 'none':
+        #if HA setup get the cinder vip address
+        storage_master_ip = cinder_vip
+    else:
         #Get the storage master host
         storage_master = env.roledefs['storage-master'][0]
-
         #Get the storage master ip address (assuming ceph-rest-api server running)
         storage_master_ip = hstr_to_ip(storage_master)
 
-        with settings(host_string = storage_webui_ip, password = storage_webui_host_password):
-            with cd(INSTALLER_DIR):
-                # Argument details
-                # storage-setup-mode - setup/unconfigure/reconfigure
-                # storage-webui-ip - Storage WebUI IP
-                # storage-master-ip - storage master node where ceph-rest-api server is running
-                cmd= "PASSWORD=%s python setup-vnc-storage-webui.py --storage-setup-mode %s --storage-webui-ip %s --storage-master-ip %s --storage-disk-config %s --storage-ssd-disk-config %s"\
-                        %(storage_webui_host_password, mode, storage_webui_ip, storage_master_ip, ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), )
-                print cmd
-                run(cmd)
+    with settings(host_string = storage_webui_ip, password = storage_webui_host_password):
+        with cd(INSTALLER_DIR):
+            # Argument details
+            # storage-setup-mode - setup/unconfigure/reconfigure
+            # storage-webui-ip - Storage WebUI IP
+            # storage-master-ip - storage master node where ceph-rest-api server is running
+            cmd= "PASSWORD=%s python setup-vnc-storage-webui.py --storage-setup-mode %s --storage-webui-ip %s --storage-master-ip %s --storage-disk-config %s --storage-ssd-disk-config %s"\
+                    %(storage_webui_host_password, mode, storage_webui_ip, storage_master_ip, ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), )
+            print cmd
+            run(cmd)
 #end setup_webui_storage
 
 
