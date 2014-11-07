@@ -5,7 +5,7 @@ import tempfile
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
-from fabfile.utils.cluster import is_lbaas_enabled
+from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator
 from fabfile.utils.host import get_from_testbed_dict, get_openstack_internal_vip
 from fabfile.tasks.helpers import reboot_node
 
@@ -485,13 +485,19 @@ def create_install_repo_node(*args):
 
 @roles('build')
 @task
+def install_orchestrator():
+    if get_orchestrator() is 'openstack':
+        execute(install_openstack)
+
+@roles('build')
+@task
 def install_contrail(reboot='True'):
     """Installs required contrail packages in all nodes as per the role definition.
     """
     execute('pre_check')
     execute(create_install_repo)
     execute(install_database)
-    execute(install_openstack)
+    execute('install_orchestrator')
     execute(install_cfgm)
     execute(install_control)
     execute(install_collector)
