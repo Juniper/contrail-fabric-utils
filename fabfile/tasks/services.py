@@ -44,6 +44,7 @@ def start_cfgm():
     """starts the contrail config services."""
     with settings(warn_only=True):
         run('service supervisor-config start')
+        run('service supervisor-support-service start')
 
 @task
 @roles('database')
