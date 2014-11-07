@@ -1290,7 +1290,8 @@ def prov_control_bgp():
 def prov_external_bgp():
     cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
 
-    for ext_bgp in testbed.ext_routers:
+    ext_routers = getattr(testbed, 'ext_routers', [])
+    for ext_bgp in ext_routers:
         ext_bgp_name = ext_bgp[0]
         ext_bgp_ip   = ext_bgp[1]
         with cd(UTILS_DIR):
