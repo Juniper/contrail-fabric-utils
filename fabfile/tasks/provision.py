@@ -32,7 +32,7 @@ FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
 def bash_autocomplete_systemd():
     host = env.host_string
     output = run('uname -a')
-    if 'xen' in output or 'el6' in output or 'Ubuntu' in output:
+    if 'xen' in output or 'el6' in output or 'ubuntu' in output:
         pass
     else:
         #Assume Fedora
@@ -424,7 +424,7 @@ def setup_cfgm_node(*args):
         cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host)) for cassandra_host in env.roledefs['database']]
         amqp_server_ip = get_contrail_amqp_server()
         with  settings(host_string=host_string):
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-config.override')
                     run('rm /etc/init/neutron-server.override')
@@ -692,7 +692,7 @@ def setup_openstack():
         execute("setup_openstack_node", env.host_string)
         # Blindly run setup_openstack twice for Ubuntu
         #TODO Need to remove this finally
-        if detect_ostype() == 'Ubuntu':
+        if detect_ostype() == 'ubuntu':
             execute("setup_openstack_node", env.host_string)
         if is_package_installed('contrail-openstack-dashboard'):
             execute('setup_contrail_horizon_node', env.host_string)
@@ -776,7 +776,7 @@ def setup_contrail_horizon_node(*args):
     insert_line_to_file(pattern = pattern, line = line, file_name = file_name)
 
     pattern = 'LOGOUT_URL.*'
-    if detect_ostype() == 'Ubuntu':
+    if detect_ostype() == 'ubuntu':
         line = '''LOGOUT_URL='/horizon/auth/logout/' '''
         web_restart = 'service apache2 restart'
     else:
@@ -824,7 +824,7 @@ def setup_collector_node(*args):
         #we need the redis to be listening on *, comment bind line
         with  settings(host_string=host_string):
             with settings(warn_only=True):
-                if detect_ostype() == 'Ubuntu':
+                if detect_ostype() == 'ubuntu':
                     run("service redis-server stop")
                     run("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
                     run("service redis-server start")
@@ -874,7 +874,7 @@ def setup_collector_node(*args):
 
         # Execute the provision collector script
         with  settings(host_string=host_string):
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-analytics.override')
             with cd(INSTALLER_DIR):
@@ -924,7 +924,7 @@ def setup_database_node(*args):
 
         # Execute the provision database script
         with  settings(host_string=host_string):
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-database.override')
             with cd(INSTALLER_DIR):
@@ -996,7 +996,7 @@ def setup_webui_node(*args):
 
         # Execute the provision webui script
         with  settings(host_string=host_string):
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-webui.override')
             with cd(INSTALLER_DIR):
@@ -1050,7 +1050,7 @@ def setup_control_node(*args):
             collector_host = get_control_host_string(env.roledefs['collector'][hindex])
             collector_ip = hstr_to_ip(collector_host)
         with  settings(host_string=host_string):
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-control.override')
                     run('rm /etc/init/supervisor-dns.override')
@@ -1251,7 +1251,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
 
         # Execute the script to provision compute node.
         with  settings(host_string=host_string):
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     run('rm /etc/init/supervisor-vrouter.override')
             with cd(INSTALLER_DIR):

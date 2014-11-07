@@ -18,7 +18,7 @@ def backup_zookeeper_database():
 @task
 def restart_zookeeper():
     restart_cmd = "/usr/lib/zookeeper/bin/zkServer.sh restart"
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         restart_cmd = "/usr/share/zookeeper/bin/zkServer.sh restart"
     with settings(warn_only=True):
         if run("service zookeeper restart").failed:
@@ -27,7 +27,7 @@ def restart_zookeeper():
 @task
 def stop_zookeeper():
     stop_cmd = "/usr/lib/zookeeper/bin/zkServer.sh stop"
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         stop_cmd = "/usr/share/zookeeper/bin/zkServer.sh stop"
     with settings(warn_only=True):
         if run("service zookeeper stop").failed:
@@ -79,7 +79,7 @@ def zookeeper_rolling_restart():
             execute('create_install_repo_node', new_node)
             remove_package(['supervisor'], pdist)
             upgrade_package(['python-contrail', 'contrail-openstack-database', 'zookeeper'], pdist)
-            if pdist in ['Ubuntu']:
+            if pdist in ['ubuntu']:
                 run("ln -sf /bin/true /sbin/chkconfig")
             run("chkconfig zookeeper on")
             print "Fix zookeeper configs"
@@ -87,7 +87,7 @@ def zookeeper_rolling_restart():
             run("sudo mv log4j.properties.new /etc/zookeeper/conf/log4j.properties")
             if pdist in ['centos']:
                 run('echo export ZOO_LOG4J_PROP="INFO,CONSOLE,ROLLINGFILE" >> /usr/lib/zookeeper/bin/zkEnv.sh')
-            if pdist in ['Ubuntu']:
+            if pdist in ['ubuntu']:
                 run('echo ZOO_LOG4J_PROP="INFO,CONSOLE,ROLLINGFILE" >> /etc/zookeeper/conf/environment')
             print "put cluster-unique zookeeper's instance id in myid"
             run('sudo echo "%s" > /var/lib/zookeeper/myid' % (zk_index))
@@ -204,7 +204,7 @@ def verfiy_zookeeper(*zoo_nodes):
     for host_string in zoo_nodes:
         with settings(host_string=host_string, warn_only=True):
             status_cmd = "/usr/lib/zookeeper/bin/zkServer.sh status"
-            if detect_ostype() in ['Ubuntu']:
+            if detect_ostype() in ['ubuntu']:
                 status_cmd = "/usr/share/zookeeper/bin/zkServer.sh status"
             retries = 5
             for i in range(retries):

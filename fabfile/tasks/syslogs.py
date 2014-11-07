@@ -53,7 +53,7 @@ def install_pkg(pkgs):
         with settings(warn_only = True):
             if ostype in [ 'fedora','centos' ]:
                 run("yum -y install %s" % (pkg))
-            elif ostype in ['Ubuntu']:
+            elif ostype in ['ubuntu']:
                 run("DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install %s" %(pkg))
 
 

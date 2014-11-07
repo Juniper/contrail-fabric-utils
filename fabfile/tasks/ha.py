@@ -39,7 +39,7 @@ def fix_memcache_conf_node(*args):
     for host_string in args:
         listen_ip = hstr_to_ip(env.host_string)
         with settings(host_string=host_string, warn_only=True):
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 memcache_conf='/etc/memcached.conf'
                 if run('grep "\-m " %s' % memcache_conf).failed:
                     #Write option to memcached config file
@@ -118,7 +118,7 @@ def fix_wsrep_cluster_address():
     galera_ip_list = [hstr_to_ip(galera_host) for galera_host in openstack_host_list]
     with settings(host_string=env.roledefs['openstack'][0], password=env.passwords[env.roledefs['openstack'][0]]):
         wsrep_conf = '/etc/mysql/my.cnf'
-        if detect_ostype() in ['Ubuntu']:
+        if detect_ostype() in ['ubuntu']:
             wsrep_conf = '/etc/mysql/conf.d/wsrep.cnf'
         run('sed -ibak "s#wsrep_cluster_address=.*#wsrep_cluster_address=gcomm://%s:4567#g" %s' %
               (':4567,'.join(galera_ip_list), wsrep_conf))
@@ -463,7 +463,7 @@ def setup_cmon_schema():
 
     mysql_token = run("cat /etc/contrail/mysql.token")
     pdist = detect_ostype()
-    if pdist in ['Ubuntu']:
+    if pdist in ['ubuntu']:
         mysql_svc = 'mysql'
     elif pdist in ['centos', 'redhat']:
         mysql_svc = 'mysqld'

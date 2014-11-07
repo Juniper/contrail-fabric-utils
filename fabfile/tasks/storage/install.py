@@ -48,7 +48,7 @@ def install_storage_master_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-storage']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -68,7 +68,7 @@ def install_storage_webui_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-web-storage']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -89,7 +89,7 @@ def install_storage_compute_node(*args):
     for host_string in args:
         with  settings(host_string=host_string):
             pkg = ['contrail-storage']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 apt_install(pkg)
             else:
                 yum_install(pkg)

@@ -69,7 +69,7 @@ def uninstall_pkg_node(pkg, *args):
             if not build:
                 print "Package %s already uninstalled in the node(%s)." % (pkg, host_string)
                 continue
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 apt_uninstall([pkg])
             else:
                 yum_uninstall([pkg])
@@ -83,7 +83,7 @@ def yum_uninstall(rpms):
 
 def apt_uninstall(debs):
     cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes autoremove --purge "
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         with settings(warn_only=True):
             run(cmd + ' '.join(debs))
 
@@ -100,7 +100,7 @@ def uninstall_interface_name():
     """Uninstalls interface name package in all nodes defined in compute role."""
     if not env.roledefs['compute']:
         return
-    if detect_ostype() == 'Ubuntu':
+    if detect_ostype() == 'ubuntu':
         print "[%s]: uninstalling interface rename package not required for Ubuntu..Skipping it" %env.host_string
     else:
         execute("uninstall_interface_name_node", env.host_string)
@@ -128,7 +128,7 @@ def uninstall_database_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-database']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 apt_uninstall(pkg)
             else:
                 pkgs = get_pkg_list()
@@ -157,7 +157,7 @@ def uninstall_openstack_node(*args):
             pkg = ['contrail-openstack']
             if len(env.roledefs['openstack']) > 1 and get_openstack_internal_vip():
                 pkg.append('contrail-openstack-ha')
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     run("umount /var/lib/glance/images")
                 run("sed -i '/.*glance.*/d' /etc/fstab")
@@ -188,7 +188,7 @@ def uninstall_cfgm_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-config']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 apt_uninstall(pkg)
             else:
                 pkgs = get_pkg_list()
@@ -218,7 +218,7 @@ def uninstall_control_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-control']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 apt_uninstall(pkg)
             else:
                 pkgs = get_pkg_list()
@@ -243,7 +243,7 @@ def uninstall_collector_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-analytics']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 apt_uninstall(pkg)
             else:
                 pkgs = get_pkg_list()
@@ -271,7 +271,7 @@ def uninstall_webui_node(*args):
                 run("stop_webui")
                 run("kill -9  $(pidof redis-server)")
             pkg = ['contrail-openstack-webui']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 apt_uninstall(pkg)
             else:
                 pkgs = get_pkg_list()
@@ -318,7 +318,7 @@ def uninstall_only_vrouter_node(manage_nova_compute='yes', *args):
                        'contrail-nodemgr',
                        'contrail-vrouter-init',
                       ]
-            elif (manage_nova_compute== 'no' and ostype in ['Ubuntu']):
+            elif (manage_nova_compute== 'no' and ostype in ['ubuntu']):
                 pkg = ['contrail-nodemgr',
                        'contrail-setup',
                        'contrail-vrouter-init',
@@ -332,7 +332,7 @@ def uninstall_only_vrouter_node(manage_nova_compute='yes', *args):
                       ]
             if getattr(testbed, 'haproxy', False):
                 pkg.append('haproxy')
-            if ostype == 'Ubuntu':
+            if ostype == 'ubuntu':
                 apt_uninstall(pkg)
                 run("sed -i  's/inet manual/inet dhcp/g' /etc/network/interfaces")
             else:

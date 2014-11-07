@@ -285,7 +285,7 @@ def control_status():
 @task
 def compute_status():
     nova_compute = "openstack-nova-compute"
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         nova_compute = "nova-compute"
     run("service %s status" % nova_compute)
     run("service contrail-vrouter-agent status")
@@ -466,7 +466,7 @@ def cleanup_os_config():
             run('mysql -u root --password=%s -e \'drop database %s;\''  %(token, db))
 
         
-        if detect_ostype() == 'Ubuntu':
+        if detect_ostype() == 'ubuntu':
             services = ubuntu_services
         for service in services :
             run('sudo service %s stop' %(service))
@@ -479,7 +479,7 @@ def cleanup_os_config():
         # In Ubuntu, by default glance uses sqlite
         # Until we have a clean way of clearing glance image-data in sqlite,
         # just skip removing the images on Ubuntu
-        if not detect_ostype() in ['Ubuntu']:
+        if not detect_ostype() in ['ubuntu']:
             run('sudo rm -f /var/lib/glance/images/*')
         
         run('sudo rm -rf /var/lib/nova/tmp/nova-iptables')
@@ -491,7 +491,7 @@ def cleanup_os_config():
         run('sudo rm -rf /etc/libvirt/qemu/inst*')
         run('sudo rm -rf /var/lib/nova/instances/_base/*')
         
-        if detect_ostype() in ['Ubuntu'] and env.host_string in env.roledefs['openstack']:
+        if detect_ostype() in ['ubuntu'] and env.host_string in env.roledefs['openstack']:
             sudo('mysql_install_db --user=mysql --ldata=/var/lib/mysql/')
 #end cleanup_os_config
 
@@ -593,7 +593,7 @@ def wait_till_all_up(attempts=90, interval=10, node=None, waitdown=True, contrai
 def enable_haproxy():
     ''' For Ubuntu. Set ENABLE=1 in /etc/default/haproxy
     '''
-    if detect_ostype() == 'Ubuntu':
+    if detect_ostype() == 'ubuntu':
         with settings(warn_only=True):
             run("sudo sed -i 's/ENABLED=.*/ENABLED=1/g' /etc/default/haproxy")
 #end enable_haproxy    
@@ -602,7 +602,7 @@ def qpidd_changes_for_ubuntu():
     '''Qpidd.conf changes for Ubuntu
     '''
     qpid_file = '/etc/qpid/qpidd.conf'
-    if detect_ostype() == 'Ubuntu':
+    if detect_ostype() == 'ubuntu':
         with settings(warn_only=True):
             run("sudo sed -i 's/load-module=\/usr\/lib\/qpid\/daemon\/acl.so/#load-module=\/usr\/lib\/qpid\/daemon\/acl.so/g' %s" %(qpid_file))
             run("sudo sed -i 's/acl-file=\/etc\/qpid\/qpidd.acl/#acl-file=\/etc\/qpid\/qpidd.acl/g' %s" %(qpid_file))
@@ -647,7 +647,7 @@ def increase_ulimits():
     Increase ulimit in /etc/init.d/mysqld /etc/init/mysql.conf /etc/init.d/rabbitmq-server files
     '''
     with settings(warn_only = True):
-        if detect_ostype() == 'Ubuntu':
+        if detect_ostype() == 'ubuntu':
             run("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql") 
             run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
             run("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
@@ -667,7 +667,7 @@ def increase_limits():
     limits_conf = '/etc/security/limits.conf'
     with settings(warn_only = True):
         pattern='^root\s*soft\s*nproc\s*.*'
-        if detect_ostype() in ['Ubuntu']:
+        if detect_ostype() in ['ubuntu']:
             line = 'root soft nofile 65535\nroot hard nofile 65535'
         else:
             line = 'root soft nproc 65535'

@@ -36,7 +36,7 @@ def detach_vrouter_node(*args):
     cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
     cfgm_ip = hstr_to_ip(cfgm_host)
     nova_compute = "openstack-nova-compute"
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         nova_compute = "nova-compute"
 
     for host_string in args:
