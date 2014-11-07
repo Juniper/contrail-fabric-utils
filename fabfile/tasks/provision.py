@@ -405,9 +405,6 @@ def setup_cfgm_node(*args):
         tgt_ip = hstr_to_ip(cfgm_host)
         cfgm_host_password = env.passwords[host_string]
 
-        openstack_admin_password = get_keystone_admin_password()
-        keystone_ip = get_keystone_ip()
-
         # Prefer local collector node
         cfgm_host_list=[]
         for entry in env.roledefs['cfgm']:
@@ -423,6 +420,7 @@ def setup_cfgm_node(*args):
         mt_opt = '--multi_tenancy' if get_mt_enable() else ''
         cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host)) for cassandra_host in env.roledefs['database']]
         amqp_server_ip = get_contrail_amqp_server()
+        orch = get_orchestrator()
         with  settings(host_string=host_string):
             if detect_ostype() == 'Ubuntu':
                 with settings(warn_only=True):
@@ -439,10 +437,13 @@ def setup_cfgm_node(*args):
             cmd += " --nworkers %d" % nworkers
             cmd += " --service_token %s" % get_service_token()
             cmd += " --amqp_server_ip %s" % amqp_server_ip
+            cmd += " --orchestrator %s" % orch
             haproxy = get_haproxy()
             if haproxy:
                 cmd += " --haproxy %s" % haproxy
-            if get_orchestrator() == 'openstack':
+            if orch == 'openstack':
+                openstack_admin_password = get_keystone_admin_password()
+                keystone_ip = get_keystone_ip()
                 # Pass keystone arguments in case for openstack orchestrator
                 cmd += " --keystone_ip %s" % keystone_ip
                 cmd += " --keystone_admin_passwd %s" % openstack_admin_password
@@ -456,6 +457,8 @@ def setup_cfgm_node(*args):
                 if manage_neutron == 'no':
                     # Skip creating neutron service tenant/user/role etc in keystone.
                     cmd += ' --manage_neutron %s' % manage_neutron
+            else:
+                cmd += ' --manage_neutron no'
             internal_vip = get_contrail_internal_vip()
             if internal_vip:
                 # Highly available setup
@@ -946,9 +949,6 @@ def setup_webui_node(*args):
         cfgm_ip = hstr_to_ip(cfgm_host)
         webui_host = get_control_host_string(host_string)
         cfgm_host_password=env.passwords[host_string]
-        openstack_host = get_control_host_string(env.roledefs['openstack'][0])
-        openstack_ip = hstr_to_ip(openstack_host)
-        keystone_ip = get_keystone_ip()
         ncollectors = len(env.roledefs['collector'])
         database_host_list=[]
         for entry in env.roledefs['database']:
@@ -966,14 +966,14 @@ def setup_webui_node(*args):
             collector_host = get_control_host_string(env.roledefs['collector'][hindex])
             collector_ip = hstr_to_ip(collector_host)
         cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in database_host_list]
+        orch = get_orchestrator()
 
         # Frame the command line to provision webui
         cmd = "setup-vnc-webui"
         cmd += " --cfgm_ip %s" % cfgm_ip
-        cmd += " --keystone_ip %s" % keystone_ip
-        cmd += " --openstack_ip %s" % openstack_ip
         cmd += " --collector_ip %s" % collector_ip
         cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
+        cmd += " --orchestrator %s" % orch
         internal_vip = get_openstack_internal_vip()
         if internal_vip:
             # Highly available setup
@@ -982,7 +982,14 @@ def setup_webui_node(*args):
         if contrail_internal_vip:
             # Highly available setup with multiple interfaces
             cmd += " --contrail_internal_vip %s" % contrail_internal_vip
-	if get_orchestrator() == 'vcenter':
+
+        if orch == 'openstack':
+            openstack_host = get_control_host_string(env.roledefs['openstack'][0])
+            openstack_ip = hstr_to_ip(openstack_host)
+            keystone_ip = get_keystone_ip()
+            cmd += " --keystone_ip %s" % keystone_ip
+            cmd += " --openstack_ip %s" % openstack_ip
+	elif orch == 'vcenter':
             vcenter_info = getattr(env, 'vcenter', None)
             if not vcenter_info:
                 print 'Error: vcenter block is not defined in testbed file.Exiting'
@@ -1134,17 +1141,19 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
     #    print "contrail-agent package not installed. Install it and then run setup_vrouter"
     #    return
     
-    # reset openstack connections to create new connections
-    # when running in parallel mode
-    openstack_host = env.roledefs['openstack'][0]
-    openstack_host_connection = openstack_host + ':22'
-    if connections and openstack_host_connection in connections.keys():
-        connections.pop(openstack_host_connection)
-    # retrieve neutron_metadata_proxy_shared_secret from openstack
-    with settings(host_string=openstack_host):
-        metadata_secret = get_value(src_file='/etc/nova/nova.conf',
-                          section='keystone_authtoken',
-                          variable='neutron_metadata_proxy_shared_secret')
+    orch = get_orchestrator()
+    if orch is 'openstack':
+        # reset openstack connections to create new connections
+        # when running in parallel mode
+        openstack_host = env.roledefs['openstack'][0]
+        openstack_host_connection = openstack_host + ':22'
+        if connections and openstack_host_connection in connections.keys():
+            connections.pop(openstack_host_connection)
+        # retrieve neutron_metadata_proxy_shared_secret from openstack
+        with settings(host_string=openstack_host):
+            metadata_secret = get_value(src_file='/etc/nova/nova.conf',
+                              section='keystone_authtoken',
+                              variable='neutron_metadata_proxy_shared_secret')
 
     for host_string in args:
         # Enable haproxy for Ubuntu
@@ -1157,11 +1166,6 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
         cfgm_passwd = env.passwords[env.roledefs['cfgm'][0]]
-        openstack_mgmt_ip = hstr_to_ip(env.roledefs['openstack'][0])
-        keystone_ip = get_keystone_ip()
-        ks_auth_protocol = get_keystone_auth_protocol()
-        ks_auth_port = get_keystone_auth_port()
-        ks_admin_user, ks_admin_password = get_openstack_credentials()
         compute_host = get_control_host_string(host_string)
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
     
@@ -1173,7 +1177,6 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
             # setup haproxy and enable
             fixup_restart_haproxy_in_one_compute(host_string)
     
-        openstack_admin_password = get_keystone_admin_password()
         amqp_server_ip = get_contrail_amqp_server()
         # Using amqp running in openstack node
         if (get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes' or
@@ -1186,24 +1189,33 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
         cmd += " --cfgm_ip %s" % cfgm_ip
         cmd += " --cfgm_user %s" % cfgm_user
         cmd += " --cfgm_passwd %s" % cfgm_passwd
-        cmd += " --keystone_ip %s" % keystone_ip
-        cmd += " --openstack_mgmt_ip %s" % openstack_mgmt_ip
         cmd += " --ncontrols %s" % ncontrols
-        cmd += " --keystone_auth_protocol %s" % ks_auth_protocol
-        cmd += " --keystone_auth_port %s" % ks_auth_port
         cmd += " --amqp_server_ip %s" % amqp_server_ip
-        cmd += " --quantum_service_protocol %s" % get_quantum_service_protocol()
         cmd += " --service_token %s" % get_service_token()
-        cmd += " --keystone_admin_user %s" % ks_admin_user
-        cmd += " --keystone_admin_password %s" % ks_admin_password
+        cmd += " --orchestrator %s" % env.orchestrator
         haproxy = get_haproxy()
         if haproxy:
             cmd += " --haproxy %s" % haproxy
         if tgt_ip != compute_mgmt_ip:
             cmd += " --non_mgmt_ip %s" % tgt_ip
             cmd += " --non_mgmt_gw %s" % tgt_gw
-        if metadata_secret:
-            cmd += " --metadata_secret %s" % metadata_secret
+
+        if orch == 'openstack':
+            openstack_mgmt_ip = hstr_to_ip(env.roledefs['openstack'][0])
+            keystone_ip = get_keystone_ip()
+            ks_auth_protocol = get_keystone_auth_protocol()
+            ks_auth_port = get_keystone_auth_port()
+            ks_admin_user, ks_admin_password = get_openstack_credentials()
+            openstack_admin_password = get_keystone_admin_password()
+            cmd += " --keystone_ip %s" % keystone_ip
+            cmd += " --openstack_mgmt_ip %s" % openstack_mgmt_ip
+            cmd += " --keystone_auth_protocol %s" % ks_auth_protocol
+            cmd += " --keystone_auth_port %s" % ks_auth_port
+            cmd += " --quantum_service_protocol %s" % get_quantum_service_protocol()
+            cmd += " --keystone_admin_user %s" % ks_admin_user
+            cmd += " --keystone_admin_password %s" % ks_admin_password
+            if metadata_secret:
+                cmd += " --metadata_secret %s" % metadata_secret
 
         # HA arguments
         internal_vip = get_openstack_internal_vip()
@@ -1246,8 +1258,6 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                 cmd += " --vmware_username %s" % vmware_info['esxi']['esx_ip']
                 cmd += " --vmware_passwd %s" % vmware_info['esxi']['esx_password']
                 cmd += " --vmware_vmpg_vswitch %s" % vmware_info['esx_vm_vswitch']
-            if get_orchestrator() == 'vcenter':
-                cmd += " --orchestrator %s" % env.orchestrator
 
         # Execute the script to provision compute node.
         with  settings(host_string=host_string):
@@ -1466,19 +1476,28 @@ def cleanup_remote_syslog_node():
 
 @roles('build')
 @task
+def setup_orchestrator():
+    orch = get_orchestrator()
+    if orch == 'openstack':
+        execute('setup_openstack')
+        if get_openstack_internal_vip():
+            execute('sync_keystone_ssl_certs')
+            execute('setup_cluster_monitors')
+    elif orch == 'vcenter':
+        #execute('setup_vcenter')
+        pass
+
+@roles('build')
+@task
 def setup_all(reboot='True'):
     """Provisions required contrail services in all nodes as per the role definition.
-    """
     execute('setup_ha')
     execute('setup_rabbitmq_cluster')
     execute('increase_limits')
     execute('increase_ulimits')
     execute('setup_database')
     execute('verify_database')
-    execute('setup_openstack')
-    if get_openstack_internal_vip():
-        execute('sync_keystone_ssl_certs')
-        execute('setup_cluster_monitors')
+    execute('setup_orchestrator')
     execute('setup_cfgm')
     execute('verify_cfgm')
     execute('setup_control')
@@ -1488,6 +1507,7 @@ def setup_all(reboot='True'):
     execute('setup_webui')
     execute('verify_webui')
     execute('setup_vrouter')
+    """
     execute('prov_control_bgp')
     execute('prov_external_bgp')
     execute('prov_metadata_services')
@@ -1650,7 +1670,7 @@ def reset_config():
         execute(increase_ulimits)
         execute(setup_database)
         execute(verify_database)
-        execute(setup_openstack)
+        execute(setup_orchestrator)
         execute(setup_cfgm)
         execute(verify_cfgm)
         execute(setup_control)

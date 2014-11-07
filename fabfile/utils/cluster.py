@@ -3,12 +3,7 @@ from fabric.api import env
 
 
 def get_orchestrator():
-    orch = None
-    if 'openstack' in env.roledefs.keys():
-        orch = 'openstack'
-    elif 'vcenter' in env.keys():
-	orch = 'vcenter'
-    return orch
+    return getattr(env, 'orchestrator', 'openstack')
 
 def is_lbaas_enabled():
     if 'enable_lbaas' not in env.keys():

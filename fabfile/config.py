@@ -29,6 +29,9 @@ for key in env.passwords.keys():
 # Set default rabbit role as cfgm.
 env.roledefs['rabbit'] = env.roledefs['cfgm']
 
+# Set default openstack role to empty list
+env.roledefs['openstack'] = []
+
 class Logger(object):
     def __init__(self, filename="fabric.log"):
         self.terminal = sys.stdout
