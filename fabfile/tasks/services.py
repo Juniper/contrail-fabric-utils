@@ -135,7 +135,7 @@ def restart_openstack_node(*args):
                           'nova-consoleauth', 'nova-novncproxy',
                           'nova-conductor', 'openstack-nova-compute']
     openstack_services = [ 'httpd', 'memcached', 'supervisor-openstack']
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         openstack_services = ['rabbitmq-server', 'memcached', 'nova-api',
                               'nova-scheduler', 'glance-api',
                               'glance-registry', 'keystone',
@@ -151,7 +151,7 @@ def restart_openstack_node(*args):
 @roles('compute')
 def restart_openstack_compute():
     """Restarts the contrail openstack compute service."""
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         run('service nova-compute restart')
         return
     run('service openstack-nova-compute restart')
@@ -260,7 +260,7 @@ def stop_nova():
     host = env.host_string
     openstack_services = ['nova-api', 'nova-scheduler',
                           'nova-conductor']
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         openstack_services = ['nova-api', 'nova-scheduler', 'nova-conductor']
 
     with settings(host_string=host):
@@ -274,7 +274,7 @@ def start_nova():
     host = env.host_string
     openstack_services = ['nova-api', 'nova-scheduler',
                           'nova-conductor']
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         openstack_services = ['nova-api', 'nova-scheduler', 'nova-conductor']
 
     with settings(host_string=host):
@@ -287,7 +287,7 @@ def stop_keystone():
     """Stop keystone  services :fab stop_keystone"""
     host = env.host_string
     openstack_services = ['keystone']
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         openstack_services = ['keystone']
 
     with settings(host_string=host):
@@ -299,7 +299,7 @@ def start_keystone():
     """Start keystone  services :fab start_keystone"""
     host = env.host_string
     openstack_services = ['keystone']
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         openstack_services = ['keystone']
 
     with settings(host_string=host):
@@ -313,7 +313,7 @@ def stop_glance():
     """Stop keystone  services :fab stop_keystone"""
     host = env.host_string
     openstack_services = ['glance-api','glance-registry']
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         openstack_services = ['glance-api','glance-registry']
 
     with settings(host_string=host):
@@ -325,7 +325,7 @@ def start_glance():
     """Start keystone  services :fab start_keystone"""
     host = env.host_string
     openstack_services = ['glance-api','glance-registry']
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         openstack_services = ['glance-api','glance-registry']
 
     with settings(host_string=host):
@@ -338,7 +338,7 @@ def start_glance():
 @roles('compute')
 def stop_nova_openstack_compute():
     """Stop the contrail openstack compute service."""
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         run('service nova-compute stop')
         return
     run('service openstack-nova-compute stop')
@@ -347,7 +347,7 @@ def stop_nova_openstack_compute():
 @roles('compute')
 def start_nova_openstack_compute():
     """Start the contrail openstack compute service."""
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         run('service nova-compute start')
         return
     run('service openstack-nova-compute start')

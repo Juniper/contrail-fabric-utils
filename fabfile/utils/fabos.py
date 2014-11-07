@@ -13,23 +13,10 @@ def install_pkg(tgt_host, pkg_file):
 #end _install_pkg
 
 def detect_ostype():
-    output = run('uname -a')
-    dist = 'centos'
-    if 'el6' in output:
-        release = run('cat /etc/redhat-release')
-        if 'Red Hat' in release:
-            dist = 'redhat'
-        else:
-            dist = 'centos'
-    elif 'el7' in output:
-        dist = 'redhat'
-    elif 'fc17' in output:
-        dist = 'fedora'
-    elif 'xen' in output:
+    (dist, version, extra) = platform.linux_distribution()
+    if extra is not None and 'xen' in extra:
         dist = 'xen'
-    elif 'Ubuntu' in output:
-        dist = 'Ubuntu'
-    return dist
+    return dist.lower()
 #end detect_ostype
 
 def get_release(pkg='contrail-install-packages'):
@@ -37,7 +24,7 @@ def get_release(pkg='contrail-install-packages'):
     dist = detect_ostype() 
     if dist in ['centos', 'fedora', 'redhat']:
         cmd = "rpm -q --queryformat '%%{VERSION}' %s" %pkg
-    elif dist in ['Ubuntu']:
+    elif dist in ['ubuntu']:
         cmd = "dpkg -s %s | grep Version: | cut -d' ' -f2 | cut -d'-' -f1" %pkg
     pkg_ver = run(cmd)
     if 'is not installed' in pkg_ver or 'is not available' in pkg_ver:
@@ -50,7 +37,7 @@ def get_build(pkg='contrail-install-packages'):
     dist = detect_ostype()
     if dist in ['centos', 'fedora', 'redhat']:
         cmd = "rpm -q --queryformat '%%{RELEASE}' %s" %pkg
-    elif dist in ['Ubuntu']:
+    elif dist in ['ubuntu']:
         cmd = "dpkg -s %s | grep Version: | cut -d' ' -f2 | cut -d'-' -f2" %pkg
     pkg_rel = run(cmd)
     if 'is not installed' in pkg_rel or 'is not available' in pkg_rel:
@@ -60,7 +47,7 @@ def get_build(pkg='contrail-install-packages'):
 
 def is_package_installed(pkg_name):
     ostype = detect_ostype()
-    if ostype in ['Ubuntu']:
+    if ostype in ['ubuntu']:
         cmd = 'dpkg-query -l "%s" | grep -q ^.i'
     elif ostype in ['centos','fedora']:
         cmd = 'rpm -qi %s '

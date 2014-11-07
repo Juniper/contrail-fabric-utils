@@ -32,7 +32,7 @@ def verify_webui():
 @task
 @roles('openstack')
 def verify_openstack():
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         verify_service("keystone")
     else:
         verify_service("openstack-keystone")

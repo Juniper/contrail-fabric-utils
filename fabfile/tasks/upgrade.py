@@ -161,7 +161,7 @@ def upgrade_zookeeper():
 def upgrade_zookeeper_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 print "No need to upgrade specifically zookeeper in ubuntu."
                 return
             with settings(warn_only=True):
@@ -216,7 +216,7 @@ def increase_item_size_max_node(*args):
     item_size_max = '2m'
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 memcache_conf='/etc/memcached.conf'
                 if run('grep "\-I " %s' % memcache_conf).failed:
                     #Write option to memcached config file
@@ -237,7 +237,7 @@ def upgrade_package(pkgs, ostype):
         run('yum clean all')
         for pkg in pkgs:
             run('yum -y --disablerepo=* --enablerepo=contrail_install_repo install %s' % pkg)
-    elif ostype in ['Ubuntu']:
+    elif ostype in ['ubuntu']:
         execute('backup_source_list')
         execute('create_contrail_source_list')
         run(' apt-get clean')
@@ -301,7 +301,7 @@ def downgrade_package(pkgs, ostype):
     for pkg in pkgs:
         if ostype in ['centos', 'fedora']:
             run('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo install %s' % pkg)
-        elif ostype in ['Ubuntu']:
+        elif ostype in ['ubuntu']:
             run('DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install %s' % pkg)
 
 def remove_package(pkgs, ostype):
@@ -312,7 +312,7 @@ def remove_package(pkgs, ostype):
                 return
             if ostype in ['centos', 'fedora']:
                 run('rpm -e --nodeps %s' % pkg)
-            elif ostype in ['Ubuntu']:
+            elif ostype in ['ubuntu']:
                 run('DEBIAN_FRONTEND=noninteractive apt-get -y remove --purge  %s' % pkg)
 
 def remove_old_files(role, upgrade_data):
@@ -334,7 +334,7 @@ def upgrade(from_rel, role):
         #downgrade_package(['supervisor-0.1-%s' % buildid], ostype)
     downgrade_package(upgrade_data[role]['downgrade'], ostype)
     upgrade_package(upgrade_data[role]['upgrade'], ostype)
-    if ostype == 'Ubuntu':
+    if ostype == 'ubuntu':
         remove_package(upgrade_data[role]['remove'], ostype)
     restore_config(role, upgrade_data)
     restore_config_dir(role, upgrade_data)
@@ -392,7 +392,7 @@ def upgrade_openstack_node(from_rel, pkg, *args):
                           'openstack-nova-consoleauth', 'openstack-nova-novncproxy',
                           'openstack-nova-conductor', 'openstack-nova-compute']
     ostype = detect_ostype()
-    if ostype in ['Ubuntu']:
+    if ostype in ['ubuntu']:
         openstack_services = ['nova-api', 'nova-scheduler', 'glance-api',
                               'glance-registry', 'keystone',
                               'nova-conductor', 'cinder-api', 'cinder-scheduler']
@@ -407,7 +407,7 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             upgrade(from_rel, 'openstack')
             if from_rel in ['1.10', '1.20', '1.30']:
                 # Workaround for bug https://bugs.launchpad.net/juniperopenstack/+bug/1383927
-                if ostype in ['Ubuntu']:
+                if ostype in ['ubuntu']:
                     rel = get_release('contrail-openstack')
                     buildid = get_build('contrail-openstack')
                     downgrade_package(['contrail-openstack-dashboard=%s-%s' % (rel, buildid)], ostype)
@@ -640,7 +640,7 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'compute')
             ostype = detect_ostype()
-            if (ostype == 'Ubuntu' and is_lbaas_enabled()):
+            if (ostype == 'ubuntu' and is_lbaas_enabled()):
                 run("apt-get -o Dpkg::Options::='--force-confold' install -y haproxy iproute")
             # Populate new params of contrail-vrouter-agent config file
             conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
@@ -665,7 +665,7 @@ def fix_vrouter_configs():
 def fix_vrouter_configs_node(*args):
     """Fix the vrouter config files as per 1.10 standard in one or list of nodes. USAGE:fab fix_vrouter_configs_node:user@1.1.1.1,user@2.2.2.2"""
     ostype = detect_ostype()
-    if ostype in ['Ubuntu']:
+    if ostype in ['ubuntu']:
         with settings(warn_only=True):
             if_vhost0 = run('grep "pre-up /opt/contrail/bin/if-vhost0" /etc/network/interfaces')
         if if_vhost0.failed:
@@ -682,7 +682,7 @@ def fix_vrouter_configs_node(*args):
     insert_line_to_file(pattern=old_pname, line=new_pname, file_name=agent_param)
 
     # Replace the vrouter kernal module
-    if ostype in ['Ubuntu']:
+    if ostype in ['ubuntu']:
         old_kmod = '^kmod=.*'
         new_kmod = 'kmod=vrouter'
         insert_line_to_file(pattern=old_kmod, line=new_kmod, file_name=agent_param)

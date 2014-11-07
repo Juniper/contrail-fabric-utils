@@ -177,7 +177,7 @@ def yum_install(rpms):
 
 def apt_install(debs):
     cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes --allow-unauthenticated install "
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         for deb in debs:
             run(cmd + deb)
 
@@ -188,7 +188,7 @@ def install_interface_name(reboot='True'):
     """Installs interface name package in all nodes defined in compute role."""
     if not env.roledefs['compute']:
         return
-    if detect_ostype() in ['Ubuntu', 'redhat']:
+    if detect_ostype() in ['ubuntu', 'redhat']:
         print "[%s]: Installing interface rename package not required for Ubuntu/Redhat..Skipping it" %env.host_string
     else:
         execute("install_interface_name_node", env.host_string, reboot=reboot)
@@ -221,7 +221,7 @@ def install_database_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-database']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 run('echo "manual" >> /etc/init/supervisor-database.override')
                 apt_install(pkg)
             else:
@@ -242,11 +242,11 @@ def install_ceilometer_compute_node(*args):
         with settings(host_string=host_string):
             pkg = ['ceilometer-agent-compute']
             act_os_type = detect_ostype()
-            if act_os_type == 'Ubuntu':
+            if act_os_type == 'ubuntu':
                 apt_install(pkg)
             else:
                 raise RuntimeError('Actual OS Type (%s) != Expected OS Type (%s)'
-                                    'Aborting!' % (act_os_type, 'Ubuntu'))
+                                    'Aborting!' % (act_os_type, 'ubuntu'))
 
 @task
 @EXECUTE_TASK
@@ -273,7 +273,7 @@ def install_ceilometer_node(*args):
         	'ceilometer-alarm-notifier',
         	'python-ceilometerclient']
             act_os_type = detect_ostype()
-            if act_os_type == 'Ubuntu':
+            if act_os_type == 'ubuntu':
                 #if not is_package_installed('mongodb-server'):
                 #    raise RuntimeError('install_ceilometer: mongodb-server is required to be installed for ceilometer')
                 output = run("dpkg-query --show nova-api")
@@ -286,7 +286,7 @@ def install_ceilometer_node(*args):
                     apt_install(pkg_icehouse)
             else:
                 raise RuntimeError('Actual OS Type (%s) != Expected OS Type (%s)'
-                                    'Aborting!' % (act_os_type, 'Ubuntu'))
+                                    'Aborting!' % (act_os_type, 'ubuntu'))
 
 @task
 @EXECUTE_TASK
@@ -304,7 +304,7 @@ def install_openstack_node(*args):
             pkg = ['contrail-openstack']
             if len(env.roledefs['openstack']) > 1 and get_openstack_internal_vip():
                 pkg.append('contrail-openstack-ha')
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -323,7 +323,7 @@ def install_cfgm_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-config']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 run('echo "manual" >> /etc/init/supervisor-config.override')
                 run('echo "manual" >> /etc/init/neutron-server.override')
                 apt_install(pkg)
@@ -345,7 +345,7 @@ def install_control_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-control']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 run('echo "manual" >> /etc/init/supervisor-control.override')
                 run('echo "manual" >> /etc/init/supervisor-dns.override')
                 apt_install(pkg)
@@ -367,7 +367,7 @@ def install_collector_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-analytics']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 run('echo "manual" >> /etc/init/supervisor-analytics.override')
                 apt_install(pkg)
             else:
@@ -388,7 +388,7 @@ def install_webui_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-webui']
-            if detect_ostype() == 'Ubuntu':
+            if detect_ostype() == 'ubuntu':
                 run('echo "manual" >> /etc/init/supervisor-webui.override')
                 apt_install(pkg)
             else:
@@ -429,7 +429,7 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                        'contrail-nodemgr',
                        'contrail-vrouter-init',
                       ]
-            elif (manage_nova_compute== 'no' and ostype in ['Ubuntu']):
+            elif (manage_nova_compute== 'no' and ostype in ['ubuntu']):
                 pkg = ['contrail-nodemgr',
                        'contrail-setup',
                        'contrail-vrouter-init',
@@ -443,11 +443,11 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                       ]
             if getattr(testbed, 'haproxy', False):
                 pkg.append('haproxy')
-            if (ostype == 'Ubuntu' and is_lbaas_enabled()):
+            if (ostype == 'ubuntu' and is_lbaas_enabled()):
                 pkg.append('haproxy')
                 pkg.append('iproute')
 
-            if ostype == 'Ubuntu':
+            if ostype == 'ubuntu':
                 run('echo "manual" >> /etc/init/supervisor-vrouter.override')
                 apt_install(pkg)
             else:
@@ -527,7 +527,7 @@ def install_without_openstack(manage_nova_compute='yes'):
 def update_keystone_log():
     """Temporary workaround to update keystone log"""
     #TODO This is a workaround. Need to be fixed as part of package install
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         with  settings(warn_only=True):
             run("touch /var/log/keystone/keystone.log")
             run("sudo chown keystone /var/log/keystone/keystone.log")
@@ -571,7 +571,7 @@ def copy_install_pkgs(pkgs):
 @task
 def install_webui_packages(source_dir):
     webui = getattr(testbed, 'webui', False)
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         run('cp ' + source_dir + '/contrail-test/scripts/ubuntu_repo/sources.list /etc/apt')
         run('sudo apt-get -y update')
         run('sudo apt-get install -y xvfb')
@@ -607,7 +607,7 @@ def upgrade_kernel_all():
     """creates repo and upgrades kernel in Ubuntu"""
     execute('pre_check')
     execute(create_install_repo)
-    nodes = get_nodes_to_upgrade('linux-image-3.13.0-34-generic', 'Ubuntu', *env.roledefs['all'])
+    nodes = get_nodes_to_upgrade('linux-image-3.13.0-34-generic', 'ubuntu', *env.roledefs['all'])
     execute(upgrade_kernel_node, *nodes)
     node_list_except_build = list(nodes)
     if env.host_string in nodes:
