@@ -1545,13 +1545,38 @@ def reimage_and_setup_test():
 @roles('build')
 @task
 def setup_all_with_images():
-    execute('setup_all', reboot='False')
+    execute('setup_ha')
+    execute('setup_rabbitmq_cluster')
+    execute('increase_limits')
+    execute('increase_ulimits')
+    execute('setup_database')
+    execute('verify_database')
+    execute('setup_openstack')
+    if get_openstack_internal_vip():
+        execute('sync_keystone_ssl_certs')
+        execute('setup_cluster_monitors')
+    execute('setup_cfgm')
+    execute('verify_cfgm')
+    execute('setup_control')
+    execute('verify_control')
+    execute('setup_collector')
+    execute('verify_collector')
+    execute('setup_webui')
+    execute('verify_webui')
+    execute('setup_vrouter')
+    execute('prov_control_bgp')
+    execute('prov_external_bgp')
+    execute('prov_metadata_services')
+    execute('prov_encap_type')
+    execute('setup_remote_syslog')
     execute('add_images')
-    print "Rebooting the compute nodes after setup all."
-    execute('compute_reboot')
-    #Clear the connections cache
-    connections.clear()
-    execute('verify_compute')
+    if reboot == 'True':
+        print "Rebooting the compute nodes after setup all."
+        execute('compute_reboot')
+        #Clear the connections cache
+        connections.clear()
+        execute('verify_compute')
+
 
 @roles('build')
 @task
