@@ -982,17 +982,6 @@ def setup_webui_node(*args):
         if contrail_internal_vip:
             # Highly available setup with multiple interfaces
             cmd += " --contrail_internal_vip %s" % contrail_internal_vip
-	if get_orchestrator() == 'vcenter':
-            vcenter_info = getattr(env, 'vcenter', None)
-            if not vcenter_info:
-                print 'Error: vcenter block is not defined in testbed file.Exiting'
-                return
-            # vcenter provisioning parameters
-            cmd += " --vcenter_ip %s" % vcenter_info['server']
-            cmd += " --vcenter_port %s" % vcenter_info['port']
-            cmd += " --vcenter_auth %s" % vcenter_info['auth']
-            cmd += " --vcenter_datacenter %s" % vcenter_info['datacenter']
-            cmd += " --vcenter_dswitch %s" % vcenter_info['dv_switch']['dv_switch_name']
 
         # Execute the provision webui script
         with  settings(host_string=host_string):
@@ -1246,8 +1235,6 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
                 cmd += " --vmware_username %s" % vmware_info['esxi']['esx_ip']
                 cmd += " --vmware_passwd %s" % vmware_info['esxi']['esx_password']
                 cmd += " --vmware_vmpg_vswitch %s" % vmware_info['esx_vm_vswitch']
-            if get_orchestrator() == 'vcenter':
-                cmd += " --orchestrator %s" % env.orchestrator
 
         # Execute the script to provision compute node.
         with  settings(host_string=host_string):

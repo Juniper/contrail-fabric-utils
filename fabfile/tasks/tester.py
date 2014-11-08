@@ -14,6 +14,8 @@ from fabfile.utils.multitenancy import *
 from fabfile.utils.fabos import detect_ostype
 from fabric.contrib.files import exists
 
+from fabfile.tasks.install import pkg_install
+
 devstack_flag = False
 
 @roles('build')
@@ -46,134 +48,10 @@ def setup_test_env():
         'hosts_ipmi': []
     }
 
-    sanity_ini_templ = string.Template("""[Basic]
-# Provisioning file
-
-# Provisioning json file
-testRepoDir=$__test_repo__
-provFile=sanity_testbed.json
-logScenario=$__log_scenario__
-
-# Nova Keypair 
-key=key1
-
-# Pointer for the repo which contains new packages. Needed for setup_systems.py
-
-stackUser=admin
-stackPassword=$__stack_password__
-stackTenant=$__stack_tenant__
-multiTenancy=$__multi_tenancy__
-keystone_ip=$__keystone_ip__
-
-# If you want the HTML report through HTMLTestRunner, select 'yes'. If not, the basic Unittest TextTestRunner will run the tests 
-generate_html_report=yes
-
-# If you dont want fixture cleanups to remove the objects which are created as part of setUp of the fixture, set fixtureCleanup to 'no'. Default value should be 'yes'. If objects are already present before start of tests, they are not deleted. To clean them up forcefully, set fixtureCleanup to 'force'
-fixtureCleanup=yes
-
-[WebServer]
-# The URL to which the test log file and HTML report would be uploaded to.  
-# path is the local filesystem path to which the files will get copied to 
-# Ex: http://10.204.216.50/Docs/
-host=10.204.216.50
-username=bhushana
-password=bhu@123
-path=/home/bhushana/Documents/technical/logs/
-reportpath=/home/bhushana/Documents/technical/sanity
-webRoot=Docs
-
-[Mail]
-server=$__mail_server__
-port=$__mail_port__
-mailTo=$__mail_to__
-mailSender=contrailbuild@juniper.net
-
-[log_screen]
-# set if log redirection to console needed
-log_to_console= yes
-
-[loggers]
-keys=root,log01
-
-[proxy]
-http=$__http_proxy__
-
-[webui]
-webui=$__webui__
-
-[webui_config]
-webui_config=$__webui_config__
-
-[devstack]
-devstack=$__devstack__
-
-[logger_root]
-handlers=screen
-#qualname=(root)
-level=ERROR
-
-[logger_log01]
-handlers=file
-qualname=log01
-level=DEBUG
-propagate=0
-
-
-[formatters]
-keys=std
-
-[formatter_std]
-format=%(asctime)s [ %(levelname)5s ] %(message)s
-
-
-[handlers]
-keys=file,screen
-#keys=file
-
-[handler_file]
-class= custom_filehandler.CustomFileHandler
-formatter=std
-level=DEBUG
-args=( 'test_details.log.$__timestamp__','a')
-#args is of the form : ( log-file-name , write-mode)
-
-[handler_screen]
-class=StreamHandler
-formatter=std
-#level=ERROR
-args=(sys.stdout,)
-
-[Mx]
-# Currently, MX configuration will be read only for the BLR sanity setup with a pre-defined MX configuration
-#Route Target on the MX
-mx_rt=$__public_vn_rtgt__
-
-#Asn
-router_asn=$__router_asn__
-
-#Just a notation to identify the router
-$__ext_router_names__
-$__ext_router_ips__
-
-fip_pool=$__public_vn_subnet__
-fip_pool_name=public-pool
-
-[repos]
-#Test Revision
-test_revision=$__test_revision__
-fab_revision=$__fab_revision__
-
-[HA]
-# HA config 
-ha_setup=$__ha_setup__
-ipmi_username=$__ipmi_username__
-ipmi_password=$__ipmi_password__
-
-#For debugging
-[debug]
-stop_on_fail=no
-verify_on_setup=$__test_verify_on_setup__
-""")
+    sample_ini_file = env.test_repo_dir + '/' + 'sanity_params.ini.sample'
+    with open(sample_ini_file, 'r') as fd_sample_ini:
+        contents_sample_ini = fd_sample_ini.read()
+    sanity_ini_templ = string.Template(contents_sample_ini)
 
     if CONTROLLER_TYPE == 'Openstack':
         with settings(host_string = env.roledefs['openstack'][0]):
@@ -249,7 +127,6 @@ verify_on_setup=$__test_verify_on_setup__
                 for control_node in control_host_names:
                     role_dict['params']['bgp'].append(control_node)
                # role_dict['params']['bgp'].extend(control_host_names[randrange(len(env.roledefs['control']))])
-            
             host_dict['roles'].append(role_dict)
 
         if 'collector' in env.roledefs.keys() and host_string in env.roledefs['collector']:
@@ -263,105 +140,143 @@ verify_on_setup=$__test_verify_on_setup__
         sanity_testbed_dict['hosts'].append(host_dict)
         if env.has_key('vgw'): sanity_testbed_dict['vgw'].append(env.vgw)
     # get host ipmi list
-    if env.has_key('hosts_ipmi') :
+    if env.has_key('hosts_ipmi'):
         sanity_testbed_dict['hosts_ipmi'].append(env.hosts_ipmi)
 
     # for every host_string
-
     with settings(host_string = cfgm_host):
-        
         repo_dir_name = env.test_repo_dir.split('/')[-1]
         repo_path= get_remote_path(env.test_repo_dir)
 
         # generate json file and copy to cfgm
         sanity_testbed_json = json.dumps(sanity_testbed_dict)
 
+        stop_on_fail = env.get('stop_on_fail', False)
         mail_to = env.get('mail_to', '')
         log_scenario = env.get('log_scenario', 'Sanity')
         if CONTROLLER_TYPE == 'Cloudstack': 
             stack_password= 'password'
             stack_tenant= 'default-project'
+            stack_user= 'admin'
         else:
+            stack_user= get_keystone_admin_user()
             stack_password = get_keystone_admin_password()
-            stack_tenant= get_keystone_admin_user()
-
-        #get the ext router information from the testbed file and set it the
-        # ini inputs.
-        ext_bgp_names = ''
-        ext_bgp_ips = ''
-        router_asn = getattr(testbed, 'router_asn','0')
-        public_vn_rtgt = getattr(testbed, 'public_vn_rtgt','0')
-        public_vn_subnet = getattr(testbed, 'public_vn_subnet',None)
-        ext_routers = getattr(testbed, 'ext_routers', [])
-        test_verify_on_setup = getattr(env,'test_verify_on_setup','True')
+            stack_tenant = get_keystone_admin_tenant_name()
+        # Few hardcoded variables for sanity environment 
+        # can be removed once we move to python3 and configparser
+        stack_domain = 'default-domain'
+        webserver_host = '10.204.216.50'
+        webserver_user = 'bhushana'
+        webserver_password = 'bhu@123'
+        webserver_log_path = '/home/bhushana/Documents/technical/logs/'
+        webserver_report_path = '/home/bhushana/Documents/technical/sanity'
+        webroot = 'Docs/logs'
         mail_server = '10.204.216.49'
         mail_port = '25'
-        webui = getattr(testbed, 'webui', False)
-        webui_config = getattr(testbed, 'webui_config', False)
+        fip_pool_name = 'public-pool'
+        fixture_cleanup = 'yes'
+        generate_html_report = 'True'
+        key = 'key1'
+        mailSender = 'contrailbuild@juniper.net'
 
+        router_asn = getattr(testbed, 'router_asn', '')
+        public_vn_rtgt = getattr(testbed, 'public_vn_rtgt', '')
+        public_vn_subnet = getattr(testbed, 'public_vn_subnet', '')
+        ext_routers = getattr(testbed, 'ext_routers', '')
+        router_info = str(ext_routers)
+        test_verify_on_setup = getattr(env, 'test_verify_on_setup', True)
+        webui = getattr(testbed, 'webui', False)
+        horizon = getattr(testbed, 'horizon', False)
+        ui_config = getattr(testbed, 'ui_config', False)
+        ui_browser = getattr(testbed, 'ui_browser', False)
         if 'mail_server' in env.keys():
             mail_server = env.mail_server
             mail_port = env.mail_port
-        
-        for ext_bgp in ext_routers:
-            ext_bgp_names = ext_bgp_names + '%s_router_name=%s\n' % (ext_bgp[0], ext_bgp[0])
-            ext_bgp_ips = ext_bgp_ips + '%s_router_ip=%s\n' % (ext_bgp[0], ext_bgp[1])
 
         sanity_params = sanity_ini_templ.safe_substitute(
-            {'__timestamp__': dt.now().strftime('%Y-%m-%d-%H:%M:%S'),
-             '__multi_tenancy__': get_mt_enable(),
-             '__keystone_ip__': get_keystone_ip(),
-             '__mail_to__': mail_to,
-             '__log_scenario__': log_scenario,
-             '__test_revision__': revision,
-             '__fab_revision__': fab_revision,
-             '__stack_password__': stack_password,
-             '__stack_tenant__': stack_tenant,
-             '__ext_router_names__': ext_bgp_names,
-             '__ext_router_ips__': ext_bgp_ips,
-             '__router_asn__': router_asn,
-             '__public_vn_rtgt__': public_vn_rtgt,
-             '__public_vn_subnet__': public_vn_subnet,
-             '__mail_server__': mail_server,
-             '__mail_port__': mail_port,
-             '__test_repo__': get_remote_path(env.test_repo_dir),
-             '__webui__': webui,
-             '__devstack__': devstack_flag,
-             '__webui_config__': webui_config,
-             '__http_proxy__': env.get('http_proxy'),
+            {'__testbed_json_file__'   : 'sanity_testbed.json',
+             '__nova_keypair_name__'   : key,
+             '__stack_user__'          : stack_user,
+             '__stack_password__'      : stack_password,
+             '__stack_tenant__'        : stack_tenant,
+             '__stack_domain__'        : stack_domain,
+             '__keystone_ip__'         : get_keystone_ip(),
+             '__multi_tenancy__'       : get_mt_enable(),
+             '__log_scenario__'        : log_scenario,
+             '__generate_html_report__': generate_html_report,
+             '__fixture_cleanup__'     : fixture_cleanup,
+             '__webserver__'           : webserver_host,
+             '__webserver_user__'      : webserver_user,
+             '__webserver_password__'  : webserver_password,
+             '__webserver_log_dir__'   : webserver_log_path,
+             '__webserver_report_dir__': webserver_report_path,
+             '__webroot__'             : webroot,
+             '__mail_server__'         : mail_server,
+             '__mail_port__'           : mail_port,
+             '__sender_mail_id__'      : mailSender,
+             '__receiver_mail_id__'    : mail_to,
+             '__http_proxy__'          : env.get('http_proxy', ''),
+             '__ui_browser__'          : ui_browser,
+             '__ui_config__'           : ui_config,
+             '__horizon__'             : horizon,
+             '__webui__'               : webui,
+             '__devstack__'            : devstack_flag,
+             '__public_vn_rtgt__'      : public_vn_rtgt,
+             '__router_asn__'          : router_asn,
+             '__router_name_ip_tuples__': router_info,
+             '__public_vn_name__'      : fip_pool_name,
+             '__public_vn_subnet__'    : public_vn_subnet,
+             '__test_revision__'       : revision,
+             '__fab_revision__'        : fab_revision,
              '__test_verify_on_setup__': test_verify_on_setup,
-             '__ha_setup__': getattr(testbed, 'ha_setup', None),
-             '__ipmi_username__': getattr(testbed,'ipmi_username',None),
-             '__ipmi_password__': getattr(testbed,'ipmi_password',None)
+             '__stop_on_fail__'        : stop_on_fail,
+             '__ha_setup__'            : getattr(testbed, 'ha_setup', ''),
+             '__ipmi_username__'       : getattr(testbed, 'ipmi_username', ''),
+             '__ipmi_password__'       : getattr(testbed, 'ipmi_password', '')
             })
-        
+
         fd, fname = tempfile.mkstemp()
         of = os.fdopen(fd, 'w')
         of.write(sanity_testbed_json)
         of.close()
-        put(fname, "%s/scripts/sanity_testbed.json" %(repo_path))
-        local ("cp %s %s/scripts/sanity_testbed.json" %(fname, env.test_repo_dir))
+        put(fname, "%s/sanity_testbed.json" %(repo_path))
+        local ("cp %s %s/sanity_testbed.json" %(fname, env.test_repo_dir))
         os.remove(fname)
 
         fd, fname = tempfile.mkstemp()
         of = os.fdopen(fd, 'w')
         of.write(sanity_params)
         of.close()
-        put(fname, "%s/scripts/sanity_params.ini" %(repo_path))
-        local ("cp %s %s/scripts/sanity_params.ini" %(fname, env.test_repo_dir))
+        put(fname, "%s/sanity_params.ini" %(repo_path))
+        local ("cp %s %s/sanity_params.ini" %(fname, env.test_repo_dir))
         os.remove(fname)
         if CONTROLLER_TYPE == 'Cloudstack':
             with settings(warn_only = True):
                 run('python-pip install fixtures testtools fabric')
         else:
             with settings(warn_only = True):
-                pkg = 'fixtures testtools testresources selenium pyvirtualdisplay'
+                if detect_ostype() in ['centos']:
+                    pkg = 'fixtures testtools testresources discover unittest2 \
+                        selenium pyvirtualdisplay \
+                        testrepository junitxml pytun'
+                elif detect_ostype() in ['Ubuntu']:
+                    pkg = 'fixtures testtools testresources\
+                           testrepository junitxml pytun'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
+                if ui_browser:
+                    pkg = pkg + ' pyvirtualdisplay selenium'
                 if exists('/opt/contrail/api-venv/bin/activate'):
-                    run('source /opt/contrail/api-venv/bin/activate && pip install %s' %pkg)
+                    run('source /opt/contrail/api-venv/bin/activate && \
+                        pip install --upgrade %s' %pkg)
                 else:
-                    run("pip install %s" %pkg)
+                    run("pip install --upgrade %s" %pkg)
+                if not exists('/usr/bin/ant'):
+                    pkg_install(['ant'],disablerepo = False)
+                    ant_version = run('ant -version')
+                    if ('1.7' in ant_version):
+                        pkg_install(['ant-junit' , 'ant-trax'] , disablerepo = False)
+                pkg_install(['patch'],disablerepo = False)
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
@@ -412,7 +327,7 @@ def run_sanity(feature='sanity', test=None):
     test_delay_factor = os.environ.get("TEST_DELAY_FACTOR") or "1.0"
     test_retry_factor = os.environ.get("TEST_RETRY_FACTOR") or "1.0"
 
-    env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../fixtures' TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s" % (test_delay_factor, test_retry_factor)
+    env_vars = " TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s" % (test_delay_factor, test_retry_factor)
     if os.environ.has_key('GUESTVM_IMAGE'):
         env_vars = env_vars + ' ci_image=%s' %(os.environ['GUESTVM_IMAGE'])
     suites = {'svc_firewall' : ['%s/scripts/servicechain/firewall/sanity.py' % repo,
@@ -460,9 +375,9 @@ def run_sanity(feature='sanity', test=None):
         else :
             pre_cmd = ''
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
-    cmds = {'sanity'       : pre_cmd + '%s python sanity_tests_with_setup.py' % (env_vars),
-            'quick_sanity' : pre_cmd + '%s python quick_sanity_suite.py' % (env_vars),
-            'ci_sanity'    : pre_cmd + '%s python ci_sanity_suite.py' % (env_vars),
+    cmds = {'sanity'       : pre_cmd + '%s ./run_tests.sh --sanity --send-mail -U' % (env_vars),
+            'quick_sanity' : pre_cmd + '%s ./run_tests.sh -T quick_sanity --send-mail' % (env_vars),
+            'ci_sanity'    : pre_cmd + '%s ./run_tests.sh -T ci_sanity --send-mail -U' % (env_vars),
             'ci_svc_sanity': pre_cmd + '%s python ci_svc_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
             'upgrade'      : pre_cmd + '%s python upgrade_sanity_suite.py' % (env_vars),
@@ -510,7 +425,7 @@ def run_sanity(feature='sanity', test=None):
     execute(setup_test_env)
     cfgm_host = env.roledefs['cfgm'][0]
     with settings(host_string = cfgm_host):
-        with cd('%s/scripts' %(get_remote_path(env.test_repo_dir))):
+        with cd('%s/' %(get_remote_path(env.test_repo_dir))):
             if feature in cmds.keys():
                 run(cmds[feature])
                 return
@@ -542,6 +457,7 @@ def export_testbed_details(filename='testbed_vars'):
     router_asn = getattr(testbed, 'router_asn', '64512')
     mx_gw_test = int(getattr(env, 'mx_gw_test', False))
     testbed_location = getattr(env, 'testbed_location', None)
+    image_web_server = getattr(env, 'image_web_server', None)
     fh = open(filename,'w')
     fh.write('export KEYSTONE_SERVICE_HOST=%s\n' % (keystone_ip))
     fh.write('export API_SERVER_IP=%s\n' % (api_server_host_ip))
@@ -554,5 +470,7 @@ def export_testbed_details(filename='testbed_vars'):
     fh.write('export MX_GW_TEST=%s\n' % (mx_gw_test))
     if testbed_location:
         fh.write('export TESTBED_LOCATION=%s\n' % (testbed_location))
+    if image_web_server:
+        fh.write('export IMAGE_WEB_SERVER=%s\n' % (image_web_server))
     fh.close()
 # end export_testbed_details

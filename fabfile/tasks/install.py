@@ -165,8 +165,11 @@ def upgrade_pkgs_node(*args):
             if detect_ostype() in ['centos', 'fedora', 'redhat']:
                 run(cmd)
 
-def yum_install(rpms):
-    cmd = "yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo install "
+def yum_install(rpms, disablerepo = True):
+    if disablerepo:
+        cmd = "yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo install "
+    else:
+        cmd = "yum -y --nogpgcheck install "
     os_type = detect_ostype()
     # redhat platform installs from multiple repos
     if os_type in ['redhat']:
@@ -180,6 +183,12 @@ def apt_install(debs):
     if detect_ostype() in ['ubuntu']:
         for deb in debs:
             run(cmd + deb)
+
+def pkg_install(pkgs,disablerepo = True):
+    if detect_ostype() in ['Ubuntu']:
+        apt_install(pkgs)
+    elif detect_ostype() in ['centos', 'fedora', 'redhat']:
+        yum_install(pkgs , disablerepo = disablerepo)
 
 @task
 @parallel(pool_size=20)
@@ -586,12 +595,12 @@ def install_webui_packages(source_dir):
             run('echo "deb http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list')
             run('wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -')
             run('sudo apt-get -y update')
-            run('sudo apt-get -y install unzip')                                                                             
-            run('wget -c http://chromedriver.storage.googleapis.com/2.10/chromedriver_linux64.zip')                          
-            run('unzip chromedriver_linux64.zip')                                                                            
-            run('sudo cp ./chromedriver /usr/bin/')                                                                          
-            run('sudo chmod ugo+rx /usr/bin/chromedriver')                                                                   
-            run('sudo apt-get -y install libxpm4 libxrender1 libgtk2.0-0 libnss3 libgconf-2-4')                              
+            run('sudo apt-get -y install unzip')
+            run('wget -c http://chromedriver.storage.googleapis.com/2.10/chromedriver_linux64.zip')
+            run('unzip chromedriver_linux64.zip')
+            run('sudo cp ./chromedriver /usr/bin/')
+            run('sudo chmod ugo+rx /usr/bin/chromedriver')
+            run('sudo apt-get -y install libxpm4 libxrender1 libgtk2.0-0 libnss3 libgconf-2-4')
             run('sudo apt-get -y install google-chrome-stable')
     elif detect_ostype() in ['centos', 'fedora', 'redhat']:
         run('yum install -y xorg-x11-server-Xvfb')
