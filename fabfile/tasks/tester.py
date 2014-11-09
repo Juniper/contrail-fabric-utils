@@ -250,6 +250,7 @@ def setup_test_env():
         put(fname, "%s/sanity_params.ini" %(repo_path))
         local ("cp %s %s/sanity_params.ini" %(fname, env.test_repo_dir))
         os.remove(fname)
+        pkg = ""
         if CONTROLLER_TYPE == 'Cloudstack':
             with settings(warn_only = True):
                 run('python-pip install fixtures testtools fabric')
