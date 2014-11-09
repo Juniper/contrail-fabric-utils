@@ -456,7 +456,11 @@ def export_testbed_details(filename='testbed_vars'):
     public_network_rt = getattr(testbed, 'public_vn_rtgt', None)
     public_network_subnet = getattr(testbed, 'public_vn_subnet', None)
     router_asn = getattr(testbed, 'router_asn', '64512')
-    mx_gw_test = int(getattr(env, 'mx_gw_test', False))
+    mx_gw_test = False
+    if 'MX_GW_TEST' in os.environ.keys():
+        mx_gw_test = os.environ['MX_GW_TEST']
+    mx_gw_test = int(getattr(env, 'mx_gw_test', mx_gw_test))
+
     testbed_location = getattr(env, 'testbed_location', None)
     image_web_server = getattr(env, 'image_web_server', None)
     fh = open(filename,'w')
