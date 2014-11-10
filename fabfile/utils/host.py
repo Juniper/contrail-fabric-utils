@@ -1,9 +1,11 @@
 import paramiko
 from netaddr import *
 
-from fabfile.config import testbed
-from fabric.context_managers import settings
 from fabric.api import env, run
+from fabric.context_managers import settings
+
+from fabfile.config import testbed
+from fabfile.utils.cluster import get_orchestrator
 
 def hstr_to_ip(host_string):
     return host_string.split('@')[1]
@@ -23,6 +25,13 @@ def get_manage_neutron():
     return get_from_testbed_dict('keystone','manage_neutron', 'yes')
 
 def get_service_token():
+    if get_orchestrator() is not 'openstack':
+        with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
+            if run("sudo ls /etc/contrail/service.token").failed:
+                run("sudo setup-service-token.sh")
+            service_token = run("sudo cat /etc/contrail/service.token")
+        return service_token
+
     service_token = get_from_testbed_dict('openstack','service_token',
                              getattr(testbed, 'service_token', ''))
     if not service_token:
