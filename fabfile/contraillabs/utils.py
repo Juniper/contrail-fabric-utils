@@ -28,9 +28,10 @@ def cleanup_repo_node(*args):
                 run('apt-get update')
             elif os_type in ['centos', 'redhat']:
                 with cd('/etc/yum.repos.d/'):
-                    with hide('everything'):
-                        repo_files = run('ls -1 *.repo').split('\r\n')
-                    print 'Backup Original repo files with timestamp'
-                    for repo_file in repo_files:
-                        run('mv %s %s.%s' % (repo_file, repo_file, ts))
-                run('yum clean all')
+                    with settings(warn_only=True):
+                        with hide('everything'):
+                            repo_files = run('ls -1 *.repo').split('\r\n')
+                        print 'Backup Original repo files with timestamp'
+                        for repo_file in repo_files:
+                            run('mv %s %s.%s' % (repo_file, repo_file, ts))
+                        run('yum clean all')
