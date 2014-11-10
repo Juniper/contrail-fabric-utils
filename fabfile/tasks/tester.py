@@ -256,11 +256,11 @@ def setup_test_env():
                 run('python-pip install fixtures testtools fabric')
         else:
             with settings(warn_only = True):
-                if detect_ostype() in ['centos']:
+                if 'centos' == detect_ostype():
                     pkg = 'fixtures testtools testresources discover unittest2 \
                         selenium pyvirtualdisplay \
                         testrepository junitxml pytun'
-                elif detect_ostype() in ['Ubuntu']:
+                elif 'ubuntu' == detect_ostype():
                     pkg = 'fixtures testtools testresources\
                            testrepository junitxml pytun'
                 if os.environ.has_key('GUESTVM_IMAGE'):
@@ -281,9 +281,9 @@ def setup_test_env():
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
-                if detect_ostype() in ['centos']:
+                if 'centos' == detect_ostype():
                     run("yum -y --disablerepo=* --enablerepo=contrail_install_repo install tcpdump")
-                if detect_ostype() in ['redhat']:
+                if 'redhat' == detect_ostype():
                     run("yum -y install tcpdump")
 #end setup_test_env
 
