@@ -69,7 +69,7 @@ def _template_substitute_write(template, vals, filename):
 
 @task
 def provision_vcenter(vcenter_info, esxi_info):
-        apt_install(contrail-vmware-utils)
+        apt_install(['contrail-vmware-utils'])
         vcenter_params = {}
         vcenter_params['server'] = vcenter_info['server']
         vcenter_params['username'] = vcenter_info['username']
