@@ -473,6 +473,8 @@ def export_testbed_details(filename='testbed_vars'):
     fh.write('export ROUTER_ASN=%s\n' % (router_asn))
     fh.write('export NODEHOME=~%s\n' % (api_server_host_user))
     fh.write('export MX_GW_TEST=%s\n' % (mx_gw_test))
+    if mx_gw_test:
+        fh.write('export PUBLIC_ACCESS_AVAILABLE=%s\n' % (mx_gw_test))
     if testbed_location:
         fh.write('export TESTBED_LOCATION=%s\n' % (testbed_location))
     if image_web_server:
