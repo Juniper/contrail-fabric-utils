@@ -17,6 +17,8 @@ def detect_ostype():
     (dist, version, extra) = ast.literal_eval(run(linux_distro))
     if extra is not None and 'xen' in extra:
         dist = 'xen'
+    if 'red hat' in dist.lower():
+        dist = 'redhat'
     return dist.lower()
 #end detect_ostype
 
