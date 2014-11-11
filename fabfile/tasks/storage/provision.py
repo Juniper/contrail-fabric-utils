@@ -244,6 +244,8 @@ def setup_add_storage_compute_node(*args):
         if storage_os_pass_list == []:
             storage_os_pass_list.append('none')
 
+        cfm = env.roledefs['cfgm'][0]
+        cfm_ip = get_data_ip(cfm)[0]
         storage_master=env.roledefs['storage-master'][0]
         storage_master_ip=get_data_ip(storage_master)[0]
         storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
@@ -268,8 +270,8 @@ def setup_add_storage_compute_node(*args):
                 # storage-os-host-tokens - storage openstack hosts passwd list
                 # WARNING: If anything is added in the arguments, make sure it
                 # doesn't break setup storage
-                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode addnode --add-storage-node %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --storage-chassis-config %s --live-migration %s  --cinder-vip %s --storage-os-hosts %s --storage-os-host-tokens %s" \
-                        %(storage_master_password, new_storage_hostnames, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), ' '.join(get_storage_chassis_config()), get_live_migration_opts(),  get_cinder_ha_vip(), ' '.join(storage_os_host_list), ' '.join(storage_os_pass_list))
+                cmd= "PASSWORD=%s python setup-vnc-storage.py --storage-setup-mode addnode --add-storage-node %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --storage-chassis-config %s --live-migration %s  --cinder-vip %s --storage-os-hosts %s --storage-os-host-tokens %s --cfg-host %s" \
+                        %(storage_master_password, new_storage_hostnames, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), ' '.join(get_storage_chassis_config()), get_live_migration_opts(),  get_cinder_ha_vip(), ' '.join(storage_os_host_list), ' '.join(storage_os_pass_list), cfm_ip)
                 print cmd
                 run(cmd)
 
