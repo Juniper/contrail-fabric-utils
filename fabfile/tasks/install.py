@@ -579,7 +579,7 @@ def copy_install_pkgs(pkgs):
 @roles('cfgm')
 @task
 def install_webui_packages(source_dir):
-    webui = getattr(testbed, 'webui', False)
+    webui = getattr(testbed, 'ui_browser', False)
     if detect_ostype() in ['ubuntu']:
         run('cp ' + source_dir + '/contrail-test/scripts/ubuntu_repo/sources.list /etc/apt')
         run('sudo apt-get -y update')
