@@ -12,9 +12,13 @@ def install_pkg(tgt_host, pkg_file):
         run("rpm -iv --force %s" %(pkg_file.split('/')[-1]))
 #end _install_pkg
 
-def detect_ostype():
+def get_linux_distro():
     linux_distro = "python -c 'from platform import linux_distribution; print linux_distribution()'"
     (dist, version, extra) = ast.literal_eval(run(linux_distro))
+    return (dist, version, extra)
+
+def detect_ostype():
+    (dist, version, extra) = get_linux_distro()
     if extra is not None and 'xen' in extra:
         dist = 'xen'
     if 'red hat' in dist.lower():
