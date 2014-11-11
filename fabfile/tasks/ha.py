@@ -255,6 +255,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
     keystone_admin_server_lines = ''
     glance_server_lines = ''
     cinder_server_lines = ''
+    ceph_restapi_server_lines = ''
     nova_api_server_lines = ''
     nova_meta_server_lines = ''
     nova_vnc_server_lines = ''
@@ -278,6 +279,9 @@ def fixup_restart_haproxy_in_openstack_node(*args):
              % (space, host_ip, host_ip)
         cinder_server_lines +=\
             '%s server %s %s:9776 check inter 2000 rise 2 fall 3\n'\
+             % (space, host_ip, host_ip)
+        ceph_restapi_server_lines +=\
+            '%s server %s %s:5006 check inter 2000 rise 2 fall 3\n'\
              % (space, host_ip, host_ip)
         nova_api_server_lines +=\
             '%s server %s %s:9774 check inter 2000 rise 2 fall 1\n'\
@@ -306,6 +310,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
             '__keystone_admin_backend_servers__' : keystone_admin_server_lines,
             '__glance_backend_servers__' : glance_server_lines,
             '__cinder_backend_servers__' : cinder_server_lines,
+            '__ceph_restapi_backend_servers__' : ceph_restapi_server_lines,
             '__nova_api_backend_servers__' : nova_api_server_lines,
             '__nova_meta_backend_servers__' : nova_meta_server_lines,
             '__nova_vnc_backend_servers__' : nova_vnc_server_lines,
