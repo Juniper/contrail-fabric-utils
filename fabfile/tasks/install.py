@@ -185,7 +185,7 @@ def apt_install(debs):
             run(cmd + deb)
 
 def pkg_install(pkgs,disablerepo = True):
-    if detect_ostype() in ['Ubuntu']:
+    if detect_ostype() in ['ubuntu']:
         apt_install(pkgs)
     elif detect_ostype() in ['centos', 'fedora', 'redhat']:
         yum_install(pkgs , disablerepo = disablerepo)
