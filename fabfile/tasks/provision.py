@@ -1260,14 +1260,16 @@ def prov_control_bgp():
             tgt_hostname = run("hostname")
 
         with cd(UTILS_DIR):
-            #Configure global system config with the same ASN
+            print "Configuring global system config with the ASN"
             cmd = "python provision_control.py"
             cmd += " --api_server_ip %s" % cfgm_ip
             cmd += " --api_server_port 8082"
             cmd += " --router_asn %s" % testbed.router_asn
+            cmd += " %s" % get_mt_opts()
+            run(cmd)
+            print "Adding control node as bgp router"
             cmd += " --host_name %s" % tgt_hostname
             cmd += " --host_ip %s" % tgt_ip
-            cmd += " %s" % get_mt_opts()
             cmd += " --oper add"
             run(cmd)
 #end prov_control_bgp
