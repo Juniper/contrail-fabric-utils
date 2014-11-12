@@ -8,14 +8,11 @@ def upgrade_kernel_all():
     """creates repo and upgrades kernel in Ubuntu"""
     execute('pre_check')
     execute('create_install_repo')
-    dist, version, extra = get_linux_distro()
     nodes = []
-    if version is '12.04':
-        nodes = get_nodes_to_upgrade('linux-image-3.13.0-34-generic', 'ubuntu', *env.roledefs['all'])
-    elif version is '14.04':
-        nodes = get_nodes_to_upgrade('linux-image-3.13.0-35-generic', 'ubuntu', *env.roledefs['all'])
+    nodes = get_nodes_to_upgrade(*env.roledefs['all'])
     if not nodes:
         print "kernel is already of expected version"
+        return
     execute(upgrade_kernel_node, *nodes)
     node_list_except_build = list(nodes)
     if env.host_string in nodes:
@@ -26,11 +23,18 @@ def upgrade_kernel_all():
         execute("reboot_nodes", *nodes)
 
 @task
-def get_nodes_to_upgrade(package, os_type, *args):
+def get_nodes_to_upgrade(*args):
     """get the list of nodes in which kernel needs to be upgraded"""
     nodes = []
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
+            dist, version, extra = get_linux_distro()
+            if version == '12.04':
+                (package, os_type) = ('linux-image-3.13.0-34-generic', 'ubuntu')
+            elif version == '14.04':
+                (package, os_type) = ('linux-image-3.13.0-35-generic', 'ubuntu')
+            else:
+                raise RuntimeError('Unsupported platfrom (%s, %s, %s) for kernel upgrade.' % (dist, version, extra))
             act_os_type = detect_ostype()
             if act_os_type == os_type:
                 version = run("dpkg -l | grep %s" % package)
