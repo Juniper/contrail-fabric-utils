@@ -6,6 +6,7 @@ setup(
     packages=[
               'contrail_fabric_utils',
               'contrail_fabric_utils.fabfile',
+              'contrail_fabric_utils.fabfile.contraillabs',
               'contrail_fabric_utils.fabfile.tasks',
               'contrail_fabric_utils.fabfile.tasks.storage',
               'contrail_fabric_utils.fabfile.utils',
