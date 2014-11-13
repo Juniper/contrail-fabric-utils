@@ -1,7 +1,7 @@
 import paramiko
 from netaddr import *
 
-from fabric.api import env, run
+from fabric.api import env, sudo
 from fabric.context_managers import settings
 
 from fabfile.config import testbed
@@ -9,6 +9,9 @@ from fabfile.utils.cluster import get_orchestrator
 
 def hstr_to_ip(host_string):
     return host_string.split('@')[1]
+
+def hstr_to_user(host_string):
+    return host_string.split('@')[0]
 
 def get_control_host_string(mgmt_host):
     ctrl_ip_info= getattr(testbed, 'control_data', None)
@@ -27,18 +30,18 @@ def get_manage_neutron():
 def get_service_token():
     if get_orchestrator() is not 'openstack':
         with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
-            if run("sudo ls /etc/contrail/service.token").failed:
-                run("sudo setup-service-token.sh")
-            service_token = run("sudo cat /etc/contrail/service.token")
+            if sudo("sudo ls /etc/contrail/service.token").failed:
+                sudo("sudo setup-service-token.sh")
+            service_token = sudo("sudo cat /etc/contrail/service.token")
         return service_token
 
     service_token = get_from_testbed_dict('openstack','service_token',
                              getattr(testbed, 'service_token', ''))
     if not service_token:
         with settings(host_string=env.roledefs['openstack'][0], warn_only=True):
-            if run("sudo ls /etc/contrail/service.token").failed:
-                run("sudo setup-service-token.sh")
-            service_token = run("sudo cat /etc/contrail/service.token")
+            if sudo("sudo ls /etc/contrail/service.token").failed:
+                sudo("sudo setup-service-token.sh")
+            service_token = sudo("sudo cat /etc/contrail/service.token")
     return service_token
 
 def get_service_token_opt():
@@ -118,12 +121,13 @@ def get_keystone_admin_token():
     if token:
         return token
     keystone_ip = get_keystone_ip(ignore_vip=True)
-    if keystone_ip == hstr_to_ip(get_control_host_string(testbed.env.roledefs['openstack'][0])):
+    openstack_node = testbed.env.roledefs['openstack'][0]
+    if keystone_ip == hstr_to_ip(get_control_host_string(openstack_node)):
         # Use Management interface IP to ssh
-        keystone_ip = hstr_to_ip(testbed.env.roledefs['openstack'][0])
+        keystone_ip = hstr_to_ip(openstack_node)
     cmd = 'grep "^[ ]*admin_token" /etc/keystone/keystone.conf | tr -d \' \'| awk -F"=" {\'print $2\'}'
-    with settings(host_string='root@%s' %(keystone_ip)):
-        token = run(cmd)
+    with settings(host_string='%s@%s' % (hstr_to_user(openstack_node), keystone_ip)):
+        token = sudo(cmd)
     return token
 
 def get_keystone_admin_user():

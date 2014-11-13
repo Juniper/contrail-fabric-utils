@@ -68,7 +68,7 @@ def wait_for_cloudstack_management_up(host, username, password):
         sleep(10)
         timeout += 1
         if timeout == 30:
-            run('cloudstack-setup-management')
+            sudo('cloudstack-setup-management')
     print 'Timeout while waiting for cloudstack-management to start up'
     sys.exit(1)
 
@@ -86,7 +86,7 @@ def cloudLogin(file):
               "&password=" + env.config['cloud']['password'] + "&response=json'")
     cmd = "curl -H 'Content-Type: application/x-www-form-urlencoded' -H 'Accept: application/json'\
                     -X POST -d %s -c '%s' http://%s:8080/client/api" %(login, file, orchestrator_ip)
-    output = run(cmd)
+    output = sudo(cmd)
     response = json.loads(output)
     if not response or response.get('errorresponse'):
         if response:
@@ -100,7 +100,7 @@ def getKeys(loginresp, file):
     orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     cmd = "curl -H 'Content-Type: application/json' -b %s -X POST \
            'http://%s:8080/client/api/?command=listUsers%s'" %(file, orchestrator_ip, urlParam)
-    output = run(cmd)
+    output = sudo(cmd)
     response = json.loads(output)
     user = response['listusersresponse']['user'][0]
     if not 'apikey' in user:
@@ -122,11 +122,11 @@ def updateCloudMonkeyConfig():
             assert False, "Unable to fetch apikey and secret key"
         (apikey, secretkey) = keypair
     orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
-    run('cloudmonkey set color false')
-    run('sed -i "/host/c\host=%s" ~/.cloudmonkey/config' %orchestrator_ip)
-    run('sed -i "s/secretkey\s*\=.*$/secretkey \= %s/" ~/.cloudmonkey/config' %secretkey)
-    run('sed -i "s/apikey\s*\=.*$/apikey \= %s/" ~/.cloudmonkey/config' %apikey)
-    run('cloudmonkey set color true')
+    sudo('cloudmonkey set color false')
+    sudo('sed -i "/host/c\host=%s" ~/.cloudmonkey/config' %orchestrator_ip)
+    sudo('sed -i "s/secretkey\s*\=.*$/secretkey \= %s/" ~/.cloudmonkey/config' %secretkey)
+    sudo('sed -i "s/apikey\s*\=.*$/apikey \= %s/" ~/.cloudmonkey/config' %apikey)
+    sudo('cloudmonkey set color true')
     env.keysupdated = True
  
 @roles('build')
@@ -136,9 +136,9 @@ def install_cloudstack(pkg):
     temp_dir = tempfile.mkdtemp()
     host = env.roledefs['orchestrator'][0]
     with settings(host_string = host):
-        run('mkdir -p %s' % temp_dir)
-        put(pkg, '%s/%s' % (temp_dir, pkg_name))
-        run('cd %s && tar xvjf %s && sh ./cloudstack_setup.sh' %(temp_dir, pkg_name))
+        sudo('mkdir -p %s' % temp_dir)
+        put(pkg, '%s/%s' % (temp_dir, pkg_name), use_sudo=True)
+        sudo('cd %s && tar xvjf %s && sh ./cloudstack_setup.sh' %(temp_dir, pkg_name))
     execute(install_cloudstack_packages)
 
 @roles('build')
@@ -148,9 +148,9 @@ def install_contrail(pkg):
     temp_dir = tempfile.mkdtemp()
     host = env.roledefs['cfgm'][0]
     with settings(host_string = host):
-        run('mkdir -p %s' % temp_dir)
-        put(pkg, '%s/%s' % (temp_dir, pkg_name))
-        run('cd %s && tar xvjf %s && sh ./contrail_setup.sh' %(temp_dir, pkg_name))
+        sudo('mkdir -p %s' % temp_dir)
+        put(pkg, '%s/%s' % (temp_dir, pkg_name), use_sudo=True)
+        sudo('cd %s && tar xvjf %s && sh ./contrail_setup.sh' %(temp_dir, pkg_name))
     execute(install_contrail_packages)
 
 @roles('build')
@@ -161,9 +161,9 @@ def install_xenserver(pkg):
     hosts = env.roledefs['compute']
     for host in hosts:
         with settings(host_string = host):
-            run('mkdir -p %s' % temp_dir)
-            put(pkg, '%s/%s' % (temp_dir, pkg_name))
-            run('cd %s && tar xvjf %s && sh ./xen_setup.sh'%(temp_dir, pkg_name))
+            sudo('mkdir -p %s' % temp_dir)
+            put(pkg, '%s/%s' % (temp_dir, pkg_name), use_sudo=True)
+            sudo('cd %s && tar xvjf %s && sh ./xen_setup.sh'%(temp_dir, pkg_name))
 
 @roles('build')
 @task
@@ -178,16 +178,16 @@ def install_cloudstack_packages(pkg=None):
         pkg_name = os.path.basename(pkg)
         temp_dir = tempfile.mkdtemp()
         host = env.roledefs['cfgm'][0]
-        run('mkdir -p %s' % temp_dir)
-        put(pkg, '%s/%s' % (temp_dir, pkg_name))
-        run('cd %s && tar xvjf %s && sh ./cloudstack_setup.sh' %(temp_dir, pkg_name))
+        sudo('mkdir -p %s' % temp_dir)
+        put(pkg, '%s/%s' % (temp_dir, pkg_name), use_sudo=True)
+        sudo('cd %s && tar xvjf %s && sh ./cloudstack_setup.sh' %(temp_dir, pkg_name))
 
-    run('yum install --disablerepo=* --enablerepo=contrail_install_repo -y contrail-cloudstack-utils')
+    sudo('yum install --disablerepo=* --enablerepo=contrail_install_repo -y contrail-cloudstack-utils')
     check_cs_version_in_config()
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     if not 'systemvm_template' in env:
         env.systemvm_template = "http://10.84.5.100/cloudstack/vm_templates/systemvm64template-unknown-xen.vhd.bz2"
-    run('sh /opt/contrail/cloudstack-utils/cloudstack-install.sh %s %s %s %s' %
+    sudo('sh /opt/contrail/cloudstack-utils/cloudstack-install.sh %s %s %s %s' %
                 (env.config['nfs_share_path'], env.systemvm_template, env.host, env.cs_version))
     execute(cloudstack_api_setup)
 
@@ -198,30 +198,30 @@ def install_contrail_packages(pkg=None):
         pkg_name = os.path.basename(pkg)
         temp_dir = tempfile.mkdtemp()
         host = env.roledefs['cfgm'][0]
-        run('mkdir -p %s' % temp_dir)
-        put(pkg, '%s/%s' % (temp_dir, pkg_name))
-        run('cd %s && tar xvjf %s && sh ./contrail_setup.sh' %(temp_dir, pkg_name))
+        sudo('mkdir -p %s' % temp_dir)
+        put(pkg, '%s/%s' % (temp_dir, pkg_name), use_sudo=True)
+        sudo('cd %s && tar xvjf %s && sh ./contrail_setup.sh' %(temp_dir, pkg_name))
 
     orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     control_ip = host_string_to_ip(env.roledefs['control'][0])
-    run('yum install --disablerepo=* --enablerepo=contrail_install_repo -y contrail-cloudstack-utils')
-    run('sh /opt/contrail/cloudstack-utils/contrail-install.sh 127.0.0.1')
+    sudo('yum install --disablerepo=* --enablerepo=contrail_install_repo -y contrail-cloudstack-utils')
+    sudo('sh /opt/contrail/cloudstack-utils/contrail-install.sh 127.0.0.1')
 
     # analytics venv installation
     with cd("/opt/contrail/analytics-venv/archive"):
-        run("source ../bin/activate && pip install *")
+        sudo("source ../bin/activate && pip install *")
 
     # api venv installation
     with cd("/opt/contrail/api-venv/archive"):
-        run("source ../bin/activate && pip install *")
+        sudo("source ../bin/activate && pip install *")
 
     # control venv installation
-    run("echo 'HOSTIP=%s\n'>> /etc/contrail/control_param" %(control_ip))
-    run("/bin/cp /opt/contrail/api-venv/archive/xml* /opt/contrail/control-venv/archive/")
+    sudo("echo 'HOSTIP=%s\n'>> /etc/contrail/control_param" %(control_ip))
+    sudo("/bin/cp /opt/contrail/api-venv/archive/xml* /opt/contrail/control-venv/archive/")
     with cd("/opt/contrail/control-venv/archive"):
-        run("source ../bin/activate && pip install *")
-    run('python /opt/contrail/cloudstack-utils/contrail_post_install.py %s %s' %(orchestrator_ip, cfgm_ip))
+        sudo("source ../bin/activate && pip install *")
+    sudo('python /opt/contrail/cloudstack-utils/contrail_post_install.py %s %s' %(orchestrator_ip, cfgm_ip))
     hosts = env.roledefs['compute']
     for host in hosts:
          compute_ip = host_string_to_ip(host)
@@ -233,7 +233,7 @@ def install_contrail_packages(pkg=None):
          prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                         "--admin_user %s --admin_password %s --admin_tenant_name %s" \
                         %(compute_hostname, compute_ip, cfgm_ip, "admin", "password", "admin")
-         run("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
+         sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
 
 @roles('cfgm')
 @task
@@ -254,11 +254,11 @@ def setup_cloud():
         cfg = render_controller_config(env.config)
         json.dump(cfg, f)
         f.flush()
-        put(f.name, '~/config.json')
-    run('python /opt/contrail/cloudstack-utils/system-setup.py ~/config.json ' +
+        put(f.name, '~/config.json', use_sudo=True)
+    sudo('python /opt/contrail/cloudstack-utils/system-setup.py ~/config.json ' +
             '~/system-setup.log %s %s' %(env.cs_version, env.cs_flavor))
     with settings(host_string = orchestrator):
-        run('/etc/init.d/cloudstack-management restart')
+        sudo('/etc/init.d/cloudstack-management restart')
         wait_for_cloudstack_management_up(host_string_to_ip(orchestrator), env.config['cloud']['username'],
                                       env.config['cloud']['password'])
 
@@ -269,9 +269,9 @@ def cloudstack_api_setup():
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     if (orchestrator_ip == cfgm_ip):
         cfgm_ip = '127.0.0.1'
-    run('cat <<EOF > /usr/share/cloudstack-management/webapps/client/WEB-INF/classes/contrail.properties '+ 
+    sudo('cat <<EOF > /usr/share/cloudstack-management/webapps/client/WEB-INF/classes/contrail.properties '+ 
             '\napi.hostname=%s\napi.port=8082\nEOF' %cfgm_ip) 
-    run('/etc/init.d/cloudstack-management restart')
+    sudo('/etc/init.d/cloudstack-management restart')
     wait_for_cloudstack_management_up(env.host, env.config['cloud']['username'],
                                       env.config['cloud']['password'])
 
@@ -291,27 +291,27 @@ def install_vm_template(url, name, osname):
     updateCloudMonkeyConfig()
     template_server_ip = get_ip_from_url(url)
     assert template_server_ip, "Unable to get the ip from URL. URL should have http[s] or ftp prefix"
-    run('cloudmonkey api updateConfiguration name=secstorage.allowed.internal.sites value=%s/32' %template_server_ip)
+    sudo('cloudmonkey api updateConfiguration name=secstorage.allowed.internal.sites value=%s/32' %template_server_ip)
     with settings(host_string = orchestrator):
-        run('/etc/init.d/cloudstack-management restart')
+        sudo('/etc/init.d/cloudstack-management restart')
         wait_for_cloudstack_management_up(host_string_to_ip(orchestrator), env.config['cloud']['username'],
                                       env.config['cloud']['password'])
 
     list_os_type = "\'list ostypes description=\"%s\"\'"%(osname)
-    run('cloudmonkey set color false')
-    output = run('cloudmonkey %s' %list_os_type)
+    sudo('cloudmonkey set color false')
+    output = sudo('cloudmonkey %s' %list_os_type)
     match = re.search('^id\s*=\s*(\S+)', output, re.M)
     if not match:
-        output = run('cloudmonkey list ostypes | grep description')
+        output = sudo('cloudmonkey list ostypes | grep description')
         assert False, "OS name %s is not found in list types. Available options are %s" %(
                                        osname, output)
     ostype_id = match.group(1)
     register_template_opts = "name='%s' displaytext='%s' url=%s ostypeid=%s "%(name, name, url, ostype_id)+\
                              "hypervisor=XenServer format=VHD zoneid=-1 isextractable=True ispublic=True"
-    run('cloudmonkey "register template %s"' %register_template_opts)
+    sudo('cloudmonkey "register template %s"' %register_template_opts)
     interval = 30
     for retry in range (30):
-        output = run('cloudmonkey "list templates templatefilter=all name=\'%s\'"'%name)
+        output = sudo('cloudmonkey "list templates templatefilter=all name=\'%s\'"'%name)
         state = re.search(r'isready = True', output, re.M|re.I)
         if not state:
             if (retry < 29):
@@ -320,7 +320,7 @@ def install_vm_template(url, name, osname):
         else:
             print "Template \'%s\' is installed" %name
             break
-    run('cloudmonkey set color true')
+    sudo('cloudmonkey set color true')
     if retry == 29:
         assert False, "SystemVms are not up even after %d secs" %((retry+1)*interval)
 
@@ -328,7 +328,7 @@ def install_vm_template(url, name, osname):
 @task
 def provision_routing():
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
-    run('python /opt/contrail/cloudstack-utils/provision_routing.py ' +
+    sudo('python /opt/contrail/cloudstack-utils/provision_routing.py ' +
         '%s 127.0.0.1 %s %s' % (cfgm_ip, env.config['route_target'], env.config['mx_ip']))
 
 @roles('orchestrator')
@@ -344,19 +344,19 @@ def provision_all():
 @task
 def enable_proxyvm_console_access():
     orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
-    run('cd /opt/contrail/xenserver-scripts/ && sh ./xen-console-proxy-vm-setup.sh %s' %orchestrator_ip)
+    sudo('cd /opt/contrail/xenserver-scripts/ && sh ./xen-console-proxy-vm-setup.sh %s' %orchestrator_ip)
 
 @roles('cfgm')
 @task
 def check_systemvms():
     updateCloudMonkeyConfig()
     #Increase the storage disable threshold to 97%.
-    run('cloudmonkey update configuration name=pool.storage.capacity.disablethreshold value=0.97')
+    sudo('cloudmonkey update configuration name=pool.storage.capacity.disablethreshold value=0.97')
 
-    run('cloudmonkey set color false')
+    sudo('cloudmonkey set color false')
     interval = 30
     for retry in range (30):
-        output = run('cloudmonkey listSystemVms')
+        output = sudo('cloudmonkey listSystemVms')
         state = re.findall(r'state = Running', output, re.M|re.I)
         if state and len(state) == 2:
             print "Both the System Vms are up and running"
@@ -365,7 +365,7 @@ def check_systemvms():
             if (retry < 29):
                 print "System VMs are not up. Sleeping for %d secs before retry" %interval
                 sleep(interval)
-    run('cloudmonkey set color true')
+    sudo('cloudmonkey set color true')
     if retry == 29:
         assert False, "SystemVms are not up even after %d secs" %((retry+1)*interval)
 
@@ -429,8 +429,8 @@ def run_sanity(feature='sanity', test=None):
     with settings(host_string = cfgm_host):
         with cd('%s/scripts' %(get_remote_path(env.test_repo_dir))):
             if feature in cmds.keys():
-                run(cmds[feature])
+                sudo(cmds[feature])
                 return
-            run(cmd + test)
+            sudo(cmd + test)
 
 #end run_sanity

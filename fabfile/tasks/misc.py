@@ -46,10 +46,10 @@ def detach_vrouter_node(*args):
     for host_string in args:
         compute_hostname = socket.gethostbyaddr(hstr_to_ip(host_string))[0].split('.')[0]
         with settings(host_string=host_string, warn_only=True):
-            run("service supervisor-vrouter stop")
-            run("service %s stop" % nova_compute)
+            sudo("service supervisor-vrouter stop")
+            sudo("service %s stop" % nova_compute)
         with settings(host_string=cfgm_host, pasword=cfgm_host_password):
-            run("python /opt/contrail/utils/provision_vrouter.py --host_name %s --host_ip %s --api_server_ip %s --oper del" %
+            sudo("python /opt/contrail/utils/provision_vrouter.py --host_name %s --host_ip %s --api_server_ip %s --oper del" %
                 (compute_hostname, host_string.split('@')[1], cfgm_ip))
     execute("restart_control")
 
@@ -61,9 +61,9 @@ def check_and_kill_zookeeper():
             pkg_rls = get_release('zookeeper')
             if pkg_rls in ['3.4.3']: 
                 print 'Killing existing zookeeper process'
-                run('pkill -f zookeeper')
+                sudo('pkill -f zookeeper')
                 sleep(3)
-            run('ps -ef | grep zookeeper')
+            sudo('ps -ef | grep zookeeper')
 
 @task
 @roles('database')
@@ -76,12 +76,12 @@ def zoolink_node(*args):
     """Creates /usr/bin/zookeeper link to /etc/zookeeper"""
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            dirinfo = run('ls -lrt /usr/etc/zookeeper')
-            link_req = run('ls /etc/zookeeper/conf').failed
+            dirinfo = sudo('ls -lrt /usr/etc/zookeeper')
+            link_req = sudo('ls /etc/zookeeper/conf').failed
         if not '/usr/etc/zookeeper -> /etc/zookeeper' in dirinfo and link_req:
-            run('ln -s /etc/zookeeper /usr/etc/zookeeper')
+            sudo('ln -s /etc/zookeeper /usr/etc/zookeeper')
             sleep(3)
-            run('ls -lrt /usr/etc/zookeeper')
+            sudo('ls -lrt /usr/etc/zookeeper')
 
 
 @task
@@ -96,17 +96,17 @@ def rmmod_vrouter_node(*args):
     for host_string in args:
         if getattr(testbed, 'data', None) and host_string in testbed.data.keys():
             with settings(host_string=host_string):
-                run("service supervisor-vrouter stop")
-                run("rmmod vrouter")
-                run("insmod /lib/modules/3.8.0-29-generic/extra/net/vrouter/vrouter.ko")
-                run("service supervisor-vrouter start")
+                sudo("service supervisor-vrouter stop")
+                sudo("rmmod vrouter")
+                sudo("modprobe -r vrouter")
+                sudo("service supervisor-vrouter start")
         else:
             print "Managment and data interface are the same."
 
 @task
 def run_cmd(host_string,cmd):
     with settings(host_string=host_string):
-        run(cmd)
+        sudo(cmd)
 
 @task
 @hosts(*env.roledefs['cfgm'][:1])
@@ -225,19 +225,22 @@ def setup_passwordless_ssh(*args):
     id_rsa_pubs = {}
     for host_string in args:
         with settings(host_string=host_string):
-            if files.exists('/root/.ssh'):
-                run('chmod 700 /root/.ssh')
-            if not files.exists('/root/.ssh/id_rsa') and not files.exists('/root/.ssh/id_rsa.pub'):
-                run('ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""')
-            elif not files.exists('/root/.ssh/id_rsa') or not files.exists('/root/.ssh/id_rsa.pub'):
-                run('rm -rf /root/.ssh/id_rsa*')
-                run('ssh-keygen -b 2048 -t rsa -f /root/.ssh/id_rsa -q -N ""')
-            id_rsa_pubs.update({host_string : run('cat /root/.ssh/id_rsa.pub')})
+            if files.exists('~/.ssh', use_sudo=True):
+                sudo('chmod 700 ~/.ssh')
+            if (not files.exists('~/.ssh/id_rsa', use_sudo=True) and
+                not files.exists('~/.ssh/id_rsa.pub', use_sudo=True)):
+                sudo('ssh-keygen -b 2048 -t rsa -f ~/.ssh/id_rsa -q -N ""')
+            elif (not files.exists('~/.ssh/id_rsa', use_sudo=True) or
+                  not files.exists('~/.ssh/id_rsa.pub', use_sudo=True)):
+                sudo('rm -rf ~/.ssh/id_rsa ~/.ssh/id_rsa.pub')
+                sudo('ssh-keygen -b 2048 -t rsa -f ~/.ssh/id_rsa -q -N ""')
+            id_rsa_pubs.update({host_string : sudo('cat ~/.ssh/id_rsa.pub')})
     for host_string in args:
         with settings(host_string=host_string):
             for host, id_rsa_pub in id_rsa_pubs.items():
-                files.append('/root/.ssh/authorized_keys', id_rsa_pub)
-            run('chmod 640 /root/.ssh/authorized_keys')
+                files.append('~/.ssh/authorized_keys',
+                             id_rsa_pub, use_sudo=True)
+            sudo('chmod 640 ~/.ssh/authorized_keys')
 # end setup_passwordless_ssh
 
 
@@ -246,15 +249,15 @@ def add_reserved_ports_node(ports, *args):
     for host_string in args:
         with settings(host_string=host_string):
             # Exclude ports from the available ephemeral port range
-            existing_ports = run("cat /proc/sys/net/ipv4/ip_local_reserved_ports")
-            run("sysctl -w net.ipv4.ip_local_reserved_ports=%s,%s" % (ports, existing_ports))
+            existing_ports = sudo("cat /proc/sys/net/ipv4/ip_local_reserved_ports")
+            sudo("sysctl -w net.ipv4.ip_local_reserved_ports=%s,%s" % (ports, existing_ports))
             # Make the exclusion of port 35357 persistent
             with settings(warn_only=True):
-                not_set = run("grep '^net.ipv4.ip_local_reserved_ports' /etc/sysctl.conf > /dev/null 2>&1").failed
+                not_set = sudo("grep '^net.ipv4.ip_local_reserved_ports' /etc/sysctl.conf > /dev/null 2>&1").failed
             if not_set:
-                run('echo "net.ipv4.ip_local_reserved_ports = %s" >> /etc/sysctl.conf' % ports)
+                sudo('echo "net.ipv4.ip_local_reserved_ports = %s" >> /etc/sysctl.conf' % ports)
             else:
-                run("sed -i 's/net.ipv4.ip_local_reserved_ports\s*=\s*/net.ipv4.ip_local_reserved_ports=%s,/' /etc/sysctl.conf" % ports)
+                sudo("sed -i 's/net.ipv4.ip_local_reserved_ports\s*=\s*/net.ipv4.ip_local_reserved_ports=%s,/' /etc/sysctl.conf" % ports)
 
 @task
 @EXECUTE_TASK

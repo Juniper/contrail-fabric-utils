@@ -55,20 +55,20 @@ def install_pkg_node(pkg, *args):
                 continue
             pkg_name = os.path.basename(pkg)
             temp_dir= tempfile.mkdtemp()
-            run('mkdir -p %s' % temp_dir)
-            put(pkg, '%s/%s' % (temp_dir, pkg_name))
+            sudo('mkdir -p %s' % temp_dir)
+            put(pkg, '%s/%s' % (temp_dir, pkg_name), use_sudo=True)
             if pkg.endswith('.rpm'):
-                run("yum --disablerepo=* -y localinstall %s/%s" % (temp_dir, pkg_name))
+                sudo("yum --disablerepo=* -y localinstall %s/%s" % (temp_dir, pkg_name))
             elif pkg.endswith('.deb'):
-                run("dpkg -i %s/%s" % (temp_dir, pkg_name))
+                sudo("dpkg -i %s/%s" % (temp_dir, pkg_name))
 
 
 def upgrade_rpm(rpm):
     rpm_name = os.path.basename(rpm)
     temp_dir= tempfile.mkdtemp()
-    run('mkdir -p %s' % temp_dir)
-    put(rpm, '%s/%s' % (temp_dir, rpm_name))
-    run("rpm --upgrade --force -v %s/%s" % (temp_dir, rpm_name))
+    sudo('mkdir -p %s' % temp_dir)
+    put(rpm, '%s/%s' % (temp_dir, rpm_name), use_sudo=True)
+    sudo("rpm --upgrade --force -v %s/%s" % (temp_dir, rpm_name))
 
 @task
 @EXECUTE_TASK
@@ -168,7 +168,7 @@ def upgrade_pkgs_node(*args):
                   sudo easy_install \
                   /opt/contrail/python_packages/paramiko-1.11.0.tar.gz"
             if detect_ostype() in ['centos', 'fedora', 'redhat']:
-                run(cmd)
+                sudo(cmd)
 
 def yum_install(rpms, disablerepo = True):
     if disablerepo:
@@ -181,13 +181,13 @@ def yum_install(rpms, disablerepo = True):
         cmd = "yum -y --nogpgcheck install "
     if os_type in ['centos', 'fedora', 'redhat']:
         for rpm in rpms:
-            run(cmd + rpm)
+            sudo(cmd + rpm)
 
 def apt_install(debs):
     cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes --allow-unauthenticated install "
     if detect_ostype() in ['ubuntu']:
         for deb in debs:
-            run(cmd + deb)
+            sudo(cmd + deb)
 
 def pkg_install(pkgs,disablerepo = True):
     if detect_ostype() in ['ubuntu']:
@@ -236,7 +236,7 @@ def install_database_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-database']
             if detect_ostype() == 'ubuntu':
-                run('echo "manual" >> /etc/init/supervisor-database.override')
+                sudo('echo "manual" >> /etc/init/supervisor-database.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -290,7 +290,7 @@ def install_ceilometer_node(*args):
             if act_os_type == 'ubuntu':
                 #if not is_package_installed('mongodb-server'):
                 #    raise RuntimeError('install_ceilometer: mongodb-server is required to be installed for ceilometer')
-                output = run("dpkg-query --show nova-api")
+                output = sudo("dpkg-query --show nova-api")
                 if output.find('2013.2') != -1:
                     apt_install(pkg_havana)
                 elif output.find('2014.1') != -1:
@@ -338,8 +338,8 @@ def install_cfgm_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-config']
             if detect_ostype() == 'ubuntu':
-                run('echo "manual" >> /etc/init/supervisor-config.override')
-                run('echo "manual" >> /etc/init/neutron-server.override')
+                sudo('echo "manual" >> /etc/init/supervisor-config.override')
+                sudo('echo "manual" >> /etc/init/neutron-server.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -360,8 +360,8 @@ def install_control_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-control']
             if detect_ostype() == 'ubuntu':
-                run('echo "manual" >> /etc/init/supervisor-control.override')
-                run('echo "manual" >> /etc/init/supervisor-dns.override')
+                sudo('echo "manual" >> /etc/init/supervisor-control.override')
+                sudo('echo "manual" >> /etc/init/supervisor-dns.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -382,7 +382,7 @@ def install_collector_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-analytics']
             if detect_ostype() == 'ubuntu':
-                run('echo "manual" >> /etc/init/supervisor-analytics.override')
+                sudo('echo "manual" >> /etc/init/supervisor-analytics.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -403,7 +403,7 @@ def install_webui_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-webui']
             if detect_ostype() == 'ubuntu':
-                run('echo "manual" >> /etc/init/supervisor-webui.override')
+                sudo('echo "manual" >> /etc/init/supervisor-webui.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -462,7 +462,7 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                 pkg.append('iproute')
 
             if ostype == 'ubuntu':
-                run('echo "manual" >> /etc/init/supervisor-vrouter.override')
+                sudo('echo "manual" >> /etc/init/supervisor-vrouter.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -490,12 +490,12 @@ def create_install_repo_node(*args):
     """Creates contrail install repo in one or list of nodes. USAGE:fab create_install_repo_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            contrail_setup_pkg = run("ls /opt/contrail/contrail_install_repo/contrail-setup*")
+            contrail_setup_pkg = sudo("ls /opt/contrail/contrail_install_repo/contrail-setup*")
             contrail_setup_pkgs = contrail_setup_pkg.split('\n')
             if (len(contrail_setup_pkgs) == 1 and get_release() in contrail_setup_pkgs[0]):
                 print "Contrail install repo created already in node: %s." % host_string
                 continue
-            run("sudo /opt/contrail/contrail_packages/setup.sh")
+            sudo("sudo /opt/contrail/contrail_packages/setup.sh")
 
 @roles('build')
 @task
@@ -549,9 +549,9 @@ def update_keystone_log():
     #TODO This is a workaround. Need to be fixed as part of package install
     if detect_ostype() in ['ubuntu']:
         with  settings(warn_only=True):
-            run("touch /var/log/keystone/keystone.log")
-            run("sudo chown keystone /var/log/keystone/keystone.log")
-            run("sudo chgrp keystone /var/log/keystone/keystone.log")
+            sudo("touch /var/log/keystone/keystone.log")
+            sudo("sudo chown keystone /var/log/keystone/keystone.log")
+            sudo("sudo chgrp keystone /var/log/keystone/keystone.log")
 
 
 @roles('build')
@@ -592,31 +592,31 @@ def copy_install_pkgs(pkgs):
 def install_webui_packages(source_dir):
     webui = getattr(testbed, 'ui_browser', False)
     if detect_ostype() in ['ubuntu']:
-        run('cp ' + source_dir + '/contrail-test/scripts/ubuntu_repo/sources.list /etc/apt')
-        run('sudo apt-get -y update')
-        run('sudo apt-get install -y xvfb')
+        sudo('cp ' + source_dir + '/contrail-test/scripts/ubuntu_repo/sources.list /etc/apt')
+        sudo('sudo apt-get -y update')
+        sudo('sudo apt-get install -y xvfb')
         if webui == 'firefox':
-            run('sudo apt-get install -y firefox')
-            run('sudo apt-get remove -y firefox')
-            run('wget https://ftp.mozilla.org/pub/mozilla.org/firefox/releases/31.0/linux-x86_64/en-US/firefox-31.0.tar.bz2')
-            run('tar -xjvf firefox-31.0.tar.bz2')
-            run('sudo mv firefox /opt/firefox')
-            run('sudo ln -sf /opt/firefox/firefox /usr/bin/firefox')
+            sudo('sudo apt-get install -y firefox')
+            sudo('sudo apt-get remove -y firefox')
+            sudo('wget https://ftp.mozilla.org/pub/mozilla.org/firefox/releases/31.0/linux-x86_64/en-US/firefox-31.0.tar.bz2')
+            sudo('tar -xjvf firefox-31.0.tar.bz2')
+            sudo('sudo mv firefox /opt/firefox')
+            sudo('sudo ln -sf /opt/firefox/firefox /usr/bin/firefox')
         elif webui == 'chrome':
-            run('echo "deb http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list')
-            run('wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -')
-            run('sudo apt-get -y update')
-            run('sudo apt-get -y install unzip')
-            run('wget -c http://chromedriver.storage.googleapis.com/2.10/chromedriver_linux64.zip')
-            run('unzip chromedriver_linux64.zip')
-            run('sudo cp ./chromedriver /usr/bin/')
-            run('sudo chmod ugo+rx /usr/bin/chromedriver')
-            run('sudo apt-get -y install libxpm4 libxrender1 libgtk2.0-0 libnss3 libgconf-2-4')
-            run('sudo apt-get -y install google-chrome-stable')
+            sudo('echo "deb http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee -a /etc/apt/sources.list')
+            sudo('wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | sudo apt-key add -')
+            sudo('sudo apt-get -y update')
+            sudo('sudo apt-get -y install unzip')
+            sudo('wget -c http://chromedriver.storage.googleapis.com/2.10/chromedriver_linux64.zip')
+            sudo('unzip chromedriver_linux64.zip')
+            sudo('sudo cp ./chromedriver /usr/bin/')
+            sudo('sudo chmod ugo+rx /usr/bin/chromedriver')
+            sudo('sudo apt-get -y install libxpm4 libxrender1 libgtk2.0-0 libnss3 libgconf-2-4')
+            sudo('sudo apt-get -y install google-chrome-stable')
     elif detect_ostype() in ['centos', 'fedora', 'redhat']:
-        run('yum install -y xorg-x11-server-Xvfb')
-        run('wget http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/33.0/linux-x86_64/en-US/firefox-33.0.tar.bz2')
-        run('tar -xjvf firefox-33.0.tar.bz2')
-        run('sudo mv firefox /opt/firefox')
-        run('sudo ln -sf /opt/firefox/firefox /usr/bin/firefox')
+        sudo('yum install -y xorg-x11-server-Xvfb')
+        sudo('wget http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/33.0/linux-x86_64/en-US/firefox-33.0.tar.bz2')
+        sudo('tar -xjvf firefox-33.0.tar.bz2')
+        sudo('sudo mv firefox /opt/firefox')
+        sudo('sudo ln -sf /opt/firefox/firefox /usr/bin/firefox')
 #end install_webui_packages 

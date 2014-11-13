@@ -12,8 +12,8 @@ def copy_dir(dir_name, tgt_host):
     user_home = os.path.expanduser('~')
     local_hostname = local('hostname -s',capture=True)
     with settings(host_string=tgt_host):
-        remote_hostname = run('hostname -s')
-        remote_home = run('pwd')
+        remote_hostname = sudo('hostname -s')
+        remote_home = sudo('pwd')
     print "Remote host is %s" % (remote_hostname)
     remote_dir = "%s" % dir_name.replace(user_home,remote_home)
     if remote_hostname in local_hostname:
@@ -27,9 +27,9 @@ def copy_dir(dir_name, tgt_host):
         if elem.startswith('.git'):
             continue
         with settings(host_string=tgt_host):
-            run('mkdir -p ~/%s' % dir_name.replace(user_home,''))
+            sudo('mkdir -p ~/%s' % dir_name.replace(user_home,''))
             put(local_path=os.path.join(dir_name, elem),
-                remote_path=remote_dir, mirror_local_mode=True)
+                remote_path=remote_dir, mirror_local_mode=True, use_sudo=True)
 
 def get_data_ip(host_str):
     tgt_ip = None

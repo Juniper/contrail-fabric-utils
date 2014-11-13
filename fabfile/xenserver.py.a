@@ -26,15 +26,15 @@ def add_contrail_repo():
     with tempfile.NamedTemporaryFile() as f:
         f.write(txt)
         f.flush()
-        put(f, '/etc/yum.repos.d/Contrail.repo')
+        put(f, '/etc/yum.repos.d/Contrail.repo', use_sudo=True)
 
 
 @roles('compute')
 @task
 def install_packages():
     execute(add_contrail_repo)
-    run('yum clean all')
-    run('yum install --disablerepo=citrix -y contrail-*')
+    sudo('yum clean all')
+    sudo('yum install --disablerepo=citrix -y contrail-*')
 
 
 @roles('compute')
@@ -53,7 +53,7 @@ def setup():
    # execute(install_packages)
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
 
-    run('cd /opt/contrail/xenserver-scripts/ && sh ./contrail-setup.sh %s %s' %
+    sudo('cd /opt/contrail/xenserver-scripts/ && sh ./contrail-setup.sh %s %s' %
         (env.config['yum_repo_host'], cfgm_ip))
 
     reboot(300)

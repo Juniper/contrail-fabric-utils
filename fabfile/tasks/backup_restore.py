@@ -140,19 +140,19 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
     host = env.host_string
     msg = "Processing the Cassandra DB backup and default path for backup DB data is ~/contrail_bkup_data/hostname/data/ in ({HOST})  \n"
     with settings(host_string=host):
-        host_name = run('hostname')
+        host_name = sudo('hostname')
         if store_db == 'local':
             print (msg.format(HOST=host_name))
         if store_db == 'remote':
             msg = "Processing the Cassandra DB Backup and puting DB dabckup data into remote host:({HOST}) and default path is ~/contrail_bkup_data/hostname/data/ or backup path is defined  as per testbed.py file  \n "
             remote_host = env.roledefs['backup'][0]
             print (msg.format(HOST=remote_host))
-        OS= run("cat /etc/issue  | awk 'FNR == 1 {print $1 }'")
+        OS= sudo("cat /etc/issue  | awk 'FNR == 1 {print $1 }'")
         if OS == 'Ubuntu' :
-           snap_path = run(
+           snap_path = sudo(
                            "grep  -A 1  'data_file_directories:' --after-context=1  /etc/cassandra/cassandra.yaml")
         if OS == 'CentOS' :
-           snap_path = run(
+           snap_path = sudo(
                            "grep  -A 1  'data_file_directories:' --after-context=1  /etc/cassandra/conf/cassandra.yaml") 
         snapshot_path = snap_path.split(' ')
         db_path = snapshot_path[-1]
@@ -161,30 +161,30 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
         if db_datas:
             dir_name = final_dir + '%s/' % (host_name)
         if exists('backup_info.txt'):
-            run('rm -rf backup_info.txt')
+            sudo('rm -rf backup_info.txt')
         with cd(db_path):
             skip_key = getattr(testbed, 'skip_keyspace', None)
             if not skip_key:
                 print "Need to Define the keyspace names in testbed.py if your are selected as custom snapshot. So that it will omit those keyspace name during the  database snapshot"
                 raise SystemExit()
-            cs_key = run('ls')
+            cs_key = sudo('ls')
             cs_key = cs_key.translate(string.maketrans("\n\t\r", "   "))
             custom_key = replace_key(cs_key, skip_key)
         nodetool_cmd = 'nodetool -h localhost -p 7199 snapshot'
         if cassandra_backup == 'custom':
             nodetool_cmd = 'nodetool -h localhost -p 7199 snapshot %s ' % custom_key
-        run(nodetool_cmd)
-        snapshot_list = run("find %s/  -name 'snapshots' " % db_path)
+        sudo(nodetool_cmd)
+        snapshot_list = sudo("find %s/  -name 'snapshots' " % db_path)
         snapshot_list = snapshot_list.split('\r\n')
         snapshot_list = snapshot_list[0]
         with cd(snapshot_list):
-            snapshot_name = run('ls -t | head -n1')
+            snapshot_name = sudo('ls -t | head -n1')
         print "Cassandra DB Snapshot Name: %s" % (snapshot_name)
         if store_db == 'local':
-            run('cp -R  %s  %s ' % (db_path, dir_name))
+            sudo('cp -R  %s  %s ' % (db_path, dir_name))
         execute(backup_info_file, dir_name, backup_type='Cassandra')
         if store_db == 'local':
-            run('cp backup_info.txt %s' % dir_name)
+            sudo('cp backup_info.txt %s' % dir_name)
         if store_db == 'remote':
             execute(ssh_key_gen)
             source_path = '%s   backup_info.txt' % (db_path)
@@ -193,7 +193,7 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
                 source_path,
                 remote_host,
                 remote_path)
-            run(remote_cmd)
+            sudo(remote_cmd)
 
 # end backup_cassandra
 
@@ -205,7 +205,7 @@ def backup_mysql(db_datas, store_db='local'):
     global backup_path, final_dir
     msg = "Processing Mysql DB backup and default path for backup data is ~/contrail_bkup_data/hostname/openstack.sql in ({HOST}) \n"
     with settings(host_string=host):
-        host_name = run('hostname')
+        host_name = sudo('hostname')
         if store_db == 'local':
             print (msg.format(HOST=host_name))
         if store_db == 'remote':
@@ -218,15 +218,15 @@ def backup_mysql(db_datas, store_db='local'):
         if db_datas:
             remote_dir_name = final_dir + '%s/' % (host_name)
     with settings(host_string=host):
-        mysql_passwd = run('cat /etc/contrail/mysql.token')
+        mysql_passwd = sudo('cat /etc/contrail/mysql.token')
         mysql_cmd = 'mysqldump  -u root --password=%s --all-databases  > openstack.sql' % (
             mysql_passwd)
-        run(mysql_cmd)
+        sudo(mysql_cmd)
         if store_db == 'local':
-            run('cp openstack.sql  %s ' % remote_dir_name)
+            sudo('cp openstack.sql  %s ' % remote_dir_name)
         execute(backup_info_file, remote_dir_name, backup_type='Mysql')
         if store_db == 'local':
-            run('cp backup_info.txt  %s' % remote_dir_name)
+            sudo('cp backup_info.txt  %s' % remote_dir_name)
         if store_db == 'remote':
             remote_path = '%s ' % (remote_dir_name)
             source_path = 'openstack.sql  backup_info.txt'
@@ -235,8 +235,8 @@ def backup_mysql(db_datas, store_db='local'):
                          source_path,
                 remote_host,
                 remote_path)
-            run(remote_cmd)
-        run('rm -rf openstack.sql')
+            sudo(remote_cmd)
+        sudo('rm -rf openstack.sql')
 # end backup_mysql
 
 @roles('openstack')
@@ -246,14 +246,14 @@ def backup_instance_image(db_datas, store_db='local'):
     global backup_path, final_dir
     msg = "Processing glance images backup and default path for backup data is ~/contrail_bkup_data/hostname/images  in ({HOST}) \n"
     with settings(host_string=host):
-        host_name = run('hostname')
+        host_name = sudo('hostname')
         if store_db == 'local':
             print (msg.format(HOST=host_name))
         if store_db == 'remote':
             msg = "Processing glance image Backup and puting glance image backup  into remote host:({HOST}) and default path is ~/contrail_bkup_data/hostname/images or backup path is defined as per testbed.py file \n"
             remote_host = env.roledefs['backup'][0]
             print (msg.format(HOST=remote_host))
-        images_path = run("grep  'filesystem_store_datadir'   /etc/glance/glance-api.conf")
+        images_path = sudo("grep  'filesystem_store_datadir'   /etc/glance/glance-api.conf")
         images_path = images_path.split('=')
         images_path = images_path[-1]
         images_path=images_path.strip() 
@@ -265,7 +265,7 @@ def backup_instance_image(db_datas, store_db='local'):
         if db_datas:
             remote_image_path = final_dir + '%s/' % (host_name)
         if store_db == 'local':
-            run(
+            sudo(
                 ' rsync -az --progress  %sglance  %s ' %
                 (images_path, remote_image_path))
         execute(
@@ -273,17 +273,17 @@ def backup_instance_image(db_datas, store_db='local'):
             remote_image_path,
             backup_type='Nova-boot-images')
         if store_db == 'local':
-            run('cp backup_info.txt %s' % remote_image_path)
+            sudo('cp backup_info.txt %s' % remote_image_path)
         if store_db == 'remote':
             remote_path = '%s' % (remote_image_path)
             source_path = '%sglance  ' % (images_path)
             execute(ssh_key_gen)
             remote_cmd='rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress    %s   %s:%s' %(  source_path,remote_host,remote_path)
-            run(remote_cmd)   
+            sudo(remote_cmd)   
             remote_bk_cmd = 'scp -o "StrictHostKeyChecking no" -r  backup_info.txt  %s:%s' % (
                 remote_host,
                 remote_path)
-            run(remote_bk_cmd)
+            sudo(remote_bk_cmd)
 # end backup_instances_images
 
 
@@ -294,14 +294,14 @@ def backup_instances(db_datas, store_db='local'):
     global backup_path, final_dir
     msg = "Processing instances backup and default path for backup data is ~/contrail_bkup_data/hostname/instances  in ({HOST}) \n"
     with settings(host_string=host):
-        host_name = run('hostname')
+        host_name = sudo('hostname')
         if store_db == 'local':
             print (msg.format(HOST=host_name))
         if store_db == 'remote':
             msg = "Processing instances data Backup and puting instances backup data into remote host:({HOST}) and default path is ~/contrail_bkup_data/hostname/instances or backup path is defined as per testbed.py file \n"
             remote_host = env.roledefs['backup'][0]
             print (msg.format(HOST=remote_host))
-        insta_path = run("grep  '^state_path'   /etc/nova/nova.conf")
+        insta_path = sudo("grep  '^state_path'   /etc/nova/nova.conf")
         instances_path = insta_path.split('=')
         instances_path = instances_path[-1]
         instances_path = instances_path.strip()
@@ -311,7 +311,7 @@ def backup_instances(db_datas, store_db='local'):
         if db_datas:
             remote_instances_path = final_dir + '%s/' % (host_name)
         if store_db == 'local':
-           run(
+           sudo(
                 'rsync -az --progress   %s/instances    %s' %
                 (instances_path, remote_instances_path))
         execute(
@@ -319,18 +319,18 @@ def backup_instances(db_datas, store_db='local'):
             remote_instances_path,
             backup_type='Instances')
         if store_db == 'local':
-            run('cp backup_info.txt %s' % remote_instances_path)
+            sudo('cp backup_info.txt %s' % remote_instances_path)
         if store_db == 'remote':
             remote_path = '%s' % (remote_instances_path)
             source_path = '%s/instances' % (instances_path)
             execute(ssh_key_gen)
             remote_cmd='rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress    %s   %s:%s' %(  source_path,remote_host,remote_path)
-            run(remote_cmd)
+            sudo(remote_cmd)
             remote_bk_cmd = 'scp -o "StrictHostKeyChecking no" -r  backup_info.txt  %s:%s' % (
                 remote_host,
                 remote_path)
-            run(remote_bk_cmd)
-        run('rm -rf backup_info.txt')
+            sudo(remote_bk_cmd)
+        sudo('rm -rf backup_info.txt')
 # end backup_instances
 
 def verify_disk_space(db_datas, db_path, store_db):
@@ -338,54 +338,54 @@ def verify_disk_space(db_datas, db_path, store_db):
     global backup_path, final_dir
     final_bk_dir = []
     with settings(host_string=host):
-        host_name = run('hostname')
+        host_name = sudo('hostname')
         with cd(db_path):
-            usage_dk_space = run("du -ck  $PWD | grep 'total'")
-            make_avail = run("du -ckh  $PWD | grep 'total'")
+            usage_dk_space = sudo("du -ck  $PWD | grep 'total'")
+            make_avail = sudo("du -ckh  $PWD | grep 'total'")
             usage_dk_space = usage_dk_space.split('\t')
             usage_dk_space = int(usage_dk_space[0])
             used_dk_space = usage_dk_space * 1.2
         if store_db == 'local':
             if not db_datas:
                 with settings(warn_only=True):
-                    run('mkdir %s' % backup_path)
-                    run('mkdir %s%s' % (backup_path, host_name))
+                    sudo('mkdir %s' % backup_path)
+                    sudo('mkdir %s%s' % (backup_path, host_name))
                 with cd('%s%s' % (backup_path, host_name)):
-                    free_dk_space = run(
+                    free_dk_space = sudo(
                         "df  $PWD | awk '/[0-9]%/{print $(NF-2)}'")
                     free_dk_space = int(free_dk_space)
             if db_datas:
                 for get_dir in db_datas:
                     with cd('%s' % get_dir):
-                        free_dk_space = run(
+                        free_dk_space = sudo(
                             "df  $PWD | awk '/[0-9]%/{print $(NF-2)}'")
                         free_dk_space = int(free_dk_space)
                         if free_dk_space >= used_dk_space:
                             final_bk_dir.append(get_dir)
                 with settings(warn_only=True):
-                    run('mkdir %s%s/ ' % (final_bk_dir[0], host_name))
+                    sudo('mkdir %s%s/ ' % (final_bk_dir[0], host_name))
                 final_dir = final_bk_dir[0]
     if store_db == 'remote':
         remote_host = env.roledefs['backup'][0]
         with settings(host_string=env.roledefs['backup'][0]):
             if not db_datas:
                 with settings(warn_only=True):
-                    run('mkdir %s' % backup_path)
-                    run('mkdir %s%s' % (backup_path, host_name))
+                    sudo('mkdir %s' % backup_path)
+                    sudo('mkdir %s%s' % (backup_path, host_name))
                 with cd('%s%s' % (backup_path, host_name)):
-                    free_dk_space = run(
+                    free_dk_space = sudo(
                         "df  $PWD | awk '/[0-9]%/{print $(NF-2)}'")
                     free_dk_space = int(free_dk_space)
             if db_datas:
                 for get_dir in db_datas:
                     with cd('%s' % get_dir):
-                        free_dk_space = run(
+                        free_dk_space = sudo(
                             "df  $PWD | awk '/[0-9]%/{print $(NF-2)}'")
                         free_dk_space = int(free_dk_space)
                         if free_dk_space >= used_dk_space:
                             final_bk_dir.append(get_dir)
                 with settings(warn_only=True):
-                    run('mkdir %s%s/ ' % (final_bk_dir[0], host_name))
+                    sudo('mkdir %s%s/ ' % (final_bk_dir[0], host_name))
                 final_dir = final_bk_dir[0]
     if db_datas:
         if final_bk_dir == []:
@@ -402,24 +402,24 @@ def backup_info_file(path, backup_type=''):
     host = env.host_string
     with settings(host_string=host):
         cassandra_backup = getattr(testbed, 'cassandra_backup', None)
-        ubuntu_os = run(
+        ubuntu_os = sudo(
             "cat /etc/lsb-release | awk 'FNR == 1 {print}' | cut -d '=' -f2")
-        cent_os = run("cat /etc/system-release |  awk  '{print $1 $2}'")
-        release_ver = run(
+        cent_os = sudo("cat /etc/system-release |  awk  '{print $1 $2}'")
+        release_ver = sudo(
             "contrail-version | grep 'contrail-install-packages' | awk  '{print $2}'")
-        run("echo '============ BACKUP-REPORT=====================\n' >>  backup_info.txt")
-        run("echo BACKUP :%s >> backup_info.txt" % backup_type)
-        run("echo BACKUP-PATH :%s >> backup_info.txt" % path)
+        sudo("echo '============ BACKUP-REPORT=====================\n' >>  backup_info.txt")
+        sudo("echo BACKUP :%s >> backup_info.txt" % backup_type)
+        sudo("echo BACKUP-PATH :%s >> backup_info.txt" % path)
         if cassandra_backup:
-            run("echo CASSANDRA-BACKUP-TYPE:%s >>  backup_info.txt" %
+            sudo("echo CASSANDRA-BACKUP-TYPE:%s >>  backup_info.txt" %
                 cassandra_backup)
         if "No such file or directory" not in ubuntu_os:
-            run("echo OS:%s >>  backup_info.txt" % ubuntu_os)
+            sudo("echo OS:%s >>  backup_info.txt" % ubuntu_os)
         if "No such file or directory" not in cent_os:
-            run("echo OS:%s >>  backup_info.txt" % cent_os)
-        run("echo RELEASE-VERSION:R%s >>  backup_info.txt" % release_ver)
-        time = run('date')
-        run("echo BACKUP TAKEN ON  :%s >>  backup_info.txt" % time)
+            sudo("echo OS:%s >>  backup_info.txt" % cent_os)
+        sudo("echo RELEASE-VERSION:R%s >>  backup_info.txt" % release_ver)
+        time = sudo('date')
+        sudo("echo BACKUP TAKEN ON  :%s >>  backup_info.txt" % time)
 # end of  backup_info_file
 
 
@@ -543,7 +543,7 @@ def restore_cassandra(backup_data_path='', store_db='local'):
     host = env.host_string
     msg = "Restoring backed-up DB in ({HOST}) \n"
     with settings(host_string=host):
-        host_name = run('hostname')
+        host_name = sudo('hostname')
     snapshot_dir_path = '%s%s/data/' % (backup_path, host_name)
     if backup_data_path:
         if store_db == 'local':
@@ -572,12 +572,12 @@ def restore_cassandra(backup_data_path='', store_db='local'):
                 raise SystemExit()
         with settings(host_string=host):
             with settings(warn_only=True):
-                run('mkdir ~/contrail-data/')
+                sudo('mkdir ~/contrail-data/')
             execute(ssh_key_gen)
             remote_cmd = 'scp -o "StrictHostKeyChecking no"  -r  %s:%s  ~/contrail-data/  ' % (
                 remote_host,
                 remote_path)
-            run(remote_cmd)
+            sudo(remote_cmd)
     with settings(host_string=host):
         if store_db == 'local':
             print (msg.format(HOST=host_name))
@@ -588,36 +588,36 @@ def restore_cassandra(backup_data_path='', store_db='local'):
                 execute(start_database)
                 execute(start_collector)
                 raise SystemExit()
-            snapshot_list = run(
+            snapshot_list = sudo(
                 "find  %s  -name 'snapshots' " %
                 snapshot_dir_path)
             snapshot_dir = snapshot_dir_path
         if store_db == 'remote':
-            snapshot_list = run(
+            snapshot_list = sudo(
                 "find  ~/contrail-data/data/  -name 'snapshots' ")
             snapshot_dir = '~/contrail-data/data/'
         snapshot_list = snapshot_list.split('\r\n')
         snapshot_list = snapshot_list[0]
-        OS= run("cat /etc/issue  | awk 'FNR == 1 {print $1 }'")
+        OS= sudo("cat /etc/issue  | awk 'FNR == 1 {print $1 }'")
         if OS == 'Ubuntu' :
-           snap_path = run(
+           snap_path = sudo(
                            "grep  -A 1  'data_file_directories:' --after-context=1  /etc/cassandra/cassandra.yaml")
         if OS == 'CentOS' :
-           snap_path = run(
+           snap_path = sudo(
                            "grep  -A 1  'data_file_directories:' --after-context=1  /etc/cassandra/conf/cassandra.yaml")
 
         snapshot_path = snap_path.split(' ')
         db_path = snapshot_path[-1]
         if snapshot_list:
             with cd(snapshot_list):
-                snapshot_name = run('ls -t | head -n1')
+                snapshot_name = sudo('ls -t | head -n1')
             cmd = '/opt/contrail/utils/cass-db-restore-v5.sh -b  %s -s %s  -n %s' % (
                 db_path,
                 snapshot_dir,
                 snapshot_name)
-            run(cmd)
+            sudo(cmd)
         if store_db == 'remote':
-            run('rm -rf  ~/contrail-data/')
+            sudo('rm -rf  ~/contrail-data/')
 
 # end restore_cassandra
 
@@ -630,7 +630,7 @@ def restore_mysql(backup_data_path, store_db='local'):
     global backup_path
     msg = "Restoring mysql backed-up DB in  ({HOST})  \n"
     with settings(host_string=host):
-        host_name = run('hostname')
+        host_name = sudo('hostname')
     snapshot_dir_path = '%s%s/openstack.sql' % (backup_path, host_name)
     if backup_data_path:
         if store_db == 'local':
@@ -659,12 +659,12 @@ def restore_mysql(backup_data_path, store_db='local'):
                 raise SystemExit()
         with settings(host_string=host):
             with settings(warn_only=True):
-                run('mkdir ~/contrail-data/')
+                sudo('mkdir ~/contrail-data/')
             execute(ssh_key_gen)
             remote_cmd = 'scp -o "StrictHostKeyChecking no" -r  %s:%s  ~/contrail-data/  ' % (
                 remote_host,
                 remote_path)
-            run(remote_cmd)
+            sudo(remote_cmd)
     with settings(host_string=host):
         if store_db == 'local':
             print (msg.format(HOST=host_name))
@@ -678,12 +678,12 @@ def restore_mysql(backup_data_path, store_db='local'):
         mysql_path = snapshot_dir_path
         if store_db == 'remote':
             mysql_path = '~/contrail-data/openstack.sql'
-        mysql_passwd = run('cat /etc/contrail/mysql.token')
+        mysql_passwd = sudo('cat /etc/contrail/mysql.token')
         mysql_cmd = 'mysql -u root --password=%s < %s' % (
             mysql_passwd, mysql_path)
-        run(mysql_cmd)
+        sudo(mysql_cmd)
         if store_db == 'remote':
-            run('rm -rf  ~/contrail-data/')
+            sudo('rm -rf  ~/contrail-data/')
 
 # end restore_mysql
 
@@ -694,8 +694,8 @@ def restore_instance_image(backup_data_path, store_db='local'):
     host = env.host_string
     msg = "Restoring backed-up images  data in ({HOST}).\n"
     with settings(host_string=host):
-        host_name = run('hostname')
-        images_path = run("grep  'filesystem_store_datadir'   /etc/glance/glance-api.conf")
+        host_name = sudo('hostname')
+        images_path = sudo("grep  'filesystem_store_datadir'   /etc/glance/glance-api.conf")
         images_path = images_path.split('=')
         images_path = images_path[-1]
         images_path=images_path.strip()
@@ -728,7 +728,7 @@ def restore_instance_image(backup_data_path, store_db='local'):
         execute(ssh_key_gen)
         with settings(host_string=host):
             remote_cmd='rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress   %s:%s    %s' %(  remote_host,remote_path,images_path)
-            run(remote_cmd)
+            sudo(remote_cmd)
     with settings(host_string=host):
         if store_db == 'local':
             print (msg.format(HOST=host_name))
@@ -737,7 +737,7 @@ def restore_instance_image(backup_data_path, store_db='local'):
                 print "Remote path doesnot exist ... So aborting the restore glance image  data ."
                 execute(start_glance)
                 raise SystemExit()
-            run('rsync -az --progress  %sglance  %s ' %
+            sudo('rsync -az --progress  %sglance  %s ' %
                 (remote_image_path,images_path ))
 
   # end restore_glance_images
@@ -750,8 +750,8 @@ def restore_instances(backup_data_path, store_db='local'):
     host = env.host_string
     msg = "Restoring backed-up instances data in ({HOST}).\n"
     with settings(host_string=host):
-        host_name = run('hostname')
-        insta_path = run("grep  '^state_path'   /etc/nova/nova.conf")
+        host_name = sudo('hostname')
+        insta_path = sudo("grep  '^state_path'   /etc/nova/nova.conf")
     instances_path = insta_path.split('=')
     instances_path = instances_path[-1]
     instances_path = instances_path.strip()
@@ -782,7 +782,7 @@ def restore_instances(backup_data_path, store_db='local'):
         execute(ssh_key_gen)
         with settings(host_string=host):
             remote_cmd='rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress   %s:%s    %s/' %(  remote_host,remote_path,instances_path)
-            run(remote_cmd)
+            sudo(remote_cmd)
     with settings(host_string=host):
         if store_db == 'local':
             print (msg.format(HOST=host_name))
@@ -791,7 +791,7 @@ def restore_instances(backup_data_path, store_db='local'):
                 print "Remote path doesnot exist ... So aborting the restore nova instaces data ."
                 execute(start_nova_openstack_compute)
                 raise SystemExit()
-            run('rsync -az --progress  %sinstances  %s/ ' %
+            sudo('rsync -az --progress  %sinstances  %s/ ' %
                 (remote_instances_dir_path,instances_path ))
 
   # end restore_instances
@@ -801,18 +801,18 @@ def ssh_key_gen():
     host = env.host_string
     with settings(host_string=host):
         if not exists('~/.ssh/id_rsa.pub'):
-            run('ssh-keygen  -f ~/.ssh/id_rsa  -t rsa -N "" -q ')
+            sudo('ssh-keygen  -f ~/.ssh/id_rsa  -t rsa -N "" -q ')
         key = get('~/.ssh/id_rsa.pub', '/tmp/')
     with settings(host_string=env.roledefs['backup'][0]):
         with settings(warn_only=True):
-            run('mkdir /pub-key/')
-        put(key[0], '/pub-key/')
+            sudo('mkdir /pub-key/')
+        put(key[0], '/pub-key/', use_sudo=True)
         if not exists('~/.ssh/'):
-            run('mkdir ~/.ssh/')
+            sudo('mkdir ~/.ssh/')
         with cd('/pub-key/'):
-            run('cat id_rsa.pub >~/.ssh/authorized_keys')
-        run('chmod 700 ~/.ssh/authorized_keys')
-        run('rm -rf /pub-key/')
+            sudo('cat id_rsa.pub >~/.ssh/authorized_keys')
+        sudo('chmod 700 ~/.ssh/authorized_keys')
+        sudo('rm -rf /pub-key/')
 
 # end ssh_key_gen
 

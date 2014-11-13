@@ -21,7 +21,7 @@ def get_pkg_list():
                         'python',
                         'python-libs',
                        ]
-    output = run('yum list installed | grep @contrail_install_repo | cut -d" " -f1 | cut -d"." -f1')
+    output = sudo('yum list installed | grep @contrail_install_repo | cut -d" " -f1 | cut -d"." -f1')
     pkgs = output.split("\r\n")
     for pkg in dont_remove_list:
         try:
@@ -79,19 +79,19 @@ def yum_uninstall(rpms):
     cmd = "rpm -e "
     if detect_ostype() in ['centos', 'fedora', 'redhat']:
         with settings(warn_only=True):
-            run(cmd + ' '.join(rpms))
+            sudo(cmd + ' '.join(rpms))
 
 def apt_uninstall(debs):
     cmd = "DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes autoremove --purge "
     if detect_ostype() in ['ubuntu']:
         with settings(warn_only=True):
-            run(cmd + ' '.join(debs))
+            sudo(cmd + ' '.join(debs))
 
 @task
 @EXECUTE_TASK
 @roles('all')
 def cleanup_opt_contrail():
-    run("sudo rm -rf /opt/contrail")
+    sudo("sudo rm -rf /opt/contrail")
 
 @task
 @EXECUTE_TASK
@@ -112,7 +112,7 @@ def uninstall_interface_name_node(*args):
         with settings(host_string=host_string):
             rpm = ['contrail-interface-name']
             yum_uninstall(rpm)
-            run('rm -f /etc/sysconfig/network-scripts/ifcfg-p*p*p*')
+            sudo('rm -f /etc/sysconfig/network-scripts/ifcfg-p*p*p*')
 
 @task
 @EXECUTE_TASK
@@ -134,12 +134,12 @@ def uninstall_database_node(*args):
                 pkgs = get_pkg_list()
                 yum_uninstall(pkgs)
             with cd('/etc/'):
-                run('sudo rm -rf zookeeper')
+                sudo('sudo rm -rf zookeeper')
             with cd('/var/lib/'):
-                run('sudo rm -rf /usr/share/cassandra /var/cassandra_log /var/crashes /home/cassandra')
-                run('sudo rm -rf /var/log/cassandra /var/log/zookeeper')
+                sudo('sudo rm -rf /usr/share/cassandra /var/cassandra_log /var/crashes /home/cassandra')
+                sudo('sudo rm -rf /var/log/cassandra /var/log/zookeeper')
             with cd('/var/log'):
-                run('sudo rm -rf contrail/*')
+                sudo('sudo rm -rf contrail/*')
 
 @task
 @EXECUTE_TASK
@@ -159,20 +159,20 @@ def uninstall_openstack_node(*args):
                 pkg.append('contrail-openstack-ha')
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
-                    run("umount /var/lib/glance/images")
-                run("sed -i '/.*glance.*/d' /etc/fstab")
+                    sudo("umount /var/lib/glance/images")
+                sudo("sed -i '/.*glance.*/d' /etc/fstab")
                 apt_uninstall(pkg)
             else:
                 pkgs = get_pkg_list()
                 yum_uninstall(pkgs)
             with cd('/etc/'):
-                run('sudo rm -rf glance/ cinder/ openstack_dashboard/ keystone/ quantum/ nova/ haproxy/ keepalived/')
+                sudo('sudo rm -rf glance/ cinder/ openstack_dashboard/ keystone/ quantum/ nova/ haproxy/ keepalived/')
             with cd('/var/lib/'):
-                run('sudo rm -rf nova quantum glance quantum keystone mysql haproxy')
+                sudo('sudo rm -rf nova quantum glance quantum keystone mysql haproxy')
             with cd('/var/run'):
-                run('sudo rm -rf cinder glance quantum nova keystone')
+                sudo('sudo rm -rf cinder glance quantum nova keystone')
             with cd('/var/log'):
-                run('sudo rm -rf contrail/* nova quantum glance cinder /root/keystone-signing /tmp/keystone-signing /tmp/keystone-signing-nova')
+                sudo('sudo rm -rf contrail/* nova quantum glance cinder ~/keystone-signing /tmp/keystone-signing /tmp/keystone-signing-nova')
 
 @task
 @EXECUTE_TASK
@@ -194,14 +194,14 @@ def uninstall_cfgm_node(*args):
                 pkgs = get_pkg_list()
                 yum_uninstall(pkgs)
             with cd('/etc/'):
-                run('sudo rm -rf irond haproxy keepalived')
+                sudo('sudo rm -rf irond haproxy keepalived')
             with cd('/var/lib/'):
-                run('sudo rm -rf haproxy')
-                run('sudo rm -rf /var/crashes')
+                sudo('sudo rm -rf haproxy')
+                sudo('sudo rm -rf /var/crashes')
             with cd('/usr/share'):
-                run('sudo rm -rf irond')
+                sudo('sudo rm -rf irond')
             with cd('/var/log'):
-                run('sudo rm -rf contrail/*') 
+                sudo('sudo rm -rf contrail/*')
 
 
 @task
@@ -224,9 +224,9 @@ def uninstall_control_node(*args):
                 pkgs = get_pkg_list()
                 yum_uninstall(pkgs)
             with cd('/var/'):
-                run('sudo rm -rf crashes')
+                sudo('sudo rm -rf crashes')
             with cd('/var/log'):
-                run('sudo rm -rf contrail/*')
+                sudo('sudo rm -rf contrail/*')
 
 
 @task
@@ -249,10 +249,10 @@ def uninstall_collector_node(*args):
                 pkgs = get_pkg_list()
                 yum_uninstall(pkgs)
             with cd('/var/lib/'):
-                run('sudo rm -rf redis')
-                run('sudo rm -rf /var/crashes')
+                sudo('sudo rm -rf redis')
+                sudo('sudo rm -rf /var/crashes')
             with cd('/var/log'):
-                run('sudo rm -rf contrail/*')
+                sudo('sudo rm -rf contrail/*')
 
 @task
 @EXECUTE_TASK
@@ -268,8 +268,8 @@ def uninstall_webui_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             with settings(warn_only=True):
-                run("stop_webui")
-                run("kill -9  $(pidof redis-server)")
+                sudo("stop_webui")
+                sudo("kill -9  $(pidof redis-server)")
             pkg = ['contrail-openstack-webui']
             if detect_ostype() == 'ubuntu':
                 apt_uninstall(pkg)
@@ -277,11 +277,11 @@ def uninstall_webui_node(*args):
                 pkgs = get_pkg_list()
                 yum_uninstall(pkgs)
             with cd('/var/'):
-                run('sudo rm -rf crashes')
+                sudo('sudo rm -rf crashes')
             with cd('/opt/contrail'):
-                run('sudo rm -rf nodejs*')
+                sudo('sudo rm -rf nodejs*')
             with cd('/var/log'):
-                run('sudo rm -rf contrail/*')
+                sudo('sudo rm -rf contrail/*')
 
 
 @task
@@ -334,19 +334,19 @@ def uninstall_only_vrouter_node(manage_nova_compute='yes', *args):
                 pkg.append('haproxy')
             if ostype == 'ubuntu':
                 apt_uninstall(pkg)
-                run("sed -i  's/inet manual/inet dhcp/g' /etc/network/interfaces")
+                sudo("sed -i  's/inet manual/inet dhcp/g' /etc/network/interfaces")
             else:
                 pkgs = get_pkg_list()
                 yum_uninstall(pkgs)
             with cd('/etc/'):
-                run('sudo rm -rf libvirt')
+                sudo('sudo rm -rf libvirt')
                 with settings(warn_only=True):
-                    run('find ./contrail/* ! -iname \'contrail_ifrename.sh\' -delete')
+                    sudo('find ./contrail/* ! -iname \'contrail_ifrename.sh\' -delete')
             with cd('/var/'):
-                run('sudo rm -rf crashes')
-                run('sudo rm -rf tmp')
+                sudo('sudo rm -rf crashes')
+                sudo('sudo rm -rf tmp')
             with cd('/var/log'):
-                run('sudo rm -rf contrail/*')
+                sudo('sudo rm -rf contrail/*')
 
 
 @roles('build')
