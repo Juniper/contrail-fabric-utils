@@ -21,6 +21,7 @@
 
 import cgitb
 import paramiko
+import os
 import logging as LOG
 try:
     from collections import OrderedDict
@@ -83,6 +84,7 @@ class ContrailVM(object):
         self.username = vm_params['username']
         self.password = vm_params['password']
         self.thindisk = vm_params['thindisk']
+        self.vmdk_download_path = vm_params['vmdk_download_path']
 	self.vm_domain = vm_params['domain']
         self.vm_id = 0
 	self.vm_server = vm_params['vm_server']
@@ -189,7 +191,11 @@ class ContrailVM(object):
         thick_vmdk = self.vmdk+".vmdk"
         sftp.put("/tmp/contrail.vmx", vm_store+dst_vmx)
         try:
-        	sftp.put(self.thindisk, vm_store+thin_vmdk)
+	    if self.thindisk is None:
+                cmd = "wget "+self.vmdk_download_path+" -O /tmp/ContrailVM-disk1.vmdk"
+                os.system('%s' %(cmd))
+                self.thindisk = '/tmp/ContrailVM-disk1.vmdk'
+       	    sftp.put(self.thindisk, vm_store+thin_vmdk)
 	except Exception, e:
     		print '*** Caught exception: %s: %s' % (e.__class__, e)
                 transport.close()

@@ -1498,8 +1498,7 @@ def setup_orchestrator():
             execute('sync_keystone_ssl_certs')
             execute('setup_cluster_monitors')
     elif orch == 'vcenter':
-        execute('prov_vcenter')
-        execute('prov_esxi_computevm')
+        execute('setup_vcenter')
 
 @roles('build')
 @task
@@ -1729,12 +1728,12 @@ def prov_esxi():
 
 @roles('build')
 @task
-def prov_vcenter():
+def setup_vcenter():
     vcenter_info = getattr(env, 'vcenter', None)
     if not vcenter_info:
         print 'Error: vcenter block is not defined in testbed file.Exiting'
         return
-    esxi_info = getattr(testbed, 'compute_vm', None)
+    esxi_info = getattr(env, 'compute_vm', None)
     if not esxi_info:
         print 'Error: compute_vm block is not defined in testbed file.Exiting'
         return
@@ -1742,13 +1741,13 @@ def prov_vcenter():
 
 @roles('build')
 @task
-def prov_esxi_computevm():
+def setup_esxi_computevm(deb=None):
     compute_vm_info = getattr(env, 'compute_vm', None)
     if not compute_vm_info:
         return
     for compute_node in env.roledefs['compute']:
         if compute_node in compute_vm_info.keys():
-		provision_esxi(compute_vm_info[compute_node])
+		provision_esxi(deb, compute_vm_info[compute_node])
 
 
 
