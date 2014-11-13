@@ -61,14 +61,14 @@ def upgrade_kernel_node(*args):
         with settings(host_string=host_string):
             dist, version, extra = get_linux_distro()
             print "upgrading apparmor before upgrading kernel"
-            if version is '12.04':
+            if version == '12.04':
                 apt_install(["apparmor"])
                 print "Installing 3.13.0-34 kernel headers"
                 apt_install(["linux-headers-3.13.0-34"])
                 apt_install(["linux-headers-3.13.0-34-generic"])
                 print "Upgrading the kernel to 3.13.0-34"
                 apt_install(["linux-image-3.13.0-34-generic"])
-            elif version is '14.04':
+            elif version == '14.04':
                 print "Upgrading the kernel to 3.13.0-35"
                 apt_install(["linux-image-3.13.0-35-generic",
                              "linux-image-extra-3.13.0-35-generic"])
