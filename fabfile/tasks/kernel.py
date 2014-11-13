@@ -33,7 +33,6 @@ def upgrade_kernel_all(reboot='yes'):
             reboot_nodes(env.host_string)
         else:
             reboot_nodes(*nodes)
-
 @task
 @EXECUTE_TASK
 @roles('all')

@@ -32,12 +32,12 @@ FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
 @roles('all')
 def bash_autocomplete_systemd():
     host = env.host_string
-    output = run('uname -a')
+    output = sudo('uname -a')
     if 'xen' in output or 'el6' in output or 'ubuntu' in output:
         pass
     else:
         #Assume Fedora
-        sudo("echo 'source /etc/bash_completion.d/systemd-bash-completion.sh' >> /root/.bashrc")
+        sudo("echo 'source /etc/bash_completion.d/systemd-bash-completion.sh' >> ~/.bashrc")
 
 @roles('cfgm')
 @task
@@ -154,13 +154,13 @@ listen  rabbitmq 0.0.0.0:5673
             cfg_file = open(tmp_fname, 'a')
             cfg_file.write(haproxy_config)
             cfg_file.close()
-            put(tmp_fname, "/etc/haproxy/haproxy.cfg")
+            put(tmp_fname, "/etc/haproxy/haproxy.cfg", use_sudo=True)
             local("rm %s" %(tmp_fname))
 
         # haproxy enable
         with settings(host_string=host_string, warn_only=True):
-            run("chkconfig haproxy on")
-            run("service haproxy restart")
+            sudo("chkconfig haproxy on")
+            sudo("service haproxy restart")
 
 # end fixup_restart_haproxy_in_all_cfgm
 
@@ -297,13 +297,13 @@ $__contrail_glance_apis__
         cfg_file = open(tmp_fname, 'a')
         cfg_file.write(compute_haproxy)
         cfg_file.close()
-        put(tmp_fname, "/etc/haproxy/haproxy.cfg")
+        put(tmp_fname, "/etc/haproxy/haproxy.cfg", use_sudo=True)
         local("rm %s" %(tmp_fname))
 
         # enable
         with settings(host_string=compute_host_string, warn_only=True):
-            run("chkconfig haproxy on")
-            run("service haproxy restart")
+            sudo("chkconfig haproxy on")
+            sudo("service haproxy restart")
 
 # end fixup_restart_haproxy_in_one_compute
 
@@ -379,13 +379,13 @@ $__contrail_quantum_servers__
             cfg_file = open(tmp_fname, 'a')
             cfg_file.write(openstack_haproxy)
             cfg_file.close()
-            put(tmp_fname, "/etc/haproxy/haproxy.cfg")
+            put(tmp_fname, "/etc/haproxy/haproxy.cfg", use_sudo=True)
             local("rm %s" %(tmp_fname))
 
             # enable
             with settings(host_string=openstack_host_string, warn_only=True):
-                run("chkconfig haproxy on")
-                run("service haproxy restart")
+                sudo("chkconfig haproxy on")
+                sudo("service haproxy restart")
 
 # end fixup_restart_haproxy_in_all_openstack
 
@@ -426,8 +426,8 @@ def setup_cfgm_node(*args):
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
-                    run('rm /etc/init/supervisor-config.override')
-                    run('rm /etc/init/neutron-server.override')
+                    sudo('rm /etc/init/supervisor-config.override')
+                    sudo('rm /etc/init/neutron-server.override')
 
             # Frame the command line to provision config node
             cmd = "setup-vnc-config"
@@ -468,7 +468,7 @@ def setup_cfgm_node(*args):
 
             # Execute the provision config script
             with cd(INSTALLER_DIR):
-                run(cmd)
+                sudo(cmd)
 
     # HAPROXY fixups
     haproxy = get_haproxy_opt()
@@ -493,41 +493,43 @@ def setup_ceilometer_compute_node(*args):
     for host_string in args:
         with  settings(host_string=host_string):
             with settings(warn_only=True):
-                compute_ceilometer_present = run("grep '^instance_usage_audit =' /etc/nova/nova.conf").succeeded
+                compute_ceilometer_present = sudo("grep '^instance_usage_audit =' /etc/nova/nova.conf").succeeded
             if not compute_ceilometer_present:
-                run("sed -i -e '/\[DEFAULT\]/a %s' /etc/nova/nova.conf" %('notification_driver = ceilometer.compute.nova_notifier'))
-                run("sed -i -e '/\[DEFAULT\]/a %s' /etc/nova/nova.conf" %('notification_driver = nova.openstack.common.notifier.rpc_notifier'))
-                run("sed -i -e '/\[DEFAULT\]/a %s' /etc/nova/nova.conf" %('notify_on_state_change = vm_and_task_state'))
-                run("sed -i -e '/\[DEFAULT\]/a %s' /etc/nova/nova.conf" %('instance_usage_audit_period = hour'))
-                run("sed -i -e '/\[DEFAULT\]/a %s' /etc/nova/nova.conf" %('instance_usage_audit = True'))
-                run("service nova-compute restart")
+                config_cmd = "openstack-config --set /etc/nova/nova.conf DEFAULT"
+                sudo("%s notification_driver ceilometer.compute.nova_notifier" % config_cmd)
+                sudo("%s notification_driver nova.openstack.common.notifier.rpc_notifier" % config_cmd)
+                sudo("%s notify_on_state_change vm_and_task_state" % config_cmd)
+                sudo("%s instance_usage_audit_period hour" % config_cmd)
+                sudo("%s instance_usage_audit True" % config_cmd)
+                sudo("service nova-compute restart")
 
             if host_string != openstack_host:
                 #ceilometer.conf updates
-                new_line = "rabbit_host=" + amqp_server_ip
-                run("sed -i -e 's/^#rabbit_host=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                new_line = "log_dir=\/var\/log\/ceilometer"
-                run("sed -i -e 's/^#log_dir=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                new_line = "metering_secret=a74ca26452848001921c"
-                run("sed -i -e 's/^#metering_secret=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                new_line = "auth_strategy=keystone"
-                run("sed -i -e 's/^#auth_strategy=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
+                conf_file = "/etc/ceilometer/ceilometer.conf"
+                sudo("openstack-config --set %s DEFAULT rabbit_host %s" % (conf_file, amqp_server_ip))
+                value = "/var/log/ceilometer"
+                sudo("openstack-config --set %s DEFAULT log_dir %s" % (conf_file, value))
+                value = "a74ca26452848001921c"
+                sudo("openstack-config --set %s DEFAULT metering_secret %s" % (conf_file, value))
+                sudo("openstack-config --set %s DEFAULT auth_strategy keystone" % conf_file)
                 with settings(warn_only=True):
-                    authtoken_config = run("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
+                    authtoken_config = sudo("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
                 if not authtoken_config:
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_password = CEILOMETER_PASS'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_user = ceilometer'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_tenant_name = service'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_uri = http://'+openstack_ip+':5000'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_protocol = http'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_port = 35357'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_host = ' + openstack_ip))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_password = CEILOMETER_PASS'))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_tenant_name = service'))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_username = ceilometer'))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_auth_url = http://'+openstack_ip+':5000/v2.0'))
+                    config_cmd = "openstack-config --set %s keystone_authtoken" % conf_file
+                    sudo("%s admin_password CEILOMETER_PASS" % config_cmd)
+                    sudo("%s admin_user ceilometer" % config_cmd)
+                    sudo("%s admin_tenant_name service" % config_cmd)
+                    sudo("%s auth_uri http://%s:5000" % (config_cmd, openstack_ip))
+                    sudo("%s auth_protocol http" % config_cmd)
+                    sudo("%s auth_port 35357" % config_cmd)
+                    sudo("%s auth_host %s" % (config_cmd, openstack_ip))
+                    config_cmd = "openstack-config --set %s service_credentials" % conf_file
+                    sudo("%s os_password CEILOMETER_PASS" % config_cmd)
+                    sudo("%s os_tenant_name service" % config_cmd)
+                    sudo("%s os_username ceilometer" % config_cmd)
+                    sudo("%s os_auth_url http://%s:5000/v2.0" % (config_cmd, openstack_ip))
 
-            run("service ceilometer-agent-compute restart")
+            sudo("service ceilometer-agent-compute restart")
 
 @task
 @roles('openstack')
@@ -548,7 +550,7 @@ def setup_ceilometer_node(*args):
 
         with  settings(host_string=host_string):
 
-            output = run("dpkg-query --show nova-api")
+            output = sudo("dpkg-query --show nova-api")
             if output.find('2013.2') != -1:
                 openstack_sku = 'havana'
             elif output.find('2014.1') != -1:
@@ -558,99 +560,61 @@ def setup_ceilometer_node(*args):
                 openstack_sku = 'icehouse'
 
             if openstack_sku == 'havana':
-                with settings(warn_only=True):
-                    cmd = "mongo --host " + self_ip + " --eval 'db = db.getSiblingDB(\"ceilometer\"); db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", roles: [ \"readWrite\", \"dbAdmin\" ]})'"
-                    run(cmd);
-
-                new_line = "connection=mongodb:\/\/ceilometer:CEILOMETER_DBPASS@" + self_ip + ":27017\/ceilometer"
-                run("sed -i -e 's/^connection=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                new_line = "rabbit_host=" + amqp_server_ip
-                run("sed -i -e 's/^#rabbit_host=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                new_line = "log_dir=\/var\/log\/ceilometer"
-                run("sed -i -e 's/^#log_dir=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                new_line = "metering_secret=a74ca26452848001921c"
-                run("sed -i -e 's/^#metering_secret=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                #keystone auth params
-                with settings(warn_only=True):
-                    ceilometer_user_exists = run("source /etc/contrail/openstackrc;keystone user-list | grep ceilometer").succeeded
-                if not ceilometer_user_exists:
-                    run("source /etc/contrail/openstackrc;keystone user-create --name=ceilometer --pass=CEILOMETER_PASS --tenant=service --email=ceilometer@example.com")
-                    run("source /etc/contrail/openstackrc;keystone user-role-add --user=ceilometer --tenant=service --role=admin")
-
-                new_line = "auth_strategy=keystone"
-                run("sed -i -e 's/^#auth_strategy=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                with settings(warn_only=True):
-                    authtoken_config = run("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
-                if not authtoken_config:
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_password = CEILOMETER_PASS'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_user = ceilometer'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_tenant_name = service'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_uri = http://'+self_ip+':5000'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_protocol = http'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_port = 35357'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_host = ' + self_ip))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_password = CEILOMETER_PASS'))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_tenant_name = service'))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_username = ceilometer'))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_auth_url = http://'+self_ip+':5000/v2.0'))
-
-                #create keystone service and endpoint
-                with settings(warn_only=True):
-                    ceilometer_service_exists = run("source /etc/contrail/openstackrc;keystone service-list | grep ceilometer").succeeded
-                if not ceilometer_service_exists:
-                    run("source /etc/contrail/openstackrc;keystone service-create --name=ceilometer --type=metering --description=\"Telemetry\"")
-                    run("source /etc/contrail/openstackrc;keystone endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777" %(self_ip, self_ip, self_ip))
-                for svc in ['ceilometer-agent-central',
-                            'ceilometer-api',
-                            'ceilometer-collector']:
-                    run("service %s restart" %(svc))
+                ceilometer_services = ['ceilometer-agent-central',
+                                       'ceilometer-api',
+                                       'ceilometer-collector']
             else:
-                with settings(warn_only=True):
-                    cmd = "mongo --host " + self_ip + " --eval 'db = db.getSiblingDB(\"ceilometer\"); db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", roles: [ \"readWrite\", \"dbAdmin\" ]})'"
-                    run(cmd);
-                new_line = "connection=mongodb:\/\/ceilometer:CEILOMETER_DBPASS@" + self_ip + ":27017\/ceilometer"
-                run("sed -i -e 's/^connection=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                new_line = "rabbit_host=" + amqp_server_ip
-                run("sed -i -e 's/^#rabbit_host=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                new_line = "log_dir=\/var\/log\/ceilometer"
-                run("sed -i -e 's/^#log_dir=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                new_line = "metering_secret=a74ca26452848001921c"
-                run("sed -i -e 's/^#metering_secret=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                #keystone auth params
-                with settings(warn_only=True):
-                    ceilometer_user_exists = run("source /etc/contrail/openstackrc;keystone user-list | grep ceilometer").succeeded
-                if not ceilometer_user_exists:
-                    run("source /etc/contrail/openstackrc;keystone user-create --name=ceilometer --pass=CEILOMETER_PASS --tenant=service --email=ceilometer@example.com")
-                    run("source /etc/contrail/openstackrc;keystone user-role-add --user=ceilometer --tenant=service --role=admin")
-                new_line = "auth_strategy=keystone"
-                run("sed -i -e 's/^#auth_strategy=.*/%s/' /etc/ceilometer/ceilometer.conf" %(new_line))
-                with settings(warn_only=True):
-                    authtoken_config = run("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
-                if not authtoken_config:
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_password = CEILOMETER_PASS'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_user = ceilometer'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('admin_tenant_name = service'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_uri = http://'+self_ip+':5000'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_protocol = http'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_port = 35357'))
-                    run("sed -i -e '/\[keystone_authtoken\]/a %s' /etc/ceilometer/ceilometer.conf" %('auth_host = ' + self_ip))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_password = CEILOMETER_PASS'))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_tenant_name = service'))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_username = ceilometer'))
-                    run("sed -i -e '/\[service_credentials\]/a %s' /etc/ceilometer/ceilometer.conf" %('os_auth_url = http://'+self_ip+':5000/v2.0'))
-                #create keystone service and endpoint
-                with settings(warn_only=True):
-                    ceilometer_service_exists = run("source /etc/contrail/openstackrc;keystone service-list | grep ceilometer").succeeded
-                if not ceilometer_service_exists:
-                    run("source /etc/contrail/openstackrc;keystone service-create --name=ceilometer --type=metering --description=\"Telemetry\"")
-                    run("source /etc/contrail/openstackrc;keystone endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777" %(self_ip, self_ip, self_ip))
-                for svc in ['ceilometer-agent-central',
-                            'ceilometer-agent-notification',
-                            'ceilometer-api',
-                            'ceilometer-collector',
-                            'ceilometer-alarm-evaluator',
-                            'ceilometer-alarm-notifier']:
-                    run("service %s restart" %(svc))
+                ceilometer_services = ['ceilometer-agent-central',
+                                       'ceilometer-agent-notification',
+                                       'ceilometer-api',
+                                       'ceilometer-collector',
+                                       'ceilometer-alarm-evaluator',
+                                       'ceilometer-alarm-notifier']
+            with settings(warn_only=True):
+                cmd = "mongo --host " + self_ip + " --eval 'db = db.getSiblingDB(\"ceilometer\"); db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", roles: [ \"readWrite\", \"dbAdmin\" ]})'"
+                sudo(cmd);
+
+            conf_file = "/etc/ceilometer/ceilometer.conf"
+            value = "mongodb://ceilometer:CEILOMETER_DBPASS@" + self_ip + ":27017/ceilometer"
+            sudo("openstack-config --set %s DEFAULT connection %s" % (conf_file, value))
+            sudo("openstack-config --set %s DEFAULT rabbit_host %s" % (conf_file, amqp_server_ip))
+            value = "/var/log/ceilometer"
+            sudo("openstack-config --set %s DEFAULT log_dir %s" % (conf_file, value))
+            value = "a74ca26452848001921c"
+            sudo("openstack-config --set %s DEFAULT metering_secret %s" % (conf_file, value))
+            sudo("openstack-config --set %s DEFAULT auth_strategy keystone" % conf_file)
+            #keystone auth params
+            with settings(warn_only=True):
+                ceilometer_user_exists = sudo("source /etc/contrail/openstackrc;keystone user-list | grep ceilometer").succeeded
+            if not ceilometer_user_exists:
+                sudo("source /etc/contrail/openstackrc;keystone user-create --name=ceilometer --pass=CEILOMETER_PASS --tenant=service --email=ceilometer@example.com")
+                sudo("source /etc/contrail/openstackrc;keystone user-role-add --user=ceilometer --tenant=service --role=admin")
+
+            with settings(warn_only=True):
+                authtoken_config = sudo("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
+            if not authtoken_config:
+                config_cmd = "openstack-config --set %s keystone_authtoken" % conf_file
+                sudo("%s admin_password CEILOMETER_PASS" % config_cmd)
+                sudo("%s admin_user ceilometer" % config_cmd)
+                sudo("%s admin_tenant_name service" % config_cmd)
+                sudo("%s auth_uri http://%s:5000" % (config_cmd, self_ip))
+                sudo("%s auth_protocol http" % config_cmd)
+                sudo("%s auth_port 35357" % config_cmd)
+                sudo("%s auth_host %s" % (config_cmd, self_ip))
+                config_cmd = "openstack-config --set %s service_credentials" % conf_file
+                sudo("%s os_password CEILOMETER_PASS" % config_cmd)
+                sudo("%s os_tenant_name service" % config_cmd)
+                sudo("%s os_username ceilometer" % config_cmd)
+                sudo("%s os_auth_url http://%s:5000/v2.0" % (config_cmd, self_ip))
+
+            #create keystone service and endpoint
+            with settings(warn_only=True):
+                ceilometer_service_exists = sudo("source /etc/contrail/openstackrc;keystone service-list | grep ceilometer").succeeded
+            if not ceilometer_service_exists:
+                sudo("source /etc/contrail/openstackrc;keystone service-create --name=ceilometer --type=metering --description=\"Telemetry\"")
+                sudo("source /etc/contrail/openstackrc;keystone endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777" %(self_ip, self_ip, self_ip))
+            for svc in ceilometer_services:
+                sudo("service %s restart" %(svc))
 #end setup_ceilometer_node
 
 @task
@@ -658,34 +622,30 @@ def setup_image_service_node(*args):
     """Provisions image services in one or list of nodes. USAGE: fab setup_image_service_node:user@1.1.1.1,user@2.2.2.2"""
     amqp_server_ip = get_openstack_amqp_server()
     for host_string in args:
-        output = run("dpkg-query --show nova-api")
+        output = sudo("dpkg-query --show nova-api")
         if output.find('2013.2') != -1:
             openstack_sku = 'havana'
         elif output.find('2014.1') != -1:
             openstack_sku = 'icehouse'
         else:
-            print "setup_ceilometer_node: openstack dist unknown.. assuming icehouse.."
+            print "setup_image_service_node: openstack dist unknown.. assuming icehouse.."
             openstack_sku = 'icehouse'
 
+        glance_configs = {'DEFAULT' : {'notification_driver' : 'messaging',
+                                       'rpc_backend' : 'rabbit',
+                                       'rabbit_host' : '%s' % amqp_server_ip,
+                                       'rabbit_password' : 'guest'}
+                        }
         if openstack_sku == 'havana':
-            run("sed -i -e '/Notification System Options/a %s\n%s\n' /etc/glance/glance-api.conf" \
-                       %('notification_driver = messaging', 'rpc_backend = rabbit'))
-            new_line = 'notifier_strategy = rabbit'
-            run("sed -i -e 's/^notifier_strategy =.*/%s/' /etc/glance/glance-api.conf" %(new_line))
-            new_line = 'rabbit_host = ' + amqp_server_ip
-            run("sed -i -e 's/^rabbit_host =.*/%s/' /etc/glance/glance-api.conf" %(new_line))
-            run("sed -i -e 's/^rabbit_userid =.*/#rabbit_userid = guest/' /etc/glance/glance-api.conf")
-            run("sed -i -e 's/^rabbit_password =.*/#rabbit_password = guest/' /etc/glance/glance-api.conf")
-            run("service glance-registry restart")
-            run("service glance-api restart")
-        else:
-            run("sed -i -e '/Notification System Options/a %s\n%s\n' /etc/glance/glance-api.conf" \
-                       %('notification_driver = messaging', 'rpc_backend = rabbit'))
-            new_line = 'rabbit_host = ' + amqp_server_ip
-            run("sed -i -e 's/^rabbit_host =.*/%s/' /etc/glance/glance-api.conf" %(new_line))
-            run("sed -i -e 's/^rabbit_password =.*/#rabbit_password = guest/' /etc/glance/glance-api.conf")
-            run("service glance-registry restart")
-            run("service glance-api restart")
+            glance_configs['DEFAULT']['notifier_strategy'] = 'rabbit'
+            glance_configs['DEFAULT']['rabbit_userid'] = 'guest'
+
+        conf_file = "/etc/glance/glance-api.conf"
+        for section, key_values in glance_configs:
+            for key, value in key_values:
+                sudo("openstack-config --set %s %s %s" % (conf_file, section, key, value))
+        sudo("service glance-registry restart")
+        sudo("service glance-api restart")
 
 @task
 @roles('openstack')
@@ -755,7 +715,7 @@ def setup_openstack_node(*args):
         # Execute the provision openstack script
         with  settings(host_string=host_string):
             with cd(INSTALLER_DIR):
-                run(cmd)
+                sudo(cmd)
 #end setup_openstack_node
 
 @task
@@ -793,23 +753,23 @@ def setup_contrail_horizon_node(*args):
     internal_vip = get_openstack_internal_vip()
     if internal_vip:
         with settings(warn_only=True):
-            hash_key = run("grep 'def hash_key' %s" % file_name).succeeded
+            hash_key = sudo("grep 'def hash_key' %s" % file_name).succeeded
         if not hash_key:
             # Add a hash generating function
-            run('sed -i "/^SECRET_KEY.*/a\    return new_key" %s' % file_name)
-            run('sed -i "/^SECRET_KEY.*/a\        new_key = m.hexdigest()" %s' % file_name)
-            run('sed -i "/^SECRET_KEY.*/a\        m.update(new_key)" %s' % file_name)
-            run('sed -i "/^SECRET_KEY.*/a\        m = hashlib.md5()" %s' % file_name)
-            run('sed -i "/^SECRET_KEY.*/a\    if len(new_key) > 250:" %s' % file_name)
-            run('sed -i "/^SECRET_KEY.*/a\    new_key = \':\'.join([key_prefix, str(version), key])" %s' % file_name)
-            run('sed -i "/^SECRET_KEY.*/a\def hash_key(key, key_prefix, version):" %s' % file_name)
-            run('sed -i "/^SECRET_KEY.*/a\import hashlib" %s' % file_name)
-            run('sed -i "/^SECRET_KEY.*/a\# To ensure key size of 250" %s' % file_name)
-        run("sed  -i \"s/'LOCATION' : '127.0.0.1:11211',/'LOCATION' : '%s:11211',/\" %s" % (hstr_to_ip(env.host_string), file_name))
+            sudo('sed -i "/^SECRET_KEY.*/a\    return new_key" %s' % file_name)
+            sudo('sed -i "/^SECRET_KEY.*/a\        new_key = m.hexdigest()" %s' % file_name)
+            sudo('sed -i "/^SECRET_KEY.*/a\        m.update(new_key)" %s' % file_name)
+            sudo('sed -i "/^SECRET_KEY.*/a\        m = hashlib.md5()" %s' % file_name)
+            sudo('sed -i "/^SECRET_KEY.*/a\    if len(new_key) > 250:" %s' % file_name)
+            sudo('sed -i "/^SECRET_KEY.*/a\    new_key = \':\'.join([key_prefix, str(version), key])" %s' % file_name)
+            sudo('sed -i "/^SECRET_KEY.*/a\def hash_key(key, key_prefix, version):" %s' % file_name)
+            sudo('sed -i "/^SECRET_KEY.*/a\import hashlib" %s' % file_name)
+            sudo('sed -i "/^SECRET_KEY.*/a\# To ensure key size of 250" %s' % file_name)
+        sudo("sed  -i \"s/'LOCATION' : '127.0.0.1:11211',/'LOCATION' : '%s:11211',/\" %s" % (hstr_to_ip(env.host_string), file_name))
         with settings(warn_only=True):
-            if run("grep '\'KEY_FUNCTION\': hash_key,' %s" % file_name).failed:
-                run('sed -i "/\'LOCATION\'.*/a\       \'KEY_FUNCTION\': hash_key," %s' % file_name)
-        run("sed -i -e 's/OPENSTACK_HOST = \"127.0.0.1\"/OPENSTACK_HOST = \"%s\"/' %s" % (internal_vip,file_name))
+            if sudo("grep '\'KEY_FUNCTION\': hash_key,' %s" % file_name).failed:
+                sudo('sed -i "/\'LOCATION\'.*/a\       \'KEY_FUNCTION\': hash_key," %s' % file_name)
+        sudo("sed -i -e 's/OPENSTACK_HOST = \"127.0.0.1\"/OPENSTACK_HOST = \"%s\"/' %s" % (internal_vip,file_name))
 
     sudo(web_restart)
 #end setup_contrail_horizon_node
@@ -829,14 +789,14 @@ def setup_collector_node(*args):
         with  settings(host_string=host_string):
             with settings(warn_only=True):
                 if detect_ostype() == 'ubuntu':
-                    run("service redis-server stop")
-                    run("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
-                    run("service redis-server start")
+                    sudo("service redis-server stop")
+                    sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
+                    sudo("service redis-server start")
                 else:
-                    run("service redis stop")
-                    run("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis.conf")
-                    run("chkconfig redis on")
-                    run("service redis start")
+                    sudo("service redis stop")
+                    sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis.conf")
+                    sudo("chkconfig redis on")
+                    sudo("service redis start")
 
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
@@ -880,10 +840,10 @@ def setup_collector_node(*args):
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
-                    run('rm /etc/init/supervisor-analytics.override')
+                    sudo('rm /etc/init/supervisor-analytics.override')
             with cd(INSTALLER_DIR):
                 print cmd
-                run(cmd)
+                sudo(cmd)
 #end setup_collector
 
 @task
@@ -930,9 +890,9 @@ def setup_database_node(*args):
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
-                    run('rm /etc/init/supervisor-database.override')
+                    sudo('rm /etc/init/supervisor-database.override')
             with cd(INSTALLER_DIR):
-                run(cmd)
+                sudo(cmd)
 #end setup_database
 
 @task
@@ -1011,9 +971,9 @@ def setup_webui_node(*args):
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
-                    run('rm /etc/init/supervisor-webui.override')
+                    sudo('rm /etc/init/supervisor-webui.override')
             with cd(INSTALLER_DIR):
-                run(cmd)
+                sudo(cmd)
 #end setup_webui
 
 @task
@@ -1029,11 +989,11 @@ def fixup_irond_config(control_host_string):
         with settings(host_string=config_host_string):
             pfl = "/etc/ifmap-server/basicauthusers.properties"
             # replace control-node and dns proc creds
-            run("sed -i -e '/%s:/d' -e '/%s.dns:/d' %s" \
+            sudo("sed -i -e '/%s:/d' -e '/%s.dns:/d' %s" \
                       %(control_ip, control_ip, pfl))
-            run("echo '%s:%s' >> %s" \
+            sudo("echo '%s:%s' >> %s" \
                          %(control_ip, control_ip, pfl))
-            run("echo '%s.dns:%s.dns' >> %s" \
+            sudo("echo '%s.dns:%s.dns' >> %s" \
                          %(control_ip, control_ip, pfl))
 # end fixup_irond_config
 
@@ -1065,13 +1025,13 @@ def setup_control_node(*args):
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
-                    run('rm /etc/init/supervisor-control.override')
-                    run('rm /etc/init/supervisor-dns.override')
+                    sudo('rm /etc/init/supervisor-control.override')
+                    sudo('rm /etc/init/supervisor-dns.override')
             with cd(INSTALLER_DIR):
-                run("setup-vnc-control --self_ip %s --cfgm_ip %s --collector_ip %s" \
+                sudo("setup-vnc-control --self_ip %s --cfgm_ip %s --collector_ip %s" \
                      %(tgt_ip, cfgm_ip, collector_ip))
                 if detect_ostype() == 'centos':
-                    run("service contrail-control restart", pty=False)
+                    sudo("service contrail-control restart", pty=False)
 #end setup_control
 
 @task
@@ -1093,9 +1053,9 @@ def setup_agent_config_in_node(*args):
                 flow_cache_set_cmd = "flow_cache_timeout=%s" %(env.flow_cache_timeout)
                 restart_service = True
                 with settings(host_string=host_string):
-                    out = run("grep flow_cache_timeout %s" %(agent_conf_file))
-                    run("sed -i \"s|%s|%s|\" %s" %(out, flow_cache_set_cmd, agent_conf_file))
-                    run("grep flow_cache_timeout %s" %(agent_conf_file))
+                    out = sudo("grep flow_cache_timeout %s" %(agent_conf_file))
+                    sudo("sed -i \"s|%s|%s|\" %s" %(out, flow_cache_set_cmd, agent_conf_file))
+                    sudo("grep flow_cache_timeout %s" %(agent_conf_file))
         except Exception:
             pass
 
@@ -1106,9 +1066,9 @@ def setup_agent_config_in_node(*args):
                 max_vm_flows_set_cmd = "max_vm_flows=%s" %(env.max_vm_flows)
                 restart_service = True
                 with settings(host_string=host_string):
-                    out = run("grep max_vm_flows %s" %(agent_conf_file))
-                    run("sed -i \"s|%s|%s|\" %s" %(out, max_vm_flows_set_cmd, agent_conf_file))
-                    run("grep max_vm_flows %s" %(agent_conf_file))
+                    out = sudo("grep max_vm_flows %s" %(agent_conf_file))
+                    sudo("sed -i \"s|%s|%s|\" %s" %(out, max_vm_flows_set_cmd, agent_conf_file))
+                    sudo("grep max_vm_flows %s" %(agent_conf_file))
         except Exception:
             pass
 
@@ -1116,7 +1076,7 @@ def setup_agent_config_in_node(*args):
     if restart_service:
         for host_string in args:
             with settings(host_string=host_string):
-                out = run("service supervisor-vrouter restart")
+                out = sudo("service supervisor-vrouter restart")
 
 # end setup_agent_config_in_node
 
@@ -1142,7 +1102,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
     """
     # make sure an agent pkg has been installed
     #try:
-    #    run("yum list installed | grep contrail-agent")
+    #    sudo("yum list installed | grep contrail-agent")
     #except SystemExit as e:
     #    print "contrail-agent package not installed. Install it and then run setup_vrouter"
     #    return
@@ -1269,10 +1229,10 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
-                    run('rm /etc/init/supervisor-vrouter.override')
+                    sudo('rm /etc/init/supervisor-vrouter.override')
             with cd(INSTALLER_DIR):
                 print cmd
-                run(cmd)
+                sudo(cmd)
 #end setup_vrouter
 
 @roles('cfgm')
@@ -1286,7 +1246,7 @@ def prov_control_bgp():
     for control_host in env.roledefs['control']:
         with settings(host_string = control_host):
             tgt_ip = hstr_to_ip(get_control_host_string(control_host))
-            tgt_hostname = run("hostname")
+            tgt_hostname = sudo("hostname")
 
         with cd(UTILS_DIR):
             print "Configuring global system config with the ASN"
@@ -1295,12 +1255,12 @@ def prov_control_bgp():
             cmd += " --api_server_port 8082"
             cmd += " --router_asn %s" % testbed.router_asn
             cmd += " %s" % get_mt_opts()
-            run(cmd)
+            sudo(cmd)
             print "Adding control node as bgp router"
             cmd += " --host_name %s" % tgt_hostname
             cmd += " --host_ip %s" % tgt_ip
             cmd += " --oper add"
-            run(cmd)
+            sudo(cmd)
 #end prov_control_bgp
 
 @roles('cfgm')
@@ -1319,7 +1279,7 @@ def prov_external_bgp():
             cmd += " --router_ip %s" % ext_bgp_ip
             cmd += " --router_asn %s" % testbed.router_asn
             cmd += " %s" % get_mt_opts()
-            run(cmd)
+            sudo(cmd)
 #end prov_control_bgp
 
 @roles('cfgm')
@@ -1345,7 +1305,7 @@ def prov_metadata_services():
     metadata_args += " --linklocal_service_port 80"
     metadata_args += " --ipfabric_service_port %s" % ipfabric_service_port
     metadata_args += " --oper add"
-    run("python /opt/contrail/utils/provision_linklocal.py %s" % metadata_args)
+    sudo("python /opt/contrail/utils/provision_linklocal.py %s" % metadata_args)
 #end prov_metadata_services
 
 @roles('cfgm')
@@ -1363,7 +1323,7 @@ def prov_encap_type():
     encap_args += " --admin_password %s" % admin_password
     encap_args += " --encap_priority %s" % env.encap_priority
     encap_args += " --oper add"
-    run("python /opt/contrail/utils/provision_encap.py %s" % encap_args)
+    sudo("python /opt/contrail/utils/provision_encap.py %s" % encap_args)
     sleep(10)
 #end prov_encap_type
 
@@ -1449,7 +1409,7 @@ def setup_remote_syslog_node(*args):
                     myargs = myopts + " --mode %s" % mode
                     myargs += " --collector_ip %s" % connect_map_dict[host_ip]
                     run_cmd = cmd + myargs
-                    run(run_cmd)
+                    sudo(run_cmd)
 
     elif env.rsyslog_params['status'].lower() == 'disable':
         # Call cleanup routine
@@ -1490,7 +1450,7 @@ def cleanup_remote_syslog_node():
             with cd(FAB_UTILS_DIR):
                 run_cmd = "python provision_rsyslog_connect.py --mode %s --cleanup True" \
                     % (mode)
-                run(run_cmd)
+                sudo(run_cmd)
 # end cleanup_remote_syslog
 
 @roles('build')
@@ -1667,7 +1627,7 @@ def setup_interface_node(*args):
                           timeout= timeout,
                           connection_attempts= retries):
                 with cd(INSTALLER_DIR):
-                    run(cmd)
+                    sudo(cmd)
         else:
             raise AttributeError("'device' or 'ip' is not defined for %s" %host)
 # end setup_interface
@@ -1806,7 +1766,7 @@ def add_static_route_node(*args):
             cmd += ' --vlan %s'%vlan
         with settings(host_string=tgt_host):
             with cd(INSTALLER_DIR):
-                run(cmd)
+                sudo(cmd)
 # end add_static_route
 
 @task

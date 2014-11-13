@@ -41,7 +41,7 @@ def setup_webui_storage(mode):
              cmd= "PASSWORD=%s setup-vnc-storage-webui --storage-setup-mode %s --storage-webui-ip %s  --storage-rest-ip %s --storage-disk-config %s --storage-ssd-disk-config %s"\
                      %(storage_webui_host_password, mode, storage_webui_ip, storage_rest_ip, ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), )
              print cmd
-             run(cmd)
+             sudo(cmd)
 #end setup_webui_storage
 
 global storage_master
@@ -161,7 +161,7 @@ def setup_master_storage(mode):
         with  settings(host_string = storage_master, password = storage_master_password):
             with cd(INSTALLER_DIR):
                 print cmd
-                run(cmd)
+                sudo(cmd)
 #end setup_storage_master
 
 
@@ -203,8 +203,8 @@ def setup_nfs_live_migration(mode):
 
         if storage_master_ip != cfm_ip:
             with  settings(host_string = storage_master, password = storage_master_password):
-                run('mkdir -p %s' %(os.path.dirname(get_ceph_nfs_migration_image())))
-                put(get_ceph_nfs_migration_image(), os.path.dirname(get_ceph_nfs_migration_image()))
+                sudo('mkdir -p %s' %(os.path.dirname(get_ceph_nfs_migration_image())))
+                put(get_ceph_nfs_migration_image(), os.path.dirname(get_ceph_nfs_migration_image()), use_sudo=True)
 
         with  settings(host_string = storage_master, password = storage_master_password):
             with cd(INSTALLER_DIR):
@@ -218,7 +218,7 @@ def setup_nfs_live_migration(mode):
                 cmd= "PASSWORD=%s setup-vnc-livemigration --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s --nfs-live-migration %s" \
                     %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), get_nfs_live_migration_opts())
                 print cmd
-                run(cmd)
+                sudo(cmd)
 #end setup_nfs_live_migration_services
 
 @task
@@ -306,7 +306,7 @@ def remove_storage_node(*args):
             with cd(INSTALLER_DIR):
                 cmd += ' --hosts-to-remove %s' %(' '.join(delete_host_list))
                 print cmd
-                run(cmd)
+                sudo(cmd)
 
 # Function to remove osd/osds from existing cluster
 # The syntax is fab remove_disk cmbu-ceph-3:/dev/sdd,cmbu-ceph-2:/dev/sde
@@ -325,7 +325,7 @@ def remove_disk(*args):
             with cd(INSTALLER_DIR):
                 cmd += ' --disks-to-remove %s' %(' '.join(delete_osd_list))
                 print cmd
-                run(cmd)
+                sudo(cmd)
 
 @task
 @roles('build')

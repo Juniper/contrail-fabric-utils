@@ -64,7 +64,7 @@ def start_servers():
                 print "running %s on %s/%s" %(command, env.host_string, env.l2g_map[curr_host])
                 with settings(warn_only = True, timeout=2):
                     try:
-                        run(command, pty=False)
+                        sudo(command, pty=False)
                     except:
                         print "FAILED..."
 
@@ -75,7 +75,7 @@ def start_servers():
                 print "running %s on %s/%s" %(command, env.host_string, env.l2g_map[curr_host])
                 with settings(warn_only = True, timeout=2):
                     try:
-                        run(command, pty=False)
+                        sudo(command, pty=False)
                     except:
                         print "FAILED..."
         else:
@@ -101,7 +101,7 @@ def start_clients():
                     print "running %s on %s/%s" %(command, env.host_string, env.l2g_map[curr_host])
                     with settings(warn_only = True, timeout=2):
                        try:
-                           run(command, pty=False)
+                           sudo(command, pty=False)
                        except:
                            print "FAILED..."
             elif (prot == 'udp'):
@@ -111,7 +111,7 @@ def start_clients():
                     print "running %s on %s/%s" %(command, env.host_string, env.l2g_map[curr_host])
                     with settings(warn_only = True, timeout=2):
                        try:
-                           run(command, pty=False)
+                           sudo(command, pty=False)
                        except:
                            print "FAILED..."
             else:
