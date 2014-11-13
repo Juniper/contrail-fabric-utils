@@ -58,28 +58,28 @@ def bringup_test_setup(build, reimage=False):
     #install contrail
     with settings(host_string=env.roledefs['cfgm'][0]):
         with cd('/opt/contrail/contrail_packages/'):
-            run('./setup.sh')
+            sudo('./setup.sh')
         put('fabfile/testbeds/%s' % testbed_py, '/opt/contrail/utils/fabfile/testbeds/testbed.py')
         with cd('/opt/contrail/utils/'):
-            run('pwd')
+            sudo('pwd')
             if cfgm in env.roledefs['compute']:
-                run('fab install_contrail:False')
+                sudo('fab install_contrail:False')
                 execute('compute_reboot')
             else:
-                run('fab install_contrail')
+                sudo('fab install_contrail')
     connections.clear()
 
     # setup interface
     with settings(host_string=env.roledefs['cfgm'][0]):
         with cd('/opt/contrail/utils/'):
-            run('fab setup_interface')
+            sudo('fab setup_interface')
 
     # setup all
     with settings(host_string=env.roledefs['cfgm'][0]):
         with cd('/opt/contrail/utils/'):
-            run('pwd')
+            sudo('pwd')
             if cfgm in env.roledefs['compute']:
-                run('fab setup_all:False')
+                sudo('fab setup_all:False')
                 execute('compute_reboot')
             else:
-                run('fab setup_all')
+                sudo('fab setup_all')

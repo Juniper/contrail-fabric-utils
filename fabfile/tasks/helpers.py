@@ -126,7 +126,7 @@ def all_sm_reimage(build_param=None):
 @roles('compute')
 @task
 def contrail_version():
-    run("contrail-version")
+    sudo("contrail-version")
 
 @task
 @parallel
@@ -213,7 +213,7 @@ def compute_provision():
     cfgm_host = env.roledefs['cfgm'][0]
     cfgm_ip = hstr_to_ip(cfgm_host)
     tgt_ip = env.host_string.split('@')[1]
-    tgt_hostname = run("hostname")
+    tgt_hostname = sudo("hostname")
     prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                                 %(tgt_hostname, tgt_ip, cfgm_ip) 
     sudo("/opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
@@ -222,7 +222,7 @@ def compute_provision():
 @roles('compute')
 @task
 def install_img_agent():
-    run("yum localinstall %s/extras/contrail-agent*.rpm" %(INSTALLER_DIR))
+    sudo("yum localinstall %s/extras/contrail-agent*.rpm" %(INSTALLER_DIR))
 #end install_img_agent
 
 #@roles('compute')
@@ -233,7 +233,7 @@ def test():
 @roles('compute')
 @task
 def start_vnc():
-    run("vncserver")
+    sudo("vncserver")
 
 @roles('cfgm')
 @task
@@ -287,14 +287,14 @@ def compute_status():
     nova_compute = "openstack-nova-compute"
     if detect_ostype() in ['ubuntu']:
         nova_compute = "nova-compute"
-    run("service %s status" % nova_compute)
-    run("service contrail-vrouter-agent status")
+    sudo("service %s status" % nova_compute)
+    sudo("service contrail-vrouter-agent status")
 #end compute_status
 
 @roles('compute')
 @task
 def agent_restart():
-    run("service contrail-vrouter-agent restart")
+    sudo("service contrail-vrouter-agent restart")
 #end agent_restart
 
 @roles('cfgm')
@@ -303,11 +303,11 @@ def config_demo():
     cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
 
     with cd(UTILS_DIR):
-        run("python demo_cfg.py --api_server_ip %s --api_server_port 8082 --public_subnet %s %s" %(cfgm_ip, testbed.public_vn_subnet, get_mt_opts()))
-        run("python add_route_target.py --routing_instance_name default-domain:demo:public:public --route_target_number %s --router_asn %s --api_server_ip %s --api_server_port 8082 %s" \
+        sudo("python demo_cfg.py --api_server_ip %s --api_server_port 8082 --public_subnet %s %s" %(cfgm_ip, testbed.public_vn_subnet, get_mt_opts()))
+        sudo("python add_route_target.py --routing_instance_name default-domain:demo:public:public --route_target_number %s --router_asn %s --api_server_ip %s --api_server_port 8082 %s" \
                     %(testbed.public_vn_rtgt, testbed.router_asn, cfgm_ip, get_mt_opts()))
-        run("python create_floating_pool.py --public_vn_name default-domain:demo:public --floating_ip_pool_name pub_fip_pool --api_server_ip %s --api_server_port 8082 %s" %(cfgm_ip, get_mt_opts()))
-        run("python use_floating_pool.py --project_name default-domain:demo --floating_ip_pool_name default-domain:demo:public:pub_fip_pool --api_server_ip %s --api_server_port 8082 %s" %(cfgm_ip, get_mt_opts()))
+        sudo("python create_floating_pool.py --public_vn_name default-domain:demo:public --floating_ip_pool_name pub_fip_pool --api_server_ip %s --api_server_port 8082 %s" %(cfgm_ip, get_mt_opts()))
+        sudo("python use_floating_pool.py --project_name default-domain:demo --floating_ip_pool_name default-domain:demo:public:pub_fip_pool --api_server_ip %s --api_server_port 8082 %s" %(cfgm_ip, get_mt_opts()))
 
 #end config_demo
 
@@ -346,13 +346,13 @@ def add_images(image=None):
         local = "/images/"+loc+".gz"
         remote = loc.split("/")[-1]
         remote_gz = remote+".gz"
-        run("wget http://%s/%s" % (mount, local)) 
-        run("gunzip " + remote_gz)
+        sudo("wget http://%s/%s" % (mount, local)) 
+        sudo("gunzip " + remote_gz)
         if ".vmdk" in loc:
-            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+")")
+            sudo("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+")")
         else:
-            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=qcow2 < "+remote+")")
-        run("rm "+remote)
+            sudo("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=qcow2 < "+remote+")")
+        sudo("rm "+remote)
 #end add_images
 
 @hosts(*env.roledefs['openstack'][0:1])
@@ -382,27 +382,27 @@ def add_basic_images(image=None):
         local = "/images/"+loc+".gz"
         remote = loc.split("/")[-1]
         remote_gz = remote+".gz"
-        run("wget http://%s/%s" % (mount, local)) 
-        run("gunzip " + remote_gz)
+        sudo("wget http://%s/%s" % (mount, local)) 
+        sudo("gunzip " + remote_gz)
         if ".vmdk" in loc:
-            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+")")
+            sudo("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+")")
         elif "cirros" in loc:
-            run('source /etc/contrail/openstackrc')
-            run('cd /tmp ; sudo rm -f /tmp/cirros-0.3.0-x86_64*')
-            run('tar xvf %s -C /tmp/' %remote)
-            run('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-kernel is_public=true '+
+            sudo('source /etc/contrail/openstackrc')
+            sudo('cd /tmp ; sudo rm -f /tmp/cirros-0.3.0-x86_64*')
+            sudo('tar xvf %s -C /tmp/' %remote)
+            sudo('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-kernel is_public=true '+
                 'container_format=aki disk_format=aki < /tmp/cirros-0.3.0-x86_64-vmlinuz')
-            run('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-ramdisk is_public=true '+
+            sudo('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-ramdisk is_public=true '+
                     ' container_format=ari disk_format=ari < /tmp/cirros-0.3.0-x86_64-initrd')
-            run('source /etc/contrail/openstackrc && glance add name=' +remote+ ' is_public=true '+
+            sudo('source /etc/contrail/openstackrc && glance add name=' +remote+ ' is_public=true '+
                 'container_format=ami disk_format=ami '+
                 '\"kernel_id=$(glance index | awk \'/cirros-0.3.0-x86_64-kernel/ {print $1}\')\" '+
                 '\"ramdisk_id=$(glance index | awk \'/cirros-0.3.0-x86_64-ramdisk/ {print $1}\')\" ' +
                 ' < <(zcat --force /tmp/cirros-0.3.0-x86_64-blank.img)')
-            run('rm -rf /tmp/*cirros*')
+            sudo('rm -rf /tmp/*cirros*')
         else:
-            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=qcow2 < "+remote+")")
-        run("rm "+remote)
+            sudo("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=qcow2 < "+remote+")")
+        sudo("rm "+remote)
 
 #end add_basic_images
 
@@ -439,7 +439,7 @@ def net_list():
     os_opts = os_opts + ' --os-tenant-name %s ' %(get_keystone_admin_tenant_name())
     os_opts = os_opts + ' --os-auth-url http://%s:5000/v2.0 ' %(cfgm_ip)
 
-    run('quantum %s net-list' %(os_opts))
+    sudo('quantum %s net-list' %(os_opts))
 #end net_list
 
 @roles('cfgm')
@@ -450,7 +450,7 @@ def demo_fixup():
 
 @task
 def copy(src, dst = '.'):
-    put(src, dst)
+    put(src, dst, use_sudo=True)
 #end copy
 
 @roles('openstack','compute')
@@ -463,35 +463,35 @@ def cleanup_os_config():
     ubuntu_services =['mysql', 'nova-novncproxy', 'rabbitmq-server', 'cinder-volume', 'cinder-scheduler', 'cinder-api', 'glance-registry', 'glance-api', 'nova-xvpvncproxy', 'nova-scheduler', 'nova-objectstore', 'nova-metadata-api', 'nova-consoleauth', 'nova-console', 'nova-compute', 'nova-cert', 'nova-api', 'contrail-vncserver', 'keystone', ]
     # Drop all dbs
     with settings(warn_only=True):
-        token=run('cat /etc/contrail/mysql.token')
+        token=sudo('cat /etc/contrail/mysql.token')
         for db in dbs:
-            run('mysql -u root --password=%s -e \'drop database %s;\''  %(token, db))
+            sudo('mysql -u root --password=%s -e \'drop database %s;\''  %(token, db))
 
         
         if detect_ostype() == 'ubuntu':
             services = ubuntu_services
         for service in services :
-            run('sudo service %s stop' %(service))
+            sudo('sudo service %s stop' %(service))
 
-        run('sudo rm -f /etc/contrail/mysql.token')
-        run('sudo rm -f /etc/contrail/service.token')
-        run('sudo rm -f /etc/contrail/keystonerc')
+        sudo('sudo rm -f /etc/contrail/mysql.token')
+        sudo('sudo rm -f /etc/contrail/service.token')
+        sudo('sudo rm -f /etc/contrail/keystonerc')
         
         #TODO 
         # In Ubuntu, by default glance uses sqlite
         # Until we have a clean way of clearing glance image-data in sqlite,
         # just skip removing the images on Ubuntu
         if not detect_ostype() in ['ubuntu']:
-            run('sudo rm -f /var/lib/glance/images/*')
+            sudo('sudo rm -f /var/lib/glance/images/*')
         
-        run('sudo rm -rf /var/lib/nova/tmp/nova-iptables')
-        run('sudo rm -rf /var/lib/libvirt/qemu/instance*')
-        run('sudo rm -rf /var/log/libvirt/qemu/instance*')
-        run('sudo rm -rf /var/lib/nova/instances/*')
-        run('sudo rm -rf /etc/libvirt/nwfilter/nova-instance*')
-        run('sudo rm -rf /var/log/libvirt/qemu/inst*')
-        run('sudo rm -rf /etc/libvirt/qemu/inst*')
-        run('sudo rm -rf /var/lib/nova/instances/_base/*')
+        sudo('sudo rm -rf /var/lib/nova/tmp/nova-iptables')
+        sudo('sudo rm -rf /var/lib/libvirt/qemu/instance*')
+        sudo('sudo rm -rf /var/log/libvirt/qemu/instance*')
+        sudo('sudo rm -rf /var/lib/nova/instances/*')
+        sudo('sudo rm -rf /etc/libvirt/nwfilter/nova-instance*')
+        sudo('sudo rm -rf /var/log/libvirt/qemu/inst*')
+        sudo('sudo rm -rf /etc/libvirt/qemu/inst*')
+        sudo('sudo rm -rf /var/lib/nova/instances/_base/*')
         
         if detect_ostype() in ['ubuntu'] and env.host_string in env.roledefs['openstack']:
             sudo('mysql_install_db --user=mysql --ldata=/var/lib/mysql/')
@@ -510,15 +510,15 @@ def config_server_reset(option=None, hosts=[]):
         with settings(host_string=host_string):
             try :
                 if option == "add" :
-                    run('sudo sed -i \'s/contrail-api --conf_file/contrail-api --reset_config --conf_file/\' %s' %(api_config_file))
-                    run('sudo sed -i \'s/discovery-server --conf_file/discovery-server --reset_config --conf_file/\' %s' %(disc_config_file))
-                    run('sudo sed -i \'s/contrail-schema --conf_file/contrail-schema --reset_config --conf_file/\' %s' %(schema_config_file))
-                    run('sudo sed -i \'s/contrail-svc-monitor --conf_file/contrail-svc-monitor --reset_config --conf_file/\' %s' %(svc_m_config_file))
+                    sudo('sudo sed -i \'s/contrail-api --conf_file/contrail-api --reset_config --conf_file/\' %s' %(api_config_file))
+                    sudo('sudo sed -i \'s/discovery-server --conf_file/discovery-server --reset_config --conf_file/\' %s' %(disc_config_file))
+                    sudo('sudo sed -i \'s/contrail-schema --conf_file/contrail-schema --reset_config --conf_file/\' %s' %(schema_config_file))
+                    sudo('sudo sed -i \'s/contrail-svc-monitor --conf_file/contrail-svc-monitor --reset_config --conf_file/\' %s' %(svc_m_config_file))
                 elif option == 'delete' :
-                    run('sudo sed -i \'s/contrail-api --reset_config/contrail-api/\' %s' %(api_config_file))
-                    run('sudo sed -i \'s/discovery-server --reset_config/discovery-server/\' %s' %(disc_config_file))
-                    run('sudo sed -i \'s/contrail-schema --reset_config/contrail-schema/\' %s' %(schema_config_file))
-                    run('sudo sed -i \'s/contrail-svc-monitor --reset_config/contrail-svc-monitor/\' %s' %(svc_m_config_file))
+                    sudo('sudo sed -i \'s/contrail-api --reset_config/contrail-api/\' %s' %(api_config_file))
+                    sudo('sudo sed -i \'s/discovery-server --reset_config/discovery-server/\' %s' %(disc_config_file))
+                    sudo('sudo sed -i \'s/contrail-schema --reset_config/contrail-schema/\' %s' %(schema_config_file))
+                    sudo('sudo sed -i \'s/contrail-svc-monitor --reset_config/contrail-svc-monitor/\' %s' %(svc_m_config_file))
             except SystemExit as e:
                 print "Failure of one or more of these cmds are ok"
 #end config_server_reset
@@ -530,8 +530,8 @@ def start_servers(file_n="traffic_profile.py"):
     file_proft = os.getcwd() + "/fabfile/testbeds/" + file_n
 
     with settings(warn_only=True):
-        put(file_fabt, "/root/fabfile.py")
-        put(file_proft, "/root/traffic_profile.py")
+        put(file_fabt, "/root/fabfile.py", use_sudo=True)
+        put(file_proft, "/root/traffic_profile.py", use_sudo=True)
 
         sudo("fab setup_hosts start_servers")
 
@@ -597,7 +597,7 @@ def enable_haproxy():
     '''
     if detect_ostype() == 'ubuntu':
         with settings(warn_only=True):
-            run("sudo sed -i 's/ENABLED=.*/ENABLED=1/g' /etc/default/haproxy")
+            sudo("sudo sed -i 's/ENABLED=.*/ENABLED=1/g' /etc/default/haproxy")
 #end enable_haproxy    
 
 def qpidd_changes_for_ubuntu():
@@ -606,11 +606,11 @@ def qpidd_changes_for_ubuntu():
     qpid_file = '/etc/qpid/qpidd.conf'
     if detect_ostype() == 'ubuntu':
         with settings(warn_only=True):
-            run("sudo sed -i 's/load-module=\/usr\/lib\/qpid\/daemon\/acl.so/#load-module=\/usr\/lib\/qpid\/daemon\/acl.so/g' %s" %(qpid_file))
-            run("sudo sed -i 's/acl-file=\/etc\/qpid\/qpidd.acl/#acl-file=\/etc\/qpid\/qpidd.acl/g' %s" %(qpid_file))
-            run("sudo sed -i 's/max-connections=2048/#max-connections=2048/g' %s" %(qpid_file))
-            run('grep -q \'auth=no\' %s || echo \'auth=no\' >> %s' %(qpid_file,qpid_file))
-            run('service qpidd restart')
+            sudo("sudo sed -i 's/load-module=\/usr\/lib\/qpid\/daemon\/acl.so/#load-module=\/usr\/lib\/qpid\/daemon\/acl.so/g' %s" %(qpid_file))
+            sudo("sudo sed -i 's/acl-file=\/etc\/qpid\/qpidd.acl/#acl-file=\/etc\/qpid\/qpidd.acl/g' %s" %(qpid_file))
+            sudo("sudo sed -i 's/max-connections=2048/#max-connections=2048/g' %s" %(qpid_file))
+            sudo('grep -q \'auth=no\' %s || echo \'auth=no\' >> %s' %(qpid_file,qpid_file))
+            sudo('service qpidd restart')
 #end qpidd_changes_for_ubuntu
 
 @task
@@ -623,7 +623,7 @@ def is_pingable(host_string, negate=False, maxwait=900):
     with settings(host_string=host_string, warn_only=True):
        while True:
             try:
-                res = run('ping -q -w 2 -c 1 %s' %hostip)
+                res = sudo('ping -q -w 2 -c 1 %s' %hostip)
             except:
                 res = runouput(return_code=1)
                 
@@ -650,15 +650,15 @@ def increase_ulimits():
     '''
     with settings(warn_only = True):
         if detect_ostype() == 'ubuntu':
-            run("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql") 
-            run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
-            run("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
-            run("sed -i '/\[mysqld\]/a\max_connections = 10000' /etc/mysql/my.cnf")
-            run("echo 'ulimit -n 10240' >> /etc/default/rabbitmq-server")
+            sudo("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql") 
+            sudo("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
+            sudo("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
+            sudo("sed -i '/\[mysqld\]/a\max_connections = 10000' /etc/mysql/my.cnf")
+            sudo("echo 'ulimit -n 10240' >> /etc/default/rabbitmq-server")
         else:
-            run("sed -i '/start(){/ a\    ulimit -n 10240' /etc/init.d/mysqld")
-            run("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
-            run("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/my.cnf")
+            sudo("sed -i '/start(){/ a\    ulimit -n 10240' /etc/init.d/mysqld")
+            sudo("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
+            sudo("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/my.cnf")
 
 @roles('cfgm','database','control','collector')
 @task
@@ -713,7 +713,7 @@ def full_mesh_ping_by_name():
     for host in env.roledefs['all']:
         with settings(host_string = host, warn_only = True):
             for hostname in env.hostnames['all']:
-                result = run('ping -c 1 %s' %(hostname))
+                result = sudo('ping -c 1 %s' %(hostname))
                 if not result.succeeded:
                     print '!!! Ping from %s to %s failed !!!' %( host, hostname)
                     exit(1)
@@ -730,7 +730,7 @@ def validate_hosts():
     # Check if the hostnames on the nodes are as mentioned in testbed file
     for host in env.roledefs['all']:
         with settings(host_string = host):
-            curr_hostname = run('hostname')
+            curr_hostname = sudo('hostname')
             if not curr_hostname  in all_hostnames:
                 print "Hostname of host %s : %s not defined in testbed!!!" %(
                     host, curr_hostname)
@@ -754,7 +754,7 @@ def validate_hosts():
     #Check if date/time on the hosts are almost the same (diff < 5min)
     for host in env.roledefs['all']:
         with settings(host_string = host):
-            current_hosttimes[host] = run('date +%s')
+            current_hosttimes[host] = sudo('date +%s')
     avg_time = sum(map(int,current_hosttimes.values()))/len(current_hosttimes.values())
     for host in env.roledefs['all']:
         print "Expected date/time on host %s : (approx) %s, Seen : %s" %(
@@ -781,7 +781,7 @@ def reboot_vm(vmid='all', mode='soft'):
 
     if vmid != 'all':
         with settings(warn_only=True):
-            run('source /etc/contrail/openstackrc; nova reboot %s %s' % (flag, vmid))
+            sudo('source /etc/contrail/openstackrc; nova reboot %s %s' % (flag, vmid))
         return
 
     print "Rebooting all the VM's"
@@ -791,7 +791,7 @@ def reboot_vm(vmid='all', mode='soft'):
     for vm_info in nova_list:
         vm_id = vm_info.split('|')[1]
         with settings(warn_only=True):
-            run('source /etc/contrail/openstackrc; nova reboot %s %s' % (flag, vm_id))
+            sudo('source /etc/contrail/openstackrc; nova reboot %s %s' % (flag, vm_id))
 
 @task
 @roles('database')
@@ -801,9 +801,9 @@ def delete_cassandra_db_files():
     else:
         db_path = '/var/lib/cassandra/'
 
-    run('rm -rf %s/commitlog' %(db_path))
-    run('rm -rf %s/data' %(db_path))
-    run('rm -rf %s/saved_caches' %(db_path))
+    sudo('rm -rf %s/commitlog' %(db_path))
+    sudo('rm -rf %s/data' %(db_path))
+    sudo('rm -rf %s/saved_caches' %(db_path))
 
 
 @task
@@ -867,20 +867,20 @@ def disable_iptables():
     with settings(warn_only=True):
         os_type = detect_ostype().lower()
         if os_type in ['centos']:
-            run("iptables --flush")
-            run("service iptables save")
+            sudo("iptables --flush")
+            sudo("service iptables save")
         if os_type in ['redhat']:
-            run("iptables --flush")
-            run("sudo service iptables stop")
-            run("sudo service ip6tables stop")
-            run("sudo systemctl stop firewalld")
-            run("sudo systemctl status firewalld")
-            run("sudo chkconfig firewalld off")
-            run("sudo /usr/libexec/iptables/iptables.init stop")
-            run("sudo /usr/libexec/iptables/ip6tables.init stop")
-            run("sudo service iptables save")
-            run("sudo service ip6tables save")
-            run("iptables -L")
+            sudo("iptables --flush")
+            sudo("sudo service iptables stop")
+            sudo("sudo service ip6tables stop")
+            sudo("sudo systemctl stop firewalld")
+            sudo("sudo systemctl status firewalld")
+            sudo("sudo chkconfig firewalld off")
+            sudo("sudo /usr/libexec/iptables/iptables.init stop")
+            sudo("sudo /usr/libexec/iptables/ip6tables.init stop")
+            sudo("sudo service iptables save")
+            sudo("sudo service ip6tables save")
+            sudo("iptables -L")
 
 @task
 @roles('all')

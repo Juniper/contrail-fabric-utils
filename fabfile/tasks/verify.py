@@ -8,7 +8,7 @@ class OpenStackSetupError(Exception):
 
 def verify_service(service):
     for x in xrange(10):
-        output = run("service %s status" % service)
+        output = sudo("service %s status" % service)
         if 'running' in output.lower():
             return
         else:
@@ -36,7 +36,7 @@ def verify_openstack():
         verify_service("keystone")
     else:
         verify_service("openstack-keystone")
-    output = run("source /etc/contrail/openstackrc; keystone tenant-list")
+    output = sudo("source /etc/contrail/openstackrc; keystone tenant-list")
     if 'error' in output:
         raise OpenStackSetupError(output)
 
@@ -78,30 +78,30 @@ def verify_compute():
 def remove_startup_files():
     compute = env.host_string
     if compute not in env.roledefs['database']:
-        run("rm /etc/init/supervisord-contrail-database.conf")
-        run("rm /etc/contrail/supervisord_contrail_database.conf")
+        sudo("rm /etc/init/supervisord-contrail-database.conf")
+        sudo("rm /etc/contrail/supervisord_contrail_database.conf")
     if compute not in env.roledefs['collector']:
-        run("rm /etc/init/supervisor-analytics.conf")
-        run("rm /etc/contrail/supervisord_analytics.conf")
+        sudo("rm /etc/init/supervisor-analytics.conf")
+        sudo("rm /etc/contrail/supervisord_analytics.conf")
     if compute not in env.roledefs['webui']:
-        run("rm /etc/init/supervisor-webui.conf")
-        run("rm /etc/contrail/supervisord_webui.conf")
+        sudo("rm /etc/init/supervisor-webui.conf")
+        sudo("rm /etc/contrail/supervisord_webui.conf")
     if compute not in env.roledefs['cfgm']:
-        run("rm /etc/init/supervisor-config.conf")
-        run("rm /etc/contrail/supervisord_config.conf")
+        sudo("rm /etc/init/supervisor-config.conf")
+        sudo("rm /etc/contrail/supervisord_config.conf")
     if compute not in env.roledefs['control']:
-        run("rm /etc/init/supervisor-dns.conf")
-        run("rm /etc/init/supervisor-control.conf") 
-        run("rm /etc/contrail/supervisord_dns.conf")
-        run("rm /etc/contrail/supervisord_control.conf")
+        sudo("rm /etc/init/supervisor-dns.conf")
+        sudo("rm /etc/init/supervisor-control.conf") 
+        sudo("rm /etc/contrail/supervisord_dns.conf")
+        sudo("rm /etc/contrail/supervisord_control.conf")
     if compute not in env.roledefs['compute']:
-        run("rm /etc/init/supervisor-vrouter.conf")
-        run("rm /etc/contrail/supervisord_vrouter.conf")
+        sudo("rm /etc/init/supervisor-vrouter.conf")
+        sudo("rm /etc/contrail/supervisord_vrouter.conf")
 
 @task
 @roles('compute')
 def stop_glance_in_compute():
     compute = env.host_string
     if compute not in env.roledefs['cfgm']:
-       run("service glance-api stop")
-       run("service glance-registry stop")
+       sudo("service glance-api stop")
+       sudo("service glance-registry stop")

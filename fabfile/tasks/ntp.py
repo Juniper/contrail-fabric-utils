@@ -3,7 +3,7 @@ from fabfile.config import *
 @task
 @roles('all')
 def get_all_time():
-    date = run("DATE=$( sudo date ); DATEMILLISEC=$( sudo date +%s ); echo $DATE; echo $DATEMILLISEC")
+    date = sudo("DATE=$( date ); DATEMILLISEC=$( date +%s ); echo $DATE; echo $DATEMILLISEC")
     return tuple(date.split('\r\n'))
 
 @task

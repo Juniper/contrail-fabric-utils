@@ -37,7 +37,7 @@ def get_nodes_to_upgrade(*args):
                 raise RuntimeError('Unsupported platfrom (%s, %s, %s) for kernel upgrade.' % (dist, version, extra))
             act_os_type = detect_ostype()
             if act_os_type == os_type:
-                version = run("dpkg -l | grep %s" % package)
+                version = sudo("dpkg -l | grep %s" % package)
                 if not version:
                     nodes.append(host_string)
                 else:

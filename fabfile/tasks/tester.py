@@ -27,7 +27,7 @@ def setup_test_env():
         is_git_repo = local('git branch').succeeded
     if not is_git_repo:
         with settings(host_string=cfgm_host):
-            build_id = run('cat /opt/contrail/contrail_packages/VERSION')
+            build_id = sudo('cat /opt/contrail/contrail_packages/VERSION')
         fab_revision = build_id
         revision = build_id
         print "Testing from the CFGM."
@@ -55,30 +55,30 @@ def setup_test_env():
 
     if CONTROLLER_TYPE == 'Openstack':
         with settings(host_string = env.roledefs['openstack'][0]):
-            openstack_host_name = run("hostname")
+            openstack_host_name = sudo("hostname")
     elif CONTROLLER_TYPE == 'Cloudstack':
         openstack_host_name = None
 
     with settings(host_string = env.roledefs['cfgm'][0]):
-        cfgm_host_name = run("hostname")
+        cfgm_host_name = sudo("hostname")
 
     control_host_names = []
     for control_host in env.roledefs['control']:
         with settings(host_string = control_host):
-            host_name = run("hostname")
+            host_name = sudo("hostname")
             control_host_names.append(host_name)
 
     cassandra_host_names = []
     if 'database' in env.roledefs.keys():
         for cassandra_host in env.roledefs['database']:
             with settings(host_string = cassandra_host):
-                host_name = run("hostname")
+                host_name = sudo("hostname")
                 cassandra_host_names.append(host_name)
 
     for host_string in env.roledefs['all']:
         host_ip = host_string.split('@')[1]
         with settings(host_string = host_string):
-            host_name = run("hostname")
+            host_name = sudo("hostname")
 
         host_dict = {}
         # We may have to change it when we have HA support in Cloudstack
@@ -239,7 +239,7 @@ def setup_test_env():
         of = os.fdopen(fd, 'w')
         of.write(sanity_testbed_json)
         of.close()
-        put(fname, "%s/sanity_testbed.json" %(repo_path))
+        put(fname, "%s/sanity_testbed.json" %(repo_path), use_sudo=True)
         local ("cp %s %s/sanity_testbed.json" %(fname, env.test_repo_dir))
         os.remove(fname)
 
@@ -247,13 +247,13 @@ def setup_test_env():
         of = os.fdopen(fd, 'w')
         of.write(sanity_params)
         of.close()
-        put(fname, "%s/sanity_params.ini" %(repo_path))
+        put(fname, "%s/sanity_params.ini" %(repo_path), use_sudo=True)
         local ("cp %s %s/sanity_params.ini" %(fname, env.test_repo_dir))
         os.remove(fname)
         pkg = ""
         if CONTROLLER_TYPE == 'Cloudstack':
             with settings(warn_only = True):
-                run('python-pip install fixtures testtools fabric')
+                sudo('python-pip install fixtures testtools fabric')
         else:
             with settings(warn_only = True):
                 if 'centos' == detect_ostype():
@@ -268,13 +268,13 @@ def setup_test_env():
                 if ui_browser:
                     pkg = pkg + ' pyvirtualdisplay selenium'
                 if exists('/opt/contrail/api-venv/bin/activate'):
-                    run('source /opt/contrail/api-venv/bin/activate && \
+                    sudo('source /opt/contrail/api-venv/bin/activate && \
                         pip install --upgrade %s' %pkg)
                 else:
-                    run("pip install --upgrade %s" %pkg)
+                    sudo("pip install --upgrade %s" %pkg)
                 if not exists('/usr/bin/ant'):
                     pkg_install(['ant'],disablerepo = False)
-                    ant_version = run('ant -version')
+                    ant_version = sudo('ant -version')
                     if ('1.7' in ant_version):
                         pkg_install(['ant-junit' , 'ant-trax'] , disablerepo = False)
                 pkg_install(['patch'],disablerepo = False)
@@ -282,9 +282,9 @@ def setup_test_env():
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
                 if 'centos' == detect_ostype():
-                    run("yum -y --disablerepo=* --enablerepo=contrail_install_repo install tcpdump")
+                    sudo("yum -y --disablerepo=* --enablerepo=contrail_install_repo install tcpdump")
                 if 'redhat' == detect_ostype():
-                    run("yum -y install tcpdump")
+                    sudo("yum -y install tcpdump")
 #end setup_test_env
 
 def get_remote_path(path):
@@ -365,9 +365,9 @@ def run_sanity(feature='sanity', test=None):
               }
     if feature in ('upgrade','upgrade_only'):
         with settings(host_string = env.roledefs['cfgm'][0]):
-                put("./fabfile/testbeds/testbed.py", "/opt/contrail/utils/fabfile/testbeds/testbed.py")
+                put("./fabfile/testbeds/testbed.py", "/opt/contrail/utils/fabfile/testbeds/testbed.py", use_sudo=True)
                 if not files.exists("/tmp/temp/%s" % os.path.basename(test)):
-                    put(test,"/tmp/temp/")
+                    put(test,"/tmp/temp/", use_sudo=True)
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
     with settings(host_string = env.roledefs['cfgm'][0]):
@@ -428,9 +428,9 @@ def run_sanity(feature='sanity', test=None):
     with settings(host_string = cfgm_host):
         with cd('%s/' %(get_remote_path(env.test_repo_dir))):
             if feature in cmds.keys():
-                run(cmds[feature])
+                sudo(cmds[feature])
                 return
-            run(cmd + test)
+            sudo(cmd + test)
 
 #end run_sanity
 

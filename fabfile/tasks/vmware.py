@@ -27,12 +27,12 @@ def configure_esxi_network(esxi_info):
     uplink_nic = esxi_info['uplink_nic']
     with settings(host_string = host_string, password = password, 
                     warn_only = True, shell = '/bin/sh -l -c'):
-        run('esxcli network vswitch standard add --vswitch-name=%s' %(
+        sudo('esxcli network vswitch standard add --vswitch-name=%s' %(
                 vswitch1))
-        run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(compute_pg, vswitch1))
-        run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(fabric_pg, vswitch0))
-        run('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(uplink_nic, vswitch0))
-        run('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=4095' %(compute_pg))
+        sudo('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(compute_pg, vswitch1))
+        sudo('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(fabric_pg, vswitch0))
+        sudo('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(uplink_nic, vswitch0))
+        sudo('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=4095' %(compute_pg))
 
 @task
 

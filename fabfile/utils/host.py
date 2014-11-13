@@ -1,7 +1,7 @@
 import paramiko
 from netaddr import *
 
-from fabric.api import env, run
+from fabric.api import env, sudo
 from fabric.context_managers import settings
 
 from fabfile.config import testbed
@@ -27,18 +27,18 @@ def get_manage_neutron():
 def get_service_token():
     if get_orchestrator() is not 'openstack':
         with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
-            if run("sudo ls /etc/contrail/service.token").failed:
-                run("sudo setup-service-token.sh")
-            service_token = run("sudo cat /etc/contrail/service.token")
+            if sudo("sudo ls /etc/contrail/service.token").failed:
+                sudo("sudo setup-service-token.sh")
+            service_token = sudo("sudo cat /etc/contrail/service.token")
         return service_token
 
     service_token = get_from_testbed_dict('openstack','service_token',
                              getattr(testbed, 'service_token', ''))
     if not service_token:
         with settings(host_string=env.roledefs['openstack'][0], warn_only=True):
-            if run("sudo ls /etc/contrail/service.token").failed:
-                run("sudo setup-service-token.sh")
-            service_token = run("sudo cat /etc/contrail/service.token")
+            if sudo("sudo ls /etc/contrail/service.token").failed:
+                sudo("sudo setup-service-token.sh")
+            service_token = sudo("sudo cat /etc/contrail/service.token")
     return service_token
 
 def get_service_token_opt():
@@ -123,7 +123,7 @@ def get_keystone_admin_token():
         keystone_ip = hstr_to_ip(testbed.env.roledefs['openstack'][0])
     cmd = 'grep "^[ ]*admin_token" /etc/keystone/keystone.conf | tr -d \' \'| awk -F"=" {\'print $2\'}'
     with settings(host_string='root@%s' %(keystone_ip)):
-        token = run(cmd)
+        token = sudo(cmd)
     return token
 
 def get_keystone_admin_user():

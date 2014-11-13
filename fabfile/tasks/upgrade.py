@@ -129,27 +129,27 @@ def backup_install_repo_node(*args):
     """Backup contrail install repo in one or list of nodes. USAGE:fab create_install_repo_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with  settings(host_string=host_string):
-            version = run("cat /opt/contrail/contrail_packages/VERSION | cut -d '=' -f2")
+            version = sudo("cat /opt/contrail/contrail_packages/VERSION | cut -d '=' -f2")
             version = version.strip()
-            out = run("ls /opt/contrail/")
+            out = sudo("ls /opt/contrail/")
             if 'contrail_install_repo_%s' % version not in out:
-                run("mv /opt/contrail/contrail_install_repo /opt/contrail/contrail_install_repo_%s" % version)
+                sudo("mv /opt/contrail/contrail_install_repo /opt/contrail/contrail_install_repo_%s" % version)
 
 @task
 def backup_source_list():
-    run('mv /etc/apt/sources.list /etc/apt/sources.list.upgradesave')
+    sudo('mv /etc/apt/sources.list /etc/apt/sources.list.upgradesave')
 
 @task
 def create_contrail_source_list():
-    run('echo "deb file:/opt/contrail/contrail_install_repo ./" > /etc/apt/sources.list')
+    sudo('echo "deb file:/opt/contrail/contrail_install_repo ./" > /etc/apt/sources.list')
 @task
 def restore_source_list():
     with settings(warn_only=True):
-        run('mv /etc/apt/sources.list.upgradesave /etc/apt/sources.list')
+        sudo('mv /etc/apt/sources.list.upgradesave /etc/apt/sources.list')
 
 def fix_vizd_param():
-    if run('ls /etc/contrail/vizd_param').succeeded:
-        run('grep -q ANALYTICS_SYSLOG_PORT /etc/contrail/vizd_param || echo "ANALYTICS_SYSLOG_PORT=-1" >> /etc/contrail/vizd_param')
+    if sudo('ls /etc/contrail/vizd_param').succeeded:
+        sudo('grep -q ANALYTICS_SYSLOG_PORT /etc/contrail/vizd_param || echo "ANALYTICS_SYSLOG_PORT=-1" >> /etc/contrail/vizd_param')
 
 @task
 @EXECUTE_TASK
@@ -165,10 +165,10 @@ def upgrade_zookeeper_node(*args):
                 print "No need to upgrade specifically zookeeper in ubuntu."
                 return
             with settings(warn_only=True):
-                run('rpm -e --nodeps zookeeper zookeeper-lib zkpython')
+                sudo('rpm -e --nodeps zookeeper zookeeper-lib zkpython')
             yum_install(['zookeeper'])
-            run('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo reinstall contrail-config')
-            run('chkconfig zookeeper on')
+            sudo('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo reinstall contrail-config')
+            sudo('chkconfig zookeeper on')
 
 @task
 @parallel
@@ -180,12 +180,12 @@ def backup_zookeeper_config():
 def backup_zookeeper_config_node(*args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            if run('ls /etc/zookeeper/zoo.cfg').succeeded:
+            if sudo('ls /etc/zookeeper/zoo.cfg').succeeded:
                 zoo_cfg = '/etc/zookeeper/zoo.cfg'
             else:
                 zoo_cfg = '/etc/zookeeper/conf/zoo.cfg'
-            if not run('ls /etc/contrail/zoo.cfg.rpmsave').succeeded:
-                run('cp %s /etc/contrail/zoo.cfg.rpmsave' % zoo_cfg)
+            if not sudo('ls /etc/contrail/zoo.cfg.rpmsave').succeeded:
+                sudo('cp %s /etc/contrail/zoo.cfg.rpmsave' % zoo_cfg)
 
 @task
 @parallel
@@ -197,11 +197,11 @@ def restore_zookeeper_config():
 def restore_zookeeper_config_node(*args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            if run('ls /etc/contrail/zoo.cfg.rpmsave').succeeded:
+            if sudo('ls /etc/contrail/zoo.cfg.rpmsave').succeeded:
                 if get_release() not in RELEASES_WITH_ZOO_3_4_3:
                     #upgrade to >= 1.05
-                    run('cp /etc/contrail/zoo.cfg.rpmsave /etc/zookeeper/conf/zoo.cfg')
-                run('rm -f /etc/contrail/zoo.cfg.rpmsave')
+                    sudo('cp /etc/contrail/zoo.cfg.rpmsave /etc/zookeeper/conf/zoo.cfg')
+                sudo('rm -f /etc/contrail/zoo.cfg.rpmsave')
 
 @task
 @EXECUTE_TASK
@@ -218,32 +218,32 @@ def increase_item_size_max_node(*args):
         with settings(host_string=host_string, warn_only=True):
             if detect_ostype() == 'ubuntu':
                 memcache_conf='/etc/memcached.conf'
-                if run('grep "\-I " %s' % memcache_conf).failed:
+                if sudo('grep "\-I " %s' % memcache_conf).failed:
                     #Write option to memcached config file
-                    run('echo "-I %s" >> %s' % (item_size_max, memcache_conf))
+                    sudo('echo "-I %s" >> %s' % (item_size_max, memcache_conf))
             else:
                 memcache_conf='/etc/sysconfig/memcached'
-                opts = run("grep OPTIONS %s | grep -Po '\".*?\"'" % memcache_conf)
+                opts = sudo("grep OPTIONS %s | grep -Po '\".*?\"'" % memcache_conf)
                 if opts.failed:
                     #Write option to memcached config file
-                    run("echo 'OPTIONS=\"-I %s\"' >> %s" % (item_size_max, memcache_conf))
-                elif run("grep OPTIONS %s | grep -Po '\".*?\"' | grep \"\-I\"" % memcache_conf).failed:
+                    sudo("echo 'OPTIONS=\"-I %s\"' >> %s" % (item_size_max, memcache_conf))
+                elif sudo("grep OPTIONS %s | grep -Po '\".*?\"' | grep \"\-I\"" % memcache_conf).failed:
                     #concatenate with the existing options
                     opts = opts.strip('"') + '-I %s' % item_size_max
-                    run("sed -i 's/OPTIONS.*/OPTIONS=\"%s\"/g' %s" % (opts, memcache_conf))
+                    sudo("sed -i 's/OPTIONS.*/OPTIONS=\"%s\"/g' %s" % (opts, memcache_conf))
 
 def upgrade_package(pkgs, ostype):
     if ostype in ['centos', 'fedora']:
-        run('yum clean all')
+        sudo('yum clean all')
         for pkg in pkgs:
-            run('yum -y --disablerepo=* --enablerepo=contrail_install_repo install %s' % pkg)
+            sudo('yum -y --disablerepo=* --enablerepo=contrail_install_repo install %s' % pkg)
     elif ostype in ['ubuntu']:
         execute('backup_source_list')
         execute('create_contrail_source_list')
-        run(' apt-get clean')
+        sudo(' apt-get clean')
         for pkg in pkgs:
             cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install %s' % pkg
-            run(cmd)
+            sudo(cmd)
         execute('restore_source_list')
         return
     
@@ -262,15 +262,15 @@ def backup_config_dir(from_rel):
             with settings(warn_only=True):
                 for config_dir in upgrade_data[role]['backup_dirs']:
                     cfg_dir_name = os.path.basename(config_dir)
-                    run('mkdir -p /tmp/contrail/%s.upgradesave' % cfg_dir_name)
-                    if run('cp -r %s/* /tmp/contrail/%s.upgradesave' % (config_dir, cfg_dir_name)).failed:
+                    sudo('mkdir -p /tmp/contrail/%s.upgradesave' % cfg_dir_name)
+                    if sudo('cp -r %s/* /tmp/contrail/%s.upgradesave' % (config_dir, cfg_dir_name)).failed:
                         if not files.exists('/tmp/contrail/%s.upgradesave' % cfg_dir_name):
                             raise RuntimeError("Unable to backup config dir %s, please correct and continue upgrade." % config_dir)
 
 def restore_config_dir(role, upgrade_data):
     for config_dir in upgrade_data[role]['backup_dirs']:
         cfg_dir_name = os.path.basename(config_dir)
-        run('cp -r /tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
+        sudo('cp -r /tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
 
 @task
 @EXECUTE_TASK
@@ -282,27 +282,27 @@ def backup_config(from_rel):
         upgrade_data = eval(ostype.upper() + '_' + ('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
     except NameError:
         raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
-    run('mkdir -p /tmp/contrail')
+    sudo('mkdir -p /tmp/contrail')
     for role in upgrade_data.keys():
         if env.host_string in env.roledefs[role]:
             with settings(warn_only=True):
                 for config_file in upgrade_data[role]['backup_files']:
                     cfg_file_name = os.path.basename(config_file)
-                    if run('cp %s /tmp/contrail/%s.upgradesave' % (config_file, cfg_file_name)).failed:
+                    if sudo('cp %s /tmp/contrail/%s.upgradesave' % (config_file, cfg_file_name)).failed:
                         if not files.exists('/tmp/contrail/%s.upgradesave' % cfg_file_name):
                             raise RuntimeError("Unable to backup config file %s, please correct and continue upgrade." % config_file)
 
 def restore_config(role, upgrade_data):
     for config_file in upgrade_data[role]['backup_files']:
         cfg_file_name = os.path.basename(config_file)
-        run('cp /tmp/contrail/%s.upgradesave %s' % (cfg_file_name, config_file))
+        sudo('cp /tmp/contrail/%s.upgradesave %s' % (cfg_file_name, config_file))
 
 def downgrade_package(pkgs, ostype):
     for pkg in pkgs:
         if ostype in ['centos', 'fedora']:
-            run('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo install %s' % pkg)
+            sudo('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo install %s' % pkg)
         elif ostype in ['ubuntu']:
-            run('DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install %s' % pkg)
+            sudo('DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install %s' % pkg)
 
 def remove_package(pkgs, ostype):
     with settings(warn_only=True):
@@ -311,14 +311,14 @@ def remove_package(pkgs, ostype):
                 print "need not remove zookeeper, cfgm and database in same nodes."
                 return
             if ostype in ['centos', 'fedora']:
-                run('rpm -e --nodeps %s' % pkg)
+                sudo('rpm -e --nodeps %s' % pkg)
             elif ostype in ['ubuntu']:
-                run('DEBIAN_FRONTEND=noninteractive apt-get -y remove --purge  %s' % pkg)
+                sudo('DEBIAN_FRONTEND=noninteractive apt-get -y remove --purge  %s' % pkg)
 
 def remove_old_files(role, upgrade_data):
     with settings(warn_only=True):
         for config_file in upgrade_data[role]['remove_files']:
-            run("rm %s" % config_file)
+            sudo("rm %s" % config_file)
 
 def upgrade(from_rel, role):
     ostype = detect_ostype()
@@ -374,8 +374,8 @@ def fix_nova_conf_node(*args):
     rabbit_host = get_openstack_amqp_server()
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            run("openstack-config --del /etc/nova/nova.conf DEFAULT rpc_backend")
-            run("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" % rabbit_host)
+            sudo("openstack-config --del /etc/nova/nova.conf DEFAULT rpc_backend")
+            sudo("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" % rabbit_host)
 
 @task
 @EXECUTE_TASK
@@ -400,7 +400,7 @@ def upgrade_openstack_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             for svc in openstack_services:
                 with settings(warn_only=True):
-                    run("service %s stop" % svc)
+                    sudo("service %s stop" % svc)
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
@@ -415,8 +415,8 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             # Set the rabbit_host as from 1.10 the rabbit listens at the control_data ip
             amqp_server_ip = get_openstack_amqp_server()
-            run("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" % amqp_server_ip)
-            run("openstack-config --set /etc/glance/glance-api.conf DEFAULT rabbit_host %s" % amqp_server_ip)
+            sudo("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" % amqp_server_ip)
+            sudo("openstack-config --set /etc/glance/glance-api.conf DEFAULT rabbit_host %s" % amqp_server_ip)
             if get_openstack_internal_vip():
                 execute('fixup_restart_haproxy_in_openstack_node', host_string)
             execute('restart_openstack_node', host_string)
@@ -425,20 +425,20 @@ def upgrade_openstack_node(from_rel, pkg, *args):
 @roles('cfgm')
 def fix_rabbitmq_conf():
     rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
-    run("rm -rf %s" % rabbit_conf)
+    sudo("rm -rf %s" % rabbit_conf)
     amqp_listen_ip = get_openstack_amqp_server()
-    run('sudo echo "[" >> %s' % rabbit_conf)
-    run("sudo echo '   {rabbit, [ {tcp_listeners, [{\"%s\", 5672}]},' >> %s" % (amqp_listen_ip, rabbit_conf))
-    run('sudo echo "   {loopback_users, []}," >> %s' % rabbit_conf)
-    run('sudo echo "   {log_levels,[{connection, info},{mirroring, info}]} ]" >> %s' % rabbit_conf)
-    run('sudo echo "    }" >> %s' % rabbit_conf)
-    run('sudo echo "]." >> %s' % rabbit_conf)
+    sudo('sudo echo "[" >> %s' % rabbit_conf)
+    sudo("sudo echo '   {rabbit, [ {tcp_listeners, [{\"%s\", 5672}]},' >> %s" % (amqp_listen_ip, rabbit_conf))
+    sudo('sudo echo "   {loopback_users, []}," >> %s' % rabbit_conf)
+    sudo('sudo echo "   {log_levels,[{connection, info},{mirroring, info}]} ]" >> %s' % rabbit_conf)
+    sudo('sudo echo "    }" >> %s' % rabbit_conf)
+    sudo('sudo echo "]." >> %s' % rabbit_conf)
 
 @task
 @EXECUTE_TASK
 @roles('cfgm')
 def stop_rabbitmq():
-    run("service rabbitmq-server stop")
+    sudo("service rabbitmq-server stop")
 
 @task
 @EXECUTE_TASK
@@ -468,33 +468,33 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                                          'analytics_server_port' : '8081'
                                         }
             for param, value in lbaas_svc_instance_params.items():
-                run("openstack-config --set %s SCHEDULER %s %s" % (conf_file, param, value))
+                sudo("openstack-config --set %s SCHEDULER %s %s" % (conf_file, param, value))
             if from_rel in ['1.10', '1.20', '1.30']:
                 # Create Keystone auth config ini
                 api_conf_file = '/etc/contrail/contrail-api.conf'
                 conf_file = '/etc/contrail/contrail-keystone-auth.conf'
-                run("sed -n -e '/[KEYSTONE]/,$p' %s > %s" % (api_conf_file, conf_file))
+                sudo("sed -n -e '/[KEYSTONE]/,$p' %s > %s" % (api_conf_file, conf_file))
                 # delete [KEYSTONE] section from config files
-                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-api.log" % api_conf_file)
-                run("openstack-config --del %s KEYSTONE" % api_conf_file)
-                run("openstack-config --set %s DEFAULT log_local 1" % api_conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % api_conf_file)
+                sudo("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-api.log" % api_conf_file)
+                sudo("openstack-config --del %s KEYSTONE" % api_conf_file)
+                sudo("openstack-config --set %s DEFAULT log_local 1" % api_conf_file)
+                sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % api_conf_file)
                 conf_file = '/etc/contrail/contrail-schema.conf'
-                run("mv /etc/contrail/schema_transformer.conf %s" % conf_file)
-                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-schema.log" % conf_file)
-                run("openstack-config --del %s KEYSTONE" % conf_file)
-                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                sudo("mv /etc/contrail/schema_transformer.conf %s" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-schema.log" % conf_file)
+                sudo("openstack-config --del %s KEYSTONE" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/contrail-svc-monitor.conf'
-                run("mv /etc/contrail/svc_monitor.conf %s" % conf_file)
-                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-svc-monitor.log" % conf_file)
-                run("openstack-config --del %s KEYSTONE" % conf_file)
-                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                sudo("mv /etc/contrail/svc_monitor.conf %s" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-svc-monitor.log" % conf_file)
+                sudo("openstack-config --del %s KEYSTONE" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/contrail-discovery.conf'
-                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-discovery.log" % conf_file)
-                run("openstack-config --set %s DEFAULT log_local True" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-discovery.log" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_local True" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
 
 @task
 @serial
@@ -518,11 +518,11 @@ def upgrade_control_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.10', '1.20', '1.30']:
                 conf_file = '/etc/contrail/contrail-control.conf'
-                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/dns/dns.conf'
-                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             execute('restart_control_node', host_string)
 
 
@@ -545,16 +545,16 @@ def upgrade_collector_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.10', '1.20', '1.30']:
                 conf_file = '/etc/contrail/contrail-collector.conf'
-                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-collector.log" % conf_file)
-                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-collector.log" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/contrail-query-engine.conf'
-                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-query-engine.log" % conf_file)
-                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-query-engine.log" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/contrail-analytics-api.conf'
-                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             else:
                 execute('restart_collector_node', host_string)
 
@@ -591,15 +591,15 @@ module.exports = config;
 """
     for host_string in args:
         with settings(host_string=host_string):
-            run("sed -i '$d' /etc/contrail/config.global.js")
-            run("sed -i '$d' /etc/contrail/config.global.js")
-            run("echo \"%s\" >> /etc/contrail/config.global.js" % new_config)
+            sudo("sed -i '$d' /etc/contrail/config.global.js")
+            sudo("sed -i '$d' /etc/contrail/config.global.js")
+            sudo("echo \"%s\" >> /etc/contrail/config.global.js" % new_config)
             # Make sure juniper logo is set
             logo_old = '/usr/src/contrail/contrail-webui/webroot/img/juniper-networks-logo.png';
             logo_new = '/usr/src/contrail/contrail-web-core/webroot/img/juniper-networks-logo.png';
-            run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
+            sudo("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
             logo_old = '/usr/src/contrail/contrail-web-core/webroot/img/opencontrail-logo.png';
-            run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
+            sudo("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
 
 @task
 @EXECUTE_TASK
@@ -641,16 +641,16 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
             upgrade(from_rel, 'compute')
             ostype = detect_ostype()
             if (ostype == 'ubuntu' and is_lbaas_enabled()):
-                run("apt-get -o Dpkg::Options::='--force-confold' install -y haproxy iproute")
+                sudo("apt-get -o Dpkg::Options::='--force-confold' install -y haproxy iproute")
             # Populate new params of contrail-vrouter-agent config file
             conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
             lbaas_svc_instance_params = {'netns_command' : '/usr/bin/opencontrail-vrouter-netns',
                                         }
             for param, value in lbaas_svc_instance_params.items():
-                run("openstack-config --set %s SERVICE-INSTANCE %s %s" % (conf_file, param, value))
+                sudo("openstack-config --set %s SERVICE-INSTANCE %s %s" % (conf_file, param, value))
             if from_rel in ['1.10', '1.20', '1.30']:
-                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             if ostype in ['centos']:
                 execute('setup_vrouter_node', host_string)
 
@@ -667,9 +667,9 @@ def fix_vrouter_configs_node(*args):
     ostype = detect_ostype()
     if ostype in ['ubuntu']:
         with settings(warn_only=True):
-            if_vhost0 = run('grep "pre-up /opt/contrail/bin/if-vhost0" /etc/network/interfaces')
+            if_vhost0 = sudo('grep "pre-up /opt/contrail/bin/if-vhost0" /etc/network/interfaces')
         if if_vhost0.failed:
-            run('sed -i "/iface vhost0 inet static/a\    pre-up /opt/contrail/bin/if-vhost0" /etc/network/interfaces')
+            sudo('sed -i "/iface vhost0 inet static/a\    pre-up /opt/contrail/bin/if-vhost0" /etc/network/interfaces')
     agent_param = '/etc/contrail/agent_param'
     # Replace the vrouter binary name
     old_prog = '^prog=/usr/bin/vnswad'
@@ -754,11 +754,11 @@ def backup_install_repo_node(*args):
     """Backup contrail install repo in one or list of nodes. USAGE:fab create_install_repo_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with  settings(host_string=host_string):
-            version = run("cat /opt/contrail/contrail_packages/VERSION | cut -d '=' -f2")
+            version = sudo("cat /opt/contrail/contrail_packages/VERSION | cut -d '=' -f2")
             version = version.strip()
-            out = run("ls /opt/contrail/")
+            out = sudo("ls /opt/contrail/")
             if 'contrail_install_repo_%s' % version not in out:
-                run("mv /opt/contrail/contrail_install_repo /opt/contrail/contrail_install_repo_%s" % version)
+                sudo("mv /opt/contrail/contrail_install_repo /opt/contrail/contrail_install_repo_%s" % version)
 
 @task
 @hosts(env.roledefs['cfgm'][0])

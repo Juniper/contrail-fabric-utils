@@ -15,7 +15,7 @@ def tar_logs_cores():
     sudo("rm -rf /var/temp_log")
     a = dt.now().strftime("%Y_%m_%d_%H_%M_%S")
     d = env.host_string
-    e=run('hostname')
+    e=sudo('hostname')
     sudo ("mkdir -p /var/temp_log; cp -R /var/log/* /var/temp_log")
     sudo ("mv /var/temp_log /var/log/temp_log")
     sudo ("cd /var/log/temp_log/ ; tar czf /var/log/logs_%s_%s.tgz *"%(e, a))
@@ -52,9 +52,9 @@ def install_pkg(pkgs):
     for pkg in pkgs:
         with settings(warn_only = True):
             if ostype in [ 'fedora','centos' ]:
-                run("yum -y install %s" % (pkg))
+                sudo("yum -y install %s" % (pkg))
             elif ostype in ['ubuntu']:
-                run("DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install %s" %(pkg))
+                sudo("DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install %s" %(pkg))
 
 
 @roles('collector')
@@ -63,7 +63,7 @@ def get_cassandra_logs():
     sudo("rm -f /var/log/cassandra_log_*")
     a = dt.now().strftime("%Y_%m_%d_%H_%M_%S")
     d = env.host_string
-    e=run('hostname')
+    e=sudo('hostname')
     output = sudo("cat /proc/uptime") 
     uptime_seconds = float(output.split()[0]) 
     uptime_min=uptime_seconds/60
@@ -82,7 +82,7 @@ def get_cassandra_db_files():
     sudo("rm -rf /var/cassandra_log")
     a = dt.now().strftime("%Y_%m_%d_%H_%M_%S")
     d = env.host_string
-    e=run('hostname')
+    e = sudo('hostname')
     sudo("mkdir -p /var/cassandra_log")
     if exists('/home/cassandra/'):
         sudo("cp -R /home/cassandra/* /var/cassandra_log")
