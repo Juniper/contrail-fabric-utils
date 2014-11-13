@@ -167,6 +167,9 @@ UBUNTU_R1_06_TO_R1_20 = copy.deepcopy(UBUNTU_R1_06_TO_R1_10)
 UBUNTU_R1_10_TO_R1_10 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_10_TO_R1_20 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_20_TO_R1_20 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_10_TO_R1_21 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_20_TO_R1_21 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_21_TO_R1_21 = copy.deepcopy(UPGRADE_SCHEMA)
 
 # Upgrade data from 1.05 to 1.10(Centos)
 CENTOS_R1_05_TO_R1_10 = {
@@ -362,6 +365,9 @@ CENTOS_R1_10_TO_R1_20 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R1_10_TO_R1_20['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
 CENTOS_R1_10_TO_R1_20['cfgm']['backup_dirs'].append('/etc/irond')
 CENTOS_R1_20_TO_R1_20 = copy.deepcopy(CENTOS_R1_10_TO_R1_20)
+CENTOS_R1_10_TO_R1_21 = copy.deepcopy(CENTOS_R1_10_TO_R1_20)
+CENTOS_R1_20_TO_R1_21 = copy.deepcopy(CENTOS_R1_10_TO_R1_20)
+CENTOS_R1_21_TO_R1_21 = copy.deepcopy(CENTOS_R1_10_TO_R1_20)
 
 @task
 @EXECUTE_TASK
