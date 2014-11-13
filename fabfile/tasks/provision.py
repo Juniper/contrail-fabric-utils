@@ -1742,13 +1742,13 @@ def prov_vcenter():
 
 @roles('build')
 @task
-def prov_esxi_computevm():
+def prov_esxi_computevm(deb=None):
     compute_vm_info = getattr(env, 'compute_vm', None)
     if not compute_vm_info:
         return
     for compute_node in env.roledefs['compute']:
         if compute_node in compute_vm_info.keys():
-		provision_esxi(compute_vm_info[compute_node])
+		provision_esxi(deb, compute_vm_info[compute_node])
 
 
 

@@ -21,6 +21,7 @@
 
 import cgitb
 import paramiko
+import os
 import logging as LOG
 try:
     from collections import OrderedDict
@@ -189,7 +190,10 @@ class ContrailVM(object):
         thick_vmdk = self.vmdk+".vmdk"
         sftp.put("/tmp/contrail.vmx", vm_store+dst_vmx)
         try:
-        	sftp.put(self.thindisk, vm_store+thin_vmdk)
+	    if self.thindisk is None:
+                os.system("wget http://10.84.5.100/vmware/vmdk/ContrailVM-disk1.vmdk -O /tmp/ContrailVM-disk1.vmdk")
+                self.thindisk = '/tmp/ContrailVM-disk1.vmdk'
+            sftp.put(self.thindisk, vm_store+thin_vmdk)
 	except Exception, e:
     		print '*** Caught exception: %s: %s' % (e.__class__, e)
                 transport.close()

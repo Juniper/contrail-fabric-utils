@@ -95,7 +95,7 @@ def provision_vcenter(vcenter_info, esxi_info):
 
 
 @task
-def provision_esxi(compute_vm_info):
+def provision_esxi(deb, compute_vm_info):
             vm_params = {}
             vm_params['vm'] = compute_vm_info['esx_vm_name']
             vm_params['vmdk'] = _get_var(compute_vm_info['vmdk'])
@@ -113,11 +113,21 @@ def provision_esxi(compute_vm_info):
             vm_params['server'] = _get_var(compute_vm_info['esxi']['esx_ip'])
             vm_params['username'] = _get_var(compute_vm_info['esxi']['esx_username'])
             vm_params['password'] = _get_var(compute_vm_info['esxi']['esx_password'])
-            vm_params['thindisk'] =  _get_var(compute_vm_info['esx_vmdk'])
+            if 'esx_vmdk' not in compute_vm_info.keys():
+                vm_params['thindisk'] =  None
+            else:
+                vm_params['thindisk'] =  _get_var(compute_vm_info['esx_vmdk'])
             vm_params['domain'] =  _get_var(compute_vm_info['domain'])
             vm_params['vm_password'] = _get_var(compute_vm_info['password'])
             vm_params['vm_server'] = _get_var(compute_vm_info['server_id'])
-            vm_params['vm_deb'] = _get_var(compute_vm_info['vm_deb'])
+            if deb is not None:
+                vm_params['vm_deb'] = deb
+            else:
+                print 'deb package not passed as param, expecting in testbed'
+                if 'vm_deb' not in compute_vm_info.keys():
+                    print 'No deb package section in testbed.py. Exiting!'
+                    return
+                vm_params['vm_deb'] = _get_var(compute_vm_info['vm_deb'])
             out = ContrailVM(vm_params)
             print out
 
