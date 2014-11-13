@@ -1734,7 +1734,7 @@ def prov_vcenter():
     if not vcenter_info:
         print 'Error: vcenter block is not defined in testbed file.Exiting'
         return
-    esxi_info = getattr(testbed, 'compute_vm', None)
+    esxi_info = getattr(env, 'compute_vm', None)
     if not esxi_info:
         print 'Error: compute_vm block is not defined in testbed file.Exiting'
         return
@@ -1742,13 +1742,13 @@ def prov_vcenter():
 
 @roles('build')
 @task
-def prov_esxi_computevm():
+def prov_esxi_computevm(deb=None):
     compute_vm_info = getattr(env, 'compute_vm', None)
     if not compute_vm_info:
         return
     for compute_node in env.roledefs['compute']:
         if compute_node in compute_vm_info.keys():
-		provision_esxi(compute_vm_info[compute_node])
+		provision_esxi(deb, compute_vm_info[compute_node])
 
 
 
