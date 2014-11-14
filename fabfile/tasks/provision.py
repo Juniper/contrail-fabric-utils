@@ -400,8 +400,9 @@ def setup_cfgm_node(*args):
         # Enable settings for Ubuntu
         with  settings(host_string=host_string):
             enable_haproxy()
-        #qpidd_changes_for_ubuntu()
-        #cfgm_host = env.host_string
+    fixup_restart_haproxy_in_all_cfgm(nworkers)
+
+    for host_string in args:
         cfgm_host=get_control_host_string(host_string)
         tgt_ip = hstr_to_ip(cfgm_host)
         cfgm_host_password = env.passwords[host_string]
@@ -470,7 +471,6 @@ def setup_cfgm_node(*args):
                 run(cmd)
 
     # HAPROXY fixups
-    fixup_restart_haproxy_in_all_cfgm(nworkers)
     haproxy = get_haproxy_opt()
     if haproxy:
         fixup_restart_haproxy_in_all_compute()
