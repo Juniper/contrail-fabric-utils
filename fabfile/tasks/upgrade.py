@@ -42,7 +42,8 @@ UPGRADE_SCHEMA = {
                    'backup_dirs' : ['/etc/ifmap-server',
                                     '/etc/neutron',
                                    ],
-                   'remove_files' : ['/etc/contrail/supervisord_config_files/rabbitmq-server.ini'],
+                   #'remove_files' : ['/etc/contrail/supervisord_config_files/rabbitmq-server.ini'],
+                   'remove_files' : [],
                   },
     'collector' : {'upgrade' : ['contrail-openstack-analytics'],
                    'remove' : [],
@@ -464,6 +465,8 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             # Populate the new SCHEDULER section in svc_monitor.conf
             conf_file = '/etc/contrail/svc_monitor.conf'
+            if get_release() == '2.0':
+                 conf_file = '/etc/contrail/contrail-svc-monitor.conf'
             lbaas_svc_instance_params = {'analytics_server_ip' : hstr_to_ip(env.roledefs['collector'][0]),
                                          'analytics_server_port' : '8081'
                                         }
