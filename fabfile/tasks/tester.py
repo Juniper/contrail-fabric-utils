@@ -75,6 +75,7 @@ def setup_test_env():
                 host_name = run("hostname")
                 cassandra_host_names.append(host_name)
 
+    internal_vip = get_openstack_internal_vip()
     for host_string in env.roledefs['all']:
         host_ip = host_string.split('@')[1]
         with settings(host_string = host_string):
@@ -93,17 +94,21 @@ def setup_test_env():
         host_dict['password'] = env.passwords[host_string]
         host_dict['roles'] = []
 
-        if CONTROLLER_TYPE == 'Openstack' and host_string in env.roledefs['openstack']:
-            role_dict = {'type': 'openstack', 'params': {'cfgm': cfgm_host_name}}
-            host_dict['roles'].append(role_dict)
-        elif CONTROLLER_TYPE == 'Cloudstack' and host_string in env.roledefs['orchestrator']:
-            role_dict = {'type': 'orchestrator', 'params': {'cfgm': cfgm_host_name}}
-            host_dict['roles'].append(role_dict)
+        if not internal_vip:
+            if CONTROLLER_TYPE == 'Openstack' and host_string in env.roledefs['openstack']:
+                role_dict = {'type': 'openstack', 'params': {'cfgm': cfgm_host_name}}
+                host_dict['roles'].append(role_dict)
+            elif CONTROLLER_TYPE == 'Cloudstack' and host_string in env.roledefs['orchestrator']:
+                role_dict = {'type': 'orchestrator', 'params': {'cfgm': cfgm_host_name}}
+                host_dict['roles'].append(role_dict)
 
         if host_string in env.roledefs['cfgm']:
             role_dict = {'type': 'cfgm', 'params': {'collector': host_name, 'cassandra': ' '.join(cassandra_host_names)}}
             if CONTROLLER_TYPE == 'Openstack':
-                role_dict['openstack'] = openstack_host_name
+                if internal_vip:
+                    role_dict['openstack'] = 'contrail-vip'
+                else:
+                    role_dict['openstack'] = openstack_host_name
             host_dict['roles'].append(role_dict)
             # Currently Cloudstack supports all-in-one model alone for contrail hence piggybacking Controller role on to cfgm
             if CONTROLLER_TYPE == 'Cloudstack':
@@ -139,6 +144,24 @@ def setup_test_env():
 
         sanity_testbed_dict['hosts'].append(host_dict)
         if env.has_key('vgw'): sanity_testbed_dict['vgw'].append(env.vgw)
+
+    # Adding vip VIP dict for HA test setup
+    if CONTROLLER_TYPE == 'Openstack':
+        with settings(host_string = env.roledefs['openstack'][0]):
+            if internal_vip:
+                host_dict = {}
+    # We may have to change it when we have HA support in Cloudstack
+                host_dict['data-ip']= get_keystone_ip()
+                host_dict['control-ip']= get_keystone_ip()
+                host_dict['ip']= get_keystone_ip()
+                host_dict['name'] = 'contrail-vip'
+                with settings(host_string = env.roledefs['openstack'][0]):
+                    host_dict['username'] = host_string.split('@')[0]
+                    host_dict['password'] = env.passwords[host_string]
+                host_dict['roles'] = []
+                role_dict = {'type': 'openstack', 'params': {'cfgm': cfgm_host_name}}
+                host_dict['roles'].append(role_dict)
+                sanity_testbed_dict['hosts'].append(host_dict)
     # get host ipmi list
     if env.has_key('hosts_ipmi'):
         sanity_testbed_dict['hosts_ipmi'].append(env.hosts_ipmi)
