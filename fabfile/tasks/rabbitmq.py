@@ -190,11 +190,18 @@ def verify_cluster_status(retry='yes'):
     if not rabbitmq_up:
         return False
 
-    output = run("rabbitmqctl cluster_status")
-    running_nodes = re.compile(r"running_nodes,\[([^\]]*)")
-    match = running_nodes.search(output)
-    if not match:
+    rabbitmq_up = False
+    for i in range(0, 6):
+        output = run("rabbitmqctl cluster_status")
+        running_nodes = re.compile(r"running_nodes,\[([^\]]*)")
+        match = running_nodes.search(output)
+        if match:
+            rabbitmq_up = True
+            break
+        time.sleep(2)
+    if not rabbitmq_up:
         return False
+
     clustered_nodes = match.group(1).split(',')
     clustered_nodes = [node.strip(' \n\r\'') for node in clustered_nodes]
 
