@@ -202,3 +202,9 @@ def get_storage_mon_hosts():
     if storage_mon_list == []:
         storage_mon_list.append('none')
     return (storage_mon_list)
+
+def get_cfg_ha_vip():
+    ha_vip = get_from_testbed_dict('ha', 'contrail_internal_vip', None)
+    if ha_vip:
+        return ha_vip
+    return 'none'
