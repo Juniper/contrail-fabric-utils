@@ -261,7 +261,7 @@ def setup_test_env():
                         selenium pyvirtualdisplay \
                         testrepository junitxml pytun'
                 elif 'ubuntu' == detect_ostype():
-                    pkg = 'fixtures testtools testresources\
+                    pkg = 'fixtures unittest2 testtools testresources\
                            testrepository junitxml pytun'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
