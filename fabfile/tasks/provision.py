@@ -15,7 +15,7 @@ from fabfile.tasks.verify import *
 from fabfile.tasks.helpers import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
-from fabfile.tasks.vmware import configure_esxi_network, create_ovf
+from fabfile.tasks.vmware import configure_esxi_network, create_ovf, create_compute_vm
 from time import sleep
 from fabric.contrib.files import exists
 
@@ -1146,8 +1146,8 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
             if esxi_info:
                 for host in esxi_info.keys():
                     esxi_data = esxi_info[host]
-                    data = esxi_data['contrail_vm']
-                    if (esxi_data['contrail_vm'] == host_string):
+                    data = esxi_data['contrail_vm']['host']
+                    if (esxi_data['contrail_vm']['host'] == host_string):
                         vmware = 1
                         break
 
@@ -1632,6 +1632,7 @@ def prov_esxi():
         return
     for host in esxi_info.keys():
         configure_esxi_network(esxi_info[host])
+        create_compute_vm(esxi_info[host])
 #end prov_compute_vm
 
 @task

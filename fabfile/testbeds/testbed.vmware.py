@@ -1,15 +1,11 @@
 #Setting Esxi hypervisor as compute node is a three step process
 
 #1) fab prov_esxi which provisions the Esxi with the required vswitches
-#and port groups. The esxi hypervisor information is provided in
+#and port groups. Also spawns the ContailVM on the esx server.
+#The esxi hypervisor information is provided in
 #esxi_hosts stanza as mentioned in this testbed.py file
 
-#2) After provisioning Esxi hypervisor, ContrialVM needs to be
-#instantiated as virtual machine on hypervisor manually either through
-#Vsphere or Vcenter or Escicli. The vmdk disk file and ovf file are
-#available along with contrial distribution
-
-#3) After instantiating ContrailVM, the IP address need to be updated in
+#2) After instantiating ContrailVM, the IP address need to be updated in
 #this testbed.py file like any other compute node. And other fab commands
 #like 'fab install_pkg_all, install_contrail, setup_all' need to be
 #followed
@@ -69,8 +65,18 @@ esxi_hosts = {
  'vm_vswitch': 'vSwitch1',
 #Port group on 'vm_vswitch', which is a member of all vlans, to which ContrailVM is connected to all openstack VM's
  'vm_port_group' : 'contrail-vm-pg',
+ 'contrail_vm' :  {
 #Below links 'host2' CotrailVM to esxi_host1 hypervisor
- 'contrail_vm' : host2,
+                   'host' : host2,
+#VM name
+                   'name' : 'XXXX',
+#MAC addr for VM's eth0
+                   'mac'  : '00:11:22:aa:bb:cc',
+#Datastore on esx server *optional*
+                   'datastore' : '/vmfs/volumes/datastore1/',
+#Contrail VM vmdk image location *optional*
+                   'image' : '/images/ContrailVM-disk1.vmdk'
+                  }
  },
 # Another Esxi hypervisor follows
 }
