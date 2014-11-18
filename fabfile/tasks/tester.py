@@ -279,7 +279,7 @@ def setup_test_env():
                 run('python-pip install fixtures testtools fabric')
         else:
             with settings(warn_only = True):
-                if 'centos' == detect_ostype():
+                if detect_ostype() in ['centos', 'redhat'];
                     pkg = 'fixtures testtools==1.1.0 testresources discover unittest2 \
                         selenium pyvirtualdisplay \
                         testrepository junitxml pytun'
