@@ -948,6 +948,7 @@ def setup_webui_node(*args):
     for host_string in args:
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_ip = hstr_to_ip(cfgm_host)
+        ks_admin_user, ks_admin_password = get_openstack_credentials()
         webui_host = get_control_host_string(host_string)
         cfgm_host_password=env.passwords[host_string]
         ncollectors = len(env.roledefs['collector'])
@@ -990,6 +991,10 @@ def setup_webui_node(*args):
             keystone_ip = get_keystone_ip()
             cmd += " --keystone_ip %s" % keystone_ip
             cmd += " --openstack_ip %s" % openstack_ip
+            cmd += " --keystone_admin_user %s" % ks_admin_user
+            cmd += " --keystone_admin_password %s" % ks_admin_password
+            cmd += " --keystone_admin_token %s" % get_keystone_admin_token()
+            cmd += " --keystone_admin_tenant_name %s" % get_keystone_admin_tenant_name()
 	elif orch == 'vcenter':
             vcenter_info = getattr(env, 'vcenter', None)
             if not vcenter_info:
