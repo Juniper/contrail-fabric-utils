@@ -156,7 +156,7 @@ listen  rabbitmq 0.0.0.0:5673
             cfg_file.close()
             put(tmp_fname, "/etc/haproxy/haproxy.cfg")
             local("rm %s" %(tmp_fname))
-            
+
         # haproxy enable
         with settings(host_string=host_string, warn_only=True):
             run("chkconfig haproxy on")
@@ -240,7 +240,7 @@ $__contrail_glance_apis__
             host_ip = hstr_to_ip(config_host_string)
             ds_server_lines = ds_server_lines + \
             '    server %s %s:5998 check\n' %(host_ip, host_ip)
-    
+
             ds_stanza = ds_stanza_template.safe_substitute({
                 '__contrail_disc_frontend__': ds_frontend,
                 '__contrail_disc_servers__': ds_server_lines,
@@ -252,7 +252,7 @@ $__contrail_glance_apis__
             host_ip = hstr_to_ip(config_host_string)
             q_server_lines = q_server_lines + \
             '    server %s %s:9696 check\n' %(host_ip, host_ip)
-    
+
             q_stanza = q_stanza_template.safe_substitute({
                 '__contrail_quantum_frontend__': q_frontend,
                 '__contrail_quantum_servers__': q_server_lines,
@@ -268,7 +268,7 @@ $__contrail_glance_apis__
             host_ip = hstr_to_ip(openstack_host_string)
             g_api_server_lines = g_api_server_lines + \
             '    server %s %s:9292 check\n' %(host_ip, host_ip)
-    
+
             g_api_stanza = g_api_stanza_template.safe_substitute({
                 '__contrail_glance_api_frontend__': g_api_frontend,
                 '__contrail_glance_apis__': g_api_server_lines,
@@ -355,7 +355,7 @@ $__contrail_quantum_servers__
                 host_ip = hstr_to_ip(config_host_string)
                 q_server_lines = q_server_lines + \
                 '    server %s %s:9696 check\n' %(host_ip, host_ip)
-     
+
                 q_stanza = q_stanza_template.safe_substitute({
                     '__contrail_quantum_frontend__': q_frontend,
                     '__contrail_quantum_servers__': q_server_lines,
@@ -392,7 +392,7 @@ $__contrail_quantum_servers__
 @task
 def setup_cfgm_node(*args):
     """Provisions config services in one or list of nodes. USAGE: fab setup_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
-    
+
     nworkers = 1
     quantum_port = '9697'
 
@@ -416,7 +416,7 @@ def setup_cfgm_node(*args):
         else:
             # Select based on index
             hindex = cfgm_host_list.index(cfgm_host)
-            hindex = hindex % len(env.roledefs['collector']) 
+            hindex = hindex % len(env.roledefs['collector'])
             collector_host = get_control_host_string(env.roledefs['collector'][hindex])
             collector_ip = hstr_to_ip(collector_host)
         mt_opt = '--multi_tenancy' if get_mt_enable() else ''
@@ -450,7 +450,7 @@ def setup_cfgm_node(*args):
                 cmd += " --keystone_ip %s" % keystone_ip
                 cmd += " --keystone_admin_passwd %s" % openstack_admin_password
                 cmd += " --keystone_service_tenant_name %s" % get_keystone_service_tenant_name()
-                cmd += " --keystone_auth_protocol %s" % get_keystone_auth_protocol() 
+                cmd += " --keystone_auth_protocol %s" % get_keystone_auth_protocol()
                 cmd += " --keystone_auth_port %s" % get_keystone_auth_port()
                 cmd += " --keystone_admin_token %s" % get_keystone_admin_token()
                 cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
@@ -712,7 +712,7 @@ def setup_contrail_horizon():
 def setup_openstack_node(*args):
     """Provisions openstack services in one or list of nodes. USAGE: fab setup_openstack_node:user@1.1.1.1,user@2.2.2.2"""
     #qpidd_changes_for_ubuntu()
-   
+
     amqp_server_ip = get_openstack_amqp_server()
     for host_string in args:
         openstack_ip_list = []
@@ -733,7 +733,7 @@ def setup_openstack_node(*args):
         cmd += " --keystone_admin_passwd %s" % openstack_admin_password
         cmd += " --cfgm_ip %s " % cfgm_ip
         cmd += " --keystone_auth_protocol %s" % get_keystone_auth_protocol()
-        cmd += " --amqp_server_ip %s" % amqp_server_ip 
+        cmd += " --amqp_server_ip %s" % amqp_server_ip
         cmd += " --quantum_service_protocol %s" % get_quantum_service_protocol()
         cmd += " --service_token %s" % get_service_token()
         cmd += ' --openstack_index %s' % (env.roledefs['openstack'].index(host_string) + 1)
@@ -813,7 +813,7 @@ def setup_contrail_horizon_node(*args):
 
     sudo(web_restart)
 #end setup_contrail_horizon_node
-        
+
 @task
 @roles('collector')
 def setup_collector():
@@ -837,7 +837,7 @@ def setup_collector_node(*args):
                     run("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis.conf")
                     run("chkconfig redis on")
                     run("service redis start")
-        
+
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         collector_host_password = env.passwords[host_string]
@@ -934,7 +934,7 @@ def setup_database_node(*args):
             with cd(INSTALLER_DIR):
                 run(cmd)
 #end setup_database
-    
+
 @task
 @roles('webui')
 def setup_webui():
@@ -1141,7 +1141,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
     #except SystemExit as e:
     #    print "contrail-agent package not installed. Install it and then run setup_vrouter"
     #    return
-    
+
     orch = get_orchestrator()
     if orch is 'openstack':
         # reset openstack connections to create new connections
@@ -1169,7 +1169,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
         cfgm_passwd = env.passwords[env.roledefs['cfgm'][0]]
         compute_host = get_control_host_string(host_string)
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
-    
+
         compute_mgmt_ip= host_string.split('@')[1]
         compute_control_ip= hstr_to_ip(compute_host)
 
@@ -1177,7 +1177,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
         if haproxy:
             # setup haproxy and enable
             fixup_restart_haproxy_in_one_compute(host_string)
-    
+
         amqp_server_ip = get_contrail_amqp_server()
         # Using amqp running in openstack node
         if (get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes' or
@@ -1537,7 +1537,7 @@ def setup_all(reboot='True'):
 
 @roles('build')
 @task
-def setup_without_openstack(manage_nova_compute='yes'):
+def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     """Provisions required contrail packages in all nodes as per the role definition except the openstack.
        User has to provision the openstack node with their custom openstack pakckages.
        If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute will be skipped in the compute node.
@@ -1561,11 +1561,12 @@ def setup_without_openstack(manage_nova_compute='yes'):
     execute('prov_metadata_services')
     execute('prov_encap_type')
     execute('setup_remote_syslog')
-    print "Rebooting the compute nodes after setup all."
-    execute(compute_reboot)
-    #Clear the connections cache
-    connections.clear()
-    execute('verify_compute')
+    if reboot == 'True':
+        print "Rebooting the compute nodes after setup all."
+        execute(compute_reboot)
+        # Clear the connections cache
+        connections.clear()
+        execute('verify_compute')
 
 @roles('build')
 @task
@@ -1575,7 +1576,7 @@ def reimage_and_setup_test():
     execute(setup_all)
     sleep(300)
     execute(setup_test_env)
-    
+
 @roles('build')
 @task
 def setup_all_with_images():
