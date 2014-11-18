@@ -257,11 +257,11 @@ def setup_test_env():
         else:
             with settings(warn_only = True):
                 if 'centos' == detect_ostype():
-                    pkg = 'fixtures testtools testresources discover unittest2 \
+                    pkg = 'fixtures testtools==1.1.0 testresources discover unittest2 \
                         selenium pyvirtualdisplay \
                         testrepository junitxml pytun'
                 elif 'ubuntu' == detect_ostype():
-                    pkg = 'fixtures testtools testresources\
+                    pkg = 'fixtures testtools==1.1.0 testresources\
                            testrepository junitxml pytun'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
