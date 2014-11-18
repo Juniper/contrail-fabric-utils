@@ -42,8 +42,7 @@ UPGRADE_SCHEMA = {
                    'backup_dirs' : ['/etc/ifmap-server',
                                     '/etc/neutron',
                                    ],
-                   #'remove_files' : ['/etc/contrail/supervisord_config_files/rabbitmq-server.ini'],
-                   'remove_files' : [],
+                   'remove_files' : ['/etc/contrail/supervisord_config_files/rabbitmq-server.ini'],
                   },
     'collector' : {'upgrade' : ['contrail-openstack-analytics'],
                    'remove' : [],
@@ -106,8 +105,6 @@ if getattr(env, 'interface_rename', True):
     CENTOS_UPGRADE_SCHEMA['compute']['upgrade'].append('contrail-interface-name')
 
 # Centos Release upgrade
-CENTOS_UPGRADE_SCHEMA['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
-CENTOS_UPGRADE_SCHEMA['cfgm']['backup_dirs'].append('/etc/irond')
 CENTOS_R1_10_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R1_20_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R2_0_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)

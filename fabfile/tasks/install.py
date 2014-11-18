@@ -44,7 +44,12 @@ def install_pkg_node(pkg, *args):
     """Installs any rpm/deb in one node."""
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            build = get_build(pkg)
+            # Get the package name from .rpm | .deb
+            if pkg.endswith('.rpm'):
+                pkgname = local("rpm -qpi %s | grep Name | cut -d':' -f2 | cut -d' ' -f2" % pkg, capture=True).strip()
+            elif pkg.endswith('.deb'):
+                pkgname = local("dpkg --info %s | grep Package: | cut -d':' -f2" % pkg, capture=True).strip()
+            build = get_build(pkgname)
             if build and build in pkg:
                 print "Package %s already installed in the node(%s)." % (pkg, host_string)
                 continue
