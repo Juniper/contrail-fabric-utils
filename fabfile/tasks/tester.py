@@ -18,6 +18,13 @@ from fabfile.tasks.install import pkg_install
 
 devstack_flag = False
 
+def get_address_family():
+    address_family = os.getenv('AF', 'dual')
+    # ToDo: CI to execute 'v4' testcases alone for now
+    if os.getenv('GUESTVM_IMAGE', None):
+        address_family = 'v4'
+    return address_family
+
 @roles('build')
 @task
 def setup_test_env():
@@ -225,6 +232,7 @@ def setup_test_env():
              '__stack_domain__'        : stack_domain,
              '__keystone_ip__'         : get_keystone_ip(),
              '__multi_tenancy__'       : get_mt_enable(),
+             '__address_family__'      : get_address_family(),
              '__log_scenario__'        : log_scenario,
              '__generate_html_report__': generate_html_report,
              '__fixture_cleanup__'     : fixture_cleanup,
