@@ -46,7 +46,7 @@ def install_pkg_node(pkg, *args):
         with settings(host_string=host_string, warn_only=True):
             # Get the package name from .rpm | .deb
             if pkg.endswith('.rpm'):
-                pkgname = local("rpm -qpi %s | grep Name: | cut -d':' -f2" % pkg, capture=True).strip()
+                pkgname = local("rpm -qpi %s | grep Name | cut -d':' -f2 | cut -d' ' -f2" % pkg, capture=True).strip()
             elif pkg.endswith('.deb'):
                 pkgname = local("dpkg --info %s | grep Package: | cut -d':' -f2" % pkg, capture=True).strip()
             build = get_build(pkgname)
