@@ -205,7 +205,8 @@ def verify_cluster_status(retry='yes'):
     # connect to AMQP server. Total wait time here is atmost a minute.
     rabbitmq_up = False
     for i in range(0, 6):
-        status = run("service rabbitmq-server status")
+        with settings(warn_only=(retry == 'yes')):
+            status = run("service rabbitmq-server status")
         if 'running' in status.lower():
             rabbitmq_up = True
             break
@@ -217,13 +218,16 @@ def verify_cluster_status(retry='yes'):
 
     rabbitmq_up = False
     for i in range(0, 6):
-        output = run("rabbitmqctl cluster_status")
+        with settings(warn_only=(retry == 'yes')):
+            output = run("rabbitmqctl cluster_status")
         running_nodes = re.compile(r"running_nodes,\[([^\]]*)")
         match = running_nodes.search(output)
         if match:
             rabbitmq_up = True
             break
-        time.sleep(2)
+        elif retry == 'no':
+            return False
+        time.sleep(10)
     if not rabbitmq_up:
         return False
 
