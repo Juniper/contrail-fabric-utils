@@ -4,6 +4,29 @@ from fabfile.utils.fabos import detect_ostype
 @task
 @EXECUTE_TASK
 @roles('all')
+def install_test_repo():
+    '''Installs test repo which contains packages specific to execute contrail test scripts'''
+    execute('install_test_repo_node', env.host_string)
+
+@task
+def install_test_repo_node(*args):
+    '''Installs test repo in given node'''
+    for host_string in args:
+        with settings(host_string=host_string):
+            os_type = detect_ostype().lower()
+            if os_type in ['ubuntu']:
+                print 'No test-repo availabe'
+            if os_type in ['centos']:
+                print 'No test-repo availabe'
+            if os_type in ['redhat']:
+                put('fabfile/contraillabs/repo/el7_test.repo',
+                    '/etc/yum.repos.d/contrail_test.repo')
+                run('yum clean all')
+
+
+@task
+@EXECUTE_TASK
+@roles('all')
 def cleanup_repo():
     '''Removes all existing repos in all the nodes specified in testbed'''
     execute('cleanup_repo_node', env.host_string)
