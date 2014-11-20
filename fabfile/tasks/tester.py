@@ -273,11 +273,15 @@ def setup_test_env():
                         pip install --upgrade %s' %pkg)
                 else:
                     run("pip install --upgrade %s" %pkg)
+
                 if not exists('/usr/bin/ant'):
                     pkg_install(['ant'],disablerepo = False)
                     ant_version = run('ant -version')
                     if ('1.7' in ant_version):
                         pkg_install(['ant-junit' , 'ant-trax'] , disablerepo = False)
+                    if ('1.9' in ant_version):
+                        pkg_install(['ant-junit'] , disablerepo = False)
+
                 pkg_install(['patch'],disablerepo = False)
 
         for host_string in env.roledefs['compute']:
