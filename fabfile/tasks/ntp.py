@@ -7,16 +7,22 @@ def get_all_time():
     return tuple(date.split('\r\n'))
 
 @task
+@parallel
 @roles('build')
 def verify_time_all():
     result = execute('get_all_time')
-    print result
-    all_time = [int(date_in_millisec) for date, date_in_millisec in result.values()]
+    all_time = []
+    for dates in result.values():
+        try:
+            (date, date_in_millisec) = dates
+            all_time.append(int(date_in_millisec))
+        except ValueError:
+            print "ERROR: %s" %  dates
     all_time.sort()
-   
-    if (all_time[-1] - all_time[0]) > 120:
-        raise RuntimeError("Time not synced in the nodes, Please sync and proceed:\n %s" % result)
+
+    if (all_time[-1] - all_time[0]) > 240:
+        raise RuntimeError("Time not synced in the nodes,"
+                           " Please sync and proceed:\n %s %s %s" %
+                           (result, all_time[-1], all_time[0]))
     else:
         print "Time synced in the nodes, Proceeding to install/provision."
-
-     
