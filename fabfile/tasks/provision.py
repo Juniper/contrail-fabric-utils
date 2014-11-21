@@ -988,8 +988,13 @@ def setup_webui_node(*args):
             openstack_host = get_control_host_string(env.roledefs['openstack'][0])
             openstack_ip = hstr_to_ip(openstack_host)
             keystone_ip = get_keystone_ip()
+            ks_admin_user, ks_admin_password = get_openstack_credentials()
             cmd += " --keystone_ip %s" % keystone_ip
             cmd += " --openstack_ip %s" % openstack_ip
+            cmd += " --admin_user %s" % ks_admin_user
+            cmd += " --admin_password %s" % ks_admin_password
+            cmd += " --admin_token %s" % get_keystone_admin_token()
+            cmd += " --admin_tenant_name %s" % get_keystone_admin_tenant_name()
 	elif orch == 'vcenter':
             vcenter_info = getattr(env, 'vcenter', None)
             if not vcenter_info:
