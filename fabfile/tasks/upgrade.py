@@ -437,6 +437,8 @@ def fix_rabbitmq_conf():
 @roles('cfgm')
 def stop_rabbitmq():
     run("service rabbitmq-server stop")
+    with settings(warn_only=True):
+        run("service supervisor-support-service stop")
 
 @task
 @EXECUTE_TASK
@@ -473,7 +475,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                 # Create Keystone auth config ini
                 api_conf_file = '/etc/contrail/contrail-api.conf'
                 conf_file = '/etc/contrail/contrail-keystone-auth.conf'
-                run("sed -n -e '/[KEYSTONE]/,$p' %s > %s" % (api_conf_file, conf_file))
+                run("sed -n -e '/\[KEYSTONE\]/,$p' %s > %s" % (api_conf_file, conf_file))
                 # delete [KEYSTONE] section from config files
                 run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-api.log" % api_conf_file)
                 run("openstack-config --del %s KEYSTONE" % api_conf_file)
@@ -545,14 +547,17 @@ def upgrade_collector_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.10', '1.20', '1.30']:
                 conf_file = '/etc/contrail/contrail-collector.conf'
+                run("sed -i 's/\s//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-collector.log" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/contrail-query-engine.conf'
+                run("sed -i 's/\s//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-query-engine.log" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/contrail-analytics-api.conf'
+                run("sed -i 's/\s//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             else:
