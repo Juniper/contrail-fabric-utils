@@ -408,7 +408,7 @@ def run_sanity(feature='sanity', test=None):
         else :
             pre_cmd = ''
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
-    cmds = {'sanity'       : pre_cmd + '%s ./run_tests.sh --sanity --send-mail -U -t' % (env_vars),
+    cmds = {'sanity'       : pre_cmd + '%s ./run_tests.sh --sanity --send-mail -U' % (env_vars),
             'quick_sanity' : pre_cmd + '%s ./run_tests.sh -T quick_sanity --send-mail -t' % (env_vars),
             'ci_sanity'    : pre_cmd + '%s ./run_tests.sh -T ci_sanity --send-mail -U' % (env_vars),
             'ci_svc_sanity': pre_cmd + '%s python ci_svc_sanity_suite.py' % (env_vars),
