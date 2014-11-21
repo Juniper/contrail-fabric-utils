@@ -413,7 +413,7 @@ def run_sanity(feature='sanity', test=None):
             'ci_sanity'    : pre_cmd + '%s ./run_tests.sh -T ci_sanity --send-mail -U' % (env_vars),
             'ci_svc_sanity': pre_cmd + '%s python ci_svc_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
-            'upgrade'      : pre_cmd + '%s python upgrade_sanity_suite.py' % (env_vars),
+            'upgrade'      : pre_cmd + '%s ./run_tests.sh -T upgrade --send-mail -U' % (env_vars),
             'webui_sanity' : pre_cmd + '%s python webui_tests_suite.py' % (env_vars),
             'ci_webui_sanity' : pre_cmd + '%s python ci_webui_sanity.py' % (env_vars),
             'devstack_sanity' : pre_cmd + '%s python devstack_sanity_tests_with_setup.py' % (env_vars),
