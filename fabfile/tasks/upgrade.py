@@ -38,6 +38,8 @@ UPGRADE_SCHEMA = {
                                      '/etc/contrail/contrail-api.conf',
                                      '/etc/contrail/contrail-discovery.conf',
                                      '/etc/contrail/vnc_api_lib.ini',
+                                     '/etc/init.d/contrail-api',
+                                     '/etc/init.d/contrail-discovery'
                                     ],
                    'backup_dirs' : ['/etc/ifmap-server',
                                     '/etc/neutron',
@@ -109,6 +111,8 @@ if getattr(env, 'interface_rename', True):
 CENTOS_UPGRADE_SCHEMA['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
 CENTOS_UPGRADE_SCHEMA['cfgm']['backup_dirs'].append('/etc/irond')
 CENTOS_R1_10_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
+CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].append('/etc/irond')
 CENTOS_R1_20_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R2_0_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
@@ -459,7 +463,13 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            if detect_ostype() != 'ubuntu' and is_package_installed('irond'):
+                # Fix for bug https://bugs.launchpad.net/juniperopenstack/+bug/1394813
+                run("rpm -e --nodeps irond")
             upgrade(from_rel, 'cfgm')
+            if from_rel in ['1.10']:
+                run("mv -f /etc/irond/* /etc/ifmap-server/")
+                run("rm -rf /etc/irond/")
             if len(env.roledefs['cfgm']) == 1:
                 execute('fix_rabbitmq_conf')
             if get_contrail_internal_vip():
@@ -500,6 +510,9 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                 run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-discovery.log" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local True" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                # Fix init.d scripts
+                run("sed -i 's#http://localhost:9004#unix:///tmp/supervisord_config.sock#g' /etc/init.d/contrail-api")
+                run("sed -i 's#http://localhost:9004#unix:///tmp/supervisord_config.sock#g' /etc/init.d/contrail-discovery")
 
 @task
 @serial
@@ -523,9 +536,13 @@ def upgrade_control_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.10', '1.20', '1.30']:
                 conf_file = '/etc/contrail/contrail-control.conf'
+                #Removing the preceeding empty spaces
+                run("sed -i 's/\s//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/dns/dns.conf'
+                #Removing the preceeding empty spaces
+                run("sed -i 's/\s//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             execute('restart_control_node', host_string)
