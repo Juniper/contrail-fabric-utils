@@ -309,6 +309,9 @@ def setup_test_env():
                     ant_version = run('ant -version')
                     if ('1.7' in ant_version):
                         pkg_install(['ant-junit' , 'ant-trax'] , disablerepo = False)
+                    if ('1.9' in ant_version):
+                        pkg_install(['ant-junit'] , disablerepo = False)
+
                 pkg_install(['patch'],disablerepo = False)
 
         for host_string in env.roledefs['compute']:
