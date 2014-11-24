@@ -151,15 +151,15 @@ class Vcenter(object):
             for host in hosts:
                 dvs_config_spec.uplinkPortPolicy.uplinkPortName = uplink_port_names
                 dvs_config_spec.maxPorts = 2000
-                pnic_spec = self.pyVmomi.vim.dvs.HostMember.PnicSpec()
-                pnic_spec.pnicDevice = 'vmnic1'
-                pnic_specs.append(pnic_spec)
+                #pnic_spec = self.pyVmomi.vim.dvs.HostMember.PnicSpec()
+                #pnic_spec.pnicDevice = 'vmnic1'
+                #pnic_specs.append(pnic_spec)
                 dvs_host_config = self.pyVmomi.vim.dvs.HostMember.ConfigSpec()
                 dvs_host_config.operation = self.pyVmomi.vim.ConfigSpecOperation.add
                 dvs_host_config.host = host
                 dvs_host_configs.append(dvs_host_config)
                 dvs_host_config.backing = self.pyVmomi.vim.dvs.HostMember.PnicBacking()
-                dvs_host_config.backing.pnicSpec = pnic_specs
+                #dvs_host_config.backing.pnicSpec = pnic_specs
                 dvs_config_spec.host = dvs_host_configs
             dvs_create_spec.configSpec = dvs_config_spec
             dvs_create_spec.productInfo = self.pyVmomi.vim.dvs.ProductSpec(version='5.5.0')
