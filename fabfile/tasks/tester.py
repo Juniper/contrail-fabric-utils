@@ -402,6 +402,7 @@ def run_sanity(feature='sanity', test=None):
         with settings(host_string = env.roledefs['cfgm'][0]):
                 put("./fabfile/testbeds/testbed.py", "/opt/contrail/utils/fabfile/testbeds/testbed.py")
                 if not files.exists("/tmp/temp/%s" % os.path.basename(test)):
+                    run("mkdir /tmp/temp")
                     put(test,"/tmp/temp/")
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
