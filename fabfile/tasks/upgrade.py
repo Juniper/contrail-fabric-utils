@@ -28,7 +28,9 @@ UPGRADE_SCHEMA = {
                                      '/etc/contrail/contrail-nodemgr-database.conf',
                                     ],
                    'backup_dirs' : [],
-                   'remove_files' : [],
+                   'remove_files' : ['/etc/init/supervisord-contrail-database.conf',
+                                     '/etc/contrail/supervisord_contrail_database.conf',
+                                    ],
                   },
     'cfgm' : {'upgrade' : ['contrail-openstack-config'],
                    'remove' : [],
@@ -357,6 +359,8 @@ def upgrade_database_node(from_rel, pkg, *args):
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            if from_rel in ['1.10', '1.20']:
+                run("service supervisord-contrail-database stop")
             upgrade(from_rel, 'database')
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.05', '1.06']:
@@ -534,12 +538,12 @@ def upgrade_control_node(from_rel, pkg, *args):
             if from_rel in ['1.10', '1.20', '1.30']:
                 conf_file = '/etc/contrail/contrail-control.conf'
                 #Removing the preceeding empty spaces
-                run("sed -i 's/\s//g' %s" % conf_file)
+                run("sed -i 's/^\s\+//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/dns/dns.conf'
                 #Removing the preceeding empty spaces
-                run("sed -i 's/\s//g' %s" % conf_file)
+                run("sed -i 's/^\s\+//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             execute('restart_control_node', host_string)
@@ -564,21 +568,20 @@ def upgrade_collector_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.10', '1.20', '1.30']:
                 conf_file = '/etc/contrail/contrail-collector.conf'
-                run("sed -i 's/\s//g' %s" % conf_file)
+                run("sed -i 's/^\s\+//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-collector.log" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/contrail-query-engine.conf'
-                run("sed -i 's/\s//g' %s" % conf_file)
+                run("sed -i 's/^\s\+//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-query-engine.log" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/contrail-analytics-api.conf'
-                run("sed -i 's/\s//g' %s" % conf_file)
+                run("sed -i 's/^\s\+//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
-            else:
-                execute('restart_collector_node', host_string)
+            execute('restart_collector_node', host_string)
 
 
 @task
