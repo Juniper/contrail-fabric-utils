@@ -2,6 +2,7 @@ import sys
 import socket
 import os
 import time
+from copy import deepcopy
 import collections
 
 from fabfile.config import *
@@ -810,6 +811,11 @@ def delete_cassandra_db_files():
 @task
 @roles('build')
 def pre_check():
+    database_nodes = deepcopy(env.roledefs['database'])
+    if (len(database_nodes) % 2) != 1:
+        print "\nERROR: \n\tRecommended to deploy odd number of zookeeper(database) nodes."
+        print "\tAdd/remove a node to/from the existing clusters testbed.py and continue."
+        exit(0)
     execute('verify_time_all')
     if len(env.roledefs['openstack']) > 1 and not get_openstack_internal_vip():
         print "\nERROR: \n\tkeystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
