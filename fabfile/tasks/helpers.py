@@ -348,10 +348,11 @@ def add_images(image=None):
         remote_gz = remote+".gz"
         run("wget http://%s/%s" % (mount, local)) 
         run("gunzip " + remote_gz)
+
         if ".vmdk" in loc:
-            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+")")
+            run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format ovf --disk-format vmdk --file "+remote+")")
         else:
-            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=qcow2 < "+remote+")")
+            run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format ovf --disk-format qcow2 --file "+remote+")")
         run("rm "+remote)
 #end add_images
 
