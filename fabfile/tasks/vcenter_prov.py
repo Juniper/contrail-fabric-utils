@@ -131,6 +131,7 @@ class Vcenter(object):
             task=dv_switch.AddDVPortgroup_Task([dv_pg_spec])
             self.wait_for_task(task, si)
             print "Successfully created DV Port Group ", dv_port_name
+
     def create_dvSwitch(self, si, network_folder, cluster, dvs_name):
         dvs = self.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], dvs_name)
         if dvs is not None:
@@ -140,8 +141,32 @@ class Vcenter(object):
             pnic_specs = []
             dvs_host_configs = []
             uplink_port_names = []
+            pvlan_configs = []
             dvs_create_spec = self.pyVmomi.vim.DistributedVirtualSwitch.CreateSpec()
-            dvs_config_spec = self.pyVmomi.vim.DistributedVirtualSwitch.ConfigSpec()
+            dvs_config_spec = self.pyVmomi.vim.dvs.VmwareDistributedVirtualSwitch.ConfigSpec()
+            for pvlan_idx in range(100,2001,2):
+                #promiscuous  pvlan config
+                pvlan_map_entry = self.pyVmomi.vim.dvs.VmwareDistributedVirtualSwitch.PvlanMapEntry()
+                pvlan_config_spec=self.pyVmomi.vim.dvs.VmwareDistributedVirtualSwitch.PvlanConfigSpec()
+                pvlan_map_entry.primaryVlanId = pvlan_idx
+                pvlan_map_entry.secondaryVlanId = pvlan_idx
+                pvlan_map_entry.pvlanType = "promiscuous"
+                pvlan_config_spec.pvlanEntry = pvlan_map_entry
+                pvlan_config_spec.operation = self.pyVmomi.vim.ConfigSpecOperation.add
+	        #isolated pvlan config
+                pvlan_map_entry2 = self.pyVmomi.vim.dvs.VmwareDistributedVirtualSwitch.PvlanMapEntry()
+                pvlan_config_spec2=self.pyVmomi.vim.dvs.VmwareDistributedVirtualSwitch.PvlanConfigSpec()
+                pvlan_map_entry2.primaryVlanId = pvlan_idx
+                pvlan_map_entry2.secondaryVlanId = pvlan_idx+1
+                pvlan_map_entry2.pvlanType = "isolated"
+                pvlan_config_spec2.pvlanEntry = pvlan_map_entry2
+                pvlan_config_spec2.operation = self.pyVmomi.vim.ConfigSpecOperation.add
+
+                pvlan_configs.append(pvlan_config_spec)
+                pvlan_configs.append(pvlan_config_spec2)
+
+            dvs_config_spec.pvlanConfigSpec = pvlan_configs
+
             dvs_config_spec.name = dvs_name
             dvs_config_spec.uplinkPortPolicy = self.pyVmomi.vim.DistributedVirtualSwitch.NameArrayUplinkPortPolicy()
             hosts = cluster.host
