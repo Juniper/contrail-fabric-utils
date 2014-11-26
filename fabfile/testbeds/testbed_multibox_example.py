@@ -297,3 +297,89 @@ env.ostypes = {
 #                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}},
 #           host5: {'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}}
 #          }
+
+#######################################
+#vcenter provisioning
+#server is the vcenter server ip
+#port is the port on which vcenter is listening for connection
+#username is the vcenter username credentials
+#password is the vcenter password credentials
+#auth is the autentication type used to talk to vcenter, http or https
+#datacenter is the datacenter name we are operating on
+#cluster is the clustername we are operating on
+#dvswitch section contains distributed switch related para,s
+#       dv_switch_name and the nic which will be put on it
+#dvportgroup section contains the distributed port group info
+#       dv_portgroupname and the number of ports the group has
+######################################
+env.vcenter = {
+        'server':'127.0.0.1',
+        'port': '443',
+        'username': 'administrator@vsphere.local',
+        'password': 'Contrail123!',
+        'auth': 'https',
+        'datacenter': 'kd_dc',
+        'cluster': 'kd_cluster',
+        'dv_switch': { 'dv_switch_name': 'kd_dvswitch',
+                        'nic': 'vmnic0',
+                     },
+        'dv_port_group': { 'dv_portgroup_name': 'kd_dvportgroup',
+                           'number_of_ports': '3',
+                     },
+}
+
+#######################################
+#The compute vm provisioning on ESXI host
+#This section is used to copy a vmdk on to the ESXI box and bring it up# . the contrailVM which comes up will be setup as a compute node with 
+# only vrouter running on it.
+# Each host has an associated esxi to it. For example in the below
+# section host1 is associated with esxi inside that section.
+# esx_ip: the esxi ip on which the contrailvm(host/compute) runs
+# esx_username: username used to login to esxi
+# esx_password: password for esxi
+# esx_uplinck_nic: the nic usedfor underlay
+# esx_fab_vswitch: the name of the underlay vswitch that runs on esxi
+# esx_fab_port_group: the name of the underlay port group for esxi
+# esx_ssl_thumbprint: the ssl thumbprint on esxi host,needed by vcenter
+#               Run this and get the ssl thumbprint on host: openssl x509 -in /etc/vmware/ssl/rui.crt -fingerprint -sha1 -noout
+# server_mac: the virt mac address for the contrail vm
+# server_ip the contrailvm ip to be associated with the virtual mac
+# esx_vm_name: the contrailvm name which is brought up on esxi
+# esx_data_store: the datastore on esxi where the vmdk is copied to
+#example: 'esx_datastore' : "/vmfs/volumes/b3s40-ds1",
+# esx_vmdk: the absolute path of the contrail-vmdk used to spawn vm
+#OR
+# id esx_vmdk is not provided vmdk_download_path should be given to download vmdk
+#example: 'vmdk_download_path' : "http://10.84.5.100/vmware/vmdk/ContrailVM-disk1.vmdk",
+# vm: the name used by esxi for vmdk changes, same as esx_vm_name
+# vmdk: name of the vmdk file without the vmdk extension
+# vm_deb: absolute path of the contrail package installed on contrailvm if not provided on commandline
+# server_id: hostname of the contrailvm
+# password: root password for the contrailvm
+# domain: domain of the contrailvm
+##############################################
+
+env.compute_vm = {
+    host2: { 'esxi': {'esx_ip': '6.6.6.6',
+                      'esx_username': 'root',
+                      'esx_password': 'c0ntrail123',
+                      'esx_uplink_nic': 'vmnic0',
+                      'esx_fab_vswitch' : 'vSwitch0',
+                      'esx_fab_port_group' : 'contrail-fab-pg',
+                      'esx_ssl_thumbprint' : "2A:B9:E9:E0:4F:07:20:DD:F1:FC:C6:45:BE:A8:E0:21:D1:8E:47:CB",
+                     },
+             'server_mac' : "00:50:56:05:BC:BA",
+             'server_ip': "1.1.1.2",
+             'esx_vm_name' : "ContrailVM-sumne1",
+             'esx_datastore' : "/vmfs/volumes/b3s40-ds1",
+             'vm' : "ContrailVM",
+             'vmdk' : "ContrailVM-disk1",
+             'vmdk_download_path' : "http://127.0.0.1/vmware/vmdk/ContrailVM-disk1.vmdk",
+             'server_id' : 'contrail-vm',
+             'password' : 'c0ntrail123',
+             'domain' : 'englab.juniper.net',
+    },
+}
+
+
+

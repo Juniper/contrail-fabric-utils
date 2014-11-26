@@ -1,7 +1,7 @@
 #!/usr/bin/python
 """
    Name : esxi_contrailvm.py
-   Author : Prasad Miriyala
+   Author : Prasad Miriyala, Kiran Desai
    Description : Start Contrail VM, utilities
                  1) Prepare .vmx
                  2) Creating networking support for contrail vm
@@ -75,9 +75,6 @@ class ContrailVM(object):
         self.eth0_pg = vm_params['eth0_pg']
         self.eth0_vswitch = vm_params['eth0_vswitch']
         self.eth0_vlan = vm_params['eth0_vlan']
-        self.eth1_vswitch = vm_params['eth1_vswitch']
-        self.eth1_pg = vm_params['eth1_pg']
-        self.eth1_vlan = vm_params['eth1_vlan']
         self.uplink_nic = vm_params['uplink_nic']
         self.uplink_vswitch = vm_params['uplink_vswitch']
         self.server = vm_params['server']
@@ -90,10 +87,10 @@ class ContrailVM(object):
 	self.vm_server = vm_params['vm_server']
 	self.vm_password = vm_params['vm_password']
 	self.vm_deb = vm_params['vm_deb']
+        self.ntp_server = vm_params['ntp_server']
         self._create_networking()
         print self._create_vm()
-        print self._install_contrailvm_pkg(self.eth0_ip, "root", self.vm_password, self.vm_domain, self.vm_server,
-                                     self.vm_deb)
+        print self._install_contrailvm_pkg(self.eth0_ip, "root", self.vm_password, self.vm_domain, self.vm_server, self.vm_deb)
         
     #end __init__    
 
@@ -125,14 +122,10 @@ class ContrailVM(object):
                              ('ethernet0.networkName', "contrail-fab-pg"),
                              ('ethernet0.addressType', "static"),
                              ('ethernet0.address', "00:00:de:ad:be:ef"),
-                             ('ethernet1.present', "TRUE"),
-                             ('ethernet1.virtualDev', "e1000"),
-                             ('ethernet1.networkName', "contrail-vm-pg"),
-                             ('ethernet1.addressType', "generated"),
                              ('chipset.onlineStandby', "FALSE"),
                              ('guestOS', "ubuntu-64")))
     
-    def _create_vmx_file(self, vmname, vmdkname, eth0mac=None, eth0pg=None, eth1pg=None,
+    def _create_vmx_file(self, vmname, vmdkname, eth0mac=None, eth0pg=None, 
                          vswitch1=None, vswitch2=None, ):
         if vmname is not None:
             self.vmx_file['nvram'] = vmname + '.nvram'
@@ -148,8 +141,6 @@ class ContrailVM(object):
         if eth0pg is not None:
             self.vmx_file['ethernet0.networkName'] = eth0pg
                             
-        if eth1pg is not None:
-            self.vmx_file['ethernet1.networkName'] = eth1pg
 
         vmf_fp = open("/tmp/contrail.vmx", "w+")
 
@@ -167,7 +158,7 @@ class ContrailVM(object):
         Copies the thin vmdk and expands it.
         Register and power on contrail vm.
         """
-        self._create_vmx_file(self.vm, self.vmdk, self.eth0_mac, self.eth0_pg, self.eth1_pg)
+        self._create_vmx_file(self.vm, self.vmdk, self.eth0_mac, self.eth0_pg)
 
         # open ssh session
         ssh_session = ssh(self.server, self.username, self.password)
@@ -283,28 +274,14 @@ class ContrailVM(object):
             vswitch_cmd = ('esxcli network vswitch standard add --vswitch-name=%s') % (self.eth0_vswitch)
             out, err = execute_cmd_out(ssh_session, vswitch_cmd)
 
-        if self.eth1_vswitch is not 'vSwitch0':
-            vswitch_cmd = ('esxcli network vswitch standard add --vswitch-name=%s') % (self.eth1_vswitch)
-            out, err = execute_cmd_out(ssh_session, vswitch_cmd)
-
         if self.eth0_pg is not None:
             pg_cmd = ('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s') % (
                 self.eth0_pg, self.eth0_vswitch)
             out, err = execute_cmd_out(ssh_session, pg_cmd)
 
-        if self.eth1_pg is not None:
-            pg_cmd = ('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s') % (
-                self.eth1_pg, self.eth1_vswitch)
-            out, err = execute_cmd_out(ssh_session, pg_cmd)
-
         if self.eth0_vlan is not None and self.eth0_pg:
             vlan_cmd = ('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=%s') % (
                 self.eth0_pg, self.eth0_vlan)
-            out, err = execute_cmd_out(ssh_session, vlan_cmd)
-
-        if self.eth1_vlan is not None and self.eth1_pg:
-            vlan_cmd = ('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=%s') % (
-                self.eth1_pg, self.eth1_vlan)
             out, err = execute_cmd_out(ssh_session, vlan_cmd)
 
         if self.uplink_vswitch is not None:
@@ -370,9 +347,6 @@ contrail_vm_params =  {  'vm':"ContrailVM",
                          'eth0_pg':"contrail-fab-pg",
                          'eth0_vswitch':'vSwitch0',
                          'eth0_vlan': None,
-                         'eth1_vswitch':'vSwitch1',
-                         'eth1_pg':"contrail-vm-pg",
-                         'eth1_vlan':'4095',
                          'uplink_nic': 'vmnic0',
                          'uplink_vswitch':'vSwitch0',
                          'server':"127.0.0.1",

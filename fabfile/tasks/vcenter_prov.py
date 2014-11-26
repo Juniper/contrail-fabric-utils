@@ -1,5 +1,5 @@
 """
-Python program for listing the vms on an ESX / vCenter host
+Python program for provisioning vcenter 
 """
 
 import atexit
@@ -18,6 +18,7 @@ class Vcenter(object):
         self.dvportgroup_name = vcenter_params['dvportgroup_name']
         self.dvportgroup_num_ports = vcenter_params['dvportgroup_num_ports']
         self.hosts = vcenter_params['hosts']
+        self.vms = vcenter_params['vms']
         
         try:
             
@@ -29,6 +30,8 @@ class Vcenter(object):
             	self.add_host(cluster,host_info[0],host_info[3],host_info[1],host_info[2])
             dvs=self.create_dvSwitch(self.service_instance, network_folder, cluster, self.dvswitch_name)
             self.add_dvPort_group(self.service_instance,dvs, self.dvportgroup_name)
+            for vm_name in self.vms:
+                self.add_vm_to_dvpg(self.service_instance,vm_name,dvs, self.dvportgroup_name)
             
         except self.pyVmomi.vmodl.MethodFault as error:
             print "Caught vmodl fault : " + error.msg
@@ -131,6 +134,37 @@ class Vcenter(object):
             task=dv_switch.AddDVPortgroup_Task([dv_pg_spec])
             self.wait_for_task(task, si)
             print "Successfully created DV Port Group ", dv_port_name
+
+    def add_vm_to_dvpg(self, si, vm_name, dv_switch, dv_port_name):
+        devices = []
+        vm_was_on = False
+        print "Adding Contrail VM: %s to the DV port group" %(vm_name)
+        vm = self.get_obj([self.pyVmomi.vim.VirtualMachine], vm_name)
+        if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOn:
+                print "VM:%s is powered ON. Cannot do hot add now. Shutting it down" %(vm_name)
+                vm_was_on= True
+                task = vm.PowerOff()
+                self.wait_for_task(task, si)
+        nicspec = self.pyVmomi.vim.vm.device.VirtualDeviceSpec()
+        nicspec.operation = self.pyVmomi.vim.vm.device.VirtualDeviceSpec.Operation.add
+        nicspec.device = self.pyVmomi.vim.vm.device.VirtualE1000()
+        nicspec.device.wakeOnLanEnabled = True
+        nicspec.device.deviceInfo = self.pyVmomi.vim.Description()
+        pg_obj = self.get_obj([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name)
+        dvs_port_connection = self.pyVmomi.vim.dvs.PortConnection()
+        dvs_port_connection.portgroupKey= pg_obj.key
+        dvs_port_connection.switchUuid= pg_obj.config.distributedVirtualSwitch.uuid
+        nicspec.device.backing = self.pyVmomi.vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo()
+        nicspec.device.backing.port = dvs_port_connection
+        devices.append(nicspec)
+        vmconf = self.pyVmomi.vim.vm.ConfigSpec(deviceChange=devices)
+        task = vm.ReconfigVM_Task(vmconf)
+        self.wait_for_task(task, si)
+        if vm_was_on:
+            print "Turning VM: %s On" %(vm_name)
+            task = vm.PowerOn()
+            self.wait_for_task(task, si)
+        print "Succesfully added  ContrailVM:%s to the DV port group" %(vm_name)
 
     def create_dvSwitch(self, si, network_folder, cluster, dvs_name):
         dvs = self.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], dvs_name)
