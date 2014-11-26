@@ -32,13 +32,15 @@ def verify_webui():
 @task
 @roles('openstack')
 def verify_openstack():
-    if detect_ostype() in ['ubuntu']:
-        verify_service("keystone")
-    else:
-        verify_service("openstack-keystone")
-    output = run("source /etc/contrail/openstackrc; keystone tenant-list")
-    if 'error' in output:
-        raise OpenStackSetupError(output)
+    verify_service("keystone")
+    for x in xrange(10):
+        with settings(warn_only=True):
+            output = run("source /etc/contrail/openstackrc; keystone tenant-list")
+        if output.failed:
+            sleep(10)
+        else:
+            return
+    raise OpenStackSetupError(output)
 
 @task
 @roles('cfgm')

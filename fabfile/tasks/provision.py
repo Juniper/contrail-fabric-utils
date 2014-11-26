@@ -1497,6 +1497,7 @@ def setup_orchestrator():
         if get_openstack_internal_vip():
             execute('sync_keystone_ssl_certs')
             execute('setup_cluster_monitors')
+        execute('verify_openstack')
     elif orch == 'vcenter':
         execute('prov_vcenter')
         execute('prov_esxi_computevm')
