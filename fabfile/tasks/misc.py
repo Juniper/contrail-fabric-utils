@@ -5,10 +5,14 @@ import socket
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
-from fabfile.tasks.helpers import reboot_node
+from fabfile.utils.fabos import detect_ostype, get_linux_distro
 from fabfile.utils.host import get_control_host_string, hstr_to_ip
-from fabfile.tasks.provision import setup_vrouter_node, get_openstack_credentials
-from fabfile.tasks.install import create_install_repo_node, install_interface_name_node, install_vrouter_node
+from fabfile.utils.cluster import get_nodes_to_upgrade_pkg, reboot_nodes
+from fabfile.tasks.helpers import reboot_node
+from fabfile.tasks.provision import setup_vrouter_node,\
+         get_openstack_credentials
+from fabfile.tasks.install import create_install_repo_node,\
+         install_interface_name_node, install_vrouter_node, apt_install
 
 @task
 def add_vrouter_node(*args):
@@ -258,3 +262,38 @@ def add_reserved_ports_node(ports, *args):
 def add_openstack_reserverd_ports():
     ports = '35357,35358,33306'
     execute('add_reserved_ports_node', ports, env.host_string)
+
+
+@task
+@roles('build')
+def upgrade_biosdevname_all(reboot='yes'):
+    """creates repo and upgrades biosdevname in Ubuntu"""
+    execute('pre_check')
+    execute('create_install_repo')
+    nodes = []
+    with settings(host_string=env.roledefs['all'][0], warn_only=True):
+        dist, version, extra = get_linux_distro()
+        if version == '14.04':
+            (package, os_type) = ('biosdevname', 'ubuntu')
+    nodes = get_nodes_to_upgrade_pkg(package, os_type,
+                *env.roledefs['all'], version='0.4.1-0ubuntu6.1')
+    if not nodes:
+        print "biosdevname is already of expected version"
+        return
+    execute(upgrade_biosdevname_node, *nodes)
+    if reboot == 'yes':
+        node_list_except_build = list(nodes)
+        if env.host_string in nodes:
+            node_list_except_build.remove(env.host_string)
+            reboot_nodes(*node_list_except_build)
+            reboot_nodes(env.host_string)
+        else:
+            reboot_nodes(*nodes)
+
+@task
+def upgrade_biosdevname_node(*args):
+    """upgrades the biosdevname in given nodes."""
+    for host_string in args:
+        with settings(host_string=host_string):
+            print "upgrading biosdevname package"
+            apt_install(["biosdevname"])
