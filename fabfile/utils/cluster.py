@@ -1,5 +1,7 @@
+from fabric.api import env, settings, run
+
+from fabos import detect_ostype, get_release, get_build
 from fabfile.config import testbed
-from fabric.api import env
 
 
 def get_orchestrator():
@@ -55,3 +57,35 @@ def get_vmware_details(compute_host_string):
             vmware_info = compute_vm_info[compute_host_string]
 
     return (vmware, esxi_data, vmware_info)
+
+def get_nodes_to_upgrade_pkg(package, os_type, *args, **kwargs):
+    """get the list of nodes in which th given package needs to be upgraded"""
+    nodes = []
+    version = kwargs.get('version', None)
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            act_os_type = detect_ostype()
+            if act_os_type == os_type:
+                installed = run("dpkg -l | grep %s" % package)
+                if not installed:
+                    nodes.append(host_string)
+                elif (version and
+                      version != '%s-%s' %
+                         (get_release(package), get_build(package))):
+                    nodes.append(host_string)
+                else:
+                    print 'Required package %s installed. Skipping!' % package
+            else:
+                raise RuntimeError('Actual OS Type (%s) != Expected OS Type (%s)'
+                                    'Aborting!' % (act_os_type, os_type))
+    return nodes
+
+def reboot_nodes(*args):
+    """reboots the given nodes"""
+    for host_string in args:
+        with settings(host_string=host_string):
+            print "Rebooting (%s) to boot with new kernel version" % host_string
+            try:
+                sudo('reboot --force', timeout=3)
+            except CommandTimeout:
+                pass
