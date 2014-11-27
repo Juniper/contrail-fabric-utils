@@ -29,6 +29,7 @@ except ImportError:
     from ordereddict import OrderedDict
 import pdb
 import socket
+import os
 
 def ssh(host, user, passwd, log=LOG):
     """ SSH to any host.
@@ -43,20 +44,22 @@ def execute_cmd(session, cmd, log=LOG):
     """Executing long running commands in background has issues
     So implemeted this to execute the command.
     """
-    log.debug("Executing command: %s" % cmd)
+    print cmd
     stdin, stdout, stderr = session.exec_command(cmd)
+    print stderr
 # end execute_cmd
 
 def execute_cmd_out(session, cmd, log=LOG):
     """Executing long running commands in background through fabric has issues
     So implemeted this to execute the command.
     """
+    print cmd
     stdin, stdout, stderr = session.exec_command(cmd)
     out = None
     err = None
     out = stdout.read()
     err = stderr.read()
-        #log.debug("STDERR: %s", err)
+    print err
     return (out, err)
 # end execute_cmd_out
 
@@ -151,7 +154,7 @@ class ContrailVM(object):
         if eth1pg is not None:
             self.vmx_file['ethernet1.networkName'] = eth1pg
 
-        vmf_fp = open("/tmp/contrail.vmx", "w+")
+        vmf_fp = open("contrail.vmx", "w+")
 
         for k, v in self.vmx_file.items():
             vmf_fp.write(k+ " = "+"\""+v+"\"\n")
@@ -182,6 +185,8 @@ class ContrailVM(object):
 
         create_dir = ("%s %s/%s") % ("mkdir -p", self.datastore, self.vm)
         execute_cmd_out(ssh_session, create_dir)
+        create_dir = ("%s %s/%s") % ("mkdir -p", self.datastore, 'vmware_base')
+        execute_cmd_out(ssh_session, create_dir)
         # open sftp and transfer .vmx and thin disk and close the channel
         transport = paramiko.Transport((self.server, 22))
         transport.connect(username=self.username, password=self.password)
@@ -189,7 +194,8 @@ class ContrailVM(object):
         dst_vmx = self.vm+".vmx"
         thin_vmdk = self.vmdk+"-disk.vmdk"
         thick_vmdk = self.vmdk+".vmdk"
-        sftp.put("/tmp/contrail.vmx", vm_store+dst_vmx)
+        sftp.put("contrail.vmx", vm_store+dst_vmx)
+        os.remove("contrail.vmx")
         try:
 	    if self.thindisk is None:
                 cmd = "wget "+self.vmdk_download_path+" -O /tmp/ContrailVM-disk1.vmdk"

@@ -1261,7 +1261,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
             if vmware_info:
                 # Vmware provisioning parameters
                 cmd += " --vmware %s" % vmware_info['esxi']['esx_ip']
-                cmd += " --vmware_username %s" % vmware_info['esxi']['esx_ip']
+                cmd += " --vmware_username %s" % vmware_info['esxi']['esx_username']
                 cmd += " --vmware_passwd %s" % vmware_info['esxi']['esx_password']
                 cmd += " --vmware_vmpg_vswitch %s" % vmware_info['esx_vm_vswitch']
 
