@@ -20,6 +20,7 @@ UPGRADE_SCHEMA = {
                                     '/etc/cinder',
                                    ],
                    'remove_files' : [],
+                   'rename_files' : [],
                   },
     'database' : {'upgrade' : ['contrail-openstack-database'],
                    'remove' : [],
@@ -31,6 +32,7 @@ UPGRADE_SCHEMA = {
                    'remove_files' : ['/etc/init/supervisord-contrail-database.conf',
                                      '/etc/contrail/supervisord_contrail_database.conf',
                                     ],
+                   'rename_files' : [],
                   },
     'cfgm' : {'upgrade' : ['contrail-openstack-config'],
                    'remove' : [],
@@ -48,6 +50,7 @@ UPGRADE_SCHEMA = {
                                    ],
                    #'remove_files' : ['/etc/contrail/supervisord_config_files/rabbitmq-server.ini'],
                    'remove_files' : [],
+                   'rename_files' : [],
                   },
     'collector' : {'upgrade' : ['contrail-openstack-analytics'],
                    'remove' : [],
@@ -58,6 +61,7 @@ UPGRADE_SCHEMA = {
                                     ],
                    'backup_dirs' : [],
                    'remove_files' : [],
+                   'rename_files' : [],
                   },
     'control' : {'upgrade' : ['contrail-openstack-control'],
                    'remove' : [],
@@ -66,13 +70,22 @@ UPGRADE_SCHEMA = {
                                      '/etc/contrail/dns.conf'],
                    'backup_dirs' : [],
                    'remove_files' : [],
+                   'rename_files' : [],
                   },
     'webui' : {'upgrade' : ['contrail-openstack-webui'],
                    'remove' : [],
                    'downgrade' : [],
                    'backup_files' : ['/etc/contrail/config.global.js'],
                    'backup_dirs' : [],
-                   'remove_files' : [],
+                   'remove_files' : ['/var/log/named/bind.log'],
+                   'rename_files' : [('/etc/dns.conf', '/etc/contrail-dns.conf'),
+                                     ('/etc/contrail/dns/named.conf',
+                                      '/etc/contrail/dns/contrail-named.conf'),
+                                     ('/etc/contrail/dns/rndc.conf',
+                                      '/etc/contrail/dns/contrail-rndc.conf'),
+                                     ('/etc/contrail/dns/named.pid',
+                                      '/etc/contrail/dns/contrail-named.pid'),
+                                    ],
                   },
     'compute' : {'upgrade' : ['contrail-openstack-vrouter'],
                    'remove' : [],
@@ -83,6 +96,7 @@ UPGRADE_SCHEMA = {
                                     ],
                    'backup_dirs' : [],
                    'remove_files' : [],
+                   'rename_files' : [],
                   },
 }
 
@@ -93,6 +107,8 @@ if get_openstack_internal_vip():
 
 # Ubuntu Release upgrade
 UBUNTU_R1_10_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_10_TO_R2_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
+UBUNTU_R1_10_TO_R2_0['cfgm']['backup_dirs'].append('/etc/irond')
 UBUNTU_R1_20_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_30_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
@@ -332,6 +348,11 @@ def remove_old_files(role, upgrade_data):
         for config_file in upgrade_data[role]['remove_files']:
             run("rm %s" % config_file)
 
+def rename_files(role, upgrade_data):
+    with settings(warn_only=True):
+        for old_conf_file, new_conf_file in upgrade_data[role]['rename_files']:
+            run("mv %s %s" % (old_conf_file, new_conf_file))
+
 def upgrade(from_rel, role):
     ostype = detect_ostype()
     to_rel = get_release()
@@ -350,6 +371,7 @@ def upgrade(from_rel, role):
         remove_package(upgrade_data[role]['remove'], ostype)
     restore_config(role, upgrade_data)
     restore_config_dir(role, upgrade_data)
+    rename_files(role, upgrade_data)
     remove_old_files(role, upgrade_data)
 
 @task
