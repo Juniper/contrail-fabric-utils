@@ -67,6 +67,7 @@ def setup_rhosp_node():
     run("sudo /usr/libexec/iptables/ip6tables.init stop; echo pass")
     run("sudo service iptables save; echo pass")
     run("sudo service ip6tables save; echo pass")
+    run("mkdir -p /var/crashes")
 
     steps = "\n\n\n"
     steps += "="*160

@@ -58,3 +58,13 @@ def cleanup_repo_node(*args):
                         for repo_file in repo_files:
                             run('mv %s %s.%s' % (repo_file, repo_file, ts))
                         run('yum clean all')
+
+@task
+def update_keystone_admin_token():
+    '''Retrieve admin token from openstack node (/etc/keystone/keystone.conf)
+       and update it in testbed.py'''
+    openstack_node = testbed.env['roledefs']['openstack'][0]
+    with settings(host_string=openstack_node):
+        admin_token = run('echo "ADMING_KEY: $(grep -Po "^admin_token=\K\w+" /etc/keystone/keystone.conf)" | grep -Po "ADMING_KEY: \K\w+"')
+    local('sed -i "s/\'admin_token\'.*/\'admin_token\' : \'%s\',/g" fabfile/testbeds/testbed.py' % admin_token)
+    local('sed -i "s/\'service_token\'.*/\'service_token\' : \'%s\',/g" fabfile/testbeds/testbed.py' % admin_token)
