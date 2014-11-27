@@ -1,51 +1,38 @@
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype, get_linux_distro
+from fabfile.utils.cluster import get_nodes_to_upgrade_pkg, reboot_nodes
 from fabfile.tasks.install import apt_install
+
 
 @task
 @roles('build')
-def upgrade_kernel_all():
+def upgrade_kernel_all(reboot='yes'):
     """creates repo and upgrades kernel in Ubuntu"""
     execute('pre_check')
     execute('create_install_repo')
     nodes = []
-    nodes = get_nodes_to_upgrade(*env.roledefs['all'])
+    with settings(host_string=env.roledefs['all'][0], warn_only=True):
+        dist, version, extra = get_linux_distro()
+        if version == '12.04':
+            (package, os_type) = ('linux-image-3.13.0-34-generic', 'ubuntu')
+        elif version == '14.04':
+            (package, os_type) = ('linux-image-3.13.0-35-generic', 'ubuntu')
+        else:
+            raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
+                               " kernel upgrade." % (dist, version, extra))
+    nodes = get_nodes_to_upgrade_pkg(package, os_type, *env.roledefs['all'])
     if not nodes:
         print "kernel is already of expected version"
         return
     execute(upgrade_kernel_node, *nodes)
-    node_list_except_build = list(nodes)
-    if env.host_string in nodes:
-        node_list_except_build.remove(env.host_string)
-        execute("reboot_nodes", *node_list_except_build)
-        execute("reboot_nodes", env.host_string)
-    else:
-        execute("reboot_nodes", *nodes)
-
-@task
-def get_nodes_to_upgrade(*args):
-    """get the list of nodes in which kernel needs to be upgraded"""
-    nodes = []
-    for host_string in args:
-        with settings(host_string=host_string, warn_only=True):
-            dist, version, extra = get_linux_distro()
-            if version == '12.04':
-                (package, os_type) = ('linux-image-3.13.0-34-generic', 'ubuntu')
-            elif version == '14.04':
-                (package, os_type) = ('linux-image-3.13.0-35-generic', 'ubuntu')
-            else:
-                raise RuntimeError('Unsupported platfrom (%s, %s, %s) for kernel upgrade.' % (dist, version, extra))
-            act_os_type = detect_ostype()
-            if act_os_type == os_type:
-                version = run("dpkg -l | grep %s" % package)
-                if not version:
-                    nodes.append(host_string)
-                else:
-                    print 'Has required Kernel. Skipping!'
-            else:
-                raise RuntimeError('Actual OS Type (%s) != Expected OS Type (%s)'
-                                    'Aborting!' % (act_os_type, os_type))
-    return nodes
+    if reboot == 'yes':
+        node_list_except_build = list(nodes)
+        if env.host_string in nodes:
+            node_list_except_build.remove(env.host_string)
+            reboot_nodes(*node_list_except_build)
+            reboot_nodes(env.host_string)
+        else:
+            reboot_nodes(*nodes)
 
 @task
 @EXECUTE_TASK
@@ -72,14 +59,3 @@ def upgrade_kernel_node(*args):
                 print "Upgrading the kernel to 3.13.0-35"
                 apt_install(["linux-image-3.13.0-35-generic",
                              "linux-image-extra-3.13.0-35-generic"])
-
-@task
-def reboot_nodes(*args):
-    """reboots the given nodes"""
-    for host_string in args:
-        with settings(host_string=host_string):
-            print "Rebooting (%s) to boot with new kernel version" % host_string
-            try:
-                sudo('reboot --force', timeout=3)
-            except CommandTimeout:
-                pass
