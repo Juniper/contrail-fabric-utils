@@ -974,7 +974,7 @@ def setup_webui_node(*args):
         cmd += " --cfgm_ip %s" % cfgm_ip
         cmd += " --collector_ip %s" % collector_ip
         cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
-        #cmd += " --orchestrator %s" % orch
+        cmd += " --orchestrator %s" % orch
         internal_vip = get_openstack_internal_vip()
         if internal_vip:
             # Highly available setup
