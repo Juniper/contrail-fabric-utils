@@ -188,3 +188,9 @@ def get_cinder_ha_vip():
         return ha_vip
     return 'none'
 #end get_cinder_ha_vip
+
+def get_cfg_ha_vip():
+    ha_vip = get_from_testbed_dict('ha', 'contrail_internal_vip', None)
+    if ha_vip:
+        return ha_vip
+    return 'none'
