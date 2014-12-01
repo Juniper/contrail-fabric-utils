@@ -90,6 +90,7 @@ class ContrailVM(object):
 	self.vm_server = vm_params['vm_server']
 	self.vm_password = vm_params['vm_password']
 	self.vm_deb = vm_params['vm_deb']
+        self.ntp_server = vm_params['ntp_server']
         self._create_networking()
         print self._create_vm()
         print self._install_contrailvm_pkg(self.eth0_ip, "root", self.vm_password, self.vm_domain, self.vm_server,
@@ -338,10 +339,30 @@ class ContrailVM(object):
         if retries > MAX_RETRIES:
                 return ( "Connection to %s failed" % (ip))
 
-
         sftp.put(pkg, "/root/contrail_pkg")
-        sftp.close()
 
+        #Set up the ntp client (optional, can be skipped)
+        ntp_cmd = ('apt-get install -y ntp')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('ntpdate "%s"') %(ntp_server)
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('mv /etc/ntp.conf /etc/ntp.conf.orig')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('touch /var/lib/ntp/drift')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('echo "driftfile /var/lib/ntp/drift" >> /etc/ntp.conf')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('echo "server %s" >> /etc/ntp.conf') % (ntp_server)
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('echo "restrict 127.0.0.1" >> /etc/ntp.conf')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('echo "restrict -6 ::1" >> /etc/ntp.conf')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('service ntp restart')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+
+        sftp.close()
+ 
         install_cmd = ("/usr/bin/dpkg -i %s") % ("/root/contrail_pkg")
         out, err = execute_cmd_out(ssh_session, install_cmd)
         setup_cmd = "/opt/contrail/contrail_packages/setup.sh"

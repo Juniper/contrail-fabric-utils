@@ -125,6 +125,7 @@ def provision_esxi(deb, compute_vm_info):
             vm_params['domain'] =  _get_var(compute_vm_info['domain'])
             vm_params['vm_password'] = _get_var(compute_vm_info['password'])
             vm_params['vm_server'] = _get_var(compute_vm_info['server_id'])
+            vm_params['ntp_server'] = _get_var(compute_vm_info['esx_ntp_server'])
             if deb is not None:
                 vm_params['vm_deb'] = deb
             else:
