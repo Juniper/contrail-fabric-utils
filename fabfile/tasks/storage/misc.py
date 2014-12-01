@@ -12,7 +12,7 @@ def add_storage_node(*args):
         with settings(host_string=host_string):
             execute("create_storage_repo_node", env.host_string)
             execute("install_storage_compute_node", env.host_string)
-    execute("setup_master_storage", env.host_string)
+    execute("setup_master_storage", "setup")
 
 #@task
 #def detach_storage_node(*args):
