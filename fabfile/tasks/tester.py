@@ -290,7 +290,6 @@ def setup_test_env():
                 run('rm -rf /tmp/pip-build-root')
                 if detect_ostype() in ['centos', 'redhat']:
                     pkg = 'fixtures testtools==1.1.0 testresources discover unittest2 \
-                        selenium pyvirtualdisplay \
                         testrepository junitxml pytun'
                 elif 'ubuntu' == detect_ostype():
                     pkg = 'fixtures testtools==1.1.0 testresources\
