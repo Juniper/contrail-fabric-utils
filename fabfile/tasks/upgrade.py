@@ -69,16 +69,10 @@ UPGRADE_SCHEMA = {
                    'backup_files' : ['/etc/contrail/contrail-control.conf',
                                      '/etc/contrail/dns.conf'],
                    'backup_dirs' : [],
-                   'remove_files' : [],
-                   'rename_files' : [],
-                  },
-    'webui' : {'upgrade' : ['contrail-openstack-webui'],
-                   'remove' : [],
-                   'downgrade' : [],
-                   'backup_files' : ['/etc/contrail/config.global.js'],
-                   'backup_dirs' : [],
-                   'remove_files' : ['/var/log/named/bind.log'],
-                   'rename_files' : [('/etc/dns.conf', '/etc/contrail-dns.conf'),
+                   'remove_files' : ['/var/log/named/bind.log',
+                                     '/etc/contrail/dns/dns.conf'
+                                    ],
+                   'rename_files' : [('/etc/contrail/dns.conf', '/etc/contrail/dns/contrail-dns.conf'),
                                      ('/etc/contrail/dns/named.conf',
                                       '/etc/contrail/dns/contrail-named.conf'),
                                      ('/etc/contrail/dns/rndc.conf',
@@ -86,6 +80,14 @@ UPGRADE_SCHEMA = {
                                      ('/etc/contrail/dns/named.pid',
                                       '/etc/contrail/dns/contrail-named.pid'),
                                     ],
+                  },
+    'webui' : {'upgrade' : ['contrail-openstack-webui'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : ['/etc/contrail/config.global.js'],
+                   'backup_dirs' : [],
+                   'remove_files' : [],
+                   'rename_files' : [],
                   },
     'compute' : {'upgrade' : ['contrail-openstack-vrouter'],
                    'remove' : [],
@@ -107,8 +109,6 @@ if get_openstack_internal_vip():
 
 # Ubuntu Release upgrade
 UBUNTU_R1_10_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
-UBUNTU_R1_10_TO_R2_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
-UBUNTU_R1_10_TO_R2_0['cfgm']['backup_dirs'].append('/etc/irond')
 UBUNTU_R1_20_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_30_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
@@ -491,7 +491,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                 # Fix for bug https://bugs.launchpad.net/juniperopenstack/+bug/1394813
                 run("rpm -e --nodeps irond")
             upgrade(from_rel, 'cfgm')
-            if from_rel in ['1.10']:
+            if (from_rel in ['1.10'] and detect_ostype() == 'centos'):
                 run("mv -f /etc/irond/* /etc/ifmap-server/")
                 run("rm -rf /etc/irond/")
             if len(env.roledefs['cfgm']) == 1:
@@ -564,7 +564,7 @@ def upgrade_control_node(from_rel, pkg, *args):
                 run("sed -i 's/^\s\+//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
-                conf_file = '/etc/contrail/dns/dns.conf'
+                conf_file = '/etc/contrail/dns/contrail-dns.conf'
                 #Removing the preceeding empty spaces
                 run("sed -i 's/^\s\+//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
