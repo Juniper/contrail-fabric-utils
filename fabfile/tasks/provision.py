@@ -1006,6 +1006,7 @@ def setup_webui_node(*args):
             cmd += " --vcenter_auth %s" % vcenter_info['auth']
             cmd += " --vcenter_datacenter %s" % vcenter_info['datacenter']
             cmd += " --vcenter_dvswitch %s" % vcenter_info['dv_switch']['dv_switch_name']
+            cmd += " --orchestrator %s" % orch
 
         # Execute the provision webui script
         with  settings(host_string=host_string):
