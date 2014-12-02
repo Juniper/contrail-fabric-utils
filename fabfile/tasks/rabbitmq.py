@@ -18,28 +18,28 @@ def verfiy_and_update_hosts(host_name, host_string):
     # this is required for erlang node to cluster using
     # the same interface that is used for rabbitMQ TCP listener
     with settings(hide('stderr'), warn_only=True):
-        if run('grep %s /etc/hosts' % (host_name+ctrl)).failed:
-            run("echo '%s     %s     %s' >> /etc/hosts" % (hstr_to_ip(get_control_host_string(host_string)), host_name, host_name+ctrl))
+        if sudo('grep %s /etc/hosts' % (host_name+ctrl)).failed:
+            sudo("echo '%s     %s     %s' >> /etc/hosts" % (hstr_to_ip(get_control_host_string(host_string)), host_name, host_name+ctrl))
 
 @task
 @EXECUTE_TASK
 @roles('rabbit')
 def set_tcp_keepalive():
     with settings(hide('stderr'), warn_only=True):
-        if run("grep '^net.ipv4.tcp_keepalive_time' /etc/sysctl.conf").failed:
-            run("echo 'net.ipv4.tcp_keepalive_time = 5' >> /etc/sysctl.conf")
+        if sudo("grep '^net.ipv4.tcp_keepalive_time' /etc/sysctl.conf").failed:
+            sudo("echo 'net.ipv4.tcp_keepalive_time = 5' >> /etc/sysctl.conf")
         else:
-            run("sed -i 's/net.ipv4.tcp_keepalive_time\s\s*/net.ipv4.tcp_keepalive_time = 5/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_time\s\s*/net.ipv4.tcp_keepalive_time = 5/' /etc/sysctl.conf")
 
-        if run("grep '^net.ipv4.tcp_keepalive_probes' /etc/sysctl.conf").failed:
-            run("echo 'net.ipv4.tcp_keepalive_probes = 5' >> /etc/sysctl.conf")
+        if sudo("grep '^net.ipv4.tcp_keepalive_probes' /etc/sysctl.conf").failed:
+            sudo("echo 'net.ipv4.tcp_keepalive_probes = 5' >> /etc/sysctl.conf")
         else:
-            run("sed -i 's/net.ipv4.tcp_keepalive_probes\s\s*/net.ipv4.tcp_keepalive_probes = 5/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_probes\s\s*/net.ipv4.tcp_keepalive_probes = 5/' /etc/sysctl.conf")
 
-        if run("grep '^net.ipv4.tcp_keepalive_intvl' /etc/sysctl.conf").failed:
-            run("echo 'net.ipv4.tcp_keepalive_intvl = 1' >> /etc/sysctl.conf")
+        if sudo("grep '^net.ipv4.tcp_keepalive_intvl' /etc/sysctl.conf").failed:
+            sudo("echo 'net.ipv4.tcp_keepalive_intvl = 1' >> /etc/sysctl.conf")
         else:
-            run("sed -i 's/net.ipv4.tcp_keepalive_intvl\s\s*/net.ipv4.tcp_keepalive_intvl = 1/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_intvl\s\s*/net.ipv4.tcp_keepalive_intvl = 1/' /etc/sysctl.conf")
 
 
 @task
@@ -47,42 +47,42 @@ def set_tcp_keepalive():
 @roles('compute')
 def set_tcp_keepalive_on_compute():
     with settings(hide('stderr'), warn_only=True):
-        if run("grep '^net.ipv4.tcp_keepalive_time' /etc/sysctl.conf").failed:
-            run("echo 'net.ipv4.tcp_keepalive_time = 10' >> /etc/sysctl.conf")
+        if sudo("grep '^net.ipv4.tcp_keepalive_time' /etc/sysctl.conf").failed:
+            sudo("echo 'net.ipv4.tcp_keepalive_time = 10' >> /etc/sysctl.conf")
         else:
-            run("sed -i 's/net.ipv4.tcp_keepalive_time\s\s*/net.ipv4.tcp_keepalive_time = 5/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_time\s\s*/net.ipv4.tcp_keepalive_time = 5/' /etc/sysctl.conf")
 
-        if run("grep '^net.ipv4.tcp_keepalive_probes' /etc/sysctl.conf").failed:
-            run("echo 'net.ipv4.tcp_keepalive_probes = 5' >> /etc/sysctl.conf")
+        if sudo("grep '^net.ipv4.tcp_keepalive_probes' /etc/sysctl.conf").failed:
+            sudo("echo 'net.ipv4.tcp_keepalive_probes = 5' >> /etc/sysctl.conf")
         else:
-            run("sed -i 's/net.ipv4.tcp_keepalive_probes\s\s*/net.ipv4.tcp_keepalive_probes = 5/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_probes\s\s*/net.ipv4.tcp_keepalive_probes = 5/' /etc/sysctl.conf")
 
-        if run("grep '^net.ipv4.tcp_keepalive_intvl' /etc/sysctl.conf").failed:
-            run("echo 'net.ipv4.tcp_keepalive_intvl = 1' >> /etc/sysctl.conf")
+        if sudo("grep '^net.ipv4.tcp_keepalive_intvl' /etc/sysctl.conf").failed:
+            sudo("echo 'net.ipv4.tcp_keepalive_intvl = 1' >> /etc/sysctl.conf")
         else:
-            run("sed -i 's/net.ipv4.tcp_keepalive_intvl\s\s*/net.ipv4.tcp_keepalive_intvl = 1/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_intvl\s\s*/net.ipv4.tcp_keepalive_intvl = 1/' /etc/sysctl.conf")
 
 @task
 @EXECUTE_TASK
 @roles('rabbit')
 def listen_at_supervisor_support_port():
     with settings(warn_only=True):
-        if run("service supervisor-support-service status | grep running").failed:
-            run("service supervisor-support-service start")
-            run("supervisorctl -s unix:///tmp/supervisord_support_service.sock stop all")
+        if sudo("service supervisor-support-service status | grep running").failed:
+            sudo("service supervisor-support-service start")
+            sudo("supervisorctl -s unix:///tmp/supervisord_support_service.sock stop all")
 
 @task
 @EXECUTE_TASK
 @roles('rabbit')
 def remove_mnesia_database():
-    run("rm -rf /var/lib/rabbitmq/mnesia")
+    sudo("rm -rf /var/lib/rabbitmq/mnesia")
 
 @task
 @parallel
 @roles('rabbit')
 def set_guest_user_permissions():
     with settings(warn_only=True):
-        run('rabbitmqctl set_permissions guest ".*" ".*" ".*"')
+        sudo('rabbitmqctl set_permissions guest ".*" ".*" ".*"')
 
 @task
 @serial
@@ -91,7 +91,7 @@ def rabbitmq_env():
     erl_node_name = None
     rabbit_env_conf = '/etc/rabbitmq/rabbitmq-env.conf'
     with settings(host_string=env.host_string, password=env.passwords[env.host_string]):
-      host_name = run('hostname -s') + ctrl
+      host_name = sudo('hostname -s') + ctrl
       erl_node_name = "rabbit@%s" % (host_name)
     rabbitmq_env_template = rabbitmq_env_conf
     rmq_env_conf = rabbitmq_env_template.template.safe_substitute({
@@ -113,7 +113,7 @@ def config_rabbitmq():
     rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
     for host_string in env.roledefs['rabbit']:
         with settings(host_string=host_string, password=env.passwords[host_string]):
-            host_name = run('hostname -s') + ctrl
+            host_name = sudo('hostname -s') + ctrl
         rabbit_hosts.append("\'rabbit@%s\'" % host_name)
     rabbit_hosts = ', '.join(rabbit_hosts)
     rabbitmq_config_template = rabbitmq_config
@@ -127,7 +127,7 @@ def config_rabbitmq():
     cfg_file = open(tmp_fname, 'w')
     cfg_file.write(rabbitmq_configs)
     cfg_file.close()
-    put(tmp_fname, "/etc/rabbitmq/rabbitmq.config")
+    put(tmp_fname, "/etc/rabbitmq/rabbitmq.config", use_sudo=True)
     local("rm %s" %(tmp_fname))
 
 @task
@@ -141,33 +141,33 @@ def allow_rabbitmq_port():
 @roles('rabbit')
 def stop_rabbitmq_and_set_cookie(uuid):
      with settings(warn_only=True):
-         run("service rabbitmq-server stop")
-         if 'Killed' not in run("epmd -kill"):
-             run("pkill beam.smp")
-             run("pkill epmd")
-         run("rm -rf /var/lib/rabbitmq/mnesia/")
-     run("echo '%s' > /var/lib/rabbitmq/.erlang.cookie" % uuid)
-     run("chmod 400 /var/lib/rabbitmq/.erlang.cookie")
-     run("chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie")
+         sudo("service rabbitmq-server stop")
+         if 'Killed' not in sudo("epmd -kill"):
+             sudo("pkill beam.smp")
+             sudo("pkill epmd")
+         sudo("rm -rf /var/lib/rabbitmq/mnesia/")
+     sudo("echo '%s' > /var/lib/rabbitmq/.erlang.cookie" % uuid)
+     sudo("chmod 400 /var/lib/rabbitmq/.erlang.cookie")
+     sudo("chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie")
 
 
 @task
 @serial
 @roles('rabbit')
 def start_rabbitmq():
-     run("service rabbitmq-server restart")
+     sudo("service rabbitmq-server restart")
 
 @task
 @parallel
 @roles('rabbit')
 def rabbitmqctl_stop_app():
-    run("rabbitmqctl stop_app")
+    sudo("rabbitmqctl stop_app")
 
 @task
 @parallel
 @roles('rabbit')
 def rabbitmqctl_reset():
-    run("rabbitmqctl force_reset")
+    sudo("rabbitmqctl force_reset")
 
 @task
 @parallel
@@ -179,23 +179,23 @@ def rabbitmqctl_start_app():
 def rabbitmqctl_start_app_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
-            run("rabbitmqctl start_app")
+            sudo("rabbitmqctl start_app")
 
 @task
 @roles('rabbit')
 def verify_rabbit_node_hostname():
     for host_string in env.roledefs['rabbit']:
         with settings(host_string=host_string):
-            host_name = run('hostname -s')
+            host_name = sudo('hostname -s')
         verfiy_and_update_hosts(host_name, host_string)
 
 @task
 @hosts(*env.roledefs['rabbit'][1:])
 def add_node_to_rabbitmq_cluster():
     with settings(host_string=env.roledefs['rabbit'][0]):
-        rabbit_node1 = run('hostname')
-    this_rabbit_node = run('hostname')
-    run("rabbitmqctl join_cluster rabbit@%s" % rabbit_node1)
+        rabbit_node1 = sudo('hostname')
+    this_rabbit_node = sudo('hostname')
+    sudo("rabbitmqctl join_cluster rabbit@%s" % rabbit_node1)
 
 @task
 @roles('rabbit')
@@ -206,7 +206,7 @@ def verify_cluster_status(retry='yes'):
     rabbitmq_up = False
     for i in range(0, 6):
         with settings(warn_only=(retry == 'yes')):
-            status = run("service rabbitmq-server status")
+            status = sudo("service rabbitmq-server status")
         if 'running' in status.lower():
             rabbitmq_up = True
             break
@@ -219,7 +219,7 @@ def verify_cluster_status(retry='yes'):
     rabbitmq_up = False
     for i in range(0, 6):
         with settings(warn_only=(retry == 'yes')):
-            output = run("rabbitmqctl cluster_status")
+            output = sudo("rabbitmqctl cluster_status")
         running_nodes = re.compile(r"running_nodes,\[([^\]]*)")
         match = running_nodes.search(output)
         if match:
@@ -239,7 +239,7 @@ def verify_cluster_status(retry='yes'):
         with settings(host_string=host_string):
             if not files.exists("/etc/rabbitmq/rabbitmq.config"):
                 return False
-            host_name = run('hostname -s') + ctrl
+            host_name = sudo('hostname -s') + ctrl
             rabbit_nodes.append('rabbit@%s' % host_name)
     for rabbit_node in rabbit_nodes:
         if rabbit_node not in clustered_nodes:
@@ -251,7 +251,7 @@ def verify_cluster_status(retry='yes'):
 @roles('rabbit')
 @task
 def set_ha_policy_in_rabbitmq():
-    run("rabbitmqctl set_policy HA-all \"\" '{\"ha-mode\":\"all\",\"ha-sync-mode\":\"automatic\"}'")
+    sudo("rabbitmqctl set_policy HA-all \"\" '{\"ha-mode\":\"all\",\"ha-sync-mode\":\"automatic\"}'")
 
 @task
 @roles('build')

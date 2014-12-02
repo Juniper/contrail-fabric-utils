@@ -4,17 +4,17 @@ from fabfile.config import *
 
 def copy_pkg(tgt_host, pkg_file):
     with settings(host_string = tgt_host):
-        put(pkg_file)
+        put(pkg_file, use_sudo=True)
 #end _copy_pkg
 
 def install_pkg(tgt_host, pkg_file):
     with settings(host_string = tgt_host):
-        run("rpm -iv --force %s" %(pkg_file.split('/')[-1]))
+        sudo("rpm -iv --force %s" %(pkg_file.split('/')[-1]))
 #end _install_pkg
 
 def get_linux_distro():
     linux_distro = "python -c 'from platform import linux_distribution; print linux_distribution()'"
-    (dist, version, extra) = ast.literal_eval(run(linux_distro))
+    (dist, version, extra) = ast.literal_eval(sudo(linux_distro))
     return (dist, version, extra)
 
 def detect_ostype():
@@ -33,7 +33,7 @@ def get_release(pkg='contrail-install-packages'):
         cmd = "rpm -q --queryformat '%%{VERSION}' %s" %pkg
     elif dist in ['ubuntu']:
         cmd = "dpkg -s %s | grep Version: | cut -d' ' -f2 | cut -d'-' -f1" %pkg
-    pkg_ver = run(cmd)
+    pkg_ver = sudo(cmd)
     if 'is not installed' in pkg_ver or 'is not available' in pkg_ver:
         print "Package %s not installed." % pkg
         return None
@@ -46,7 +46,7 @@ def get_build(pkg='contrail-install-packages'):
         cmd = "rpm -q --queryformat '%%{RELEASE}' %s" %pkg
     elif dist in ['ubuntu']:
         cmd = "dpkg -s %s | grep Version: | cut -d' ' -f2 | cut -d'-' -f2" %pkg
-    pkg_rel = run(cmd)
+    pkg_rel = sudo(cmd)
     if 'is not installed' in pkg_rel or 'is not available' in pkg_rel:
         print "Package %s not installed." % pkg
         return None
@@ -60,6 +60,6 @@ def is_package_installed(pkg_name):
         cmd = 'rpm -qi %s '
     cmd = cmd % (pkg_name)
     with settings(warn_only=True):
-        result = run(cmd)
+        result = sudo(cmd)
     return result.succeeded 
 #end is_package_installed

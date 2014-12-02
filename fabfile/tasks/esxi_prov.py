@@ -316,10 +316,10 @@ class ContrailVM(object):
                 return ( "Connection to %s failed" % (ip))
 
 
-        sftp.put(pkg, "/root/contrail_pkg")
+        sftp.put(pkg, "~/contrail_pkg")
         sftp.close()
 
-        install_cmd = ("/usr/bin/dpkg -i %s") % ("/root/contrail_pkg")
+        install_cmd = ("/usr/bin/dpkg -i %s") % ("~/contrail_pkg")
         out, err = execute_cmd_out(ssh_session, install_cmd)
         setup_cmd = "/opt/contrail/contrail_packages/setup.sh"
         out, err = execute_cmd_out(ssh_session, setup_cmd)
@@ -357,7 +357,7 @@ contrail_vm_params =  {  'vm':"ContrailVM",
 			 'smgr_ip':'10.204.217.59',
 			 'vm_server': 'contrail-vm',
 			 'vm_password': 'c0ntrail123',
-			 'vm_deb': '/root/contrail-install-packages_1.05-5440~havana_all.deb'
+			 'vm_deb': '~/contrail-install-packages_1.05-5440~havana_all.deb'
                       }
 
 def main(args_str=None):
