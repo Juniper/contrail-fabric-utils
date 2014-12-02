@@ -82,14 +82,17 @@ def provision_vcenter(vcenter_info, esxi_info):
         vcenter_params['dvportgroup_name'] = vcenter_info['dv_port_group']['dv_portgroup_name']
         vcenter_params['dvportgroup_num_ports'] = vcenter_info['dv_port_group']['number_of_ports']
         hosts = []
+        vms = []
         for host in esxi_info.keys():
                 esxi_data = esxi_info[host]
                 data = esxi_data['esxi']
 
                 esx_list=[data['esx_ip'],data['esx_username'],data['esx_password'],data['esx_ssl_thumbprint']]
                 hosts.append(esx_list)
+                vms.append(esxi_data['esx_vm_name'])
 
         vcenter_params['hosts'] = hosts
+        vcenter_params['vms'] = vms
 
         Vcenter(vcenter_params)
 
@@ -105,9 +108,6 @@ def provision_esxi(deb, compute_vm_info):
             vm_params['eth0_pg'] = _get_var(compute_vm_info['esxi']['esx_fab_port_group'])
             vm_params['eth0_vswitch'] = _get_var(compute_vm_info['esxi']['esx_fab_vswitch'])
             vm_params['eth0_vlan'] = None
-            vm_params['eth1_vswitch'] = _get_var(compute_vm_info['esx_vm_vswitch'])
-            vm_params['eth1_pg'] = _get_var(compute_vm_info['esx_vm_port_group'])
-            vm_params['eth1_vlan'] = "4095"
             vm_params['uplink_nic'] = _get_var(compute_vm_info['esxi']['esx_uplink_nic'])
             vm_params['uplink_vswitch'] = _get_var(compute_vm_info['esxi']['esx_fab_vswitch'])
             vm_params['server'] = _get_var(compute_vm_info['esxi']['esx_ip'])
@@ -119,6 +119,7 @@ def provision_esxi(deb, compute_vm_info):
                 if 'vmdk_download_path' not in compute_vm_info.keys():
                     print 'No vmdk_download_path specified. Cannot proceed further'
                     return
+                print 'Found vmdk_download_path in testbed.py, proceeding further...'
                 vm_params['vmdk_download_path'] =  _get_var(compute_vm_info['vmdk_download_path'])
             else:
                 vm_params['thindisk'] =  _get_var(compute_vm_info['esx_vmdk'])
