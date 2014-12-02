@@ -48,7 +48,7 @@ UPGRADE_SCHEMA = {
                    'backup_dirs' : ['/etc/ifmap-server',
                                     '/etc/neutron',
                                    ],
-                   #'remove_files' : ['/etc/contrail/supervisord_config_files/rabbitmq-server.ini'],
+                   'remove_files' : ['/etc/contrail/supervisord_config_files/rabbitmq-server.ini'],
                    'remove_files' : [],
                    'rename_files' : [],
                   },
@@ -69,16 +69,10 @@ UPGRADE_SCHEMA = {
                    'backup_files' : ['/etc/contrail/contrail-control.conf',
                                      '/etc/contrail/dns.conf'],
                    'backup_dirs' : [],
-                   'remove_files' : [],
-                   'rename_files' : [],
-                  },
-    'webui' : {'upgrade' : ['contrail-openstack-webui'],
-                   'remove' : [],
-                   'downgrade' : [],
-                   'backup_files' : ['/etc/contrail/config.global.js'],
-                   'backup_dirs' : [],
-                   'remove_files' : ['/var/log/named/bind.log'],
-                   'rename_files' : [('/etc/dns.conf', '/etc/contrail-dns.conf'),
+                   'remove_files' : ['/var/log/named/bind.log',
+                                     '/etc/contrail/dns/dns.conf'
+                                    ],
+                   'rename_files' : [('/etc/contrail/dns.conf', '/etc/contrail/dns/contrail-dns.conf'),
                                      ('/etc/contrail/dns/named.conf',
                                       '/etc/contrail/dns/contrail-named.conf'),
                                      ('/etc/contrail/dns/rndc.conf',
@@ -86,6 +80,14 @@ UPGRADE_SCHEMA = {
                                      ('/etc/contrail/dns/named.pid',
                                       '/etc/contrail/dns/contrail-named.pid'),
                                     ],
+                  },
+    'webui' : {'upgrade' : ['contrail-openstack-webui'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : ['/etc/contrail/config.global.js'],
+                   'backup_dirs' : [],
+                   'remove_files' : [],
+                   'rename_files' : [],
                   },
     'compute' : {'upgrade' : ['contrail-openstack-vrouter'],
                    'remove' : [],
@@ -106,18 +108,10 @@ if get_openstack_internal_vip():
     UPGRADE_SCHEMA['openstack']['upgrade'].append('contrail-openstack-ha')
 
 # Ubuntu Release upgrade
-UBUNTU_R1_10_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
-UBUNTU_R1_10_TO_R2_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
-UBUNTU_R1_10_TO_R2_0['cfgm']['backup_dirs'].append('/etc/irond')
-UBUNTU_R1_20_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
-UBUNTU_R1_30_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
-UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
-UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
-UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
-UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
-UBUNTU_R1_30_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
-UBUNTU_R1_30_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
-UBUNTU_R2_0_TO_R2_0 = copy.deepcopy(UBUNTU_R1_30_TO_R2_0)
+UBUNTU_R1_10_TO_R3_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_20_TO_R3_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R2_0_TO_R3_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R3_0_TO_R3_0 = copy.deepcopy(UBUNTU_R1_30_TO_R2_0)
 
 
 CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
@@ -126,24 +120,18 @@ if getattr(env, 'interface_rename', True):
     CENTOS_UPGRADE_SCHEMA['compute']['upgrade'].append('contrail-interface-name')
 
 # Centos Release upgrade
-CENTOS_R1_10_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
-CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
-CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].append('/etc/irond')
-CENTOS_R1_20_TO_R2_0 = copy.deepcopy(CENTOS_R1_10_TO_R2_0)
-CENTOS_R1_30_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
-CENTOS_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
-CENTOS_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
-CENTOS_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
-CENTOS_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
-CENTOS_R1_30_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
-CENTOS_R1_30_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
-CENTOS_R2_0_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
-CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
-CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
-CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
-CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
-CENTOS_R2_0_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
-CENTOS_R2_0_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
+CENTOS_R1_10_TO_R3_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R1_10_TO_R3_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
+CENTOS_R1_10_TO_R3_0['cfgm']['backup_dirs'].append('/etc/irond')
+CENTOS_R1_20_TO_R3_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R2_0_TO_R3_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R3_0_TO_R3_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R3_0_TO_R3_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
+CENTOS_R3_0_TO_R3_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
+CENTOS_R3_0_TO_R3_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
+CENTOS_R3_0_TO_R3_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
+CENTOS_R3_0_TO_R3_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
+CENTOS_R3_0_TO_R3_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
 
 @task
 @EXECUTE_TASK
@@ -498,7 +486,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                 # Fix for bug https://bugs.launchpad.net/juniperopenstack/+bug/1394813
                 run("rpm -e --nodeps irond")
             upgrade(from_rel, 'cfgm')
-            if from_rel in ['1.10']:
+            if (from_rel in ['1.10'] and detect_ostype() == 'centos'):
                 run("mv -f /etc/irond/* /etc/ifmap-server/")
                 run("rm -rf /etc/irond/")
             if len(env.roledefs['cfgm']) == 1:
@@ -571,7 +559,7 @@ def upgrade_control_node(from_rel, pkg, *args):
                 run("sed -i 's/^\s\+//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
-                conf_file = '/etc/contrail/dns/dns.conf'
+                conf_file = '/etc/contrail/dns/contrail-dns.conf'
                 #Removing the preceeding empty spaces
                 run("sed -i 's/^\s\+//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
