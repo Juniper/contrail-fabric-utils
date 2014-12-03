@@ -174,6 +174,8 @@ def setup_test_env():
         mail_server = '10.204.216.49'
         mail_port = '25'
         fip_pool_name = 'public-pool'
+        public_virtual_network='public-network'
+        public_tenant_name='public-tenant'
         fixture_cleanup = 'yes'
         generate_html_report = 'True'
         key = 'key1'
@@ -225,6 +227,8 @@ def setup_test_env():
              '__router_asn__'          : router_asn,
              '__router_name_ip_tuples__': router_info,
              '__public_vn_name__'      : fip_pool_name,
+             '__public_virtual_network__':public_virtual_network,
+             '__public_tenant_name__'  :public_tenant_name,
              '__public_vn_subnet__'    : public_vn_subnet,
              '__test_revision__'       : revision,
              '__fab_revision__'        : fab_revision,
