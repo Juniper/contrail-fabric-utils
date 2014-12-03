@@ -128,7 +128,7 @@ if getattr(env, 'interface_rename', True):
 CENTOS_R1_10_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
 CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].append('/etc/irond')
-CENTOS_R1_20_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R1_20_TO_R2_0 = copy.deepcopy(CENTOS_R1_10_TO_R2_0)
 CENTOS_R2_0_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
 CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
@@ -282,15 +282,19 @@ def backup_config_dir(from_rel):
             with settings(warn_only=True):
                 for config_dir in upgrade_data[role]['backup_dirs']:
                     cfg_dir_name = os.path.basename(config_dir)
-                    run('mkdir -p /tmp/contrail/%s.upgradesave' % cfg_dir_name)
-                    if run('cp -r %s/* /tmp/contrail/%s.upgradesave' % (config_dir, cfg_dir_name)).failed:
-                        if not files.exists('/tmp/contrail/%s.upgradesave' % cfg_dir_name):
+                    if files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_dir_name):
+                        print "Already the config dir %s is backed up." % cfg_dir_name
+                        continue
+                    run('mkdir -p /var/tmp/contrail/%s.upgradesave' % cfg_dir_name)
+                    if run('cp -r %s/* /var/tmp/contrail/%s.upgradesave' % (config_dir, cfg_dir_name)).failed:
+                        if not files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_dir_name):
                             raise RuntimeError("Unable to backup config dir %s, please correct and continue upgrade." % config_dir)
 
 def restore_config_dir(role, upgrade_data):
     for config_dir in upgrade_data[role]['backup_dirs']:
         cfg_dir_name = os.path.basename(config_dir)
-        run('cp -r /tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
+        run('mkdir -p %s' % config_dir)
+        run('cp -r /var/tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
 
 @task
 @EXECUTE_TASK
@@ -302,20 +306,23 @@ def backup_config(from_rel):
         upgrade_data = eval(ostype.upper() + '_' + ('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
     except NameError:
         raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
-    run('mkdir -p /tmp/contrail')
+    run('mkdir -p /var/tmp/contrail')
     for role in upgrade_data.keys():
         if env.host_string in env.roledefs[role]:
             with settings(warn_only=True):
                 for config_file in upgrade_data[role]['backup_files']:
                     cfg_file_name = os.path.basename(config_file)
-                    if run('cp %s /tmp/contrail/%s.upgradesave' % (config_file, cfg_file_name)).failed:
-                        if not files.exists('/tmp/contrail/%s.upgradesave' % cfg_file_name):
+                    if files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_file_name):
+                        print "Already the config file %s is backed up." % cfg_file_name
+                        continue
+                    if run('cp %s /var/tmp/contrail/%s.upgradesave' % (config_file, cfg_file_name)).failed:
+                        if not files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_file_name):
                             raise RuntimeError("Unable to backup config file %s, please correct and continue upgrade." % config_file)
 
 def restore_config(role, upgrade_data):
     for config_file in upgrade_data[role]['backup_files']:
         cfg_file_name = os.path.basename(config_file)
-        run('cp /tmp/contrail/%s.upgradesave %s' % (cfg_file_name, config_file))
+        run('cp /var/tmp/contrail/%s.upgradesave %s' % (cfg_file_name, config_file))
 
 def downgrade_package(pkgs, ostype):
     for pkg in pkgs:
@@ -338,7 +345,7 @@ def remove_package(pkgs, ostype):
 def remove_old_files(role, upgrade_data):
     with settings(warn_only=True):
         for config_file in upgrade_data[role]['remove_files']:
-            run("rm %s" % config_file)
+            run("rm -f %s" % config_file)
 
 def rename_files(role, upgrade_data):
     with settings(warn_only=True):
@@ -381,7 +388,7 @@ def upgrade_database_node(from_rel, pkg, *args):
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            if from_rel in ['1.10', '1.20']:
+            if get_release('contrail-openstack-database') in ['1.10', '1.20']:
                 run("service supervisord-contrail-database stop")
             upgrade(from_rel, 'database')
             execute('upgrade_pkgs_node', host_string)
@@ -468,7 +475,10 @@ def fix_rabbitmq_conf():
 def stop_rabbitmq():
     run("service rabbitmq-server stop")
     with settings(warn_only=True):
-        run("service supervisor-support-service stop")
+        if get_release('contrail-openstack-config') == '1.10':
+            run("service supervisor-config stop")
+        else:
+            run("service supervisor-support-service stop")
 
 @task
 @EXECUTE_TASK
@@ -482,7 +492,6 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
     """Upgrades config pkgs in one or list of nodes. USAGE:fab upgrade_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            execute('stop_cfgm_node', host_string)
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
@@ -490,9 +499,12 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                 # Fix for bug https://bugs.launchpad.net/juniperopenstack/+bug/1394813
                 run("rpm -e --nodeps irond")
             upgrade(from_rel, 'cfgm')
-            if (from_rel in ['1.10'] and detect_ostype() == 'centos'):
-                run("mv -f /etc/irond/* /etc/ifmap-server/")
-                run("rm -rf /etc/irond/")
+            if from_rel in ['1.10', '1.20']:
+                with settings(warn_only=True):
+                    run("kill $(ps ax | grep irond.jar | grep -v grep | cut -d' ' -f1)")
+                if detect_ostype() == 'centos':
+                    run("mv -f /etc/irond/* /etc/ifmap-server/")
+                    run("rm -rf /etc/irond/")
             if len(env.roledefs['cfgm']) == 1:
                 execute('fix_rabbitmq_conf')
             if get_contrail_internal_vip():
@@ -511,8 +523,9 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                 # Create Keystone auth config ini
                 api_conf_file = '/etc/contrail/contrail-api.conf'
                 conf_file = '/etc/contrail/contrail-keystone-auth.conf'
-                if run('grep "\[KEYSTONE\]" %s' % api_conf_file).succeded:
-                    run("sed -n -e '/\[KEYSTONE\]/,$p' %s > %s" % (api_conf_file, conf_file))
+                with settings(warn_only=True):
+                    if run('grep "\[KEYSTONE\]" %s' % api_conf_file).succeeded:
+                        run("sed -n -e '/\[KEYSTONE\]/,$p' %s > %s" % (api_conf_file, conf_file))
                 # delete [KEYSTONE] section from config files
                 run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-api.log" % api_conf_file)
                 run("openstack-config --del %s KEYSTONE" % api_conf_file)
@@ -745,6 +758,7 @@ def upgrade_contrail(from_rel, pkg):
     execute('zookeeper_rolling_restart')
     execute('backup_config', from_rel)
     execute('backup_config_dir', from_rel)
+    execute('stop_cfgm')
     execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
@@ -773,6 +787,7 @@ def upgrade_without_openstack(pkg):
     execute('zookeeper_rolling_restart')
     execute('backup_config', from_rel)
     execute('backup_config_dir', from_rel)
+    execute('stop_cfgm')
     execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
