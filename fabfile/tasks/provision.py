@@ -1031,7 +1031,7 @@ def setup_control_node(*args):
                 sudo("setup-vnc-control --self_ip %s --cfgm_ip %s --collector_ip %s" \
                      %(tgt_ip, cfgm_ip, collector_ip))
                 if detect_ostype() == 'centos':
-                    sudo("service contrail-control restart", pty=False)
+                    sudo("service contrail-control restart")
 #end setup_control
 
 @task
