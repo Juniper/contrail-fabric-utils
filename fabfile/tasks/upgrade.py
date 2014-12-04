@@ -48,8 +48,7 @@ UPGRADE_SCHEMA = {
                    'backup_dirs' : ['/etc/ifmap-server',
                                     '/etc/neutron',
                                    ],
-                   #'remove_files' : ['/etc/contrail/supervisord_config_files/rabbitmq-server.ini'],
-                   'remove_files' : [],
+                   'remove_files' : ['/etc/contrail/supervisord_config_files/rabbitmq-server.ini'],
                    'rename_files' : [],
                   },
     'collector' : {'upgrade' : ['contrail-openstack-analytics'],
@@ -69,16 +68,10 @@ UPGRADE_SCHEMA = {
                    'backup_files' : ['/etc/contrail/contrail-control.conf',
                                      '/etc/contrail/dns.conf'],
                    'backup_dirs' : [],
-                   'remove_files' : [],
-                   'rename_files' : [],
-                  },
-    'webui' : {'upgrade' : ['contrail-openstack-webui'],
-                   'remove' : [],
-                   'downgrade' : [],
-                   'backup_files' : ['/etc/contrail/config.global.js'],
-                   'backup_dirs' : [],
-                   'remove_files' : ['/var/log/named/bind.log'],
-                   'rename_files' : [('/etc/dns.conf', '/etc/contrail-dns.conf'),
+                   'remove_files' : ['/var/log/named/bind.log',
+                                     '/etc/contrail/dns/dns.conf'
+                                    ],
+                   'rename_files' : [('/etc/contrail/dns.conf', '/etc/contrail/contrail-dns.conf'),
                                      ('/etc/contrail/dns/named.conf',
                                       '/etc/contrail/dns/contrail-named.conf'),
                                      ('/etc/contrail/dns/rndc.conf',
@@ -86,6 +79,14 @@ UPGRADE_SCHEMA = {
                                      ('/etc/contrail/dns/named.pid',
                                       '/etc/contrail/dns/contrail-named.pid'),
                                     ],
+                  },
+    'webui' : {'upgrade' : ['contrail-openstack-webui'],
+                   'remove' : [],
+                   'downgrade' : [],
+                   'backup_files' : ['/etc/contrail/config.global.js'],
+                   'backup_dirs' : [],
+                   'remove_files' : [],
+                   'rename_files' : [],
                   },
     'compute' : {'upgrade' : ['contrail-openstack-vrouter'],
                    'remove' : [],
@@ -106,18 +107,17 @@ if get_openstack_internal_vip():
     UPGRADE_SCHEMA['openstack']['upgrade'].append('contrail-openstack-ha')
 
 # Ubuntu Release upgrade
-UBUNTU_R1_10_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
-UBUNTU_R1_10_TO_R2_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
-UBUNTU_R1_10_TO_R2_0['cfgm']['backup_dirs'].append('/etc/irond')
-UBUNTU_R1_20_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
-UBUNTU_R1_30_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
-UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
-UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
-UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
-UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
-UBUNTU_R1_30_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
-UBUNTU_R1_30_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
-UBUNTU_R2_0_TO_R2_0 = copy.deepcopy(UBUNTU_R1_30_TO_R2_0)
+UBUNTU_R1_10_TO_R3_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_20_TO_R3_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_30_TO_R3_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_30_TO_R3_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
+UBUNTU_R1_30_TO_R3_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
+UBUNTU_R1_30_TO_R3_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
+UBUNTU_R1_30_TO_R3_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
+UBUNTU_R1_30_TO_R3_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
+UBUNTU_R1_30_TO_R3_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
+UBUNTU_R2_0_TO_R3_0 = copy.deepcopy(UBUNTU_R1_30_TO_R3_0)
+UBUNTU_R3_0_TO_R3_0 = copy.deepcopy(UBUNTU_R1_30_TO_R3_0)
 
 
 CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
@@ -126,24 +126,18 @@ if getattr(env, 'interface_rename', True):
     CENTOS_UPGRADE_SCHEMA['compute']['upgrade'].append('contrail-interface-name')
 
 # Centos Release upgrade
-CENTOS_R1_10_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
-CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
-CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].append('/etc/irond')
-CENTOS_R1_20_TO_R2_0 = copy.deepcopy(CENTOS_R1_10_TO_R2_0)
-CENTOS_R1_30_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
-CENTOS_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
-CENTOS_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
-CENTOS_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
-CENTOS_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
-CENTOS_R1_30_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
-CENTOS_R1_30_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
-CENTOS_R2_0_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
-CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
-CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
-CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
-CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
-CENTOS_R2_0_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
-CENTOS_R2_0_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
+CENTOS_R1_10_TO_R3_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R1_10_TO_R3_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
+CENTOS_R1_10_TO_R3_0['cfgm']['backup_dirs'].append('/etc/irond')
+CENTOS_R1_20_TO_R3_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R2_0_TO_R3_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
+CENTOS_R2_0_TO_R3_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
+CENTOS_R2_0_TO_R3_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
+CENTOS_R2_0_TO_R3_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
+CENTOS_R2_0_TO_R3_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
+CENTOS_R2_0_TO_R3_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
+CENTOS_R2_0_TO_R3_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
+CENTOS_R3_0_TO_R3_0 = copy.deepcopy(CENTOS_R2_0_TO_R3_0)
 
 @task
 @EXECUTE_TASK
@@ -290,15 +284,18 @@ def backup_config_dir(from_rel):
             with settings(warn_only=True):
                 for config_dir in upgrade_data[role]['backup_dirs']:
                     cfg_dir_name = os.path.basename(config_dir)
-                    sudo('mkdir -p /tmp/contrail/%s.upgradesave' % cfg_dir_name)
-                    if sudo('cp -r %s/* /tmp/contrail/%s.upgradesave' % (config_dir, cfg_dir_name)).failed:
-                        if not files.exists('/tmp/contrail/%s.upgradesave' % cfg_dir_name):
+                    sudo('mkdir -p /var/tmp/contrail/%s.upgradesave' % cfg_dir_name)
+                    if files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_dir_name, use_sudo=True):
+                        print "Already the config dir %s is backed up." % cfg_dir_name
+                        return
+                    if sudo('cp -r %s/* /var/tmp/contrail/%s.upgradesave' % (config_dir, cfg_dir_name)).failed:
+                        if not files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_dir_name, use_sudo=True):
                             raise RuntimeError("Unable to backup config dir %s, please correct and continue upgrade." % config_dir)
 
 def restore_config_dir(role, upgrade_data):
     for config_dir in upgrade_data[role]['backup_dirs']:
         cfg_dir_name = os.path.basename(config_dir)
-        sudo('cp -r /tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
+        sudo('cp -r /var/tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
 
 @task
 @EXECUTE_TASK
@@ -310,20 +307,23 @@ def backup_config(from_rel):
         upgrade_data = eval(ostype.upper() + '_' + ('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
     except NameError:
         raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
-    sudo('mkdir -p /tmp/contrail')
+    sudo('mkdir -p /var/tmp/contrail')
     for role in upgrade_data.keys():
         if env.host_string in env.roledefs[role]:
             with settings(warn_only=True):
                 for config_file in upgrade_data[role]['backup_files']:
                     cfg_file_name = os.path.basename(config_file)
-                    if sudo('cp %s /tmp/contrail/%s.upgradesave' % (config_file, cfg_file_name)).failed:
-                        if not files.exists('/tmp/contrail/%s.upgradesave' % cfg_file_name):
+                    if files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_file_name, use_sudo=True):
+                        print "Already the config file %s is backed up." % cfg_file_name
+                        return
+                    if sudo('cp %s /var/tmp/contrail/%s.upgradesave' % (config_file, cfg_file_name)).failed:
+                        if not files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_file_name, use_sudo=True):
                             raise RuntimeError("Unable to backup config file %s, please correct and continue upgrade." % config_file)
 
 def restore_config(role, upgrade_data):
     for config_file in upgrade_data[role]['backup_files']:
         cfg_file_name = os.path.basename(config_file)
-        sudo('cp /tmp/contrail/%s.upgradesave %s' % (cfg_file_name, config_file))
+        sudo('cp /var/tmp/contrail/%s.upgradesave %s' % (cfg_file_name, config_file))
 
 def downgrade_package(pkgs, ostype):
     for pkg in pkgs:
@@ -346,12 +346,12 @@ def remove_package(pkgs, ostype):
 def remove_old_files(role, upgrade_data):
     with settings(warn_only=True):
         for config_file in upgrade_data[role]['remove_files']:
-            sudo("rm %s" % config_file)
+            sudo("rm -f %s" % config_file)
 
 def rename_files(role, upgrade_data):
     with settings(warn_only=True):
         for old_conf_file, new_conf_file in upgrade_data[role]['rename_files']:
-            run("mv %s %s" % (old_conf_file, new_conf_file))
+            sudo("mv %s %s" % (old_conf_file, new_conf_file))
 
 def upgrade(from_rel, role):
     ostype = detect_ostype()
@@ -389,8 +389,8 @@ def upgrade_database_node(from_rel, pkg, *args):
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            if from_rel in ['1.10', '1.20']:
-                run("service supervisord-contrail-database stop")
+            if get_release('contrail-openstack-database') in ['1.10', '1.20']:
+                sudo("service supervisord-contrail-database stop")
             upgrade(from_rel, 'database')
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.05', '1.06']:
@@ -461,8 +461,7 @@ def upgrade_openstack_node(from_rel, pkg, *args):
 @roles('cfgm')
 def fix_rabbitmq_conf():
     rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
-    if files.exists(rabbit_conf, use_sudo=True):
-        sudo("mv %s %s.backup" % (rabbit_conf, rabbit_conf))
+    sudo("rm -rf %s" % rabbit_conf)
     amqp_listen_ip = get_openstack_amqp_server()
     sudo('sudo echo "[" >> %s' % rabbit_conf)
     sudo("sudo echo '   {rabbit, [ {tcp_listeners, [{\"%s\", 5672}]},' >> %s" % (amqp_listen_ip, rabbit_conf))
@@ -477,7 +476,10 @@ def fix_rabbitmq_conf():
 def stop_rabbitmq():
     sudo("service rabbitmq-server stop")
     with settings(warn_only=True):
-        run("service supervisor-support-service stop")
+        if get_release('contrail-openstack-config') == '1.10':
+            sudo("service supervisor-config stop")
+        else:
+            sudo("service supervisor-support-service stop")
 
 @task
 @EXECUTE_TASK
@@ -491,17 +493,19 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
     """Upgrades config pkgs in one or list of nodes. USAGE:fab upgrade_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            execute('stop_cfgm_node', host_string)
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             if detect_ostype() != 'ubuntu' and is_package_installed('irond'):
                 # Fix for bug https://bugs.launchpad.net/juniperopenstack/+bug/1394813
-                run("rpm -e --nodeps irond")
+                sudo("rpm -e --nodeps irond")
             upgrade(from_rel, 'cfgm')
             if from_rel in ['1.10']:
-                run("mv -f /etc/irond/* /etc/ifmap-server/")
-                run("rm -rf /etc/irond/")
+                with settings(warn_only=True):
+                    sudo("kill $(ps ax | grep irond.jar | grep -v grep | cut -d' ' -f1)")
+                if detect_ostype() == 'centos':
+                    sudo("mv -f /etc/irond/* /etc/ifmap-server/")
+                    sudo("rm -rf /etc/irond/")
             if len(env.roledefs['cfgm']) == 1:
                 execute('fix_rabbitmq_conf')
             if get_contrail_internal_vip():
@@ -520,7 +524,9 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                 # Create Keystone auth config ini
                 api_conf_file = '/etc/contrail/contrail-api.conf'
                 conf_file = '/etc/contrail/contrail-keystone-auth.conf'
-                sudo("sed -n -e '/\[KEYSTONE\]/,$p' %s > %s" % (api_conf_file, conf_file))
+                with settings(warn_only=True):
+                    if sudo('grep "\[KEYSTONE\]" %s' % api_conf_file).succeeded:
+                        sudo("sed -n -e '/\[KEYSTONE\]/,$p' %s > %s" % (api_conf_file, conf_file))
                 # delete [KEYSTONE] section from config files
                 sudo("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-api.log" % api_conf_file)
                 sudo("openstack-config --del %s KEYSTONE" % api_conf_file)
@@ -572,9 +578,10 @@ def upgrade_control_node(from_rel, pkg, *args):
                 sudo("sed -i 's/^\s\+//g' %s" % conf_file)
                 sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
-                conf_file = '/etc/contrail/dns/dns.conf'
+                conf_file = '/etc/contrail/contrail-dns.conf'
                 #Removing the preceeding empty spaces
                 sudo("sed -i 's/^\s\+//g' %s" % conf_file)
+                sudo("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-dns.log" % conf_file)
                 sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             execute('restart_control_node', host_string)
@@ -705,6 +712,7 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
             for param, value in lbaas_svc_instance_params.items():
                 sudo("openstack-config --set %s SERVICE-INSTANCE %s %s" % (conf_file, param, value))
             if from_rel in ['1.10', '1.20', '1.30']:
+                sudo("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-vrouter-agent.log" % conf_file)
                 sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             if ostype in ['centos']:
@@ -751,6 +759,7 @@ def upgrade_contrail(from_rel, pkg):
     execute('zookeeper_rolling_restart')
     execute('backup_config', from_rel)
     execute('backup_config_dir', from_rel)
+    execute('stop_cfgm')
     execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
@@ -779,6 +788,7 @@ def upgrade_without_openstack(pkg):
     execute('zookeeper_rolling_restart')
     execute('backup_config', from_rel)
     execute('backup_config_dir', from_rel)
+    execute('stop_cfgm')
     execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
