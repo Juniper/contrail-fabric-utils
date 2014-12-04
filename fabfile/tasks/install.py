@@ -619,4 +619,17 @@ def install_webui_packages(source_dir):
         run('tar -xjvf firefox-33.0.tar.bz2')
         run('sudo mv firefox /opt/firefox')
         run('sudo ln -sf /opt/firefox/firefox /usr/bin/firefox')
-#end install_webui_packages 
+#end install_webui_packages
+
+@task
+def update_config_option(role, file_path, section, option, value, service):
+    """Task to update config option of any section in a conf file
+       USAGE:fab update_config_option:openstack,/etc/keystone/keystone.conf,token,expiration,86400,keystone
+    """
+    cmd1 = "openstack-config --set " + file_path + " " +  section + " " + option + " " + value
+    cmd2= "service " + service + " restart"
+    for host in env.roledefs[role]:
+        with settings(host_string=host, password=env.passwords[host]):
+            run(cmd1)
+            run(cmd2)
+# end update_config_option
