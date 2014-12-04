@@ -38,7 +38,7 @@ def tar_logs_cores():
             sudo ("cp /var/crashes/core* /var/crashes/saved/")
             sudo ("gzip /var/crashes/core*")
             sudo ("cd /var/crashes; for i in core*.gz; do mv -f $i %s_$i; done" %(e) )
-    sudo("contrail-version > /var/log/contrail_version_%s_%s.log"%(e,a))
+        sudo("contrail-version > /var/log/contrail_version_%s_%s.log"%(e,a))
 
 #end tar_logs_cores
 
