@@ -111,6 +111,9 @@ def rabbitmq_env():
 def config_rabbitmq():
     rabbit_hosts = []
     rabbit_conf = '/etc/rabbitmq/rabbitmq.config'
+    if len(env.roledefs['rabbit']) <= 1 and detect_ostype() == 'redhat':
+        print "CONFIG_RABBITMQ: Skip creating rabbitmq.config for Single node setup"
+        return
     for host_string in env.roledefs['rabbit']:
         with settings(host_string=host_string, password=env.passwords[host_string]):
             host_name = sudo('hostname -s') + ctrl
@@ -237,7 +240,9 @@ def verify_cluster_status(retry='yes'):
     rabbit_nodes = []
     for host_string in env.roledefs['rabbit']:
         with settings(host_string=host_string):
-            if not files.exists("/etc/rabbitmq/rabbitmq.config"):
+            if len(env.roledefs['rabbit']) <= 1 and detect_ostype() == 'redhat':
+                print "Skip verifying /etc/rabbitmq/rabbitmq.config for Single node setup"
+            elif not files.exists("/etc/rabbitmq/rabbitmq.config"):
                 return False
             host_name = sudo('hostname -s') + ctrl
             rabbit_nodes.append('rabbit@%s' % host_name)
