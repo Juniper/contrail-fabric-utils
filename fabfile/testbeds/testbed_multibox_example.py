@@ -245,6 +245,7 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #}
 
 #To enable multi-tenancy feature
+#Set multi_tenancy to False in case of the orchestrator being vcenter
 #multi_tenancy = True
 
 #To enable haproxy feature
@@ -354,6 +355,7 @@ env.vcenter = {
 # vm: the name used by esxi for vmdk changes, same as esx_vm_name
 # vmdk: name of the vmdk file without the vmdk extension
 # vm_deb: absolute path of the contrail package installed on contrailvm if not provided on commandline
+# esx_ntp_server: the ntp server ip to be used by the contrail vm
 # server_id: hostname of the contrailvm
 # password: root password for the contrailvm
 # domain: domain of the contrailvm
@@ -376,6 +378,7 @@ env.compute_vm = {
              'vmdk' : "ContrailVM-disk1",
              'vmdk_download_path' : "http://127.0.0.1/vmware/vmdk/ContrailVM-disk1.vmdk",
              'server_id' : 'contrail-vm',
+             'esx_ntp_server' : "2.2.2.3",
              'password' : 'c0ntrail123',
              'domain' : 'englab.juniper.net',
     },
