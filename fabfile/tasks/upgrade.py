@@ -111,9 +111,9 @@ UBUNTU_R1_10_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_20_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_30_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
-UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
 UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
-UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
+UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'] += ['/etc/contrail/contrail-svc-monitor.conf',
+                                                 '/etc/contrail/contrail-schema.conf']
 UBUNTU_R1_30_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
 UBUNTU_R1_30_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
 UBUNTU_R2_0_TO_R2_0 = copy.deepcopy(UBUNTU_R1_30_TO_R2_0)
@@ -123,11 +123,33 @@ CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
 # Add contrail-interface-name to upgrade list if interface rename enabled.
 if getattr(env, 'interface_rename', True):
     CENTOS_UPGRADE_SCHEMA['compute']['upgrade'].append('contrail-interface-name')
+CENTOS_UPGRADE_SCHEMA['openstack']['remove'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['openstack']['upgrade'] += ['contrail-openstack-dashboard',
+                                                  'openstack-dashboard']
+CENTOS_UPGRADE_SCHEMA['openstack']['downgrade'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['cfgm']['remove'] += ['contrail-api-extension', 'irond', 'supervisor']
+CENTOS_UPGRADE_SCHEMA['cfgm']['downgrade'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['database']['remove'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['database']['downgrade'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['collector']['remove'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['collector']['downgrade'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['control']['remove'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['control']['downgrade'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['compute']['remove'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['compute']['downgrade'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['webui']['remove'] += [' supervisor']
+CENTOS_UPGRADE_SCHEMA['webui']['downgrade'] += [' supervisor']
 
 # Centos Release upgrade
 CENTOS_R1_10_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
 CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].append('/etc/irond')
+CENTOS_R1_10_TO_R2_0['cfgm']['rename_files'].append((
+    '/etc/irond/authorization.properties',
+    '/etc/fmap-server/authorization.properties'))
+CENTOS_R1_10_TO_R2_0['cfgm']['rename_files'].append((
+    '/etc/irond/basicauthusers.properties',
+    '/etc/ifmap-server/basicauthusers.properties'))
 CENTOS_R1_20_TO_R2_0 = copy.deepcopy(CENTOS_R1_10_TO_R2_0)
 CENTOS_R2_0_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
@@ -495,15 +517,11 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            if detect_ostype() != 'ubuntu' and is_package_installed('irond'):
-                # Fix for bug https://bugs.launchpad.net/juniperopenstack/+bug/1394813
-                run("rpm -e --nodeps irond")
             upgrade(from_rel, 'cfgm')
             if from_rel in ['1.10', '1.20']:
                 with settings(warn_only=True):
-                    run("kill $(ps ax | grep irond.jar | grep -v grep | cut -d' ' -f1)")
+                    run("kill -9 $(ps ax | grep irond.jar | grep -v grep | awk '{print $1}')")
                 if detect_ostype() == 'centos':
-                    run("mv -f /etc/irond/* /etc/ifmap-server/")
                     run("rm -rf /etc/irond/")
             if len(env.roledefs['cfgm']) == 1:
                 execute('fix_rabbitmq_conf')
@@ -527,26 +545,26 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                     if run('grep "\[KEYSTONE\]" %s' % api_conf_file).succeeded:
                         run("sed -n -e '/\[KEYSTONE\]/,$p' %s > %s" % (api_conf_file, conf_file))
                 # delete [KEYSTONE] section from config files
-                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-api.log" % api_conf_file)
+                run("openstack-config --set %s DEFAULTS log_file /var/log/contrail/contrail-api.log" % api_conf_file)
                 run("openstack-config --del %s KEYSTONE" % api_conf_file)
-                run("openstack-config --set %s DEFAULT log_local 1" % api_conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % api_conf_file)
+                run("openstack-config --set %s DEFAULTS log_local 1" % api_conf_file)
+                run("openstack-config --set %s DEFAULTS log_level SYS_NOTICE" % api_conf_file)
                 conf_file = '/etc/contrail/contrail-schema.conf'
                 run("mv /etc/contrail/schema_transformer.conf %s" % conf_file)
-                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-schema.log" % conf_file)
+                run("openstack-config --set %s DEFAULTS log_file /var/log/contrail/contrail-schema.log" % conf_file)
                 run("openstack-config --del %s KEYSTONE" % conf_file)
-                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                run("openstack-config --set %s DEFAULTS log_local 1" % conf_file)
+                run("openstack-config --set %s DEFAULTS log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/contrail-svc-monitor.conf'
                 run("mv /etc/contrail/svc_monitor.conf %s" % conf_file)
-                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-svc-monitor.log" % conf_file)
+                run("openstack-config --set %s DEFAULTS log_file /var/log/contrail/contrail-svc-monitor.log" % conf_file)
                 run("openstack-config --del %s KEYSTONE" % conf_file)
-                run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                run("openstack-config --set %s DEFAULTS log_local 1" % conf_file)
+                run("openstack-config --set %s DEFAULTS log_level SYS_NOTICE" % conf_file)
                 conf_file = '/etc/contrail/contrail-discovery.conf'
-                run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-discovery.log" % conf_file)
-                run("openstack-config --set %s DEFAULT log_local True" % conf_file)
-                run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
+                run("openstack-config --set %s DEFAULTS log_file /var/log/contrail/contrail-discovery.log" % conf_file)
+                run("openstack-config --set %s DEFAULTS log_local True" % conf_file)
+                run("openstack-config --set %s DEFAULTS log_level SYS_NOTICE" % conf_file)
                 # Fix init.d scripts
                 run("sed -i 's#http://localhost:9004#unix:///tmp/supervisord_config.sock#g' /etc/init.d/contrail-api")
                 run("sed -i 's#http://localhost:9004#unix:///tmp/supervisord_config.sock#g' /etc/init.d/contrail-discovery")
