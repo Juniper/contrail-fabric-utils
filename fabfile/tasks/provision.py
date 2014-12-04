@@ -943,6 +943,9 @@ def setup_webui_node(*args):
         if contrail_internal_vip:
             # Highly available setup with multiple interfaces
             cmd += " --contrail_internal_vip %s" % contrail_internal_vip
+        # multi_tenancy
+        mt_enable = get_mt_enable()
+        cmd += " --mt_enable %s" % mt_enable
 
         if orch == 'openstack':
             openstack_host = get_control_host_string(env.roledefs['openstack'][0])
