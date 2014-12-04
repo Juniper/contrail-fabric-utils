@@ -94,6 +94,17 @@ backend cinder-backend
     balance   roundrobin
 $__cinder_backend_servers__
 
+frontend ceph-rest-api-server *:5005
+    default_backend  ceph-rest-api-server-backend
+
+backend ceph-rest-api-server-backend
+    option tcpka
+    option nolinger
+    timeout server 24h
+    balance   roundrobin
+$__ceph_restapi_backend_servers__
+
+
 frontend openstack-nova-api *:8774
     default_backend  nova-api-backend
 
