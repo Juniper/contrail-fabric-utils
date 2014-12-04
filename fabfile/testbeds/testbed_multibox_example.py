@@ -79,7 +79,7 @@ env.ostypes = {
     host9: 'centos',
     host10: 'centos',
 }
-
+env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 
 # INFORMATION FOR DB BACKUP/RESTORE ..
 #=======================================================
