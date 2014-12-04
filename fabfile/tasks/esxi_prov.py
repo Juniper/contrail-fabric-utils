@@ -87,7 +87,6 @@ class ContrailVM(object):
 	self.vm_server = vm_params['vm_server']
 	self.vm_password = vm_params['vm_password']
 	self.vm_deb = vm_params['vm_deb']
-        self.ntp_server = vm_params['ntp_server']
         self._create_networking()
         print self._create_vm()
         print self._install_contrailvm_pkg(self.eth0_ip, "root", self.vm_password, self.vm_domain, self.vm_server, self.vm_deb)
@@ -316,10 +315,10 @@ class ContrailVM(object):
                 return ( "Connection to %s failed" % (ip))
 
 
-        sftp.put(pkg, "~/contrail_pkg")
+        sftp.put(pkg, "/tmp/contrail_pkg")
         sftp.close()
 
-        install_cmd = ("/usr/bin/dpkg -i %s") % ("~/contrail_pkg")
+        install_cmd = ("/usr/bin/dpkg -i %s") % ("/tmp/contrail_pkg")
         out, err = execute_cmd_out(ssh_session, install_cmd)
         setup_cmd = "/opt/contrail/contrail_packages/setup.sh"
         out, err = execute_cmd_out(ssh_session, setup_cmd)

@@ -1715,8 +1715,8 @@ def setup_esxi_computevm(deb=None):
     for compute_node in env.roledefs['compute']:
         if compute_node in compute_vm_info.keys():
 		provision_esxi(deb, compute_vm_info[compute_node])
-
-
+        else:
+                print 'Error: compute_vm block does not have compute host.Exiting'
 
 @task
 @roles('build')
