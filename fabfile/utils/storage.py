@@ -189,6 +189,22 @@ def get_cinder_ha_vip():
     return 'none'
 #end get_cinder_ha_vip
 
+
+# storage host with monitors config
+def get_storage_mon_hosts():
+    storage_mon_info = getattr(testbed, 'storage_compute_mon_list', None)
+    storage_mon_list = []
+    if storage_mon_info:
+        for entry in storage_mon_info:
+            storage_host = get_control_host_string(entry)
+            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+                if entry == sthostentry:
+                    storage_mon_list.append(sthostname)
+    if storage_mon_list == []:
+        storage_mon_list.append('none')
+    return (storage_mon_list)
+#end get_storage_mon_hosts config
+
 def get_cfg_ha_vip():
     ha_vip = get_from_testbed_dict('ha', 'contrail_internal_vip', None)
     if ha_vip:
