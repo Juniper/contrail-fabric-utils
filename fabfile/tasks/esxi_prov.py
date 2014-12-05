@@ -318,6 +318,26 @@ class ContrailVM(object):
         sftp.put(pkg, "/tmp/contrail_pkg")
         sftp.close()
 
+        #Set up ntp  
+        ntp_cmd = ('ntpdate "%s"') %(self.ntp_server)
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('mv /etc/ntp.conf /etc/ntp.conf.orig')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('touch /var/lib/ntp/drift')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('echo "driftfile /var/lib/ntp/drift" >> /etc/ntp.conf')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('echo "server %s" >> /etc/ntp.conf') % (self.ntp_server)
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('echo "restrict 127.0.0.1" >> /etc/ntp.conf')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('echo "restrict -6 ::1" >> /etc/ntp.conf')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        ntp_cmd = ('service ntp restart')
+        out, err = execute_cmd_out(ssh_session, ntp_cmd)
+        
+        # end ntp setup»        
+
         install_cmd = ("/usr/bin/dpkg -i %s") % ("/tmp/contrail_pkg")
         out, err = execute_cmd_out(ssh_session, install_cmd)
         setup_cmd = "/opt/contrail/contrail_packages/setup.sh"
