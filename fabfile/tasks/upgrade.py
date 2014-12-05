@@ -525,6 +525,12 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'cfgm')
+            with settings(warn_only=True):
+                execute('restart_cfgm_node', host_string)
+                run('supervisorctl -s unix:///tmp/supervisord_config.sock stop all')
+                run('supervisorctl -s unix:///tmp/supervisord_config.sock reread')
+                run('supervisorctl -s unix:///tmp/supervisord_config.sock update')
+                execute('stop_cfgm_node', host_string)
             if from_rel in ['1.10', '1.20']:
                 with settings(warn_only=True):
                     run("kill -9 $(ps ax | grep irond.jar | grep -v grep | awk '{print $1}')")
