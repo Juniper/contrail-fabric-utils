@@ -101,10 +101,10 @@ def provision_vcenter(vcenter_info, esxi_info):
 def provision_esxi(deb, compute_vm_info):
             vm_params = {}
             vm_params['vm'] = compute_vm_info['esx_vm_name']
-            vm_params['vmdk'] = _get_var(compute_vm_info['vmdk'])
+            vm_params['vmdk'] = "ContrailVM-disk1"
             vm_params['datastore'] = compute_vm_info['esx_datastore']
-            vm_params['eth0_mac'] = _get_var(compute_vm_info['server_mac'])
-            vm_params['eth0_ip'] = _get_var(compute_vm_info['server_ip'])
+            vm_params['eth0_mac'] = _get_var(compute_vm_info['contrailvm_virtual_mac'])
+            vm_params['eth0_ip'] = _get_var(compute_vm_info['contrailvm_ip'])
             vm_params['eth0_pg'] = _get_var(compute_vm_info['esxi']['esx_fab_port_group'])
             vm_params['eth0_vswitch'] = _get_var(compute_vm_info['esxi']['esx_fab_vswitch'])
             vm_params['eth0_vlan'] = None
@@ -125,7 +125,7 @@ def provision_esxi(deb, compute_vm_info):
                 vm_params['thindisk'] =  _get_var(compute_vm_info['esx_vmdk'])
             vm_params['domain'] =  _get_var(compute_vm_info['domain'])
             vm_params['vm_password'] = _get_var(compute_vm_info['password'])
-            vm_params['vm_server'] = _get_var(compute_vm_info['server_id'])
+            vm_params['vm_server'] = _get_var(compute_vm_info['esx_vm_name'])
             if deb is not None:
                 vm_params['vm_deb'] = deb
             else:

@@ -470,6 +470,30 @@ def setup_cfgm_node(*args):
             with cd(INSTALLER_DIR):
                 sudo(cmd)
 
+            # Frame the command  to provision vcenter-plugin
+            vcenter_info = getattr(env, 'vcenter', None)
+            if not vcenter_info:
+                print 'Error: vcenter block is not defined in testbed file.Exiting'
+                return
+            cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+
+            if orch == 'vcenter':
+                cmd = "setup-vcenter-plugin"
+                cmd += " --vcenter_url %s" % vcenter_info['server']
+                cmd += " --vcenter_username %s" % vcenter_info['username']
+                cmd += " --vcenter_password %s" % vcenter_info['password']
+                cmd += " --vcenter_datacenter %s" % vcenter_info['datacenter']
+                cmd += " --vcenter_dvswitch %s" % vcenter_info['dv_switch']['dv_switch_name']
+                cmd += " --api_hostname %s" % cfgm_ip
+                cmd += " --api_port 8082"
+                zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
+                cmd += " --zookeeper_serverlist %s" % zk_servers_ports
+
+            # Execute the provision vcenter-plugin script
+            with cd(INSTALLER_DIR):
+                sudo(cmd)
+
+
     # HAPROXY fixups
     haproxy = get_haproxy_opt()
     if haproxy:

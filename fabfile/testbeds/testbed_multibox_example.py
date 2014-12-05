@@ -342,19 +342,16 @@ env.vcenter = {
 # esx_fab_port_group: the name of the underlay port group for esxi
 # esx_ssl_thumbprint: the ssl thumbprint on esxi host,needed by vcenter
 #               Run this and get the ssl thumbprint on host: openssl x509 -in /etc/vmware/ssl/rui.crt -fingerprint -sha1 -noout
-# server_mac: the virt mac address for the contrail vm
-# server_ip the contrailvm ip to be associated with the virtual mac
+# contrailvm_virtual_mac: the virt mac address for the contrail vm
+# contrailvm_ip the contrailvm ip to be associated with the virtual mac
 # esx_vm_name: the contrailvm name which is brought up on esxi
 # esx_data_store: the datastore on esxi where the vmdk is copied to
 #example: 'esx_datastore' : "/vmfs/volumes/b3s40-ds1",
 # esx_vmdk: the absolute path of the contrail-vmdk used to spawn vm
 #OR
-# id esx_vmdk is not provided vmdk_download_path should be given to download vmdk
+# if esx_vmdk is not provided vmdk_download_path should be given to download vmdk
 #example: 'vmdk_download_path' : "http://10.84.5.100/vmware/vmdk/ContrailVM-disk1.vmdk",
-# vm: the name used by esxi for vmdk changes, same as esx_vm_name
-# vmdk: name of the vmdk file without the vmdk extension
 # vm_deb: absolute path of the contrail package installed on contrailvm if not provided on commandline
-# server_id: hostname of the contrailvm
 # password: root password for the contrailvm
 # domain: domain of the contrailvm
 ##############################################
@@ -368,14 +365,11 @@ env.compute_vm = {
                       'esx_fab_port_group' : 'contrail-fab-pg',
                       'esx_ssl_thumbprint' : "2A:B9:E9:E0:4F:07:20:DD:F1:FC:C6:45:BE:A8:E0:21:D1:8E:47:CB",
                      },
-             'server_mac' : "00:50:56:05:BC:BA",
-             'server_ip': "1.1.1.2",
+             'contrailvm_virual_mac' : "00:50:56:05:BC:BA",
+             'contrailvm_ip': "1.1.1.2",
              'esx_vm_name' : "ContrailVM-sumne1",
              'esx_datastore' : "/vmfs/volumes/b3s40-ds1",
-             'vm' : "ContrailVM",
-             'vmdk' : "ContrailVM-disk1",
              'vmdk_download_path' : "http://127.0.0.1/vmware/vmdk/ContrailVM-disk1.vmdk",
-             'server_id' : 'contrail-vm',
              'password' : 'c0ntrail123',
              'domain' : 'englab.juniper.net',
     },
