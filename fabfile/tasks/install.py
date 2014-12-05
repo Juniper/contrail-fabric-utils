@@ -502,6 +502,7 @@ def create_install_repo_node(*args):
 def install_orchestrator():
     if get_orchestrator() is 'openstack':
         execute(install_openstack)
+        execute(update_keystone_log)
 
 @roles('build')
 @task
@@ -518,7 +519,6 @@ def install_contrail(reboot='True'):
     execute(install_webui)
     execute(install_vrouter)
     execute(upgrade_pkgs)
-    execute(update_keystone_log)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
