@@ -46,11 +46,13 @@ def install_pkg_node(pkg, *args):
         with settings(host_string=host_string, warn_only=True):
             # Get the package name from .rpm | .deb
             if pkg.endswith('.rpm'):
-                pkgname = local("rpm -qpi %s | grep Name | cut -d':' -f2 | cut -d' ' -f2" % pkg, capture=True).strip()
+                pkgname = local("rpm -qp --queryformat '%%{NAME}' %s" % pkg)
+                pkg_ver = local("rpm -qp --queryformat '%%{RELEASE}' %s" % pkg)
             elif pkg.endswith('.deb'):
-                pkgname = local("dpkg --info %s | grep Package: | cut -d':' -f2" % pkg, capture=True).strip()
+                pkgname = local("dpkg -I %s | grep -Po 'Package: \K.*'" % pkg)
+                pkg_ver = local("dpkg -I %s | grep -Po 'Version: \K.*'" % pkg)
             build = get_build(pkgname)
-            if build and build in pkg:
+            if build and build == pkg_ver:
                 print "Package %s already installed in the node(%s)." % (pkg, host_string)
                 continue
             pkg_name = os.path.basename(pkg)
