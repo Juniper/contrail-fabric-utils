@@ -614,6 +614,7 @@ def install_webui_packages(source_dir):
             sudo('sudo apt-get -y install libxpm4 libxrender1 libgtk2.0-0 libnss3 libgconf-2-4')
             sudo('sudo apt-get -y install google-chrome-stable')
     elif detect_ostype() in ['centos', 'fedora', 'redhat']:
+        sudo('yum install -y xorg-x11-server-Xvfb')
         sudo('wget http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/33.0/linux-x86_64/en-US/firefox-33.0.tar.bz2')
         sudo('tar -xjvf firefox-33.0.tar.bz2')
         sudo('sudo mv firefox /opt/firefox')
