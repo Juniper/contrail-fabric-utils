@@ -12,6 +12,7 @@ from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 UPGRADE_SCHEMA = {
     'openstack' : {'upgrade' : ['contrail-openstack'],
                    'remove' : [],
+                   'ensure' : [],
                    'downgrade' : [],
                    'backup_files' : [],
                    'backup_dirs' : ['/etc/keystone',
@@ -24,6 +25,7 @@ UPGRADE_SCHEMA = {
                   },
     'database' : {'upgrade' : ['contrail-openstack-database'],
                    'remove' : [],
+                   'ensure' : [],
                    'downgrade' : [],
                    'backup_files' : ['/etc/contrail/database_nodemgr_param',
                                      '/etc/contrail/contrail-nodemgr-database.conf',
@@ -37,6 +39,7 @@ UPGRADE_SCHEMA = {
     'cfgm' : {'upgrade' : ['contrail-openstack-config'],
                    'remove' : [],
                    'downgrade' : [],
+                   'ensure' : [],
                    'backup_files' : ['/etc/contrail/svc_monitor.conf',
                                      '/etc/contrail/schema_transformer.conf',
                                      '/etc/contrail/contrail-api.conf',
@@ -54,6 +57,7 @@ UPGRADE_SCHEMA = {
     'collector' : {'upgrade' : ['contrail-openstack-analytics'],
                    'remove' : [],
                    'downgrade' : [],
+                   'ensure' : [],
                    'backup_files' : ['/etc/contrail/contrail-analytics-api.conf',
                                      '/etc/contrail/contrail-collector.conf',
                                      '/etc/contrail/contrail-query-engine.conf',
@@ -65,6 +69,7 @@ UPGRADE_SCHEMA = {
     'control' : {'upgrade' : ['contrail-openstack-control'],
                    'remove' : [],
                    'downgrade' : [],
+                   'ensure' : [],
                    'backup_files' : ['/etc/contrail/contrail-control.conf',
                                      '/etc/contrail/dns.conf'],
                    'backup_dirs' : [],
@@ -83,6 +88,7 @@ UPGRADE_SCHEMA = {
     'webui' : {'upgrade' : ['contrail-openstack-webui'],
                    'remove' : [],
                    'downgrade' : [],
+                   'ensure' : [],
                    'backup_files' : ['/etc/contrail/config.global.js'],
                    'backup_dirs' : [],
                    'remove_files' : [],
@@ -91,6 +97,7 @@ UPGRADE_SCHEMA = {
     'compute' : {'upgrade' : ['contrail-openstack-vrouter'],
                    'remove' : [],
                    'downgrade' : [],
+                   'ensure' : [],
                    'backup_files' : ['/etc/contrail/agent_param',
                                      '/etc/contrail/contrail-vrouter-agent.conf',
                                      '/etc/contrail/vrouter_nodemgr_param',
@@ -123,29 +130,23 @@ CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
 # Add contrail-interface-name to upgrade list if interface rename enabled.
 if getattr(env, 'interface_rename', True):
     CENTOS_UPGRADE_SCHEMA['compute']['upgrade'].append('contrail-interface-name')
-libvirt_pkgs = ['libvirt', 'libvirt-client', 'libvirt-python']
-CENTOS_UPGRADE_SCHEMA['openstack']['remove'] += ['supervisor']
-CENTOS_UPGRADE_SCHEMA['openstack']['remove'] += libvirt_pkgs
-CENTOS_UPGRADE_SCHEMA['openstack']['upgrade'] += ['contrail-openstack-dashboard',
-                                                  'openstack-dashboard']
-CENTOS_UPGRADE_SCHEMA['openstack']['downgrade'] += ['supervisor']
-CENTOS_UPGRADE_SCHEMA['openstack']['downgrade'] += libvirt_pkgs
-CENTOS_UPGRADE_SCHEMA['cfgm']['remove'] += ['contrail-api-extension', 'irond', 'supervisor']
-CENTOS_UPGRADE_SCHEMA['cfgm']['remove'] += libvirt_pkgs
-CENTOS_UPGRADE_SCHEMA['cfgm']['downgrade'] += ['supervisor']
-CENTOS_UPGRADE_SCHEMA['cfgm']['downgrade'] += libvirt_pkgs
-CENTOS_UPGRADE_SCHEMA['database']['remove'] += ['supervisor']
-CENTOS_UPGRADE_SCHEMA['database']['downgrade'] += ['supervisor']
-CENTOS_UPGRADE_SCHEMA['collector']['remove'] += [ 'supervisor']
-CENTOS_UPGRADE_SCHEMA['collector']['downgrade'] += ['supervisor']
-CENTOS_UPGRADE_SCHEMA['control']['remove'] += ['supervisor']
-CENTOS_UPGRADE_SCHEMA['control']['downgrade'] += ['supervisor']
-CENTOS_UPGRADE_SCHEMA['compute']['remove'] += ['supervisor']
-CENTOS_UPGRADE_SCHEMA['compute']['remove'] += libvirt_pkgs
-CENTOS_UPGRADE_SCHEMA['compute']['downgrade'] += ['supervisor']
-CENTOS_UPGRADE_SCHEMA['compute']['downgrade'] += libvirt_pkgs
-CENTOS_UPGRADE_SCHEMA['webui']['remove'] += ['supervisor']
-CENTOS_UPGRADE_SCHEMA['webui']['downgrade'] += ['supervisor']
+libvirt_pkgs = [('libvirt', '0.10.2-{BUILD}'),
+                ('libvirt-client', '0.10.2-{BUILD}'),
+                ('libvirt-python', '0.10.2-{BUILD}')]
+CENTOS_UPGRADE_SCHEMA['openstack']['ensure'] += [('supervisor', '3.0-9.2')]
+CENTOS_UPGRADE_SCHEMA['openstack']['ensure'] += libvirt_pkgs
+CENTOS_UPGRADE_SCHEMA['openstack']['upgrade'] += ['openstack-dashboard']
+CENTOS_UPGRADE_SCHEMA['cfgm']['remove'] += ['contrail-api-extension', 'irond']
+CENTOS_UPGRADE_SCHEMA['cfgm']['ensure'] += libvirt_pkgs
+CENTOS_UPGRADE_SCHEMA['cfgm']['ensure'] += [('supervisor', '3.0-9.2')]
+CENTOS_UPGRADE_SCHEMA['database']['ensure'] += [('supervisor', '3.0-9.2')]
+CENTOS_UPGRADE_SCHEMA['collector']['ensure'] += [('supervisor', '3.0-9.2')]
+CENTOS_UPGRADE_SCHEMA['control']['ensure'] += [('supervisor', '3.0-9.2')]
+CENTOS_UPGRADE_SCHEMA['compute']['ensure'] += libvirt_pkgs
+CENTOS_UPGRADE_SCHEMA['compute']['ensure'] += [('supervisor', '3.0-9.2')]
+CENTOS_UPGRADE_SCHEMA['webui']['ensure'] += [('supervisor', '3.0-9.2')]
+CENTOS_UPGRADE_SCHEMA['webui']['rename_files'] += [('/etc/contrail/supervisord_webui.conf.rpmnew',
+                                                        '/etc/contrail/supervisord_webui.conf')]
 
 # Centos Release upgrade
 CENTOS_R1_10_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
@@ -165,6 +166,34 @@ CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transfo
 CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
 CENTOS_R2_0_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
 CENTOS_R2_0_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
+
+def format_upgrade_schema(data, **formater):
+    if type(data) is dict:
+        for key, value in data.items():
+            data[key] = format_upgrade_schema(value, **formater)
+        return data
+    elif type(data) is list:
+        for elem in data:
+            data.remove(elem)
+            data.append(format_upgrade_schema(elem, **formater))
+        return data
+    elif type(data) is tuple:
+        dummy = list(data)
+        for elem in data:
+            dummy.remove(elem)
+            dummy.append(format_upgrade_schema(elem, **formater))
+        data = tuple(dummy)
+        return data
+    elif type(data) is str:
+        return data.format(**formater)
+
+def get_upgrade_schema(ostype, from_rel, to_rel, build):
+    try:
+        upgrade_schema = eval(ostype.upper() + '_' + ('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
+    except NameError:
+        raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
+    formater = {'BUILD': build}
+    return format_upgrade_schema(upgrade_schema, **formater)
 
 @task
 @EXECUTE_TASK
@@ -302,10 +331,8 @@ def upgrade_package(pkgs, ostype):
 def backup_config_dir(from_rel):
     ostype = detect_ostype()
     to_rel = get_release()
-    try:
-        upgrade_data = eval(ostype.upper() + '_' + ('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
-    except NameError:
-        raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
+    to_build = get_build().split('~')[0]
+    upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
     for role in upgrade_data.keys():
         if env.host_string in env.roledefs[role]:
             with settings(warn_only=True):
@@ -331,10 +358,8 @@ def restore_config_dir(role, upgrade_data):
 def backup_config(from_rel):
     ostype = detect_ostype()
     to_rel = get_release()
-    try:
-        upgrade_data = eval(ostype.upper() + '_' + ('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
-    except NameError:
-        raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
+    to_build = get_build().split('~')[0]
+    upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
     run('mkdir -p /var/tmp/contrail')
     for role in upgrade_data.keys():
         if env.host_string in env.roledefs[role]:
@@ -371,6 +396,15 @@ def remove_package(pkgs, ostype):
             elif ostype in ['ubuntu']:
                 run('DEBIAN_FRONTEND=noninteractive apt-get -y remove --purge  %s' % pkg)
 
+def ensure_package(pkg_versions, ostype):
+    with settings(warn_only=True):
+        for pkg, version in pkg_versions:
+            if ('%s-%s' % (get_release(pkg), get_build(pkg)) == version):
+                continue
+            else:
+                remove_package([pkg], ostype)
+                downgrade_package([pkg], ostype)
+
 def remove_old_files(role, upgrade_data):
     with settings(warn_only=True):
         for config_file in upgrade_data[role]['remove_files']:
@@ -384,15 +418,14 @@ def rename_files(role, upgrade_data):
 def upgrade(from_rel, role):
     ostype = detect_ostype()
     to_rel = get_release()
-    try:
-        upgrade_data = eval(ostype.upper() + '_' + ('R'+from_rel+'_TO_'+'R'+to_rel).replace('.','_'))
-    except NameError:
-        raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
+    to_build = get_build().split('~')[0]
+    upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
     #backup_config(role, upgrade_data)
     if ostype == 'centos':
         #buildid = get_build('contrail-setup')
         remove_package(upgrade_data[role]['remove'], ostype)
         #downgrade_package(['supervisor-0.1-%s' % buildid], ostype)
+    ensure_package(upgrade_data[role]['ensure'], ostype)
     downgrade_package(upgrade_data[role]['downgrade'], ostype)
     upgrade_package(upgrade_data[role]['upgrade'], ostype)
     if ostype == 'ubuntu':
@@ -414,7 +447,6 @@ def upgrade_database_node(from_rel, pkg, *args):
     """Upgrades database pkgs in one or list of nodes. USAGE:fab upgrade_database_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             if get_release('contrail-openstack-database') in ['1.10', '1.20']:
@@ -426,6 +458,7 @@ def upgrade_database_node(from_rel, pkg, *args):
                 execute('setup_database_node', host_string)
                 execute('restart_database_node', host_string)
             else:
+                run('chkconfig supervisor-database on')
                 execute('restart_database_node', host_string)
 
 @task
@@ -465,16 +498,19 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             for svc in openstack_services:
                 with settings(warn_only=True):
                     run("service %s stop" % svc)
-            execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'openstack')
-            if from_rel in ['1.10', '1.20', '1.30']:
+            if from_rel in ['1.10', '1.20']:
                 # Workaround for bug https://bugs.launchpad.net/juniperopenstack/+bug/1383927
                 if ostype in ['ubuntu']:
                     rel = get_release('contrail-openstack')
                     buildid = get_build('contrail-openstack')
                     downgrade_package(['contrail-openstack-dashboard=%s-%s' % (rel, buildid)], ostype)
+                if ostype in ['centos']:
+                    sku = get_build().split('~')[1]
+                    if 'havana' in sku:
+                        upgrade_package([contrail-openstack-dashboard], ostype)
             execute('increase_item_size_max_node', host_string)
             execute('upgrade_pkgs_node', host_string)
             # Set the rabbit_host as from 1.10 the rabbit listens at the control_data ip
@@ -521,10 +557,10 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
     """Upgrades config pkgs in one or list of nodes. USAGE:fab upgrade_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'cfgm')
+            run('chkconfig supervisor-support-service on')
             if from_rel in ['1.10', '1.20']:
                 with settings(warn_only=True):
                     run("kill -9 $(ps ax | grep irond.jar | grep -v grep | awk '{print $1}')")
@@ -591,7 +627,6 @@ def upgrade_control_node(from_rel, pkg, *args):
     """Upgrades control pkgs in one or list of nodes. USAGE:fab upgrade_control_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'control')
@@ -623,7 +658,6 @@ def upgrade_collector_node(from_rel, pkg, *args):
     """Upgrades analytics pkgs in one or list of nodes. USAGE:fab upgrade_collector_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'collector')
@@ -681,12 +715,10 @@ module.exports = config;
             run("sed -i '$d' /etc/contrail/config.global.js")
             run("sed -i '$d' /etc/contrail/config.global.js")
             run("echo \"%s\" >> /etc/contrail/config.global.js" % new_config)
+            # Make sure redis port is changed
+            run("sed -i s'/6383/6379/g' /etc/contrail/config.global.js")
             # Make sure juniper logo is set
-            logo_old = '/usr/src/contrail/contrail-webui/webroot/img/juniper-networks-logo.png';
-            logo_new = '/usr/src/contrail/contrail-web-core/webroot/img/juniper-networks-logo.png';
-            run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
-            logo_old = '/usr/src/contrail/contrail-web-core/webroot/img/opencontrail-logo.png';
-            run("sed -i 's#%s#%s#g' /etc/contrail/config.global.js" % (logo_old, logo_new))
+            run("sed -i 's#opencontrail#juniper-networks#g' /etc/contrail/config.global.js")
 
 @task
 @EXECUTE_TASK
@@ -700,7 +732,6 @@ def upgrade_webui_node(from_rel, pkg, *args):
     """Upgrades webui pkgs in one or list of nodes. USAGE:fab upgrade_webui_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'webui')
@@ -722,7 +753,6 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
     """Upgrades vrouter pkgs in one or list of nodes. USAGE:fab upgrade_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with  settings(host_string=host_string):
-            execute('backup_install_repo_node', host_string)
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'compute')
