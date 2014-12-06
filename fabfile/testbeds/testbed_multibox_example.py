@@ -346,6 +346,7 @@ env.vcenter = {
 # contrailvm_ip the contrailvm ip to be associated with the virtual mac
 # esx_vm_name: the contrailvm name which is brought up on esxi
 # esx_data_store: the datastore on esxi where the vmdk is copied to
+# esx_ntp_server: the ntp server ip to be used by the contrail vm
 #example: 'esx_datastore' : "/vmfs/volumes/b3s40-ds1",
 # esx_vmdk: the absolute path of the contrail-vmdk used to spawn vm
 #OR
@@ -369,6 +370,7 @@ env.compute_vm = {
              'contrailvm_ip': "1.1.1.2",
              'esx_vm_name' : "ContrailVM-sumne1",
              'esx_datastore' : "/vmfs/volumes/b3s40-ds1",
+             'esx_ntp_server' : "2.2.2.3",
              'vmdk_download_path' : "http://127.0.0.1/vmware/vmdk/ContrailVM-disk1.vmdk",
              'password' : 'c0ntrail123',
              'domain' : 'englab.juniper.net',
