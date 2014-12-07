@@ -1482,6 +1482,7 @@ def cleanup_remote_syslog_node():
 def setup_orchestrator():
     orch = get_orchestrator()
     if orch == 'openstack':
+        execute('increase_ulimits')
         execute('setup_openstack')
         if get_openstack_internal_vip():
             execute('sync_keystone_ssl_certs')
@@ -1498,7 +1499,6 @@ def setup_all(reboot='True'):
     execute('setup_ha')
     execute('setup_rabbitmq_cluster')
     execute('increase_limits')
-    execute('increase_ulimits')
     execute('setup_database')
     execute('verify_database')
     execute('setup_orchestrator')
