@@ -59,17 +59,21 @@ def install_pkg(pkgs):
 
 @roles('collector')
 @task
-def get_cassandra_logs():
+def get_cassandra_logs(duration = None):
     sudo("rm -f /var/log/cassandra_log_*")
     a = dt.now().strftime("%Y_%m_%d_%H_%M_%S")
     d = env.host_string
     e=run('hostname')
-    output = sudo("cat /proc/uptime") 
-    uptime_seconds = float(output.split()[0]) 
-    uptime_min=uptime_seconds/60
-    uptime_min=int(uptime_min) 
-    uptime_min=str(uptime_min) + 'm'
-    print "Node %s is up for %s. Collecting Cassandra logs for %s" %(e,uptime_min,uptime_min)    
+    if duration is None:
+        output = sudo("cat /proc/uptime") 
+        uptime_seconds = float(output.split()[0]) 
+        uptime_min=uptime_seconds/60
+        uptime_min=int(uptime_min) 
+        uptime_min=str(uptime_min) + 'm'
+        print "Node %s is up for %s. Collecting Cassandra logs for %s" %(e,uptime_min,uptime_min)
+    else:
+        uptime_min=str(duration) + 'm'
+        print "Duration value is %s . Collecting Cassandra logs for %s" %(uptime_min,uptime_min)
     cmd = "/usr/bin/contrail-logs --last %s --all" %(uptime_min)
     with settings(warn_only=True):
         sudo("%s >> /var/log/cassandra_log_%s_%s.log" %(cmd,e,a))
@@ -96,9 +100,13 @@ def get_cassandra_db_files():
 
 @roles('build')
 @task
-def attach_logs_cores(bug_id, timestamp=None):
+def attach_logs_cores(bug_id, timestamp=None, duration=None):
     '''
     Attach the logs, core-files, bt and contrail-version to a specified location
+    
+    If argument duration is specified it will collect the cassandra logs for specifed
+    duration. Unit of the argument duration is minute. If not specifed it will collect
+    cassandra log for system uptime
     '''
     build= env.roledefs['build'][0]
     if timestamp:
@@ -108,7 +116,10 @@ def attach_logs_cores(bug_id, timestamp=None):
         folder='%s/%s' %(bug_id, time_str)
     local('mkdir -p %s' % ( folder ) )
     execute(tar_logs_cores)
-    execute(get_cassandra_logs)
+    if duration is None:
+        execute(get_cassandra_logs)
+    else:
+        execute(get_cassandra_logs,duration)
     execute(get_cassandra_db_files)
     with hide('everything'):
         for host in env.roledefs['all']:
