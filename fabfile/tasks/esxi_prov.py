@@ -87,6 +87,7 @@ class ContrailVM(object):
 	self.vm_server = vm_params['vm_server']
 	self.vm_password = vm_params['vm_password']
 	self.vm_deb = vm_params['vm_deb']
+        self.ntp_server = vm_params['ntp_server']
         self._create_networking()
         print self._create_vm()
         print self._install_contrailvm_pkg(self.eth0_ip, "root", self.vm_password, self.vm_domain, self.vm_server, self.vm_deb)
