@@ -79,6 +79,7 @@ class ContrailVM(object):
         self.uplink_vswitch = vm_params['uplink_vswitch']
         self.server = vm_params['server']
         self.username = vm_params['username']
+        self.ntp_server = vm_params['ntp_server']
         self.password = vm_params['password']
         self.thindisk = vm_params['thindisk']
         self.vmdk_download_path = vm_params['vmdk_download_path']
