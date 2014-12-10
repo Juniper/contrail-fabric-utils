@@ -136,6 +136,8 @@ libvirt_pkgs = [('libvirt', '0.10.2-{BUILD}'),
 CENTOS_UPGRADE_SCHEMA['openstack']['ensure'] += [('supervisor', '3.0-9.2')]
 CENTOS_UPGRADE_SCHEMA['openstack']['ensure'] += libvirt_pkgs
 CENTOS_UPGRADE_SCHEMA['openstack']['upgrade'] += ['openstack-dashboard']
+CENTOS_UPGRADE_SCHEMA['openstack']['rename_files'] += [('/etc/contrail/supervisord_openstack.conf.rpmnew',
+                                                        '/etc/contrail/supervisord_openstack.conf')]
 CENTOS_UPGRADE_SCHEMA['cfgm']['remove'] += ['contrail-api-extension', 'irond']
 CENTOS_UPGRADE_SCHEMA['cfgm']['ensure'] += libvirt_pkgs
 CENTOS_UPGRADE_SCHEMA['cfgm']['ensure'] += [('supervisor', '3.0-9.2')]
@@ -154,7 +156,7 @@ CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].remove('/etc/ifmap-server')
 CENTOS_R1_10_TO_R2_0['cfgm']['backup_dirs'].append('/etc/irond')
 CENTOS_R1_10_TO_R2_0['cfgm']['rename_files'].append((
     '/etc/irond/authorization.properties',
-    '/etc/fmap-server/authorization.properties'))
+    '/etc/ifmap-server/authorization.properties'))
 CENTOS_R1_10_TO_R2_0['cfgm']['rename_files'].append((
     '/etc/irond/basicauthusers.properties',
     '/etc/ifmap-server/basicauthusers.properties'))
@@ -510,7 +512,7 @@ def upgrade_openstack_node(from_rel, pkg, *args):
                 if ostype in ['centos']:
                     sku = get_build().split('~')[1]
                     if 'havana' in sku:
-                        upgrade_package([contrail-openstack-dashboard], ostype)
+                        upgrade_package(['contrail-openstack-dashboard'], ostype)
             execute('increase_item_size_max_node', host_string)
             execute('upgrade_pkgs_node', host_string)
             # Set the rabbit_host as from 1.10 the rabbit listens at the control_data ip
@@ -687,7 +689,7 @@ def upgrade_collector_node(from_rel, pkg, *args):
 
 
 @task
-def fix_config_global_js_node(*args):
+def fix_config_global_js_node(*args, **kwargs):
     new_config = """
 config.featurePkg = {};
 /* Add new feature Package Config details below */
@@ -718,13 +720,15 @@ module.exports = config;
 """
     for host_string in args:
         with settings(host_string=host_string):
-            run("sed -i '$d' /etc/contrail/config.global.js")
-            run("sed -i '$d' /etc/contrail/config.global.js")
-            run("echo \"%s\" >> /etc/contrail/config.global.js" % new_config)
-            # Make sure redis port is changed
-            run("sed -i s'/6383/6379/g' /etc/contrail/config.global.js")
-            # Make sure juniper logo is set
-            run("sed -i 's#opencontrail#juniper-networks#g' /etc/contrail/config.global.js")
+            if kwargs['from_rel'] in ['1.05', '1.06']:
+                run("sed -i '$d' /etc/contrail/config.global.js")
+                run("sed -i '$d' /etc/contrail/config.global.js")
+                run("echo \"%s\" >> /etc/contrail/config.global.js" % new_config)
+            else:
+                # Make sure redis port is changed
+                run("sed -i s'/6383/6379/g' /etc/contrail/config.global.js")
+                # Make sure juniper logo is set
+                run("sed -i 's#opencontrail#juniper-networks#g' /etc/contrail/config.global.js")
 
 @task
 @EXECUTE_TASK
@@ -742,8 +746,7 @@ def upgrade_webui_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'webui')
             execute('upgrade_pkgs_node', host_string)
-            if from_rel in ['1.05', '1.06']:
-                execute('fix_config_global_js_node', host_string)
+            execute('fix_config_global_js_node', host_string, from_rel=from_rel)
             execute('restart_webui_node', host_string)
 
 
