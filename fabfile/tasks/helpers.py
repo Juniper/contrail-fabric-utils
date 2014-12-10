@@ -326,7 +326,7 @@ def add_images(image=None):
 
     images = [ ("turnkey-redmine-12.0-squeeze-x86.vmdk", "redmine-web"),
                ("turnkey-redmine-12.0-squeeze-x86-mysql.vmdk", "redmine-db"),
-               ("precise-server-cloudimg-amd64-disk1.img", "ubuntu"),
+               ("ubuntu.img", "ubuntu"),
                ("traffic/ubuntu-traffic.img", "ubuntu-traffic"),
                ("vsrx/junos-vsrx-12.1-in-network.img", "nat-service"),
                ("vsrx/junos-vsrx-12.1-transparent.img", "vsrx-bridge"),
@@ -368,7 +368,7 @@ def add_basic_images(image=None):
     if not mount :
         return
 
-    images = [ ("precise-server-cloudimg-amd64-disk1.img", "ubuntu"),
+    images = [ ("ubuntu.img", "ubuntu"),
                ("traffic/ubuntu-traffic.img", "ubuntu-traffic"),
                ("cirros/cirros-0.3.0-x86_64-uec", "cirros"),
                ("vsrx/junos-vsrx-12.1-in-network.img", "nat-service"),
