@@ -289,6 +289,8 @@ def setup_rabbitmq_cluster(force=False):
         execute(config_rabbitmq)
         execute("stop_rabbitmq_and_set_cookie", rabbitmq_cluster_uuid)
         execute(start_rabbitmq)
+        #adding sleep to workaround rabbitmq bug 26370 prevent "rabbitmqctl cluster_status" from breaking the database, this is seen in ci
+        time.sleep(60)
         #execute(rabbitmqctl_stop_app)
         #execute(rabbitmqctl_reset)
         #execute("rabbitmqctl_start_app_node", env.roledefs['rabbit'][0])
