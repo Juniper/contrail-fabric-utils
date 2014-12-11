@@ -31,6 +31,20 @@ def install_pkg_all(pkg):
     execute('install_pkg_node', pkg, env.host_string)
 
 @task
+@parallel(pool_size=20)
+@roles('cfgm')
+def install_contrail_vcenter_plugin(pkg):
+    """Installs any rpm/deb package in all nodes."""
+    execute('install_pkg_node', pkg, env.host_string)
+    execute('install_contrail_vcenter_plugin_node', env.host_string)
+
+@task
+def install_contrail_vcenter_plugin_node( *args):
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            sudo('cd /opt/contrail/contrail_vcenter_plugin_install_repo/; dpkg -i *')
+
+@task
 @roles('build')
 def install_pkg_all_without_openstack(pkg):
     """Installs any rpm/deb package in all nodes excluding openstack node."""
