@@ -78,7 +78,6 @@ def provision_vcenter(vcenter_info, esxi_info):
         vcenter_params['datacenter_name'] = vcenter_info['datacenter']
         vcenter_params['cluster_name'] = vcenter_info['cluster']
         vcenter_params['dvswitch_name'] = vcenter_info['dv_switch']['dv_switch_name']
-        vcenter_params['dvswitch_nic'] = vcenter_info['dv_switch']['nic']
         vcenter_params['dvportgroup_name'] = vcenter_info['dv_port_group']['dv_portgroup_name']
         vcenter_params['dvportgroup_num_ports'] = vcenter_info['dv_port_group']['number_of_ports']
         hosts = []

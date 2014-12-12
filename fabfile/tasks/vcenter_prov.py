@@ -14,7 +14,6 @@ class Vcenter(object):
         self.datacenter_name = vcenter_params['datacenter_name']
         self.cluster_name = vcenter_params['cluster_name']
         self.dvswitch_name = vcenter_params['dvswitch_name']
-        self.dvswitch_nic = vcenter_params['dvswitch_nic']
         self.dvportgroup_name = vcenter_params['dvportgroup_name']
         self.dvportgroup_num_ports = vcenter_params['dvportgroup_num_ports']
         self.hosts = vcenter_params['hosts']
@@ -320,7 +319,6 @@ def main():
     vcenter_params['dvswitch_name']='kiran_dvswitch'
     vcenter_params['dvportgroup_num_ports']='16'
     vcenter_params['dvportgroup_name']='kiran_dvportgroup'
-    vcenter_params['dvswitch_nic']='vmnic1'
     
     
     try:

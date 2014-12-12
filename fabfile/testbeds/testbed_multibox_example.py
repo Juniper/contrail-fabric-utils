@@ -308,7 +308,7 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #datacenter is the datacenter name we are operating on
 #cluster is the clustername we are operating on
 #dvswitch section contains distributed switch related para,s
-#       dv_switch_name and the nic which will be put on it
+#       dv_switch_name 
 #dvportgroup section contains the distributed port group info
 #       dv_portgroupname and the number of ports the group has
 ######################################
@@ -321,7 +321,6 @@ env.vcenter = {
         'datacenter': 'kd_dc',
         'cluster': 'kd_cluster',
         'dv_switch': { 'dv_switch_name': 'kd_dvswitch',
-                        'nic': 'vmnic0',
                      },
         'dv_port_group': { 'dv_portgroup_name': 'kd_dvportgroup',
                            'number_of_ports': '3',
