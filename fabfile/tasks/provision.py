@@ -1139,11 +1139,19 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
         openstack_host_connection = openstack_host + ':22'
         if connections and openstack_host_connection in connections.keys():
             connections.pop(openstack_host_connection)
+
+        # Use metadata_secret provided in testbed. If not available
         # retrieve neutron_metadata_proxy_shared_secret from openstack
-        with settings(host_string=openstack_host):
-            metadata_secret = get_value(src_file='/etc/nova/nova.conf',
-                              section='keystone_authtoken',
-                              variable='neutron_metadata_proxy_shared_secret')
+        metadata_secret = getattr(testbed,
+                                  'neutron_metadata_proxy_shared_secret',
+                                  None)
+        if not metadata_secret:
+            with settings(host_string=openstack_host):
+                status, secret = get_value('/etc/nova/nova.conf',
+                                     'DEFAULT',
+                                     'service_neutron_metadata_proxy',
+                                     'neutron_metadata_proxy_shared_secret')
+            metadata_secret = secret if status == 'True' else None
 
     for host_string in args:
         # Enable haproxy for Ubuntu
