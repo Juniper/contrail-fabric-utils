@@ -283,11 +283,16 @@ def fixup_restart_haproxy_in_openstack_node(*args):
                 '%s server repcache%s %s:11211 check inter 2000 rise 2 fall 3\n'\
                  % (space, server_index, host_ip)
         rabbitmq_server_lines +=\
-            '%s server rabbit%s %s:5672 check inter 2000 rise 2 fall 3 weight 1 maxconn 500\n'\
+            '%s server rabbit%s %s:5672 check inter 2000 rise 2 fall 3\n'\
              % (space, server_index, host_ip)
-        mysql_server_lines +=\
-            '%s server mysql%s %s:3306 weight 1\n'\
-             % (space, server_index, host_ip)
+        if server_index >= 2:
+             mysql_server_lines +=\
+                   '%s server mysql%s %s:3306 check inter 2000 rise 2 fall 3 backup\n'\
+                   % (space, server_index, host_ip)
+        elif:
+             mysql_server_lines +=\
+                   '%s server mysql%s %s:3306 check inter 2000 rise 2 fall 3\n'\
+                   % (space, server_index, host_ip)
 
 
     for host_string in env.roledefs['openstack']:
