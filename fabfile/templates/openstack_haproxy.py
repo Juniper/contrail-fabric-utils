@@ -183,25 +183,28 @@ $__memcached_servers__
 listen  rabbitmq 0.0.0.0:5673
     mode tcp
     maxconn 10000
-    balance roundrobin
+    balance leastconn
     option tcpka
     option nolinger
-    option redispatch
+    option forceclose
     timeout client 48h
     timeout server 48h
+    timeout client-fin 60s
+    timeout server-fin 60s
 $__rabbitmq_servers__
 
 listen  mysql 0.0.0.0:33306
     mode tcp
-    balance roundrobin
+    balance leastconn
     option tcpka
     option nolinger
-    option redispatch
+    option forceclose
     maxconn 10000
-    timeout connect 5s
+    timeout connect 30s
     timeout client 24h
     timeout server 24h
-    option mysql-check user root
+    timeout client-fin 60s
+    timeout server-fin 60s
 $__mysql_servers__
 
 #contrail-openstack-marker-end

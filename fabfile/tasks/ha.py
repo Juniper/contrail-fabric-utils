@@ -282,12 +282,22 @@ def fixup_restart_haproxy_in_openstack_node(*args):
             memcached_server_lines +=\
                 '%s server repcache%s %s:11211 check inter 2000 rise 2 fall 3\n'\
                  % (space, server_index, host_ip)
-        rabbitmq_server_lines +=\
-            '%s server rabbit%s %s:5672 check inter 2000 rise 2 fall 3 weight 1 maxconn 500\n'\
-             % (space, server_index, host_ip)
-        mysql_server_lines +=\
-            '%s server mysql%s %s:3306 weight 1\n'\
-             % (space, server_index, host_ip)
+        if server_index == 1:
+            rabbitmq_server_lines +=\
+                '%s server rabbit%s %s:5672 weight 200 check inter 2000 rise 2 fall 3\n'\
+                 % (space, server_index, host_ip)
+        else:
+            rabbitmq_server_lines +=\
+                '%s server rabbit%s %s:5672 weight 100 check inter 2000 rise 2 fall 3 backup\n'\
+                 % (space, server_index, host_ip)
+        if server_index == 1:
+             mysql_server_lines +=\
+                   '%s server mysql%s %s:3306 weight 200 check inter 2000 rise 2 fall 3\n'\
+                   % (space, server_index, host_ip)
+        else:
+             mysql_server_lines +=\
+                   '%s server mysql%s %s:3306 weight 100 check inter 2000 rise 2 fall 3 backup\n'\
+                   % (space, server_index, host_ip)
 
 
     for host_string in env.roledefs['openstack']:
@@ -422,6 +432,7 @@ def fix_cmon_param_and_add_keys_to_compute():
     run("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
     run("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
     run("echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % cmon_param)
+    run("echo 'RABBITMQ_RESET=True' >> %s" % cmon_param)
     amqps = 'DIPHOSTS=("' + '" "'.join(amqp_host_list) + '")'
     run("echo '%s' >> %s" % (amqps, cmon_param))
     run("echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % cmon_param)
