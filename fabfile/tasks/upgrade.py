@@ -116,6 +116,7 @@ if get_openstack_internal_vip():
 # Ubuntu Release upgrade
 UBUNTU_R1_10_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_20_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_21_TO_R2_0 = copy.deepcopy(UBUNTU_R1_20_TO_R2_0)
 UBUNTU_R1_30_TO_R2_0 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
 UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
@@ -161,6 +162,7 @@ CENTOS_R1_10_TO_R2_0['cfgm']['rename_files'].append((
     '/etc/irond/basicauthusers.properties',
     '/etc/ifmap-server/basicauthusers.properties'))
 CENTOS_R1_20_TO_R2_0 = copy.deepcopy(CENTOS_R1_10_TO_R2_0)
+CENTOS_R1_21_TO_R2_0 = copy.deepcopy(CENTOS_R1_20_TO_R2_0)
 CENTOS_R2_0_TO_R2_0 = copy.deepcopy(CENTOS_UPGRADE_SCHEMA)
 CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
 CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-svc-monitor.conf')
@@ -451,7 +453,7 @@ def upgrade_database_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            if get_release('contrail-openstack-database') in ['1.10', '1.20']:
+            if get_release('contrail-openstack-database') in ['1.10', '1.20', '1.21']:
                 run("service supervisord-contrail-database stop")
             upgrade(from_rel, 'database')
             execute('upgrade_pkgs_node', host_string)
@@ -503,7 +505,7 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'openstack')
-            if from_rel in ['1.10', '1.20']:
+            if from_rel in ['1.10', '1.20', '1.21']:
                 # Workaround for bug https://bugs.launchpad.net/juniperopenstack/+bug/1383927
                 if ostype in ['ubuntu']:
                     rel = get_release('contrail-openstack')
@@ -569,7 +571,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                 run('supervisorctl -s unix:///tmp/supervisord_config.sock update')
                 execute('stop_cfgm_node', host_string)
             run('chkconfig supervisor-support-service on')
-            if from_rel in ['1.10', '1.20']:
+            if from_rel in ['1.10', '1.20', '1.21']:
                 with settings(warn_only=True):
                     run("kill -9 $(ps ax | grep irond.jar | grep -v grep | awk '{print $1}')")
                 if detect_ostype() == 'centos':
@@ -588,7 +590,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                                         }
             for param, value in lbaas_svc_instance_params.items():
                 run("openstack-config --set %s SCHEDULER %s %s" % (conf_file, param, value))
-            if from_rel in ['1.10', '1.20', '1.30']:
+            if from_rel in ['1.10', '1.20', '1.30', '1.21']:
                 # Create Keystone auth config ini
                 api_conf_file = '/etc/contrail/contrail-api.conf'
                 conf_file = '/etc/contrail/contrail-keystone-auth.conf'
@@ -639,7 +641,7 @@ def upgrade_control_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'control')
             execute('upgrade_pkgs_node', host_string)
-            if from_rel in ['1.10', '1.20', '1.30']:
+            if from_rel in ['1.10', '1.20', '1.30', '1.21']:
                 conf_file = '/etc/contrail/contrail-control.conf'
                 #Removing the preceeding empty spaces
                 run("sed -i 's/^\s\+//g' %s" % conf_file)
@@ -670,7 +672,7 @@ def upgrade_collector_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'collector')
             execute('upgrade_pkgs_node', host_string)
-            if from_rel in ['1.10', '1.20', '1.30']:
+            if from_rel in ['1.10', '1.20', '1.30', '1.21']:
                 conf_file = '/etc/contrail/contrail-collector.conf'
                 run("sed -i 's/^\s\+//g' %s" % conf_file)
                 run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-collector.log" % conf_file)
@@ -774,7 +776,7 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
                                         }
             for param, value in lbaas_svc_instance_params.items():
                 run("openstack-config --set %s SERVICE-INSTANCE %s %s" % (conf_file, param, value))
-            if from_rel in ['1.10', '1.20', '1.30']:
+            if from_rel in ['1.10', '1.20', '1.30', '1.21']:
                 run("openstack-config --set %s DEFAULT log_file /var/log/contrail/contrail-vrouter-agent.log" % conf_file)
                 run("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
