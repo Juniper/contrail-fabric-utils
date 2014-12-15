@@ -365,7 +365,7 @@ env.compute_vm = {
                       'esx_fab_port_group' : 'contrail-fab-pg',
                       'esx_ssl_thumbprint' : "2A:B9:E9:E0:4F:07:20:DD:F1:FC:C6:45:BE:A8:E0:21:D1:8E:47:CB",
                      },
-             'contrailvm_virual_mac' : "00:50:56:05:BC:BA",
+             'contrailvm_virtual_mac' : "00:50:56:05:BC:BA",
              'contrailvm_ip': "1.1.1.2",
              'esx_vm_name' : "ContrailVM-sumne1",
              'esx_datastore' : "/vmfs/volumes/b3s40-ds1",
