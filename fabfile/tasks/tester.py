@@ -293,6 +293,7 @@ def setup_test_env():
                     pkg = pkg + ' pexpect'
                 if ui_browser:
                     pkg = pkg + ' pyvirtualdisplay selenium'
+                pkg = pkg + ' python-heatclient'
                 if exists('/opt/contrail/api-venv/bin/activate'):
                     run('source /opt/contrail/api-venv/bin/activate && \
                         pip install --upgrade %s' %pkg)
