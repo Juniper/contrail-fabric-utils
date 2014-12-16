@@ -307,6 +307,7 @@ def setup_test_env():
                         pip install --upgrade %s' %pkg)
                 else:
                     sudo("pip install --upgrade %s" %pkg)
+                pkg = pkg + ' python-heatclient'
                 if not exists('/usr/bin/ant'):
                     pkg_install(['ant'],disablerepo = False)
                     ant_version = sudo('ant -version')
