@@ -35,7 +35,7 @@ def verify_openstack():
     verify_service("keystone")
     for x in xrange(10):
         with settings(warn_only=True):
-            output = run("source /etc/contrail/openstackrc; keystone tenant-list")
+            output = sudo("source /etc/contrail/openstackrc; keystone tenant-list")
         if output.failed:
             sleep(10)
         else:

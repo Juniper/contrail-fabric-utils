@@ -145,7 +145,7 @@ listen  rabbitmq 0.0.0.0:5673
         with settings(host_string=host_string):
             # chop old settings including pesky default from pkg...
             tmp_fname = "/tmp/haproxy-%s-config" %(host_string)
-            get("/etc/haproxy/haproxy.cfg", tmp_fname)
+            get_as_sudo("/etc/haproxy/haproxy.cfg", tmp_fname)
             with settings(warn_only=True):
                 local("sed -i -e '/^#contrail-config-marker-start/,/^#contrail-config-marker-end/d' %s" %(tmp_fname))
                 local("sed -i -e 's/frontend\s*main\s*\*:5000/frontend  main *:5001/' %s" %(tmp_fname))
@@ -279,7 +279,7 @@ $__contrail_glance_apis__
     with settings(host_string=compute_host_string):
         # chop old settings including pesky default from pkg...
         tmp_fname = "/tmp/haproxy-%s-compute" %(compute_host_string)
-        get("/etc/haproxy/haproxy.cfg", tmp_fname)
+        get_as_sudo("/etc/haproxy/haproxy.cfg", tmp_fname)
         with settings(warn_only=True):
             local("sed -i -e '/^#contrail-compute-marker-start/,/^#contrail-compute-marker-end/d' %s"\
                    %(tmp_fname))
@@ -364,7 +364,7 @@ $__contrail_quantum_servers__
         with settings(host_string=openstack_host_string):
             # chop old settings including pesky default from pkg...
             tmp_fname = "/tmp/haproxy-%s-openstack" %(openstack_host_string)
-            get("/etc/haproxy/haproxy.cfg", tmp_fname)
+            get_as_sudo("/etc/haproxy/haproxy.cfg", tmp_fname)
             with settings(warn_only=True):
                 local("sed -i -e '/^#contrail-openstack-marker-start/,/^#contrail-openstack-marker-end/d' %s"\
                        %(tmp_fname))

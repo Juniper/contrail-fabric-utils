@@ -2,7 +2,7 @@ import copy
 import tempfile
 
 from fabfile.config import *
-from fabfile.utils.fabos import detect_ostype
+from fabfile.utils.fabos import detect_ostype, get_as_sudo
 from fabfile.utils.host import hstr_to_ip
 from fabfile.tasks.upgrade import upgrade_package, remove_package
 
@@ -98,7 +98,7 @@ def zookeeper_rolling_restart():
             zk_index = (database_nodes.index(new_node) + len(cfgm_nodes) + 1)
             sudo('echo "server.%d=%s:2888:3888" >> %s' % (zk_index, hstr_to_ip(new_node), zoo_cfg))
         tmp_dir= tempfile.mkdtemp()
-        get(zoo_cfg, tmp_dir)
+        get_as_sudo(zoo_cfg, tmp_dir)
 
     print "Restart zookeeper in all nodes to make new nodes join zookeeper quorum"
     for zookeeper_node in cfgm_nodes + new_nodes:
@@ -155,7 +155,7 @@ def zookeeper_rolling_restart():
             zk_index = (database_nodes.index(zookeeper_node) + 1)
             sudo('echo "server.%d=%s:2888:3888" >> %s' % (zk_index, hstr_to_ip(zookeeper_node), zoo_cfg))
         tmp_dir= tempfile.mkdtemp()
-        get(zoo_cfg, tmp_dir)
+        get_as_sudo(zoo_cfg, tmp_dir)
 
     print "Correct the myid in myid file for the new nodes in the zookeeper quorum"
     for zookeeper_node in database_nodes:

@@ -1,3 +1,4 @@
+import os
 import ast
 
 from fabfile.config import *
@@ -63,3 +64,17 @@ def is_package_installed(pkg_name):
         result = sudo(cmd)
     return result.succeeded 
 #end is_package_installed
+
+def get_as_sudo(src_file, dst_file):
+    basename = os.path.basename(src_file.rstrip('/'))
+    if not basename or basename in ['*']:
+        raise Exception('%s is not a valid path'%src_file)
+    tmp_file = '/tmp/tmp%s'%basename
+    sudo('cp -rf %s %s'%(src_file, tmp_file))
+    sudo('chmod -R 777 %s'%tmp_file)
+    try:
+        status = get(tmp_file, dst_file)
+    except:
+        sudo('rm -rf %s'%tmp_file)
+        raise
+    sudo('rm -rf %s'%tmp_file)
