@@ -244,6 +244,11 @@ env.ostypes = {
 #    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
 #}
 
+# Link-Local Metadata Service
+# By default fab scripts will retrieve metadata secret from openstack node.
+# To override, Specify Metadata proxy secret from Openstack node
+#neutron_metadata_proxy_shared_secret = <secret>
+
 #To enable multi-tenancy feature
 #multi_tenancy = True
 
