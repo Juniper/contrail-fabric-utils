@@ -293,7 +293,6 @@ def setup_test_env():
                     pkg = pkg + ' pexpect'
                 if ui_browser:
                     pkg = pkg + ' pyvirtualdisplay selenium'
-                pkg = pkg + ' python-heatclient'
                 if exists('/opt/contrail/api-venv/bin/activate'):
                     run('source /opt/contrail/api-venv/bin/activate && \
                         pip install --upgrade %s' %pkg)
@@ -308,7 +307,7 @@ def setup_test_env():
                     if ('1.9' in ant_version):
                         pkg_install(['ant-junit'] , disablerepo = False)
 
-                pkg_install(['patch'],disablerepo = False)
+                pkg_install(['patch', 'python-heatclient'],disablerepo = False)
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
