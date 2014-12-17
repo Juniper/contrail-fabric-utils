@@ -88,7 +88,8 @@ def provision_vcenter(vcenter_info, esxi_info):
 
                 esx_list=[data['esx_ip'],data['esx_username'],data['esx_password'],data['esx_ssl_thumbprint']]
                 hosts.append(esx_list)
-                vms.append(esxi_data['esx_vm_name'])
+                modified_vm_name = esxi_info['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+_get_var(esxi_info['contrailvm_ip'])
+                vms.append(modified_vm_name)
 
         vcenter_params['hosts'] = hosts
         vcenter_params['vms'] = vms
@@ -97,9 +98,10 @@ def provision_vcenter(vcenter_info, esxi_info):
 
 
 @task
-def provision_esxi(deb, compute_vm_info):
+def provision_esxi(deb, vcenter_info, compute_vm_info):
             vm_params = {}
-            vm_params['vm'] = compute_vm_info['esx_vm_name']
+            modified_vm_name = compute_vm_info['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+_get_var(compute_vm_info['contrailvm_ip'])
+            vm_params['vm'] = modified_vm_name
             vm_params['vmdk'] = "ContrailVM-disk1"
             vm_params['datastore'] = compute_vm_info['esx_datastore']
             vm_params['eth0_mac'] = _get_var(compute_vm_info['contrailvm_virtual_mac'])
