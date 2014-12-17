@@ -3,7 +3,7 @@ import tempfile
 from fabfile.config import *
 from fabfile.templates import openstack_haproxy, collector_haproxy
 from fabfile.tasks.helpers import enable_haproxy
-from fabfile.utils.fabos import detect_ostype
+from fabfile.utils.fabos import detect_ostype, get_as_sudo
 from fabfile.utils.host import get_keystone_ip, get_control_host_string,\
                                hstr_to_ip, get_from_testbed_dict, get_service_token,\
                                get_openstack_internal_vip, get_openstack_external_vip,\
@@ -107,7 +107,7 @@ def sync_keystone_ssl_certs():
     host_string = env.host_string
     temp_dir= tempfile.mkdtemp()
     with settings(host_string=env.roledefs['openstack'][0], password=env.passwords[env.roledefs['openstack'][0]]):
-       get('/etc/keystone/ssl/', temp_dir)
+       get_as_sudo('/etc/keystone/ssl/', temp_dir)
     with settings(host_string=host_string, password=env.passwords[host_string]):
         put('%s/ssl/' % temp_dir, '/etc/keystone/', use_sudo=True)
         sudo('service keystone restart')
@@ -311,7 +311,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
         with settings(host_string=host_string):
             # chop old settings including pesky default from pkg...
             tmp_fname = "/tmp/haproxy-%s-config" % (host_string)
-            get("/etc/haproxy/haproxy.cfg", tmp_fname)
+            get_as_sudo("/etc/haproxy/haproxy.cfg", tmp_fname)
             with settings(warn_only=True):
                 local("sed -i -e '/^#contrail-openstack-marker-start/,/^#contrail-openstack-marker-end/d' %s" % (tmp_fname))
                 local("sed -i -e 's/frontend\s*main\s*\*:5000/frontend  main *:5001/' %s" %(tmp_fname))
@@ -373,7 +373,7 @@ def fixup_restart_haproxy_in_collector_node(*args):
         with settings(host_string=host_string):
             # chop old settings including pesky default from pkg...
             tmp_fname = "/tmp/haproxy-%s-config" % (host_string)
-            get("/etc/haproxy/haproxy.cfg", tmp_fname)
+            get_as_sudo("/etc/haproxy/haproxy.cfg", tmp_fname)
             with settings(warn_only=True):
                 local("sed -i -e '/^#contrail-collector-marker-start/,/^#contrail-collector-marker-end/d' %s" % (tmp_fname))
                 local("sed -i -e 's/frontend\s*main\s*\*:5000/frontend  main *:5001/' %s" %(tmp_fname))

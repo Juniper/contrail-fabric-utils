@@ -3,6 +3,7 @@ import shutil
 import tempfile
 import ConfigParser
 from ConfigParser import SafeConfigParser
+from fabos import get_as_sudo
 
 from fabfile.config import *
 
@@ -18,7 +19,7 @@ def get_value(src_file, section, *variables, **kwargs):
            src_file,
            '%s' % env.host_string,
            dest_file)
-    status = get(src_file, dest_file)
+    status = get_as_sudo(src_file, dest_file)
     # Parse file and retrieve values
     parser = SafeConfigParser()
     read_files = parser.read(dest_file)

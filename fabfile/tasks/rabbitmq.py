@@ -102,7 +102,7 @@ def rabbitmq_env():
     cfg_file = open(tmp_fname, 'w')
     cfg_file.write(rmq_env_conf)
     cfg_file.close()
-    put(tmp_fname, rabbit_env_conf)
+    put(tmp_fname, rabbit_env_conf, use_sudo=True)
     local("rm %s" %(tmp_fname))
 
 @task
