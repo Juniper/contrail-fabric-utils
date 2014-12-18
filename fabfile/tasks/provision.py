@@ -832,6 +832,14 @@ def setup_collector_node(*args):
                     run("service redis-server stop")
                     run("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
                     run("service redis-server start")
+                    #check if the redis-server is running, if not, issue start again
+                    count = 1
+                    while run("service redis-server status | grep not").succeeded:
+                        count += 1
+                        if count > 10:
+                            break
+                        sleep(1)
+                        run("service redis-server restart")
                 else:
                     run("service redis stop")
                     run("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis.conf")
