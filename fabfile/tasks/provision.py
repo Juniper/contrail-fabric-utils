@@ -813,9 +813,17 @@ def setup_collector_node(*args):
         with  settings(host_string=host_string):
             with settings(warn_only=True):
                 if detect_ostype() == 'ubuntu':
-                    sudo("service redis-server stop")
-                    sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
-                    sudo("service redis-server start")
+                    run("service redis-server stop")
+                    run("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
+                    run("service redis-server start")
+                    #check if the redis-server is running, if not, issue start again
+                    count = 1
+                    while run("service redis-server status | grep not").succeeded:
+                        count += 1
+                        if count > 10:
+                            break
+                        sleep(1)
+                        run("service redis-server restart")
                 else:
                     sudo("service redis stop")
                     sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis.conf")
