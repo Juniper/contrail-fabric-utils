@@ -16,7 +16,7 @@ def upgrade_kernel_all(reboot='yes'):
         if version == '12.04':
             (package, os_type) = ('linux-image-3.13.0-34-generic', 'ubuntu')
         elif version == '14.04':
-            (package, os_type) = ('linux-image-3.13.0-35-generic', 'ubuntu')
+            (package, os_type) = ('linux-image-3.13.0-40-generic', 'ubuntu')
         else:
             raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
                                " kernel upgrade." % (dist, version, extra))
@@ -55,9 +55,9 @@ def upgrade_kernel_node(*args):
                 print "Upgrading the kernel to 3.13.0-34"
                 apt_install(["linux-image-3.13.0-34-generic"])
             elif version == '14.04':
-                print "Installing 3.13.0-35 kernel headers"
-                apt_install(["linux-headers-3.13.0-35",
-                             "linux-headers-3.13.0-35-generic"])
-                print "Upgrading the kernel to 3.13.0-35"
-                apt_install(["linux-image-3.13.0-35-generic",
-                             "linux-image-extra-3.13.0-35-generic"])
+                print "Installing 3.13.0-40 kernel headers"
+                apt_install(["linux-headers-3.13.0-40",
+                             "linux-headers-3.13.0-40-generic"])
+                print "Upgrading the kernel to 3.13.0-40"
+                apt_install(["linux-image-3.13.0-40-generic",
+                             "linux-image-extra-3.13.0-40-generic"])
