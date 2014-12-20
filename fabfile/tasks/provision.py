@@ -1259,11 +1259,11 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
         # Simple Gateway(vgw) arguments
         (set_vgw, gateway_routes, public_subnet, public_vn_name, vgw_intf_list) = get_vgw_details(host_string)
         if set_vgw:
-            cmd += " --public_subnet %s" % str([(';'.join(str(e) for e in public_subnet)).replace(" ","")])
-            cmd += " --public_vn_name %s" % str([(';'.join(str(e) for e in public_vn_name)).replace(" ","")])
-            cmd += " --vgw_intf %s" % str([(';'.join(str(e) for e in vgw_intf_list)).replace(" ","")])
+            cmd += " --vgw_public_subnet %s" % str([(';'.join(str(e) for e in public_subnet)).replace(" ","")])
+            cmd += " --vgw_public_vn_name %s" % str([(';'.join(str(e) for e in public_vn_name)).replace(" ","")])
+            cmd += " --vgw_intf_list %s" % str([(';'.join(str(e) for e in vgw_intf_list)).replace(" ","")])
             if gateway_routes:
-                cmd += " --gateway_routes %s" % str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
+                cmd += " --vgw_gateway_routes %s" % str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
 
         # Contrail with vmware as orchestrator
         (vmware, esxi_data, vmware_info) = get_vmware_details(host_string)
