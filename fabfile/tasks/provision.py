@@ -21,7 +21,7 @@ from fabfile.utils.vcenter import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_esxi,\
-        configure_esxi_network, create_ovf
+        configure_esxi_network, create_ovf, create_esxi_compute_vm
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details
 
@@ -1748,6 +1748,7 @@ def prov_esxi():
         return
     for host in esxi_info.keys():
         configure_esxi_network(esxi_info[host])
+        create_esxi_compute_vm(esxi_info[host])
 #end prov_compute_vm
 
 @roles('build')
