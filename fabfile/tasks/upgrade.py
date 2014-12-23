@@ -34,7 +34,8 @@ UPGRADE_SCHEMA = {
                    'remove_files' : ['/etc/init/supervisord-contrail-database.conf',
                                      '/etc/contrail/supervisord_contrail_database.conf',
                                     ],
-                   'rename_files' : [],
+                   'rename_files' : [('/etc/contrail/contrail-nodemgr-database.conf',
+                                      '/etc/contrail/contrail-database-nodemgr.conf'),],
                   },
     'cfgm' : {'upgrade' : ['contrail-openstack-config'],
                    'remove' : [],
@@ -125,7 +126,8 @@ UBUNTU_R1_30_TO_R2_0['cfgm']['backup_files'] += ['/etc/contrail/contrail-svc-mon
 UBUNTU_R1_30_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
 UBUNTU_R1_30_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
 UBUNTU_R2_0_TO_R2_0 = copy.deepcopy(UBUNTU_R1_30_TO_R2_0)
-
+UBUNTU_R2_0_TO_R2_0['database']['rename_files'].remove(('/etc/contrail/contrail-nodemgr-database.conf',
+                                                        '/etc/contrail/contrail-database-nodemgr.conf'))
 
 CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
 # Add contrail-interface-name to upgrade list if interface rename enabled.
@@ -170,6 +172,8 @@ CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].remove('/etc/contrail/schema_transfo
 CENTOS_R2_0_TO_R2_0['cfgm']['backup_files'].append('/etc/contrail/contrail-schema.conf')
 CENTOS_R2_0_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-nodemgr-database.conf')
 CENTOS_R2_0_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
+CENTOS_R2_0_TO_R2_0['database']['rename_files'].remove(('/etc/contrail/contrail-nodemgr-database.conf',
+                                                        '/etc/contrail/contrail-database-nodemgr.conf'))
 
 def format_upgrade_schema(data, **formater):
     if type(data) is dict:
