@@ -226,6 +226,20 @@ def restart_webui_node(*args):
             run('service supervisor-webui restart')
 
 @task
+@roles('webui')
+def start_redis_webui():
+    """Starts redis service in webui node."""
+    execute('start_redis_webui_node', env.host_string)
+
+@task
+def start_redis_webui_node(*args):
+    """Starts redis service in webui node. USAGE:fab start_redis_webui_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        with  settings(host_string=host_string):
+            run('chkconfig redis on')
+            run('service redis start')
+
+@task
 @roles('build')
 def stop_contrail_control_services():
     """stops the Contrail config,control,analytics,database,webui services."""
