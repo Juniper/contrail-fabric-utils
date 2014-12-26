@@ -1462,6 +1462,54 @@ def setup_remote_syslog_node(*args):
     return True
 # end setup_remote_syslog
 
+@roles('tsn')
+@task
+def add_tsn():
+    """Add the TSN nodes. Enable the compute nodes (mentioned with role TSN in testbed file) with TSN functionality . USAGE: fab add_tsn."""
+    execute("add_tsn_node", env.host_string)
+
+@task
+def add_tsn_node(*args):
+    """Enable TSN functionality in particular node. USAGE: fab add_tsn_node."""
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
+            #run ("sudo sed -i 's/# tsn=false/tsn=true/g' %s" \
+            #       % (nova_conf_file))
+            sudo("openstack-config --set %s DEFAULT agent_mode tsn" % nova_conf_file)
+            sudo("service supervisor-vrouter restart")
+
+@roles('toragent')
+@task
+def add_tor_agent():
+    """Add the tor agent nodes. Enable the compute nodes (mentioned with role toragent in testbed file) with tor agent functionality . USAGE: fab add_tor."""
+    execute("add_tor_agent_node", env.host_string)
+
+@task
+def add_tor_agent_node(*args):
+    """Enable tor agent functionality in particular node. USAGE: fab add_tor_agent_node."""
+    for host_string in args:
+        with settings(host_string=host_string):
+            toragent_dict = getattr(env,'tor_agent', None)
+            for i in range(len(toragent_dict[host_string])):
+                # Populate the argument to pass for setup-vnc-tor-agent
+                tor_id= int(toragent_dict[host_string][i]['tor_id'])
+                http_server_port = tor_id + 9009
+                tgt_hostname = sudo("hostname")
+                agent_name= tgt_hostname + '-' + str(tor_id)
+                cmd = "setup-vnc-tor-agent"
+                cmd += " --agent_name %s" % agent_name
+                cmd += " --http_server_port %s" % http_server_port
+                cmd += " --discovery_server_ip %s" % hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+                cmd += " --tor_id %s" % tor_id
+                cmd += " --tor_ip %s" % toragent_dict[host_string][i]['tor_ip']
+                cmd += " --tor_ovs_port %s" % toragent_dict[host_string][i]['tor_ovs_port']
+                cmd += " --tsn_ip %s" % toragent_dict[host_string][i]['tor_tsn_ip']
+                cmd += " --tor_ovs_protocol %s" % toragent_dict[host_string][i]['tor_ovs_protocol']
+                # Execute the provision toragent script
+                with cd(INSTALLER_DIR):
+                    sudo(cmd)
+            sudo("service supervisor-vrouter restart")
 @task
 @hosts(env.roledefs['all'])
 def cleanup_remote_syslog():
