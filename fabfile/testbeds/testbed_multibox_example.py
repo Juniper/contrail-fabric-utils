@@ -39,6 +39,9 @@ env.roledefs = {
     'storage-master': [host1],
     'storage-compute': [host4, host5, host6, host7, host8, host9, host10],
     # 'vgw': [host4, host5], # Optional, Only to enable VGW. Only compute can support vgw
+    # 'tsn': [host1], # Optional, Only to enable TSN. Only compute can support TSN
+    # 'toragent': [host1], Optional, Only to enable Tor Agent. Only compute can
+    # support Tor Agent
     #   'backup':[backup_node],  # only if the backup_node is defined
 }
 
@@ -302,6 +305,22 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}},
 #           host5: {'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}}
 #          }
+
+#OPTIONAL optional tor agent and tsn CONFIGURATION
+#==================================================
+#Section tor agent is only relevant when you want to use Tor Agent feature. 
+#You can use one of your compute node as  Tor Agent . Same or diffrent compute
+#node should be enable as tsn
+
+#Definition for the Key used
+#-------------------------------------
+# tor_ip: IP of the tor switch
+# tor_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
+# tor_ovs_port: Port number to be used by ovs
+# tor_ovs_protocol: Connection protocol to be used by ovs. Currently only TCP
+# tor_tsn_ip: TSN node ip 
+#env.tor_agent =
+#{host3:[{'tor_ip':'10.204.217.39','tor_id':'1','tor_ovs_port':'9999','tor_ovs_protocol':'tcp','tor_tsn_ip':'10.204.221.35'}]}
 
 #######################################
 #vcenter provisioning
