@@ -1,3 +1,4 @@
+import re
 import sys
 import socket
 import os
@@ -50,42 +51,63 @@ def reboot_node(*args):
                 sys.exit(1)
 #end compute_reboot
 
+def reimage_virtual_nodes(host, count):
+            with settings(
+            host_string='%s@%s' % (
+                'root', env.virtual_nodes_info[host]['keystone_ip']),
+                password='c0ntrail123', warn_only=True, abort_on_prompts=False, debug=True):
+                check = run('nova --os-username %s --os-password %s --os-tenant-name %s --os-auth-url http://192.168.22.2:5000/v2.0/ list | grep %s'%(env.virtual_nodes_info[host]['user'], env.virtual_nodes_info[host]['password'], env.virtual_nodes_info[host]['tenant'], env.hostnames['all'][count]))
+                if check :
+                   run('nova --os-username %s --os-password %s --os-tenant-name %s --os-auth-url http://192.168.22.2:5000/v2.0/ delete %s'%(env.virtual_nodes_info[host]['user'], env.virtual_nodes_info[host]['password'], env.virtual_nodes_info[host]['tenant'], env.hostnames['all'][count]))
+                   sleep(5)
+                status = run('neutron --os-username %s --os-password %s --os-tenant-name %s --os-auth-url http://192.168.22.2:5000/v2.0/ port-create --tenant-id %s --mac-address %s --fixed-ip ip_address=%s --name %s %s'%(env.virtual_nodes_info[host]['user'], env.virtual_nodes_info[host]['password'], env.virtual_nodes_info[host]['tenant'], env.virtual_nodes_info[host]['tenant_id'], env.virtual_nodes_info[host]['mac-address'] , host.split('@')[1], env.hostnames['all'][count], env.virtual_nodes_info[host]['vn_id']))
+                m = re.search('\|\sid(.*)\|\s([\w-]+)(.*)\|',status)
+                port_id = m.group(2)
+                status1 = run('nova --os-username %s --os-password %s --os-tenant-name %s --os-auth-url http://192.168.22.2:5000/v2.0/ boot --flavor 4 --image %s --nic port-id=%s,v4-fixed-ip=%s  %s'%(env.virtual_nodes_info[host]['user'], env.virtual_nodes_info[host]['password'], env.virtual_nodes_info[host]['tenant'], env.virtual_nodes_info[host]['image_name'], port_id, host.split('@')[1], env.hostnames['all'][count] ))
+
 @roles('build')
 @task
 def all_reimage(build_param="@LATEST"):
+    count = 0
     for host in env.roledefs["all"]:
-        for i in range(5):
-            try:
-                hostname = socket.gethostbyaddr( hstr_to_ip(host) )[0].split('.')[0]
-            except socket.herror: 
-                sleep(5)
-                continue
-            else:
-                break
+        if host in env.virtual_nodes_info.keys():
+           reimage_virtual_nodes(host, count)
+           count = count + 1
+        
+        else:
+   
+            for i in range(5):
+                try:
+                   hostname = socket.gethostbyaddr( hstr_to_ip(host) )[0].split('.')[0]
+                except socket.herror: 
+                   sleep(5)
+                   continue
+                else:
+                   break
 
-        if 'ostypes' in env.keys():
-            if 'xen' in env.ostypes[host]:
-                pass
-            elif 'fedora' in env.ostypes[host]:
-                # Fedora
-                local("/cs-shared/cf/bin/reimage %s %s" %(hostname, build_param))
-            elif 'ubuntu' in env.ostypes[host]:
-                with settings(warn_only=True):
-                    if local("/cs-shared/cf/bin/ubuntu.reimage %s" %(hostname)).failed:
-                        local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s ubuntu-12.04.3" % (hostname))
-            elif 'cent63' in env.ostypes[host]:
-                local("/cs-shared/cf/bin/centos63.reimage %s" %(hostname))
+            if 'ostypes' in env.keys():
+                if 'xen' in env.ostypes[host]:
+                   pass
+                elif 'fedora' in env.ostypes[host]:
+                   # Fedora
+                   local("/cs-shared/cf/bin/reimage %s %s" %(hostname, build_param))
+                elif 'ubuntu' in env.ostypes[host]:
+                   with settings(warn_only=True):
+                        if local("/cs-shared/cf/bin/ubuntu.reimage %s" %(hostname)).failed:
+                           local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s ubuntu-12.04.3" % (hostname))
+                elif 'cent63' in env.ostypes[host]:
+                   local("/cs-shared/cf/bin/centos63.reimage %s" %(hostname))
+                else:
+                   # CentOS
+                   with settings(warn_only=True):
+                        if local("/cs-shared/cf/bin/centos.reimage %s %s" %(hostname, build_param)).failed:
+                           local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
             else:
                 # CentOS
                 with settings(warn_only=True):
-                    if local("/cs-shared/cf/bin/centos.reimage %s %s" %(hostname, build_param)).failed:
-                        local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
-        else:
-            # CentOS
-            with settings(warn_only=True):
-                if local("/cs-shared/cf/bin/centos.reimage %s %s" %(hostname, build_param)).failed:
-                    local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
-        sleep(5)
+                   if local("/cs-shared/cf/bin/centos.reimage %s %s" %(hostname, build_param)).failed:
+                      local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
+            sleep(5)
 #end all_reimage
 
 @roles('build')
