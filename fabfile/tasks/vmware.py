@@ -88,7 +88,7 @@ def provision_vcenter(vcenter_info, esxi_info):
 
                 esx_list=[data['esx_ip'],data['esx_username'],data['esx_password'],data['esx_ssl_thumbprint']]
                 hosts.append(esx_list)
-                modified_vm_name = esxi_info['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+_get_var(esxi_info['contrailvm_ip'])
+                modified_vm_name = esxi_data['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+_get_var(esxi_data['contrailvm_ip'])
                 vms.append(modified_vm_name)
 
         vcenter_params['hosts'] = hosts
