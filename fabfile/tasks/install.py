@@ -429,6 +429,9 @@ def install_webui_node(*args):
 def install_vrouter(manage_nova_compute='yes'):
     """Installs vrouter pkgs in all nodes defined in vrouter role."""
     if env.roledefs['compute']:
+        # Nova compute need not required for TSN node
+        if 'tsn' in env.roledefs.keys():
+            if  env.host_string in env.roledefs['tsn']: manage_nova_compute='no'
         execute("install_only_vrouter_node", manage_nova_compute, env.host_string)
 
 @task

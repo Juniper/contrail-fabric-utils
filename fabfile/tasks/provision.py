@@ -1115,20 +1115,28 @@ def setup_agent_config_in_node(*args):
 @task
 @EXECUTE_TASK
 @roles('compute')
-def setup_vrouter(manage_nova_compute='yes'):
+def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
     """Provisions vrouter services in all nodes defined in vrouter role.
        If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute provisioning will be skipped.
+       Even when we are no managing nova-compute (manage_nova_compute = no) still we execute few required config on
+       nova.conf. If configure_nova = no; No nova config related configuration will executed on nova.conf file.
     """
     if env.roledefs['compute']:
-       execute("setup_only_vrouter_node", manage_nova_compute,  env.host_string)
+       # Launching of VM is not surrently supported in TSN node.
+       # Not proviosning nova_compute incase the compute node is TSN.
+       if 'tsn' in env.roledefs.keys():
+           if  env.host_string in env.roledefs['tsn']:
+               manage_nova_compute='no'
+               configure_nova='no'
+       execute("setup_only_vrouter_node", manage_nova_compute, configure_nova,  env.host_string)
 
 @task
 def setup_vrouter_node(*args):
     """Provisions nova-compute and vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
-    execute("setup_only_vrouter_node", 'yes', *args)
+    execute("setup_only_vrouter_node", 'yes', 'yes' *args)
 
 @task
-def setup_only_vrouter_node(manage_nova_compute='yes', *args):
+def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *args):
     """Provisions only vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2
        If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute provisioning will be skipped.
     """
@@ -1239,6 +1247,9 @@ def setup_only_vrouter_node(manage_nova_compute='yes', *args):
             cmd += " --contrail_internal_vip %s" % contrail_internal_vip
         if internal_vip or contrail_internal_vip:
             cmd += " --mgmt_self_ip %s" % compute_mgmt_ip
+
+        if configure_nova == 'no':
+            cmd = cmd + "  --no_nova_config"
 
         # Simple Gateway(vgw) arguments
         (set_vgw, gateway_routes, public_subnet, public_vn_name, vgw_intf_list) = get_vgw_details(host_string)
