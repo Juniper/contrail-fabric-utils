@@ -1,5 +1,6 @@
 import os
 import re
+import tempfile
 
 from fabfile.config import *
 from fabfile.templates import compute_ovf_template, compute_vmx_template
@@ -65,11 +66,11 @@ def create_vmx (esxi_host):
                       '__fab_pg__' : fab_pg,
                       '__vm_pg__' : vm_pg,
                     }
-    vmx_file = '%s.vmx' % vm_name
+    _, vmx_file = tempfile.mkstemp(prefix=vm_name)
     _template_substitute_write(compute_vmx_template.template,
                                template_vals, vmx_file)
-    print "VMX File %s created for VM %s" %(os.path.realpath(vmx_file), vm_name)
-    return os.path.realpath(vmx_file)
+    print "VMX File %s created for VM %s" %(vmx_file, vm_name)
+    return vmx_file
 #end create_vmx
 
 def create_esxi_compute_vm (esxi_host):
@@ -94,11 +95,9 @@ def create_esxi_compute_vm (esxi_host):
          if out.failed:
              raise Exception("Unable create %s on esxi host %s:%s" % (vm_store,
                                      esxi_host['ip'], out))
-         out = run("mkdir -p %s/vmware_base/" % datastore)
-         if out.failed:
-             raise Exception("Unable create vmware_base on esxi host %s:%s" % (
-                                     esxi_host['ip'], out))
-         out = put(vmx_file, vm_store)
+         dst_vmx = vm_store + vm_name + '.vmx'
+         out = put(vmx_file, dst_vmx)
+         os.remove(vmx_file)
          if out.failed:
              raise Exception("Unable to copy %s to %s on %s:%s" % (vmx_file,
                                      vm_store, esxi_host['ip'], out))
@@ -110,7 +109,7 @@ def create_esxi_compute_vm (esxi_host):
              raise Exception("Unable to create vmdk on %s:%s" %
                                       (esxi_host['ip'], out))
          run('rm ' + src_vmdk)
-         out = run("vim-cmd solo/registervm " + vm_store + os.path.split(vmx_file)[-1])
+         out = run("vim-cmd solo/registervm " + dst_vmx)
          if out.failed:
              raise Exception("Unable to register VM %s on %s:%s" % (vm_name,
                                       esxi_host['ip'], out))
