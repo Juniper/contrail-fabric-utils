@@ -410,6 +410,7 @@ def run_sanity(feature='sanity', test=None):
     cmds = {'sanity'       : pre_cmd + '%s ./run_tests.sh --sanity --send-mail -U' % (env_vars),
             'quick_sanity' : pre_cmd + '%s ./run_tests.sh -T quick_sanity --send-mail -t' % (env_vars),
             'ci_sanity'    : pre_cmd + '%s ./run_tests.sh -T ci_sanity --send-mail -U' % (env_vars),
+            'ci_sanity_WIP'    : pre_cmd + '%s ./run_tests.sh -T ci_sanity_WIP --send-mail -U' % (env_vars),
             'ci_svc_sanity': pre_cmd + '%s python ci_svc_sanity_suite.py' % (env_vars),
             'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
             'upgrade'      : pre_cmd + '%s ./run_tests.sh -T upgrade --send-mail -U' % (env_vars),
