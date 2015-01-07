@@ -1483,12 +1483,33 @@ def add_tsn():
 def add_tsn_node(*args):
     """Enable TSN functionality in particular node. USAGE: fab add_tsn_node."""
     for host_string in args:
-        with settings(host_string=host_string, warn_only=True):
-            nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
-            #run ("sudo sed -i 's/# tsn=false/tsn=true/g' %s" \
-            #       % (nova_conf_file))
-            sudo("openstack-config --set %s DEFAULT agent_mode tsn" % nova_conf_file)
-            sudo("service supervisor-vrouter restart")
+        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+        cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
+        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
+        cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
+        cfgm_passwd = env.passwords[env.roledefs['cfgm'][0]]
+        compute_host = get_control_host_string(host_string)
+        (tgt_ip, tgt_gw) = get_data_ip(host_string)
+        compute_mgmt_ip= host_string.split('@')[1]
+        compute_control_ip= hstr_to_ip(compute_host)
+        admin_tenant_name = get_keystone_admin_tenant_name()
+        orch = get_orchestrator()
+        if orch is 'openstack':
+            admin_user, admin_password = get_openstack_credentials()
+        elif orch is 'vcenter':
+            admin_user, admin_password = get_vcenter_credentials()
+        keystone_ip = get_keystone_ip()
+        compute_hostname = sudo("hostname")
+        with settings(host_string = '%s@%s' %(cfgm_user, cfgm_ip), password=cfgm_passwd):
+            prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
+                        "--admin_user %s --admin_password %s --admin_tenant_name %s --openstack_ip %s --router_type tor-service-node" \
+                        %(compute_hostname, compute_control_ip, cfgm_ip,
+                          admin_user, admin_password,
+                          admin_tenant_name, keystone_ip)
+            run("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
+        nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
+        sudo("openstack-config --set %s DEFAULT agent_mode tsn" % nova_conf_file)
+        sudo("service supervisor-vrouter restart")
 
 @roles('toragent')
 @task
