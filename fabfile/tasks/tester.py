@@ -30,12 +30,13 @@ def setup_test_env():
         revision = build_id
         print "Testing from the CFGM."
     else:
-        fab_revision = local('git log --format="%H" -n 1', capture=True)
-        if CONTROLLER_TYPE == 'Cloudstack':
-            revision = local('cat %s/.git/refs/heads/cs_sanity' % env.test_repo_dir, capture=True)
-        else:
-            with lcd(env.test_repo_dir):
-                revision = local('git log --format="%H" -n 1', capture=True)
+        with settings(warn_only=True):
+            fab_revision = local('git log --format="%H" -n 1', capture=True)
+            if CONTROLLER_TYPE == 'Cloudstack':
+                revision = local('cat %s/.git/refs/heads/cs_sanity' % env.test_repo_dir, capture=True)
+            else:
+                with lcd(env.test_repo_dir):
+                    revision = local('git log --format="%H" -n 1', capture=True)
 
     if not env.roledefs['build'][0] == cfgm_host:
         execute(copy_dir, env.test_repo_dir, cfgm_host)
