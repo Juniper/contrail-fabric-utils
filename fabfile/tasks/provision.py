@@ -1288,6 +1288,46 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
 
 @roles('cfgm')
 @task
+def prov_database_node():
+    cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+
+    for database_host in env.roledefs['collector']:
+        with settings(host_string = database_host):
+            tgt_ip = hstr_to_ip(get_control_host_string(database_host))
+            tgt_hostname = sudo("hostname")
+
+        with cd(UTILS_DIR):
+            cmd = "python provision_database_node.py"
+            cmd += " --api_server_ip %s" % cfgm_ip
+            cmd += " --host_name %s" % tgt_hostname
+            cmd += " --host_ip %s" % tgt_ip
+            cmd += " --oper add"
+            cmd += " %s" % get_mt_opts()
+            sudo(cmd)
+#end prov_database_node
+
+@roles('cfgm')
+@task
+def prov_analytics_node():
+    cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+
+    for analytics_host in env.roledefs['collector']:
+        with settings(host_string = analytics_host):
+            tgt_ip = hstr_to_ip(get_control_host_string(analytics_host))
+            tgt_hostname = sudo("hostname")
+
+        with cd(UTILS_DIR):
+            cmd = "python provision_analytics_node.py"
+            cmd += " --api_server_ip %s" % cfgm_ip
+            cmd += " --host_name %s" % tgt_hostname
+            cmd += " --host_ip %s" % tgt_ip
+            cmd += " --oper add"
+            cmd += " %s" % get_mt_opts()
+            sudo(cmd)
+#end prov_analytics_node
+
+@roles('cfgm')
+@task
 def prov_control_bgp():
     cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
 
@@ -1607,6 +1647,8 @@ def setup_all(reboot='True'):
     execute('setup_webui')
     execute('verify_webui')
     execute('setup_vrouter')
+    execute('prov_database_node')
+    execute('prov_analytics_node')
     execute('prov_control_bgp')
     execute('prov_external_bgp')
     execute('prov_metadata_services')
@@ -1641,6 +1683,8 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     execute('setup_webui')
     execute('verify_webui')
     execute('setup_vrouter', manage_nova_compute)
+    execute('prov_database_node')
+    execute('prov_analytics_node')
     execute('prov_control_bgp')
     execute('prov_external_bgp')
     execute('prov_metadata_services')
@@ -1794,6 +1838,8 @@ def reset_config():
     else:
         execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
     sleep(60)
+    execute(prov_database_node)
+    execute(prov_analytics_node)
     execute(prov_control_bgp)
     execute(prov_external_bgp)
     execute(prov_metadata_services)
