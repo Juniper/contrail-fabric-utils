@@ -146,7 +146,7 @@ class Vcenter(object):
                 self.wait_for_task(task, si)
         nicspec = self.pyVmomi.vim.vm.device.VirtualDeviceSpec()
         nicspec.operation = self.pyVmomi.vim.vm.device.VirtualDeviceSpec.Operation.add
-        nicspec.device = self.pyVmomi.vim.vm.device.VirtualE1000()
+        nicspec.device = self.pyVmomi.vim.vm.device.VirtualVmxnet3()
         nicspec.device.wakeOnLanEnabled = True
         nicspec.device.deviceInfo = self.pyVmomi.vim.Description()
         pg_obj = self.get_obj([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name)
