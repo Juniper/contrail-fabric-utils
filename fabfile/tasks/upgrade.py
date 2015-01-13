@@ -683,6 +683,7 @@ def upgrade_webui_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.05', '1.06']:
                 execute('fix_config_global_js_node', host_string)
+            execute('start_redis_webui_node', host_string)
             execute('restart_webui_node', host_string)
 
 
