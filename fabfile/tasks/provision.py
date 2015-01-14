@@ -21,7 +21,7 @@ from fabfile.utils.vcenter import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_esxi,\
-        configure_esxi_network, create_ovf
+        configure_esxi_network, create_ovf, create_esxi_compute_vm
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details
 
@@ -1133,7 +1133,7 @@ def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
 @task
 def setup_vrouter_node(*args):
     """Provisions nova-compute and vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
-    execute("setup_only_vrouter_node", 'yes', 'yes' *args)
+    execute("setup_only_vrouter_node", 'yes', 'yes', *args)
 
 @task
 def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *args):
@@ -1269,6 +1269,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
                 cmd += " --vmware_username %s" % esxi_data['username']
                 cmd += " --vmware_passwd %s" % esxi_data['password']
                 cmd += " --vmware_vmpg_vswitch %s" % esxi_data['vm_vswitch']
+                cmd += " --vmware_vmpg_vswitch_mtu %s" % esxi_data['vm_vswitch_mtu']
             if vmware_info:
                 # Vmware provisioning parameters
                 cmd += " --vmware %s" % vmware_info['esxi']['esx_ip']
@@ -1811,6 +1812,7 @@ def prov_esxi():
         return
     for host in esxi_info.keys():
         configure_esxi_network(esxi_info[host])
+        create_esxi_compute_vm(esxi_info[host])
 #end prov_compute_vm
 
 @roles('build')
@@ -1911,3 +1913,22 @@ def setup_network_node(*args):
         execute('setup_interface_node')
         execute('add_static_route_node')
 # end setup_network
+
+def setup_esx_zone():
+    """Provisions ESX servers into esx zone, if found in testbed."""
+    esx = getattr(testbed, 'esxi_hosts', None)
+    if esx is None:
+        return
+    run("(source /etc/contrail/openstackrc; nova aggregate-create esx esx)")
+    cmd = "(source /etc/contrail/openstackrc; nova aggregate-add-host esx %s)"
+    for server in esx:
+        run(cmd % esx[server]['contrail_vm']['name'])
+# end setup_esx_zone
+
+@hosts(env.roledefs['openstack'][0])
+@task
+def setup_zones():
+    """Setup availability zones."""
+    setup_esx_zone()
+#end setup_zones
+
