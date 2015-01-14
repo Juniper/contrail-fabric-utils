@@ -45,7 +45,7 @@ def get_vmware_details(compute_host_string):
         for host in esxi_info.keys():
             esxi_data = esxi_info[host]
             data = esxi_data['contrail_vm']
-            if (esxi_data['contrail_vm'] == compute_host_string):
+            if (esxi_data['contrail_vm']['host'] == compute_host_string):
                 vmware = True
                 break
 
