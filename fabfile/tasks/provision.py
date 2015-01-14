@@ -21,7 +21,7 @@ from fabfile.utils.vcenter import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_esxi,\
-        configure_esxi_network, create_ovf
+        configure_esxi_network, create_ovf, create_esxi_compute_vm
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details
 
@@ -1811,6 +1811,7 @@ def prov_esxi():
         return
     for host in esxi_info.keys():
         configure_esxi_network(esxi_info[host])
+        create_esxi_compute_vm(esxi_info[host])
 #end prov_compute_vm
 
 @roles('build')
@@ -1911,3 +1912,22 @@ def setup_network_node(*args):
         execute('setup_interface_node')
         execute('add_static_route_node')
 # end setup_network
+
+def setup_esx_zone():
+    """Provisions ESX servers into esx zone, if found in testbed."""
+    esx = getattr(testbed, 'esxi_hosts', None)
+    if esx is None:
+        return
+    run("(source /etc/contrail/openstackrc; nova aggregate-create esx esx)")
+    cmd = "(source /etc/contrail/openstackrc; nova aggregate-add-host esx %s)"
+    for server in esx:
+        run(cmd % esx[server]['contrail_vm']['name'])
+# end setup_esx_zone
+
+@hosts(env.roledefs['openstack'][0])
+@task
+def setup_zones():
+    """Setup availability zones."""
+    setup_esx_zone()
+#end setup_zones
+
