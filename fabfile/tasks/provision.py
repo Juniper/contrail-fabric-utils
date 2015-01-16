@@ -665,9 +665,9 @@ def setup_image_service_node(*args):
             glance_configs['DEFAULT']['rabbit_userid'] = 'guest'
 
         conf_file = "/etc/glance/glance-api.conf"
-        for section, key_values in glance_configs:
-            for key, value in key_values:
-                sudo("openstack-config --set %s %s %s" % (conf_file, section, key, value))
+        for section, key_values in glance_configs.iteritems():
+            for key, value in key_values.iteritems():
+                sudo("openstack-config --set %s %s %s %s" % (conf_file, section, key, value))
         sudo("service glance-registry restart")
         sudo("service glance-api restart")
 
