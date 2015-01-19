@@ -357,53 +357,75 @@ def add_images(image=None):
         run("rm "+remote)
 #end add_images
 
+def preload_image_to_esx(url, glance_id, sizes, version):
+    esxi_hosts = getattr(testbed, 'esxi_hosts', None)
+    if not esxi_hosts:
+        return
+    for esxi in esxi_hosts.values():
+        if esxi['contrail_vm']['host'] in env.roledefs['compute']:
+            # for havana(2013.2), images are stored under datastore/vmware_base/
+            base = esxi['datastore'] + 'vmware_base/'
+            # for icehouse, images are stored under datstore/<ip>_base/<glanceid>/
+            if '2014.1' in version:
+                ip = esxi['contrail_vm']['host'].split('@')[-1]
+                base = esxi['datastore'] + ip + '_base/' + glance_id + '/'
+
+            with settings(host_string = esxi['username'] + '@' + esxi['ip'],
+                          password = esxi['password'], warn_only=True,
+                          shell = '/bin/sh -l -c'):
+                 run('mkdir -p %s' % base)
+                 with cd(base):
+                      run('wget -O ' + glance_id + '-sparse.vmdk.gz ' + url)
+                      run('gunzip ' + glance_id + '-sparse.vmdk.gz')
+                      run('vmkfstools -i ' + glance_id + '-sparse.vmdk -a ide ' + glance_id + '.vmdk')
+                      run('rm ' + glance_id + '-sparse.vmdk')
+                      for size in sizes:
+                          run('vmkfstools -i ' + glance_id + '.vmdk -a ide ' + glance_id + '.' + str(size) + '.vmdk')
+                          run('vmkfstools -X ' + str(size) + 'G ' + glance_id + '.' + str(size) + '.vmdk')
+
+#end preload_images_to_esx
+
 @hosts(*env.roledefs['openstack'][0:1])
 @task
 def add_basic_images(image=None):
     mount=None
     if '10.84' in env.host:
-        mount= '10.84.5.100'
+        mount= '11.84.5.100'
     elif '10.204' in env.host:
         mount= '10.204.216.51'
     if not mount :
         return
 
-    images = [ ("precise-server-cloudimg-amd64-disk1.img", "ubuntu"),
-               ("traffic/ubuntu-traffic.img", "ubuntu-traffic"),
-               ("cirros/cirros-0.3.0-x86_64-uec", "cirros"),
-               ("vsrx/junos-vsrx-12.1-in-network.img", "nat-service"),
-               ("vsrx/junos-vsrx-12.1-transparent.img", "vsrx-bridge"),
-               ("vsrx/junos-vsrx-12.1-in-network.img", "vsrx"),
-               ("analyzer/analyzer-vm-console.qcow2", "analyzer"),
-               ("ubuntu-in-net.img", "ubuntu-in-net"),
+    openstack_version  = run("source /etc/contrail/openstackrc; nova-manage version")
+
+    images = [ ("converts/precise-server-cloudimg-amd64-disk1.vmdk", "ubuntu", [10,20]),
+               ("converts/ubuntu-traffic.vmdk", "ubuntu-traffic", [10,20]),
+               ("converts/centos-min.vmdk", "centos65-ipv6", [10]),
+               ("converts/ubuntu-in-net.vmdk", "ubuntu-in-net", []),
+               ("converts/redmine-isc-dhcp-server.vmdk", "ubuntu-dhcp-server", []),
+               ("converts/cirros-0.3.0-x86_64-disk.vmdk", "cirros", [1,10]),
+               ("vsrx/junos-vsrx-12.1-transparent.img", "vsrx-bridge", []),
+               ("vsrx/junos-vsrx-12.1-in-network.img", "vsrx", []),
+               ("analyzer/analyzer-vm-console.qcow2", "analyzer", []),
              ]
 
-    for (loc, name) in images:
+    for (loc, name, sizes) in images:
         if image is not None and image != name:
             continue
         local = "/images/"+loc+".gz"
         remote = loc.split("/")[-1]
         remote_gz = remote+".gz"
-        run("wget http://%s/%s" % (mount, local)) 
+        run("wget http://%s/%s" % (mount, local))
         run("gunzip " + remote_gz)
         if ".vmdk" in loc:
-            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+")")
-        elif "cirros" in loc:
-            run('source /etc/contrail/openstackrc')
-            run('cd /tmp ; sudo rm -f /tmp/cirros-0.3.0-x86_64*')
-            run('tar xvf %s -C /tmp/' %remote)
-            run('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-kernel is_public=true '+
-                'container_format=aki disk_format=aki < /tmp/cirros-0.3.0-x86_64-vmlinuz')
-            run('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-ramdisk is_public=true '+
-                    ' container_format=ari disk_format=ari < /tmp/cirros-0.3.0-x86_64-initrd')
-            run('source /etc/contrail/openstackrc && glance add name=' +remote+ ' is_public=true '+
-                'container_format=ami disk_format=ami '+
-                '\"kernel_id=$(glance index | awk \'/cirros-0.3.0-x86_64-kernel/ {print $1}\')\" '+
-                '\"ramdisk_id=$(glance index | awk \'/cirros-0.3.0-x86_64-ramdisk/ {print $1}\')\" ' +
-                ' < <(zcat --force /tmp/cirros-0.3.0-x86_64-blank.img)')
-            run('rm -rf /tmp/*cirros*')
+            if 'converts' in loc:
+                glance_id = run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --public --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+            else:
+                glance_id = run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+            if glance_id.succeeded:
+                preload_image_to_esx('http://%s/%s' % (mount,local), glance_id, sizes, openstack_version)
         else:
-            run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=qcow2 < "+remote+")")
+           run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --public --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
         run("rm "+remote)
 
 #end add_basic_images
