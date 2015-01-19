@@ -357,57 +357,6 @@ def add_images(image=None):
         sudo("rm "+remote)
 #end add_images
 
-@hosts(*env.roledefs['openstack'][0:1])
-@task
-def add_basic_images(image=None):
-    mount=None
-    if '10.84' in env.host:
-        mount= '10.84.5.100'
-    elif '10.204' in env.host:
-        mount= '10.204.216.51'
-    if not mount :
-        return
-
-    images = [ ("ubuntu.img", "ubuntu"),
-               ("traffic/ubuntu-traffic.img", "ubuntu-traffic"),
-               ("cirros/cirros-0.3.0-x86_64-uec", "cirros"),
-               ("vsrx/junos-vsrx-12.1-in-network.img", "nat-service"),
-               ("vsrx/junos-vsrx-12.1-transparent.img", "vsrx-bridge"),
-               ("vsrx/junos-vsrx-12.1-in-network.img", "vsrx"),
-               ("analyzer/analyzer-vm-console.qcow2", "analyzer"),
-               ("ubuntu-in-net.img", "ubuntu-in-net"),
-             ]
-
-    for (loc, name) in images:
-        if image is not None and image != name:
-            continue
-        local = "/images/"+loc+".gz"
-        remote = loc.split("/")[-1]
-        remote_gz = remote+".gz"
-        sudo("wget http://%s/%s" % (mount, local)) 
-        sudo("gunzip " + remote_gz)
-        if ".vmdk" in loc:
-            sudo("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+")")
-        elif "cirros" in loc:
-            sudo('source /etc/contrail/openstackrc')
-            sudo('cd /tmp ; sudo rm -f /tmp/cirros-0.3.0-x86_64*')
-            sudo('tar xvf %s -C /tmp/' %remote)
-            sudo('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-kernel is_public=true '+
-                'container_format=aki disk_format=aki < /tmp/cirros-0.3.0-x86_64-vmlinuz')
-            sudo('source /etc/contrail/openstackrc && glance add name=cirros-0.3.0-x86_64-ramdisk is_public=true '+
-                    ' container_format=ari disk_format=ari < /tmp/cirros-0.3.0-x86_64-initrd')
-            sudo('source /etc/contrail/openstackrc && glance add name=' +remote+ ' is_public=true '+
-                'container_format=ami disk_format=ami '+
-                '\"kernel_id=$(glance index | awk \'/cirros-0.3.0-x86_64-kernel/ {print $1}\')\" '+
-                '\"ramdisk_id=$(glance index | awk \'/cirros-0.3.0-x86_64-ramdisk/ {print $1}\')\" ' +
-                ' < <(zcat --force /tmp/cirros-0.3.0-x86_64-blank.img)')
-            sudo('rm -rf /tmp/*cirros*')
-        else:
-            sudo("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=qcow2 < "+remote+")")
-        sudo("rm "+remote)
-
-#end add_basic_images
-
 def preload_image_to_esx(url, glance_id, sizes, version):
     esxi_hosts = getattr(testbed, 'esxi_hosts', None)
     if not esxi_hosts:
@@ -439,10 +388,10 @@ def preload_image_to_esx(url, glance_id, sizes, version):
 
 @hosts(*env.roledefs['openstack'][0:1])
 @task
-def add_vmdk_images(image=None):
+def add_basic_images(image=None):
     mount=None
     if '10.84' in env.host:
-        mount= '11.84.5.100'
+        mount= '10.84.5.100'
     elif '10.204' in env.host:
         mount= '10.204.216.51'
     if not mount :
@@ -480,7 +429,7 @@ def add_vmdk_images(image=None):
            run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --public --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
         run("rm "+remote)
 
-#end add_sanity_images
+#end add_basic_images
 
 @roles('compute')
 @task
