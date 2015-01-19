@@ -34,7 +34,7 @@ def configure_esxi_network(esxi_info):
         run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(compute_pg, vswitch1))
         run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(fabric_pg, vswitch0))
         run('esxcli network vswitch standard set -v %s -m %s' % (vswitch1, vswitch1_mtu))
-        run('esxcli network vswitch standard portgroup policy security set --portgroup-name=%s --allow-promiscuous=1' % (fabric_pg))
+        run('esxcli network vswitch standard policy security set --vswitch-name=%s --allow-promiscuous=1' % (vswitch1))
         run('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(uplink_nic, vswitch0))
         run('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=4095' %(compute_pg))
 
