@@ -1844,3 +1844,22 @@ def setup_network_node(*args):
         execute('setup_interface_node')
         execute('add_static_route_node')
 # end setup_network
+
+def setup_esx_zone():
+    """Provisions ESX servers into esx zone, if found in testbed."""
+    esx = getattr(testbed, 'esxi_hosts', None)
+    if esx is None:
+        return
+    run("(source /etc/contrail/openstackrc; nova aggregate-create esx esx)")
+    cmd = "(source /etc/contrail/openstackrc; nova aggregate-add-host esx %s)"
+    for server in esx:
+        run(cmd % esx[server]['contrail_vm']['name'])
+# end setup_esx_zone
+
+@hosts(env.roledefs['openstack'][0])
+@task
+def setup_zones():
+    """Setup availability zones."""
+    setup_esx_zone()
+#end setup_zones
+
