@@ -3,10 +3,11 @@ import copy
 
 from fabfile.utils.fabos import *
 from fabfile.utils.host import *
-from fabfile.utils.cluster import is_lbaas_enabled
+from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator
 from fabfile.config import *
 from fabfile.tasks.helpers import insert_line_to_file
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
+from fabfile.tasks.install import yum_install, apt_install
 
 # upgrade schema
 UPGRADE_SCHEMA = {
@@ -66,13 +67,12 @@ UPGRADE_SCHEMA = {
                    'remove' : [],
                    'downgrade' : [],
                    'backup_files' : ['/etc/contrail/contrail-control.conf',
-                                     '/etc/contrail/dns.conf'],
+                                     '/etc/contrail/contrail-dns.conf'],
                    'backup_dirs' : [],
                    'remove_files' : ['/var/log/named/bind.log',
                                      '/etc/contrail/dns/dns.conf'
                                     ],
-                   'rename_files' : [('/etc/contrail/dns.conf', '/etc/contrail/contrail-dns.conf'),
-                                     ('/etc/contrail/dns/named.conf',
+                   'rename_files' : [('/etc/contrail/dns/named.conf',
                                       '/etc/contrail/dns/contrail-named.conf'),
                                      ('/etc/contrail/dns/rndc.conf',
                                       '/etc/contrail/dns/contrail-rndc.conf'),
@@ -295,7 +295,8 @@ def backup_config_dir(from_rel):
 def restore_config_dir(role, upgrade_data):
     for config_dir in upgrade_data[role]['backup_dirs']:
         cfg_dir_name = os.path.basename(config_dir)
-        sudo('cp -r /var/tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
+        with settings(warn_only=True):
+            sudo('cp -r /var/tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
 
 @task
 @EXECUTE_TASK
@@ -323,7 +324,8 @@ def backup_config(from_rel):
 def restore_config(role, upgrade_data):
     for config_file in upgrade_data[role]['backup_files']:
         cfg_file_name = os.path.basename(config_file)
-        sudo('cp /var/tmp/contrail/%s.upgradesave %s' % (cfg_file_name, config_file))
+        with settings(warn_only=True):
+            sudo('cp /var/tmp/contrail/%s.upgradesave %s' % (cfg_file_name, config_file))
 
 def downgrade_package(pkgs, ostype):
     for pkg in pkgs:
@@ -513,7 +515,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             # Populate the new SCHEDULER section in svc_monitor.conf
             conf_file = '/etc/contrail/svc_monitor.conf'
-            if get_release() == '2.0':
+            if get_release() in ['2.0', '3.0']:
                  conf_file = '/etc/contrail/contrail-svc-monitor.conf'
             lbaas_svc_instance_params = {'analytics_server_ip' : hstr_to_ip(env.roledefs['collector'][0]),
                                          'analytics_server_port' : '8081'
@@ -752,6 +754,19 @@ def fix_vrouter_configs_node(*args):
         new_kmod = 'kmod=vrouter'
         insert_line_to_file(pattern=old_kmod, line=new_kmod, file_name=agent_param)
 
+@roles('build')
+@task
+def upgrade_orchestrator(from_rel, pkg):
+    if get_orchestrator() is 'openstack':
+        execute('upgrade_openstack', from_rel, pkg)
+    if get_orchestrator() is 'vcenter':
+        execute('upgrade_vcenter')
+
+@roles('build')
+@task
+def upgrade_vcenter():
+    apt_install(['contrail-vmware-utils'])
+
 @task
 @roles('build')
 def upgrade_contrail(from_rel, pkg):
@@ -763,7 +778,7 @@ def upgrade_contrail(from_rel, pkg):
     execute('stop_cfgm')
     execute('stop_rabbitmq')
     execute('stop_collector')
-    execute('upgrade_openstack', from_rel, pkg)
+    execute('upgrade_orchestrator', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_cfgm', from_rel, pkg)
     execute('setup_rabbitmq_cluster', True)
