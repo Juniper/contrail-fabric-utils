@@ -815,6 +815,9 @@ def setup_collector_node(*args):
                 if detect_ostype() == 'ubuntu':
                     run("service redis-server stop")
                     run("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
+                    #If redis passwd sepcified add that to the conf file
+                    if get_redis_password():
+                        run("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis/redis.conf")
                     run("service redis-server start")
                     #check if the redis-server is running, if not, issue start again
                     count = 1
@@ -827,6 +830,9 @@ def setup_collector_node(*args):
                 else:
                     sudo("service redis stop")
                     sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis.conf")
+                    #If redis passwd sepcified add that to the conf file
+                    if get_redis_password():
+                        run("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis/redis.conf")
                     sudo("chkconfig redis on")
                     sudo("service redis start")
 
@@ -863,6 +869,9 @@ def setup_collector_node(*args):
         else:
             #if nothing is provided we default to 48h
             cmd += "--analytics_data_ttl 48 "
+        analytics_redis_password = get_redis_password()
+        if analytics_redis_password is not None:
+            cmd += "--redis_password %s" % analytics_redis_password
         internal_vip = get_contrail_internal_vip()
         if internal_vip:
             # Highly Available setup
