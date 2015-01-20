@@ -74,6 +74,8 @@ def get_as_sudo(src_file, dst_file):
     sudo('chmod -R 777 %s'%tmp_file)
     try:
         status = get(tmp_file, dst_file)
+        if os.path.isdir(dst_file):
+            local('mv %s/tmp%s %s/%s' %(dst_file, basename, dst_file, basename))
     except:
         sudo('rm -rf %s'%tmp_file)
         raise
