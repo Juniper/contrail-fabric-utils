@@ -26,4 +26,7 @@ def get_analytics_data_dir():
 
 def get_ssd_data_dir():
     return getattr(testbed, 'ssd_data_dir', None)
+
+def get_redis_password():
+    return getattr(testbed, 'redis_password', None)
 #end get_database_dir
