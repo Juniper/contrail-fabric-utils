@@ -399,7 +399,7 @@ def add_basic_images(image=None):
 
     openstack_version  = run("source /etc/contrail/openstackrc; nova-manage version")
 
-    images = [ ("converts/precise-server-cloudimg-amd64-disk1.vmdk", "ubuntu", [10,20]),
+    images = [ ("converts/ubuntu.vmdk", "ubuntu", [10,20]),
                ("converts/ubuntu-traffic.vmdk", "ubuntu-traffic", [10,20]),
                ("converts/centos-min.vmdk", "centos65-ipv6", [10]),
                ("converts/ubuntu-in-net.vmdk", "ubuntu-in-net", []),
