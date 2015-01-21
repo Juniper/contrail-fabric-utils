@@ -1613,6 +1613,8 @@ def setup_all(reboot='True'):
     execute('prov_metadata_services')
     execute('prov_encap_type')
     execute('setup_remote_syslog')
+    if 'tsn' in env.roledefs.keys():execute('add_tsn')
+    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():execute('add_tor_agent')
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute('compute_reboot')
