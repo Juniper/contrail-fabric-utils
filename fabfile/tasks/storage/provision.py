@@ -280,6 +280,18 @@ def setup_storage():
     execute("setup_webui_storage", "setup")
 #end setup_storage
 
+
+@task
+@roles('build')
+def setup_upgrade_storage():
+    """Provisions required contrail services in all nodes as per the role definition.
+    """
+    execute("setup_master_storage", "upgrade")
+    execute(setup_compute_storage)
+    execute("setup_webui_storage", "upgrade")
+#end setup_storage
+
+
 @task
 @roles('build')
 def setup_nfs_livem():
