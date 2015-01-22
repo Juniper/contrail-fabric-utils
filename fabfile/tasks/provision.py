@@ -1620,6 +1620,8 @@ def setup_all(reboot='True'):
         #Clear the connections cache
         connections.clear()
         execute('verify_compute')
+    if 'tsn' in env.roledefs.keys():execute('add_tsn')
+    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():execute('add_tor_agent')
 #end setup_all
 
 @roles('build')
