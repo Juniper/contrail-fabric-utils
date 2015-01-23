@@ -163,6 +163,12 @@ env.ostypes = {
 #}
 #
 
+#env.nova = {
+#    'cpu_mode': 'host-passthrough', # Possible options: none, host-passthrough, host-model, and custom
+#                                    # if cpu_mode is 'custom' specify cpu_model option too
+#    'cpu_model': 'Nehalem',         # relevant only if cpu_mode is 'custom'
+#}
+
 # In High Availability setups.
 #env.ha = {
 #    'internal_vip'   : '1.1.1.1',               #Internal Virtual IP of the HA setup.

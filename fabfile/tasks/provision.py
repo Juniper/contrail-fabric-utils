@@ -1148,7 +1148,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
     #    return
 
     orch = get_orchestrator()
-    if orch is 'openstack':
+    if orch == 'openstack':
         # reset openstack connections to create new connections
         # when running in parallel mode
         openstack_host = env.roledefs['openstack'][0]
@@ -1168,6 +1168,8 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
                                      'service_neutron_metadata_proxy',
                                      'neutron_metadata_proxy_shared_secret')
             metadata_secret = secret if status == 'True' else None
+        cpu_mode = get_nova_cpu_mode()
+        cpu_model = get_nova_cpu_model()
 
     for host_string in args:
         # Enable haproxy for Ubuntu
@@ -1230,6 +1232,12 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
             cmd += " --keystone_admin_password %s" % ks_admin_password
             if metadata_secret:
                 cmd += " --metadata_secret %s" % metadata_secret
+            if cpu_mode is not None:
+                cmd += " --cpu_mode %s" % cpu_mode
+                if cpu_mode == 'custom':
+                    if cpu_model is None:
+                        raise Exception('cpu model is required for custom cpu mode')
+                    cmd += " --cpu_model %s" % cpu_model
 
         # HA arguments
         internal_vip = get_openstack_internal_vip()

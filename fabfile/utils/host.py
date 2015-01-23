@@ -201,3 +201,8 @@ def verify_sshd(host, user, password):
         return False
     s.close()
 
+def get_nova_cpu_mode():
+    return get_from_testbed_dict('nova', 'cpu_mode', None)
+
+def get_nova_cpu_model():
+    return get_from_testbed_dict('nova', 'cpu_model', None)
