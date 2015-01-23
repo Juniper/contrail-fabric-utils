@@ -21,7 +21,7 @@ from fabfile.utils.vcenter import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_esxi,\
-        configure_esxi_network, create_ovf, create_esxi_compute_vm
+        configure_esxi_network, create_ovf, create_esxi_compute_vm, _get_var
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details
 
@@ -1866,6 +1866,33 @@ def prov_esxi():
 
 @roles('build')
 @task
+def add_esxi_to_vcenter(*args):
+    vcenter_info = getattr(env, 'vcenter', None)
+    if not vcenter_info:
+        print 'Error: vcenter block is not defined in testbed file.Exiting'
+        return
+    esxi_info = getattr(env, 'compute_vm', None)
+    if not esxi_info:
+        print 'Error: compute_vm block is not defined in testbed file.Exiting'
+        return
+
+    hosts = []
+    vms = []
+    for host in args:
+        with settings(host=host):
+             if host in esxi_info.keys():
+                esxi_data = esxi_info[host]
+                data = esxi_data['esxi']
+
+                esx_list=[data['esx_ip'],data['esx_username'],data['esx_password'],data['esx_ssl_thumbprint']]
+                hosts.append(esx_list)
+                modified_vm_name = esxi_data['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+_get_var(esxi_data['contrailvm_ip'])
+                vms.append(modified_vm_name)
+
+    provision_vcenter(vcenter_info, hosts, vms)
+
+@roles('build')
+@task
 def setup_vcenter():
     vcenter_info = getattr(env, 'vcenter', None)
     if not vcenter_info:
@@ -1875,11 +1902,23 @@ def setup_vcenter():
     if not esxi_info:
         print 'Error: compute_vm block is not defined in testbed file.Exiting'
         return
-    provision_vcenter(vcenter_info, esxi_info)
+
+    hosts = []
+    vms = []
+    for host in esxi_info.keys():
+            esxi_data = esxi_info[host]
+            data = esxi_data['esxi']
+
+            esx_list=[data['esx_ip'],data['esx_username'],data['esx_password'],data['esx_ssl_thumbprint']]
+            hosts.append(esx_list)
+            modified_vm_name = esxi_data['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+_get_var(esxi_data['contrailvm_ip'])
+            vms.append(modified_vm_name)
+
+    provision_vcenter(vcenter_info, hosts, vms)
 
 @roles('build')
 @task
-def setup_esxi_computevm(deb=None):
+def setup_esxi_computevm(deb=None, *args):
     compute_vm_info = getattr(env, 'compute_vm', None)
     if not compute_vm_info:
         print 'Error: compute_vm block is not defined in testbed file.Exiting'
@@ -1888,11 +1927,16 @@ def setup_esxi_computevm(deb=None):
     if not vcenter_info:
         print 'Error: vcenter block is not defined in testbed file.Exiting'
         return
-    for compute_node in env.roledefs['compute']:
-        if compute_node in compute_vm_info.keys():
-                provision_esxi(deb, vcenter_info,compute_vm_info[compute_node])
-        else:
-                print 'Error: compute_vm block does not have compute host.Exiting'
+    if not args:
+        for compute_node in compute_vm_info.keys():
+             provision_esxi(deb, vcenter_info, compute_vm_info[compute_node])
+    else:
+        for compute_node in args:
+             with settings(compute_node=compute_node):
+                 if compute_node in compute_vm_info.keys():
+                     provision_esxi(deb, vcenter_info,compute_vm_info[compute_node])
+                 else:
+                     print 'Error: compute_vm block does not have compute host.Exiting'
 
 @task
 @roles('build')

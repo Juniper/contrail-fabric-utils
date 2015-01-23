@@ -135,7 +135,7 @@ def _template_substitute_write(template, vals, filename):
 #end _template_substitute_write
 
 @task
-def provision_vcenter(vcenter_info, esxi_info):
+def provision_vcenter(vcenter_info, hosts, vms):
         apt_install(['contrail-vmware-utils'])
         vcenter_params = {}
         vcenter_params['server'] = vcenter_info['server']
@@ -147,16 +147,6 @@ def provision_vcenter(vcenter_info, esxi_info):
         vcenter_params['dvswitch_name'] = vcenter_info['dv_switch']['dv_switch_name']
         vcenter_params['dvportgroup_name'] = vcenter_info['dv_port_group']['dv_portgroup_name']
         vcenter_params['dvportgroup_num_ports'] = vcenter_info['dv_port_group']['number_of_ports']
-        hosts = []
-        vms = []
-        for host in esxi_info.keys():
-                esxi_data = esxi_info[host]
-                data = esxi_data['esxi']
-
-                esx_list=[data['esx_ip'],data['esx_username'],data['esx_password'],data['esx_ssl_thumbprint']]
-                hosts.append(esx_list)
-                modified_vm_name = esxi_data['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+_get_var(esxi_data['contrailvm_ip'])
-                vms.append(modified_vm_name)
 
         vcenter_params['hosts'] = hosts
         vcenter_params['vms'] = vms
