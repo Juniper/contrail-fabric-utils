@@ -66,7 +66,7 @@ UPGRADE_SCHEMA = {
                    'remove' : [],
                    'downgrade' : [],
                    'backup_files' : ['/etc/contrail/contrail-control.conf',
-                                     '/etc/contrail/dns.conf'],
+                                     '/etc/contrail/contrail-dns.conf'],
                    'backup_dirs' : [],
                    'remove_files' : ['/var/log/named/bind.log',
                                      '/etc/contrail/dns/dns.conf'
@@ -295,7 +295,8 @@ def backup_config_dir(from_rel):
 def restore_config_dir(role, upgrade_data):
     for config_dir in upgrade_data[role]['backup_dirs']:
         cfg_dir_name = os.path.basename(config_dir)
-        sudo('cp -r /var/tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
+        with settings(warn_only=True):
+            sudo('cp -r /var/tmp/contrail/%s.upgradesave/* %s' % (cfg_dir_name, config_dir))
 
 @task
 @EXECUTE_TASK
@@ -323,7 +324,8 @@ def backup_config(from_rel):
 def restore_config(role, upgrade_data):
     for config_file in upgrade_data[role]['backup_files']:
         cfg_file_name = os.path.basename(config_file)
-        sudo('cp /var/tmp/contrail/%s.upgradesave %s' % (cfg_file_name, config_file))
+        with settings(warn_only=True):
+            sudo('cp /var/tmp/contrail/%s.upgradesave %s' % (cfg_file_name, config_file))
 
 def downgrade_package(pkgs, ostype):
     for pkg in pkgs:
@@ -513,7 +515,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             # Populate the new SCHEDULER section in svc_monitor.conf
             conf_file = '/etc/contrail/svc_monitor.conf'
-            if get_release() == '2.0':
+            if get_release() in ['2.0', '3.0']:
                  conf_file = '/etc/contrail/contrail-svc-monitor.conf'
             lbaas_svc_instance_params = {'analytics_server_ip' : hstr_to_ip(env.roledefs['collector'][0]),
                                          'analytics_server_port' : '8081'
