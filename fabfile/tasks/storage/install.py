@@ -2,11 +2,17 @@ import os
 import re
 import copy
 import tempfile
+from decimal import *
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.tasks.install import yum_install,  apt_install
 
+def apt_install_overwrite(debs):
+    cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes --allow-unauthenticated -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install '
+    if detect_ostype() in ['ubuntu']:
+        for deb in debs:
+            sudo(cmd + deb)
 
 @task
 @parallel(pool_size=20)
@@ -49,7 +55,7 @@ def install_storage_master_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-storage']
             if detect_ostype() == 'ubuntu':
-                apt_install(pkg)
+                apt_install_overwrite(pkg)
             else:
                 yum_install(pkg)
 
@@ -69,7 +75,7 @@ def install_storage_webui_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-web-storage']
             if detect_ostype() == 'ubuntu':
-                apt_install(pkg)
+                apt_install_overwrite(pkg)
             else:
                 yum_install(pkg)
 
@@ -90,7 +96,7 @@ def install_storage_compute_node(*args):
         with  settings(host_string=host_string):
             pkg = ['contrail-storage']
             if detect_ostype() == 'ubuntu':
-                apt_install(pkg)
+                apt_install_overwrite(pkg)
             else:
                 yum_install(pkg)
 
@@ -115,3 +121,16 @@ def install_storage():
     execute(install_storage_master)
     execute(install_storage_compute)
     execute(install_storage_webui)
+
+
+@task
+@roles('build')
+def upgrade_storage(from_rel, pkg):
+    """upgrades all the contrail pkgs in all nodes."""
+    to_rel = get_release()
+    if Decimal(to_rel) > Decimal(from_rel):
+        execute('install_storage_pkg_all', pkg)
+        execute('install_storage')
+        execute('setup_upgrade_storage')
+    else:
+        raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
