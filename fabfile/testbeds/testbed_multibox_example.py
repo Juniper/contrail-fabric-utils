@@ -211,6 +211,12 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #}
 #
 
+#env.nova = {
+#    'cpu_mode': 'host-passthrough', # Possible options: none, host-passthrough, host-model, and custom
+#                                    # if cpu_mode is 'custom' specify cpu_model option too
+#    'cpu_model': 'Nehalem',         # relevant only if cpu_mode is 'custom'
+#}
+
 # In Openstack or Contrail High Availability setups.
 # internal_vip          : Virtual IP of the openstack HA Nodes in the data/control(internal) nerwork,
 #                         all the Openstack services behind this VIP are accessed using this VIP.
