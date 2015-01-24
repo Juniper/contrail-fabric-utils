@@ -103,6 +103,17 @@ env.ostypes = {
 #
 #ssd_data_dir = '<seperate-partition>/commit_logs_data'
 
+#following variables allow analytics data to have different TTL in cassandra database
+#analytics_configaudit_ttl controls TTL for config audit logs
+#analytics_statsdata_ttl controls TTL for stats
+#analytics_flowdata_ttl controls TTL for flow data
+#database_ttl controls TTL for rest of the data
+#
+#database_ttl = 48
+#analytics_configaudit_ttl = 48
+#analytics_statsdata_ttl = 48
+#analytics_flowdata_ttl = 48
+
 #OPTIONAL BONDING CONFIGURATION
 #==============================
 #Inferface Bonding

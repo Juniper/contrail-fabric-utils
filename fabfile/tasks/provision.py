@@ -863,6 +863,22 @@ def setup_collector_node(*args):
         else:
             #if nothing is provided we default to 48h
             cmd += "--analytics_data_ttl 48 "
+        analytics_configaudit_ttl = get_analytics_configaudit_ttl()
+        if analytics_configaudit_ttl is not None:
+            cmd += "--analytics_configaudit_ttl %d " % analytics_configaudit_ttl
+        else:
+            cmd += "--analytics_configaudit_ttl -1 "
+        analytics_statsdata_ttl = get_analytics_statsdata_ttl()
+        if analytics_statsdata_ttl is not None:
+            cmd += "--analytics_statsdata_ttl %d " % analytics_statsdata_ttl
+        else:
+            cmd += "--analytics_statsdata_ttl -1 "
+        analytics_flowdata_ttl = get_analytics_flowdata_ttl()
+        if analytics_flowdata_ttl is not None:
+            cmd += "--analytics_flowdata_ttl %d " % analytics_flowdata_ttl
+        else:
+            cmd += "--analytics_flowdata_ttl -1 "
+
         internal_vip = get_contrail_internal_vip()
         if internal_vip:
             # Highly Available setup
