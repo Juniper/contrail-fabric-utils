@@ -131,6 +131,17 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #
 #ssd_data_dir = '<seperate-partition>/commit_logs_data'
 
+#following variables allow analytics data to have different TTL in cassandra database
+#analytics_config_audit_ttl controls TTL for config audit logs
+#analytics_statistics_ttl controls TTL for stats
+#analytics_flow_ttl controls TTL for flow data
+#database_ttl controls TTL for rest of the data
+#
+#database_ttl = 48
+#analytics_config_audit_ttl = 48
+#analytics_statistics_ttl = 48
+#analytics_flow_ttl = 48
+
 #OPTIONAL BONDING CONFIGURATION
 #==============================
 #Inferface Bonding
