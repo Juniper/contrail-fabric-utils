@@ -27,3 +27,15 @@ def get_analytics_data_dir():
 def get_ssd_data_dir():
     return getattr(testbed, 'ssd_data_dir', None)
 #end get_database_dir
+
+def get_analytics_config_audit_ttl():
+    return getattr(testbed, 'analytics_config_audit_ttl', None)
+#end get_analytics_config_audit_ttl
+
+def get_analytics_statistics_ttl():
+    return getattr(testbed, 'analytics_statistics_ttl', None)
+#end get_analytics_statistics_ttl
+
+def get_analytics_flow_ttl():
+    return getattr(testbed, 'analytics_flow_ttl', None)
+#end get_analytics_flow_ttl
