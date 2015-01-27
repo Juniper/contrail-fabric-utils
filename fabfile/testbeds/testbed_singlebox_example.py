@@ -254,13 +254,3 @@ env.ostypes = {
 #Section tor agent is only relevant when you want to use Tor Agent feature.
 #You can use one of your compute node as  Tor Agent . Same or diffrent compute
 #node should be enable as tsn
-
-#Definition for the Key used
-#-------------------------------------
-# tor_ip: IP of the tor switch
-# tor_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
-# tor_ovs_port: Port number to be used by ovs
-# tor_ovs_protocol: Connection protocol to be used by ovs. Currently only TCP
-# tor_tsn_ip: TSN node ip
-#env.tor_agent =
-#{host3:[{'tor_ip':'10.204.217.39','tor_id':'1','tor_ovs_port':'9999','tor_ovs_protocol':'tcp','tor_tsn_ip':'10.204.221.35'}]}
