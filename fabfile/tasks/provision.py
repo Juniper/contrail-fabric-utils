@@ -1476,12 +1476,12 @@ def setup_remote_syslog_node(*args):
 
 @roles('tsn')
 @task
-def add_tsn():
+def add_tsn(restart= True):
     """Add the TSN nodes. Enable the compute nodes (mentioned with role TSN in testbed file) with TSN functionality . USAGE: fab add_tsn."""
-    execute("add_tsn_node", env.host_string)
+    execute("add_tsn_node", restart, env.host_string)
 
 @task
-def add_tsn_node(*args):
+def add_tsn_node(restart=True,*args):
     """Enable TSN functionality in particular node. USAGE: fab add_tsn_node."""
     for host_string in args:
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
@@ -1510,16 +1510,17 @@ def add_tsn_node(*args):
             run("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
         nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
         sudo("openstack-config --set %s DEFAULT agent_mode tsn" % nova_conf_file)
-        sudo("service supervisor-vrouter restart")
+        if restart:
+            sudo("service supervisor-vrouter restart")
 
 @roles('toragent')
 @task
-def add_tor_agent():
+def add_tor_agent(restart= True):
     """Add the tor agent nodes. Enable the compute nodes (mentioned with role toragent in testbed file) with tor agent functionality . USAGE: fab add_tor."""
-    execute("add_tor_agent_node", env.host_string)
+    execute("add_tor_agent_node", reboot, env.host_string)
 
 @task
-def add_tor_agent_node(*args):
+def add_tor_agent_node(restart=True, *args):
     """Enable tor agent functionality in particular node. USAGE: fab add_tor_agent_node."""
     for host_string in args:
         with settings(host_string=host_string):
@@ -1527,10 +1528,18 @@ def add_tor_agent_node(*args):
             for i in range(len(toragent_dict[host_string])):
                 # Populate the argument to pass for setup-vnc-tor-agent
                 tor_id= int(toragent_dict[host_string][i]['tor_id'])
+                tor_name= toragent_dict[host_string][i]['tor_name']
+                tor_tunnel_ip= toragent_dict[host_string][i]['tor_tunnel_ip']
+                tor_vendor_name= toragent_dict[host_string][i]['tor_vendor_name']
+                tsn_name=toragent_dict[host_string][i]['tor_tsn_name']
+                tor_mgmt_ip=toragent_dict[host_string][i]['tor_ip']
                 http_server_port = tor_id + 9009
                 tgt_hostname = sudo("hostname")
                 agent_name= tgt_hostname + '-' + str(tor_id)
+                tor_agent_host = get_control_host_string(host_string)
+                tor_agent_control_ip= hstr_to_ip(tor_agent_host)
                 cmd = "setup-vnc-tor-agent"
+                cmd += " --self_ip %s" % tor_agent_control_ip
                 cmd += " --agent_name %s" % agent_name
                 cmd += " --http_server_port %s" % http_server_port
                 cmd += " --discovery_server_ip %s" % hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
@@ -1542,7 +1551,38 @@ def add_tor_agent_node(*args):
                 # Execute the provision toragent script
                 with cd(INSTALLER_DIR):
                     sudo(cmd)
-            sudo("service supervisor-vrouter restart")
+                cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+                cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
+                cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
+                cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
+                cfgm_passwd = env.passwords[env.roledefs['cfgm'][0]]
+                compute_host = get_control_host_string(host_string)
+                (tgt_ip, tgt_gw) = get_data_ip(host_string)
+                compute_mgmt_ip= host_string.split('@')[1]
+                compute_control_ip= hstr_to_ip(compute_host)
+                admin_tenant_name = get_keystone_admin_tenant_name()
+                orch = get_orchestrator()
+                if orch is 'openstack':
+                    admin_user, admin_password = get_openstack_credentials()
+                elif orch is 'vcenter':
+                    admin_user, admin_password = get_vcenter_credentials()
+                keystone_ip = get_keystone_ip()
+                prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
+                            "--admin_user %s --admin_password %s --admin_tenant_name %s\
+                             --openstack_ip %s --router_type tor-agent" \
+                             %(agent_name, compute_control_ip, cfgm_ip,
+                               admin_user, admin_password,
+                               admin_tenant_name, keystone_ip)
+                pr_args = "--device_name %s --vendor_name %s --device_mgmt_ip %s\
+                           --device_tunnel_ip %s --device_tor_agent %s\
+                           --device_tsn %s --api_server_ip %s --oper add\
+                           --admin_user %s --admin_password %s\
+                           --admin_tenant_name %s --openstack_ip %s"\
+                with settings(host_string = '%s@%s' %(cfgm_user, cfgm_ip), password=cfgm_passwd):
+                    run("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
+                    run("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
+            if restart:
+                sudo("service supervisor-vrouter restart")
 @task
 @hosts(env.roledefs['all'])
 def cleanup_remote_syslog():
@@ -1613,14 +1653,14 @@ def setup_all(reboot='True'):
     execute('prov_metadata_services')
     execute('prov_encap_type')
     execute('setup_remote_syslog')
+    if 'tsn' in env.roledefs.keys():execute('add_tsn', reboot=False)
+    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():execute('add_tor_agent', reboot=False)
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute('compute_reboot')
         #Clear the connections cache
         connections.clear()
         execute('verify_compute')
-    if 'tsn' in env.roledefs.keys():execute('add_tsn')
-    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():execute('add_tor_agent')
 #end setup_all
 
 @roles('build')
@@ -1649,6 +1689,8 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     execute('prov_metadata_services')
     execute('prov_encap_type')
     execute('setup_remote_syslog')
+    if 'tsn' in env.roledefs.keys():execute('add_tsn', reboot=False)
+    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():execute('add_tor_agent', reboot=False)
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute(compute_reboot)
@@ -1790,6 +1832,8 @@ def reset_config():
         execute(run_cmd, env.roledefs['cfgm'][0], "service supervisor-config restart")
         execute(start_cfgm)
         execute(restart_collector)
+        if 'tsn' in env.roledefs.keys():execute(add_tsn)
+        if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():execute(add_tor_agent)
         sleep(120)
     except SystemExit:
         execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
