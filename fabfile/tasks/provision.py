@@ -836,7 +836,7 @@ def setup_collector_node(*args):
                     sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis.conf")
                     #If redis passwd sepcified add that to the conf file
                     if get_redis_password():
-                        run("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis/redis.conf")
+                        run("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis.conf")
                     sudo("chkconfig redis on")
                     sudo("service redis start")
 
@@ -990,12 +990,26 @@ def setup_webui_node(*args):
         cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in database_host_list]
         orch = get_orchestrator()
 
+        # If redis password is specified in testbed file, then add that to the
+        # redis config file
+        redis_password = get_redis_password()
+        if redis_password is not None:
+            if detect_ostype() == 'ubuntu':
+                redis_conf_path = '/etc/redis/redis.conf'
+                run("service redis-server stop")
+            else:
+                redis_conf_path = '/etc/redis.conf'
+                run("service redis stop")
+            run("sed -i '/^# requirepass/ c\ requirepass " +
+                redis_password + "' " + redis_conf_path)
         # Frame the command line to provision webui
         cmd = "setup-vnc-webui"
         cmd += " --cfgm_ip %s" % cfgm_ip
         cmd += " --collector_ip %s" % collector_ip
         cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
         cmd += " --orchestrator %s" % orch
+        if redis_password is not None:
+            cmd += " --redis_password %s" % redis_password
         internal_vip = get_openstack_internal_vip()
         if internal_vip:
             # Highly available setup
