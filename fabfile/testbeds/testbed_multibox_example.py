@@ -39,8 +39,8 @@ env.roledefs = {
     'storage-master': [host1],
     'storage-compute': [host4, host5, host6, host7, host8, host9, host10],
     # 'vgw': [host4, host5], # Optional, Only to enable VGW. Only compute can support vgw
-    # 'tsn': [host10], # Optional, Only to enable TSN. Only compute can support TSN
-    # 'toragent': [host10], Optional, Only to enable Tor Agent. Only compute can
+    # 'tsn': [host1], # Optional, Only to enable TSN. Only compute can support TSN
+    # 'toragent': [host1], Optional, Only to enable Tor Agent. Only compute can
     # support Tor Agent
     #   'backup':[backup_node],  # only if the backup_node is defined
 }
@@ -324,24 +324,10 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 # tor_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
 # tor_ovs_port: Port number to be used by ovs
 # tor_ovs_protocol: Connection protocol to be used by ovs. Currently only TCP
-# tor_tsn_ip: TSN node ip
-# tor_tsn_name: Name of the TSN node
-# tor_name: Name of the tor switch 
-# tor_tunnel_ip: Data plane IP for the tor switch
-# tor_vendor_name: Vendor type for TOR switch
-#env.tor_agent = {host10:[{
-#                    'tor_ip':'10.204.217.39', IP of the tor switch
-#                    'tor_id':'1',
-#                    'tor_type':'ovs',
-#                    'tor_ovs_port':'9999',
-#                    'tor_ovs_protocol':'tcp',
-#                    'tor_tsn_ip':'10.204.221.35',
-#                    'tor_tsn_name':'nodec45',
-#                    'tor_name':'bng-contrail-qfx51-2',
-#                    'tor_tunnel_ip':'34.34.34.34',
-#                    'tor_vendor_name':'Juniper'
-#                       }]
-#                }
+# tor_tsn_ip: TSN node ip 
+#env.tor_agent =
+#{host3:[{'tor_ip':'10.204.217.39','tor_id':'1','tor_ovs_port':'9999','tor_ovs_protocol':'tcp','tor_tsn_ip':'10.204.221.35'}]}
+
 #######################################
 #vcenter provisioning
 #server is the vcenter server ip
