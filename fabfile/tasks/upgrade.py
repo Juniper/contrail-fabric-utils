@@ -102,6 +102,7 @@ UPGRADE_SCHEMA = {
                    'backup_files' : ['/etc/contrail/agent_param',
                                      '/etc/contrail/contrail-vrouter-agent.conf',
                                      '/etc/contrail/vrouter_nodemgr_param',
+                                     '/etc/nova/nova.conf',
                                     ],
                    'backup_dirs' : [],
                    'remove_files' : [],
@@ -811,6 +812,17 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
                 sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             if ostype in ['centos']:
                 execute('setup_vrouter_node', host_string)
+
+            """ Upgrade nova parameters in nova.conf in compute host from 2.0 to 2.1 """
+            if get_openstack_internal_vip() and from_rel in ['2.0']:
+                nova_conf_file = '/etc/nova/nova.conf'
+                openstack_compute_service = 'openstack-nova-compute'
+                if (ostype == 'ubuntu'):
+                    openstack_compute_service = 'nova-compute'
+                sudo("service %s stop" % openstack_compute_service)
+                sudo("openstack-config --set /etc/nova/nova.conf DEFAULT rpc_response_timeout 30")
+                sudo("openstack-config --set /etc/nova/nova.conf DEFAULT report_interval 15")
+                sudo("service %s start" % openstack_compute_service)
 
 @task
 @EXECUTE_TASK
