@@ -504,6 +504,28 @@ def fix_nova_conf_node(*args):
 
 @task
 @EXECUTE_TASK
+@roles('compute')
+def upgrade_openstack_in_compute(from_rel):
+    execute("upgrade_openstack_node_in_compute", from_rel, env.host_string)
+
+@task
+def upgrade_openstack_node_in_compute(from_rel, *args):
+    openstack_compute_services = ['openstack-nova-compute']
+    ostype = detect_ostype()
+    if ostype in ['ubuntu']:
+        openstack_services = ['nova-compute']
+    for host_string in args:
+        with settings(host_string=host_string):
+            for svc in openstack_services:
+                with settings(warn_only=True):
+                    sudo("service %s stop" % svc)
+            if from_rel in ['2.0']:
+                sudo("openstack-config --set /etc/nova/nova.conf DEFAULT rpc_response_timeout 30")
+                sudo("openstack-config --set /etc/nova/nova.conf DEFAULT report_interval 15")
+            execute('restart_openstack_compute', host_string)
+
+@task
+@EXECUTE_TASK
 @roles('openstack')
 def upgrade_openstack(from_rel, pkg):
     """Upgrades openstack pkgs in all nodes defined in openstack role."""
@@ -857,6 +879,7 @@ def upgrade_contrail(from_rel, pkg):
     execute('stop_rabbitmq')
     execute('stop_collector')
     execute('upgrade_openstack', from_rel, pkg)
+    execute('upgrade_openstack_in_compute', from_rel)
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_cfgm', from_rel, pkg)
     execute('setup_rabbitmq_cluster', True)
