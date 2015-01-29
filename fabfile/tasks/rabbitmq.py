@@ -146,8 +146,10 @@ def stop_rabbitmq_and_set_cookie(uuid):
      with settings(warn_only=True):
          sudo("service rabbitmq-server stop")
          if 'Killed' not in sudo("epmd -kill"):
-             sudo("pkill beam.smp")
-             sudo("pkill epmd")
+             sudo("pkill -9  beam")
+             sudo("pkill -9 epmd")
+         if 'beam' in sudo("netstat -anp | grep beam"):
+             sudo("pkill -9  beam")
          sudo("rm -rf /var/lib/rabbitmq/mnesia/")
      sudo("echo '%s' > /var/lib/rabbitmq/.erlang.cookie" % uuid)
      sudo("chmod 400 /var/lib/rabbitmq/.erlang.cookie")
