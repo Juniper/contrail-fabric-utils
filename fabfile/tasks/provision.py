@@ -1578,6 +1578,9 @@ def add_tor_agent_node(restart=True, *args):
                            --device_tsn %s --api_server_ip %s --oper add\
                            --admin_user %s --admin_password %s\
                            --admin_tenant_name %s --openstack_ip %s"\
+                    %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
+                      agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
+                      admin_tenant_name, keystone_ip)
                 with settings(host_string = '%s@%s' %(cfgm_user, cfgm_ip), password=cfgm_passwd):
                     run("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
                     run("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
@@ -1653,8 +1656,8 @@ def setup_all(reboot='True'):
     execute('prov_metadata_services')
     execute('prov_encap_type')
     execute('setup_remote_syslog')
-    if 'tsn' in env.roledefs.keys():execute('add_tsn', reboot=False)
-    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():execute('add_tor_agent', reboot=False)
+    if 'tsn' in env.roledefs.keys():execute('add_tsn', restart=False)
+    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():execute('add_tor_agent', restart=False)
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute('compute_reboot')
@@ -1689,8 +1692,8 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     execute('prov_metadata_services')
     execute('prov_encap_type')
     execute('setup_remote_syslog')
-    if 'tsn' in env.roledefs.keys():execute('add_tsn', reboot=False)
-    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():execute('add_tor_agent', reboot=False)
+    if 'tsn' in env.roledefs.keys():execute('add_tsn', restart=False)
+    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():execute('add_tor_agent', restart=False)
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute(compute_reboot)
