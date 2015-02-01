@@ -1,5 +1,7 @@
 import os
+import sys
 import copy
+import string
 
 from fabfile.utils.fabos import *
 from fabfile.utils.host import *
@@ -648,6 +650,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                 # Fix init.d scripts
                 sudo("sed -i 's#http://localhost:9004#unix:///tmp/supervisord_config.sock#g' /etc/init.d/contrail-api")
                 sudo("sed -i 's#http://localhost:9004#unix:///tmp/supervisord_config.sock#g' /etc/init.d/contrail-discovery")
+            fixup_device_manager_config(host_string)
 
 @task
 @serial
@@ -925,3 +928,46 @@ def backup_install_repo_node(*args):
 def check_and_setup_rabbitmq_cluster():
     if get_release() not in RELEASES_WITH_QPIDD:
         execute(setup_rabbitmq_cluster)
+
+def fixup_device_manager_config(host_string):
+    # contrail-device-manager.conf
+    cfgm_ip = hstr_to_ip(host_string)
+    rabbit_host = cfgm_ip
+    rabbit_port = 5672
+    internal_vip = get_contrail_internal_vip()
+    if internal_vip:
+        rabbit_host = internal_vip
+        rabbit_port = 5673
+    cassandra_host_list = [get_control_host_string(cassandra_host) for cassandra_host in env.roledefs['database']]
+    cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in cassandra_host_list]
+    cassandra_server_list = [(cassandra_server_ip, '9160') for cassandra_server_ip in cassandra_ip_list]
+    zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
+    template_vals = {'__rabbit_server_ip__': rabbit_host,
+                     '__rabbit_server_port__': rabbit_port,
+                     '__contrail_api_server_ip__': internal_vip or cfgm_ip,
+                     '__contrail_api_server_port__': '8082',
+                     '__contrail_zookeeper_server_ip__': zk_servers_ports,
+                     '__contrail_log_file__' : '/var/log/contrail/contrail-device-manager.log',
+                     '__contrail_cassandra_server_list__' : ' '.join('%s:%s' % cassandra_server for cassandra_server in cassandra_server_list),
+                     '__contrail_disc_server_ip__': internal_vip or cfgm_ip,
+                     '__contrail_disc_server_port__': '5998',
+                    }
+    tmp_fname_1 = 'contrail_device_manager_conf.py'
+    tmp_fname_1_module = tmp_fname_1.strip('.py')
+    tmp_fname_2 = 'contrail-device-manager.conf'
+    with settings(host_string=host_string):
+        if detect_ostype() == 'ubuntu':
+            site_dir = run('python -c "import sysconfig; print sysconfig.get_path(\'platlib\')"')
+        else:
+            site_dir = run('python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"')
+        get_as_sudo("%s/contrail_provisioning/config/templates/contrail_device_manager_conf.py" % site_dir, tmp_fname_1)
+    sys.path.append(os.getcwd())
+    tmp_fname_1_obj = __import__(tmp_fname_1_module)
+    device_manager_conf = tmp_fname_1_obj.template.safe_substitute(template_vals)
+    with open(tmp_fname_2, 'w') as cfg_file:
+        cfg_file.write(device_manager_conf)
+    with settings(host_string=host_string):
+        put(tmp_fname_2, "/etc/contrail/contrail-device-manager.conf", use_sudo=True)
+        sudo("chmod a+x /etc/init.d/contrail-device-manager")
+    with settings(warn_only=True):
+        sudo("rm -rf %s %s %sc" % (tmp_fname_1, tmp_fname_2, tmp_fname_1))
