@@ -21,9 +21,10 @@ from fabfile.utils.vcenter import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_esxi,\
-        configure_esxi_network, create_ovf, create_esxi_compute_vm
+        configure_esxi_network, create_esxi_compute_vm
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details
+from fabfile.tasks.esxi_dflts import apply_esxi_defaults
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
 
@@ -1281,6 +1282,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
         (vmware, esxi_data, vmware_info) = get_vmware_details(host_string)
         if vmware:
             if esxi_data:
+                apply_esxi_defaults(esxi_data)
                 # Esxi provisioning parameters
             	cmd += " --vmware %s" % esxi_data['ip']
                 cmd += " --vmware_username %s" % esxi_data['username']
@@ -1877,6 +1879,7 @@ def prov_esxi():
     if not esxi_info:
         return
     for host in esxi_info.keys():
+        apply_esxi_defaults(esxi_info[host])
         configure_esxi_network(esxi_info[host])
         create_esxi_compute_vm(esxi_info[host])
 #end prov_compute_vm
