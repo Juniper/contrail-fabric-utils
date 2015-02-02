@@ -69,7 +69,7 @@ def get_as_sudo(src_file, dst_file):
     basename = os.path.basename(src_file.rstrip('/'))
     if not basename or basename in ['*']:
         raise Exception('%s is not a valid path'%src_file)
-    tmp_file = '/tmp/tmp%s'%basename
+    tempdir = run('(tempdir=$(mktemp -d); echo $tempdir)')
     sudo('cp -rf %s %s'%(src_file, tmp_file))
     sudo('chmod -R 777 %s'%tmp_file)
     try:
@@ -77,6 +77,6 @@ def get_as_sudo(src_file, dst_file):
         if os.path.isdir(dst_file):
             local('mv %s/tmp%s %s/%s' %(dst_file, basename, dst_file, basename))
     except:
-        sudo('rm -rf %s'%tmp_file)
+        sudo('rm -rf %s' % tempdir)
         raise
-    sudo('rm -rf %s'%tmp_file)
+    sudo('rm -rf %s' % tempdir)
