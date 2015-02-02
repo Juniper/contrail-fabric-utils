@@ -516,19 +516,11 @@ def upgrade_openstack(from_rel, pkg):
 @task
 def upgrade_openstack_node(from_rel, pkg, *args):
     """Upgrades openstack pkgs in one or list of nodes. USAGE:fab upgrade_openstack_node:user@1.1.1.1,user@2.2.2.2"""
-    openstack_services = ['openstack-nova-api', 'openstack-nova-scheduler', 'openstack-nova-cert',
-                          'openstack-nova-consoleauth', 'openstack-nova-novncproxy',
-                          'openstack-nova-conductor', 'openstack-nova-compute']
     ostype = detect_ostype()
-    if ostype in ['ubuntu']:
-        openstack_services = ['nova-api', 'nova-scheduler', 'glance-api',
-                              'glance-registry', 'keystone',
-                              'nova-conductor', 'cinder-api', 'cinder-scheduler']
     for host_string in args:
         with settings(host_string=host_string):
-            for svc in openstack_services:
-                with settings(warn_only=True):
-                    sudo("service %s stop" % svc)
+            with settings(warn_only=True):
+                sudo("service supervisor-openstack stop")
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'openstack')
@@ -553,6 +545,8 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             sudo("openstack-config --set /etc/glance/glance-api.conf DEFAULT rabbit_host %s" % amqp_server_ip)
             if get_openstack_internal_vip():
                 execute('fixup_restart_haproxy_in_openstack_node', host_string)
+            if ostype == 'centos' and from_rel in ['1.20']:
+                sudo("sed -i 's#/tmp/supervisor_openstack.sock#/tmp/supervisord_openstack.sock#g' /etc/contrail/supervisord_openstack.conf")
             execute('restart_openstack_node', host_string)
 
 @task
