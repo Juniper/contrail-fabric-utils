@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='contrail_fabric_utils',
-    version='0.1dev',
+    version='0.1.dev0',
     packages=[
               'contrail_fabric_utils',
               'contrail_fabric_utils.fabfile',
