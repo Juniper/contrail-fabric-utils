@@ -3,67 +3,48 @@ import re
 import tempfile
 
 from fabfile.config import *
-from fabfile.templates import compute_ovf_template, compute_vmx_template
+from fabfile.templates import compute_vmx_template
 from fabfile.tasks.install import yum_install, apt_install
 from esxi_prov import ContrailVM as ContrailVM
 from vcenter_prov import Vcenter as Vcenter
 
-def _get_var(var, default=None):
-    try:
-        return var
-    except Exception:
-        return default
-#end _get_var
-
 def configure_esxi_network(esxi_info):
-    #ESXI Host Login
-    host_string = '%s@%s' %(esxi_info['username'],
-                           esxi_info['ip'])
+    '''Provision ESXi server'''
+    user = esxi_info['username']
+    password = esxi_info['password']
+    ip = esxi_info['ip']
+    assert (user and ip and password), "User, password and IP of the ESXi server must be specified"
     password = _get_var(esxi_info['password'])
     
-    compute_pg = _get_var(esxi_info['vm_port_group'],'compute_pg')
-    fabric_pg = _get_var(esxi_info['fabric_port_group'],'fabric_pg')
-    vswitch0 = _get_var(esxi_info['fabric_vswitch'],'vSwitch0')
-    vswitch1 = _get_var(esxi_info['vm_vswitch'],'vSwitch1')
-    vswitch1_mtu = esxi_info.get('vm_vswitch_mtu','9000')
+    vm_pg = esxi_info['vm_port_group']
+    fabric_pg = esxi_info['fabric_port_group']
+    fab_switch = esxi_info['fabric_vswitch']
+    vm_switch = esxi_info['vm_vswitch']
+    vm_switch_mtu = esxi_info['vm_vswitch_mtu']
     uplink_nic = esxi_info['uplink_nic']
+
+    host_string = '%s@%s' %(user, ip)
     with settings(host_string = host_string, password = password, 
                     warn_only = True, shell = '/bin/sh -l -c'):
-        run('esxcli network vswitch standard add --vswitch-name=%s' %(
-                vswitch1))
-        run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(compute_pg, vswitch1))
-        run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(fabric_pg, vswitch0))
-        run('esxcli network vswitch standard set -v %s -m %s' % (vswitch1, vswitch1_mtu))
-        run('esxcli network vswitch standard policy security set --vswitch-name=%s --allow-promiscuous=1' % (vswitch1))
-        run('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(uplink_nic, vswitch0))
-        run('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=4095' %(compute_pg))
+        run('esxcli network vswitch standard add --vswitch-name=%s' %(vm_switch))
+        run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(vm_pg, vm_switch))
+        run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(fabric_pg, fab_switch))
+        run('esxcli network vswitch standard set -v %s -m %s' % (vm_switch, vm_switch_mtu))
+        run('esxcli network vswitch standard policy security set --vswitch-name=%s --allow-promiscuous=1' % (vm_switch))
+        run('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=4095' %(vm_pg))
+        if uplink_nic:
+            run('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(uplink_nic, fab_switch))
 
 @task
 
-def create_ovf(compute_vm_info):
-    compute_vm_name = _get_var(compute_vm_info['vm_name'],'Fedora-Compute-VM')
-    compute_vm_vmdk = compute_vm_info['vmdk']
-#    compute_vm_vmdk = 'Fedora-Compute-VM1-disk1.vmdk'
-    compute_pg = _get_var(compute_vm_info['port_group'],'compute_pg')
-    fabric_pg = _get_var(compute_vm_info['esxi']['vm_port_group'],'fabric_pg')
-    ovf_file = '%s.ovf' %(compute_vm_name)
-    template_vals = {'__compute_vm_name__': compute_vm_name,
-                     '__compute_vm_vmdk__': compute_vm_vmdk,
-                     '__compute_pg__': compute_pg,
-                     '__fabric_pg__': fabric_pg,
-                    }
-    _template_substitute_write(compute_ovf_template.template,
-                               template_vals, ovf_file)
-    ovf_file_path = os.path.realpath(ovf_file)
-    print "\n\nOVF File %s created for VM %s" %(ovf_file_path, compute_vm_name)
-#end create_ovf
-    
 def create_vmx (esxi_host):
     '''Creates vmx file for contrail compute VM (non vcenter env)'''
-    fab_pg = esxi_host.get('fabric_port_group', 'fabric_pg')
-    vm_pg = esxi_host.get('vm_port_group', 'compute_pg')
+    fab_pg = esxi_host['fabric_port_group']
+    vm_pg = esxi_host['vm_port_group']
     vm_name = esxi_host['contrail_vm']['name']
     vm_mac = esxi_host['contrail_vm']['mac']
+    assert vm_mac, "MAC address for contrail-compute-vm must be specified"
+
     template_vals = { '__vm_name__' : vm_name,
                       '__vm_mac__' : vm_mac,
                       '__fab_pg__' : fab_pg,
@@ -79,8 +60,8 @@ def create_vmx (esxi_host):
 def create_esxi_compute_vm (esxi_host):
     '''Spawns contrail vm on openstack managed esxi server (non vcenter env)'''
     vmx_file = create_vmx(esxi_host)
-    datastore = esxi_host['contrail_vm'].get('datastore', '/vmfs/volumes/datastore1/')
-    vmdk = esxi_host['contrail_vm'].get('vmdk', None)
+    datastore = esxi_host['contrail_vm']['datastore']
+    vmdk = esxi_host['contrail_vm']['vmdk']
     assert vmdk, "Contrail VM vmdk image should be specified in testbed file"
     vm_name = esxi_host['contrail_vm']['name']
     vm_store = datastore + vm_name + '/'
