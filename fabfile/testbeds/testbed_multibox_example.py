@@ -342,21 +342,21 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #dvportgroup section contains the distributed port group info
 #       dv_portgroupname and the number of ports the group has
 ######################################
-env.vcenter = {
-        'server':'127.0.0.1',
-        'port': '443',
-        'username': 'administrator@vsphere.local',
-        'password': 'Contrail123!',
-        'auth': 'https',
-        'datacenter': 'kd_dc',
-        'cluster': 'kd_cluster',
-        'dv_switch': { 'dv_switch_name': 'kd_dvswitch',
-                     },
-        'dv_port_group': { 'dv_portgroup_name': 'kd_dvportgroup',
-                           'number_of_ports': '3',
-                     },
-}
-
+#env.vcenter = {
+#        'server':'127.0.0.1',
+#        'port': '443',
+#        'username': 'administrator@vsphere.local',
+#        'password': 'Contrail123!',
+#        'auth': 'https',
+#        'datacenter': 'kd_dc',
+#        'cluster': 'kd_cluster',
+#        'dv_switch': { 'dv_switch_name': 'kd_dvswitch',
+#                     },
+#        'dv_port_group': { 'dv_portgroup_name': 'kd_dvportgroup',
+#                           'number_of_ports': '3',
+#                     },
+#}
+#
 #######################################
 #The compute vm provisioning on ESXI host
 #This section is used to copy a vmdk on to the ESXI box and bring it up# . the contrailVM which comes up will be setup as a compute node with 
@@ -385,26 +385,25 @@ env.vcenter = {
 # password: root password for the contrailvm
 # domain: domain of the contrailvm
 ##############################################
-
-env.compute_vm = {
-    host2: { 'esxi': {'esx_ip': '6.6.6.6',
-                      'esx_username': 'root',
-                      'esx_password': 'c0ntrail123',
-                      'esx_uplink_nic': 'vmnic0',
-                      'esx_fab_vswitch' : 'vSwitch0',
-                      'esx_fab_port_group' : 'contrail-fab-pg',
-                      'esx_ssl_thumbprint' : "2A:B9:E9:E0:4F:07:20:DD:F1:FC:C6:45:BE:A8:E0:21:D1:8E:47:CB",
-                     },
-             'contrailvm_virtual_mac' : "00:50:56:05:BC:BA",
-             'contrailvm_ip': "1.1.1.2",
-             'esx_vm_name' : "ContrailVM-sumne1",
-             'esx_datastore' : "/vmfs/volumes/b3s40-ds1",
-             'esx_ntp_server' : "2.2.2.3",
-             'vmdk_download_path' : "http://127.0.0.1/vmware/vmdk/ContrailVM-disk1.vmdk",
-             'password' : 'c0ntrail123',
-             'domain' : 'englab.juniper.net',
-    },
-}
+#env.compute_vm = {
+#    host2: { 'esxi': {'esx_ip': '6.6.6.6',
+#                      'esx_username': 'root',
+#                      'esx_password': 'c0ntrail123',
+#                      'esx_uplink_nic': 'vmnic0',
+#                      'esx_fab_vswitch' : 'vSwitch0',
+#                      'esx_fab_port_group' : 'contrail-fab-pg',
+#                      'esx_ssl_thumbprint' : "2A:B9:E9:E0:4F:07:20:DD:F1:FC:C6:45:BE:A8:E0:21:D1:8E:47:CB",
+#                     },
+#             'contrailvm_virtual_mac' : "00:50:56:05:BC:BA",
+#             'contrailvm_ip': "1.1.1.2",
+#             'esx_vm_name' : "ContrailVM-sumne1",
+#             'esx_datastore' : "/vmfs/volumes/b3s40-ds1",
+#             'esx_ntp_server' : "2.2.2.3",
+#             'vmdk_download_path' : "http://127.0.0.1/vmware/vmdk/ContrailVM-disk1.vmdk",
+#             'password' : 'c0ntrail123',
+#             'domain' : 'englab.juniper.net',
+#    },
+#}
 
 
 
