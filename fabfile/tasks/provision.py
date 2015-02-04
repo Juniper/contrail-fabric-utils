@@ -54,6 +54,8 @@ def get_openstack_credentials():
 
 def fixup_restart_haproxy_in_all_cfgm(nworkers):
     template = string.Template("""
+global
+        tune.maxrewrite 1024
 #contrail-config-marker-start
 listen contrail-config-stats :5937
    mode http
