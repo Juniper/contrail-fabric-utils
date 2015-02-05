@@ -524,6 +524,7 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'openstack')
+            sku = get_build().split('~')[1]
             if from_rel not in ['1.05', '1.06']:
                 # Workaround for bug https://bugs.launchpad.net/juniperopenstack/+bug/1383927
                 if ostype in ['ubuntu']:
@@ -533,10 +534,8 @@ def upgrade_openstack_node(from_rel, pkg, *args):
                         downgrade_package(['contrail-openstack-dashboard=%s-%s' % (rel, buildid)], ostype)
                     else:
                         upgrade_package(['contrail-openstack-dashboard'], ostype)
-                if ostype in ['centos']:
-                    sku = get_build().split('~')[1]
-                    if 'havana' in sku:
-                        upgrade_package(['contrail-openstack-dashboard'], ostype)
+                if ostype in ['centos'] and 'havana' in sku:
+                    upgrade_package(['contrail-openstack-dashboard'], ostype)
             execute('increase_item_size_max_node', host_string)
             execute('upgrade_pkgs_node', host_string)
             # Set the rabbit_host as from 1.10 the rabbit listens at the control_data ip
@@ -547,6 +546,14 @@ def upgrade_openstack_node(from_rel, pkg, *args):
                 execute('fixup_restart_haproxy_in_openstack_node', host_string)
             if ostype == 'centos' and from_rel in ['1.20']:
                 sudo("sed -i 's#/tmp/supervisor_openstack.sock#/tmp/supervisord_openstack.sock#g' /etc/contrail/supervisord_openstack.conf")
+            if from_rel in ['1.20', '1.21'] and 'icehouse' in sku:
+                SERVICE_TOKEN = get_service_token()
+                OPENSTACK_INDEX = env.roledefs['openstack'].index(host_string) + 1
+                sudo('grep -q SERVICE_TOKEN %s || echo "SERVICE_TOKEN=%s" >> %s'
+                      % ('/etc/contrail/ctrl-details', SERVICE_TOKEN, '/etc/contrail/ctrl-details'))
+                sudo('grep -q OPENSTACK_INDEX %s || echo "OPENSTACK_INDEX=%s" >> %s'
+                      % ('/etc/contrail/ctrl-details', OPENSTACK_INDEX, '/etc/contrail/ctrl-details'))
+                sudo("/opt/contrail/bin/heat-server-setup.sh")
             execute('restart_openstack_node', host_string)
 
 @task
