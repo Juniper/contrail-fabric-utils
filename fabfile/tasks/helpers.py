@@ -12,6 +12,7 @@ from fabfile.utils.multitenancy import *
 from fabfile.utils.fabos import *
 from fabric.contrib.files import exists
 import datetime
+from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
 @task
 @parallel
@@ -363,6 +364,7 @@ def preload_image_to_esx(url, glance_id, sizes, version):
         return
     for esxi in esxi_hosts.values():
         if esxi['contrail_vm']['host'] in env.roledefs['compute']:
+            apply_esxi_defaults(esxi)
             # for havana(2013.2), images are stored under datastore/vmware_base/
             base = esxi['datastore'] + 'vmware_base/'
             # for icehouse, images are stored under datstore/<ip>_base/<glanceid>/
