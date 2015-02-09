@@ -2013,7 +2013,7 @@ def setup_esx_zone():
         run(cmd % esx[server]['contrail_vm']['name'])
 # end setup_esx_zone
 
-@hosts(env.roledefs['openstack'][0])
+@hosts(env.roledefs['openstack'][0:1])
 @task
 def setup_zones():
     """Setup availability zones."""
