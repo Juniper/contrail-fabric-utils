@@ -416,5 +416,13 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #    },
 #}
 
-
-
+# OPTIONAL DPDK CONFIGURATION
+# ===========================
+# If some compute nodes should use DPDK vRouter version it has to be put in
+# env.dpdk dictionary. The format is:
+# env.dpdk = {
+#     host1: { 'huge_pages' : '50' },
+#     host2: { 'huge_pages' : '50' },
+# }
+# huge_pages - Specify what percentage of host memory should be reserved
+#              for access with huge pages

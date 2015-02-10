@@ -275,3 +275,14 @@ env.ostypes = {
 # tor_tsn_ip: TSN node ip
 #env.tor_agent =
 #{host3:[{'tor_ip':'10.204.217.39','tor_id':'1','tor_ovs_port':'9999','tor_ovs_protocol':'tcp','tor_tsn_ip':'10.204.221.35'}]}
+
+# OPTIONAL DPDK CONFIGURATION
+# ===========================
+# If some compute nodes should use DPDK vRouter version it has to be put in
+# env.dpdk dictionary. The format is:
+# env.dpdk = {
+#     host1: { 'huge_pages' : '50' },
+#     host2: { 'huge_pages' : '50' },
+# }
+# huge_pages - Specify what percentage of host memory should be reserved
+#              for access with huge pages
