@@ -84,6 +84,27 @@ backend glance-backend
     default-server error-limit 1 on-error mark-down
 $__glance_backend_servers__
 
+frontend openstack-heat-api *:8004 
+    default_backend    heat-api-backend 
+backend heat-api-backend 
+    option tcpka 
+    option nolinger 
+    timeout server 24h 
+    balance   roundrobin 
+    option tcp-check 
+    tcp-check connect port 3306 
+    default-server error-limit 1 on-error mark-down 
+    option tcp-check 
+    option httpchk 
+    tcp-check connect port 3337 
+    tcp-check send Host:localhost 
+    http-check expect ! rstatus ^5 
+    default-server error-limit 1 on-error mark-down 
+    option tcp-check 
+    tcp-check connect port 8005 
+    default-server error-limit 1 on-error mark-down 
+$__heat_backend_servers__
+
 frontend openstack-cinder *:8776
     default_backend  cinder-backend
 
