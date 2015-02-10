@@ -1573,13 +1573,29 @@ def add_tsn_node(*args):
         compute_mgmt_ip= host_string.split('@')[1]
         compute_control_ip= hstr_to_ip(compute_host)
         admin_tenant_name = get_keystone_admin_tenant_name()
+
+        # Check if nova-compute is allready running
+        # Stop if running on TSN node
+        with settings(host_string=host_string, warn_only=True):
+            compute_hostname = sudo("hostname")
+            if run("service nova-compute status | grep running").succeeded:
+                # Stop the service
+                run("service nova-compute stop")
+                if detect_ostype() in ['ubuntu']:
+                    run('echo "manual" >> /etc/init/nova-compute.override')
+                else:
+                    run('chkconfig nova-compute off')
+                # Remove TSN node from nova manage service list
+                # Mostly require when converting an exiting compute to TSN
+                openstack_host = get_control_host_string(env.roledefs['openstack'][0])
+                with settings(host_string=openstack_host, warn_only=True):
+                    run("nova-manage service disable --host=%s --service=nova-compute" %(compute_hostname))
         orch = get_orchestrator()
         if orch is 'openstack':
             admin_user, admin_password = get_openstack_credentials()
         elif orch is 'vcenter':
             admin_user, admin_password = get_vcenter_credentials()
         keystone_ip = get_keystone_ip()
-        compute_hostname = sudo("hostname")
         with settings(host_string = '%s@%s' %(cfgm_user, cfgm_ip), password=cfgm_passwd):
             prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                         "--admin_user %s --admin_password %s --admin_tenant_name %s --openstack_ip %s --router_type tor-service-node" \
@@ -1587,9 +1603,11 @@ def add_tsn_node(*args):
                           admin_user, admin_password,
                           admin_tenant_name, keystone_ip)
             run("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
-        nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
-        sudo("openstack-config --set %s DEFAULT agent_mode tsn" % nova_conf_file)
-        sudo("service supervisor-vrouter restart")
+        with settings(host_string=host_string, warn_only=True):
+            nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
+            sudo("openstack-config --set %s DEFAULT agent_mode tsn" % nova_conf_file)
+            if restart:
+                sudo("service supervisor-vrouter restart")
 
 @roles('toragent')
 @task
