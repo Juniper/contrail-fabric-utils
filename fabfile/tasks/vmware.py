@@ -14,7 +14,6 @@ def configure_esxi_network(esxi_info):
     password = esxi_info['password']
     ip = esxi_info['ip']
     assert (user and ip and password), "User, password and IP of the ESXi server must be specified"
-    password = _get_var(esxi_info['password'])
     
     vm_pg = esxi_info['vm_port_group']
     fabric_pg = esxi_info['fabric_port_group']
@@ -136,7 +135,7 @@ def provision_vcenter(vcenter_info, esxi_info):
 
                 esx_list=[data['esx_ip'],data['esx_username'],data['esx_password'],data['esx_ssl_thumbprint']]
                 hosts.append(esx_list)
-                modified_vm_name = esxi_data['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+_get_var(esxi_data['contrailvm_ip'])
+                modified_vm_name = esxi_data['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+esxi_data['contrailvm_ip']
                 vms.append(modified_vm_name)
 
         vcenter_params['hosts'] = hosts
@@ -148,20 +147,20 @@ def provision_vcenter(vcenter_info, esxi_info):
 @task
 def provision_esxi(deb, vcenter_info, compute_vm_info):
             vm_params = {}
-            modified_vm_name = compute_vm_info['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+_get_var(compute_vm_info['contrailvm_ip'])
+            modified_vm_name = compute_vm_info['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+compute_vm_info['contrailvm_ip']
             vm_params['vm'] = modified_vm_name
             vm_params['vmdk'] = "ContrailVM-disk1"
             vm_params['datastore'] = compute_vm_info['esx_datastore']
-            vm_params['eth0_mac'] = _get_var(compute_vm_info['contrailvm_virtual_mac'])
-            vm_params['eth0_ip'] = _get_var(compute_vm_info['contrailvm_ip'])
-            vm_params['eth0_pg'] = _get_var(compute_vm_info['esxi']['esx_fab_port_group'])
-            vm_params['eth0_vswitch'] = _get_var(compute_vm_info['esxi']['esx_fab_vswitch'])
+            vm_params['eth0_mac'] = compute_vm_info['contrailvm_virtual_mac']
+            vm_params['eth0_ip'] = compute_vm_info['contrailvm_ip']
+            vm_params['eth0_pg'] = compute_vm_info['esxi']['esx_fab_port_group']
+            vm_params['eth0_vswitch'] = compute_vm_info['esxi']['esx_fab_vswitch']
             vm_params['eth0_vlan'] = None
-            vm_params['uplink_nic'] = _get_var(compute_vm_info['esxi']['esx_uplink_nic'])
-            vm_params['uplink_vswitch'] = _get_var(compute_vm_info['esxi']['esx_fab_vswitch'])
-            vm_params['server'] = _get_var(compute_vm_info['esxi']['esx_ip'])
-            vm_params['username'] = _get_var(compute_vm_info['esxi']['esx_username'])
-            vm_params['password'] = _get_var(compute_vm_info['esxi']['esx_password'])
+            vm_params['uplink_nic'] = compute_vm_info['esxi']['esx_uplink_nic']
+            vm_params['uplink_vswitch'] = compute_vm_info['esxi']['esx_fab_vswitch']
+            vm_params['server'] = compute_vm_info['esxi']['esx_ip']
+            vm_params['username'] = compute_vm_info['esxi']['esx_username']
+            vm_params['password'] = compute_vm_info['esxi']['esx_password']
             if 'esx_vmdk' not in compute_vm_info.keys():
                 vm_params['thindisk'] =  None
                 print 'esx_vmdk, which is local vmdk path not found, expecting vmdk_download_path in testbed'
@@ -169,13 +168,13 @@ def provision_esxi(deb, vcenter_info, compute_vm_info):
                     print 'No vmdk_download_path specified. Cannot proceed further'
                     return
                 print 'Found vmdk_download_path in testbed.py, proceeding further...'
-                vm_params['vmdk_download_path'] =  _get_var(compute_vm_info['vmdk_download_path'])
+                vm_params['vmdk_download_path'] =  compute_vm_info['vmdk_download_path']
             else:
-                vm_params['thindisk'] =  _get_var(compute_vm_info['esx_vmdk'])
-            vm_params['domain'] =  _get_var(compute_vm_info['domain'])
-            vm_params['vm_password'] = _get_var(compute_vm_info['password'])
-            vm_params['vm_server'] = _get_var(compute_vm_info['esx_vm_name'])
-            vm_params['ntp_server'] = _get_var(compute_vm_info['esx_ntp_server'])
+                vm_params['thindisk'] =  compute_vm_info['esx_vmdk']
+            vm_params['domain'] =  compute_vm_info['domain']
+            vm_params['vm_password'] = compute_vm_info['password']
+            vm_params['vm_server'] = compute_vm_info['esx_vm_name']
+            vm_params['ntp_server'] = compute_vm_info['esx_ntp_server']
             if deb is not None:
                 vm_params['vm_deb'] = deb
             else:
@@ -183,7 +182,7 @@ def provision_esxi(deb, vcenter_info, compute_vm_info):
                 if 'vm_deb' not in compute_vm_info.keys():
                     print 'No deb package section in testbed.py. Exiting!'
                     return
-                vm_params['vm_deb'] = _get_var(compute_vm_info['vm_deb'])
+                vm_params['vm_deb'] = compute_vm_info['vm_deb']
             out = ContrailVM(vm_params)
             print out
 
