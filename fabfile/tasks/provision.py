@@ -1016,7 +1016,7 @@ def setup_webui_node(*args):
             cmd += " --admin_password %s" % ks_admin_password
             cmd += " --admin_token %s" % get_keystone_admin_token()
             cmd += " --admin_tenant_name %s" % get_keystone_admin_tenant_name()
-	elif orch == 'vcenter':
+        elif orch == 'vcenter':
             vcenter_info = getattr(env, 'vcenter', None)
             if not vcenter_info:
                 print 'Error: vcenter block is not defined in testbed file.Exiting'
@@ -1303,7 +1303,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
             if esxi_data:
                 apply_esxi_defaults(esxi_data)
                 # Esxi provisioning parameters
-            	cmd += " --vmware %s" % esxi_data['ip']
+                cmd += " --vmware %s" % esxi_data['ip']
                 cmd += " --vmware_username %s" % esxi_data['username']
                 cmd += " --vmware_passwd %s" % esxi_data['password']
                 cmd += " --vmware_vmpg_vswitch %s" % esxi_data['vm_vswitch']
@@ -1315,6 +1315,13 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
                 cmd += " --vmware_username %s" % vmware_info['esxi']['esx_ip']
                 cmd += " --vmware_passwd %s" % vmware_info['esxi']['esx_password']
                 cmd += " --vmware_vmpg_vswitch %s" % vmware_info['esx_vm_vswitch']
+
+        dpdk = getattr(env, 'dpdk', None)
+        if dpdk:
+            cmd += " --dpdk"
+
+        # Setup hugepages if necessary
+        setup_hugepages_node(host_string)
 
         # Execute the script to provision compute node.
         with  settings(host_string=host_string):
