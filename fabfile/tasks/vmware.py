@@ -59,7 +59,7 @@ def create_vmx (esxi_host):
 def create_esxi_compute_vm (esxi_host):
     '''Spawns contrail vm on openstack managed esxi server (non vcenter env)'''
     vmx_file = create_vmx(esxi_host)
-    datastore = esxi_host['contrail_vm']['datastore']
+    datastore = esxi_host['datastore']
     vmdk = esxi_host['contrail_vm']['vmdk']
     assert vmdk, "Contrail VM vmdk image should be specified in testbed file"
     vm_name = esxi_host['contrail_vm']['name']
