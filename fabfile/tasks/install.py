@@ -462,28 +462,13 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                 pkg = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
 
             if (manage_nova_compute == 'no' and ostype in ['centos', 'redhat']):
-                pkg = ['contrail-vrouter',
-                       'abrt',
-                       #'openstack-nova-compute',
+                pkg = ['contrail-vrouter-common',
                        'openstack-utils',
-                       'python-thrift',
-                       #'librabbitmq',
                        'contrail-nova-vif',
-                       'contrail-setup',
-                       'contrail-nodemgr',
-                       'contrail-vrouter-init',
                       ]
             elif (manage_nova_compute== 'no' and ostype in ['ubuntu']):
-                pkg = ['contrail-nodemgr',
-                       'contrail-setup',
-                       'contrail-vrouter-init',
-                       #'nova-compute',
-                       'python-iniparse',
-                       #'python-novaclient',
-                       'contrail-nova-vif',
-                       #'librabbitmq0',
-                       'linux-crashdump',
-                       contrail_vrouter_pkg,
+                pkg = [contrail_vrouter_pkg,
+                       'contrail-vrouter-common'
                       ]
             if getattr(testbed, 'haproxy', False):
                 pkg.append('haproxy')
