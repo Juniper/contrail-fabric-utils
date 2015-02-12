@@ -86,6 +86,6 @@ def reboot_nodes(*args):
         with settings(host_string=host_string):
             print "Rebooting (%s) to boot with new kernel version" % host_string
             try:
-                sudo('reboot --force', timeout=3)
+                sudo('reboot', timeout=3)
             except CommandTimeout:
                 pass
