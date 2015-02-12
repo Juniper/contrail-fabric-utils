@@ -179,7 +179,12 @@ def all_reimage(build_param="@LATEST"):
 @roles('build')
 @task
 def all_sm_reimage(build_param=None):
-    for host in env.roledefs["all"]:
+    hosts = env.roledefs['all'][:]
+    esxi_hosts = getattr(testbed, 'esxi_hosts', None)
+    if esxi_hosts:
+        for esxi in esxi_hosts:
+            hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+    for host in hosts:
         hostname = None
         for i in range(5):
             try:
@@ -210,6 +215,12 @@ def all_sm_reimage(build_param=None):
                 with settings(warn_only=True):
                     local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
             sleep(1)
+
+    if esxi_hosts:
+       for esxi in esxi_hosts:
+            with settings(warn_only=True):
+                local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (esxi,'esx5.5'))
+                sleep(15*60)
 #end all_sm_reimage
 
 @roles('compute')
@@ -271,7 +282,14 @@ def all_version():
 @task
 def check_reimage_state():
     failed_host = []
-    for host in env.hostnames["all"]:
+    hosts = env.hostnames['all'][:]
+    esxi_hosts = getattr(testbed, 'esxi_hosts', None)
+    if esxi_hosts:
+        for esxi in esxi_hosts:
+            if env['host_string'] == esxi_hosts[esxi]['contrail_vm']['host']:
+                print "skipping contrail vm, continue..."
+                return
+    for host in hosts:
         if exists('/opt/contrail'):
             failed_host.append(host)
     if failed_host:
@@ -671,19 +689,28 @@ def start_traffic():
 
 @roles('build')
 @task
-def wait_till_all_up(attempts=90, interval=10, node=None, waitdown=True, contrail_role='all'):
+def wait_till_all_up(attempts=90, interval=10, node=None, waitdown=True, contrail_role='all', reimaged=False):
     ''' Waits for given nodes to go down and then comeup within the given attempts.
         Defaults: attempts = 90 retries
                   interval = 10 secs
                   node     = env.roledefs['all']
     '''
-    if contrail_role == 'compute':
-        nodes = node or env.roledefs['compute']
+    if node:
+        nodes = node
     else:
-        nodes = node or env.roledefs['all']
+        nodes = env.roledefs[contrail_role][:]
+        if reimaged:
+            esxi_hosts = getattr(testbed, 'esxi_hosts', None)
+            if esxi_hosts:
+                for esxi in esxi_hosts:
+                    hstr = esxi_hosts[esxi]['username'] + '@' + esxi_hosts[esxi]['ip']
+                    nodes.append(hstr)
+                    env.passwords[hstr] = esxi_hosts[esxi]['password']
+                    nodes.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+
     nodes = [nodes] if type(nodes) is str else nodes
     #Waits for node to shutdown
-    if waitdown != 'False':
+    if waitdown != 'False' and not (reimaged and esxi_hosts):
         for node in nodes:
             nodeip = node.split('@')[1]
             print 'Waiting for the node (%s) to go down...' %nodeip
