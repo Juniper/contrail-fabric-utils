@@ -132,7 +132,7 @@ class ContrailVM(object):
                              ('scsi0:0.fileName', "Contrail.vmdk"),
                              ('scsi0:0.deviceType', "scsi-hardDisk"),
                              ('ethernet0.present', "TRUE"),
-                             ('ethernet0.virtualDev', "e1000"),
+                             ('ethernet0.virtualDev', "vmxnet3"),
                              ('ethernet0.networkName', "contrail-fab-pg"),
                              ('ethernet0.addressType', "static"),
                              ('ethernet0.address', "00:00:de:ad:be:ef"),
