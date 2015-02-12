@@ -297,7 +297,7 @@ def setup_test_env():
                     pkg = 'fixtures testtools testresources discover unittest2 \
                         testrepository junitxml pytun'
                 elif 'ubuntu' == detect_ostype():
-                    pkg = 'fixtures testtools testresources\
+                    pkg = 'fixtures testtools testresources unittest2 \
                            testrepository junitxml pytun'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
