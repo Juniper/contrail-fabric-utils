@@ -170,6 +170,7 @@ def provision_esxi(deb, vcenter_info, compute_vm_info):
                 vm_params['vmdk_download_path'] =  _get_var(compute_vm_info['vmdk_download_path'])
             else:
                 vm_params['thindisk'] =  _get_var(compute_vm_info['esx_vmdk'])
+                vm_params['vmdk_download_path'] = None
             vm_params['domain'] =  _get_var(compute_vm_info['domain'])
             vm_params['vm_password'] = _get_var(compute_vm_info['password'])
             vm_params['vm_server'] = _get_var(compute_vm_info['esx_vm_name'])
