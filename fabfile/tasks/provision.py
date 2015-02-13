@@ -1238,6 +1238,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
         cmd += " --amqp_server_ip %s" % amqp_server_ip
         cmd += " --service_token %s" % get_service_token()
         cmd += " --orchestrator %s" % get_orchestrator()
+        cmd += " --hypervisor %s" % get_hypervisor(host_string)
         haproxy = get_haproxy()
         if haproxy:
             cmd += " --haproxy %s" % haproxy
