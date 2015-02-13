@@ -178,9 +178,11 @@ class ContrailVM(object):
         ssh_session = ssh(self.server, self.username, self.password)
         vm_store = self.datastore+"/"+self.vm+"/"
         get_vmid = 0
+        print "Getting a list of all VMs, to check if contrailVM exists"
         get_vmid_cmd = ("vim-cmd vmsvc/getallvms | grep %s | awk \'{print $1}\'") % (self.vm)
         get_vmid, err = execute_cmd_out(ssh_session, get_vmid_cmd)
         if get_vmid is not 0:
+            print "ContrailVM: %s, exists. Deleting and recreating" %(self.vm)
             out, err = execute_cmd_out(ssh_session, ("vim-cmd vmsvc/power.off %s") % (get_vmid))
             out, err = execute_cmd_out(ssh_session, ("vim-cmd vmsvc/unregister %s") % (get_vmid))
             out, err = execute_cmd_out(ssh_session, ("rm -rf %s") % (vm_store))
@@ -212,16 +214,19 @@ class ContrailVM(object):
         src_vmdk = vm_store+thin_vmdk
         dst_vmdk = vm_store+thick_vmdk
         convert_thick_vmdk = ("vmkfstools -i \"%s\" -d zeroedthick \"%s\"") % (src_vmdk, dst_vmdk)
+        print "Running:%s" %(convert_thick_vmdk)
         out, err = execute_cmd_out(ssh_session, convert_thick_vmdk)
         
         # Regiser the VM
         # vim-cmd solo/registervm <vmx file location>
         register_vm = "vim-cmd solo/registervm "+ vm_store + dst_vmx
+        print "Running:%s" %(register_vm)
         register_out, register_err = execute_cmd_out(ssh_session, register_vm)
         if register_out:
             # Upon regisstration successful power on the VM
             try:
                 self.vm_id = int(register_out)
+                print "Powering on VM"
                 power_on_vm = ("vim-cmd vmsvc/power.on %s") % (self.vm_id)
                 power_on_out, power_on_err = execute_cmd_out(ssh_session, power_on_vm)
                 if power_on_err:
@@ -286,21 +291,25 @@ class ContrailVM(object):
 
         if self.eth0_vswitch is not 'vSwitch0':
             vswitch_cmd = ('esxcli network vswitch standard add --vswitch-name=%s') % (self.eth0_vswitch)
+            print "Running:%s" %(vswitch_cmd)
             out, err = execute_cmd_out(ssh_session, vswitch_cmd)
 
         if self.eth0_pg is not None:
             pg_cmd = ('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s') % (
                 self.eth0_pg, self.eth0_vswitch)
+            print "Running:%s" %(pg_cmd)
             out, err = execute_cmd_out(ssh_session, pg_cmd)
 
         if self.eth0_vlan is not None and self.eth0_pg:
             vlan_cmd = ('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=%s') % (
                 self.eth0_pg, self.eth0_vlan)
+            print "Running:%s" %(vlan_cmd)
             out, err = execute_cmd_out(ssh_session, vlan_cmd)
 
         if self.uplink_vswitch is not None:
             uplink_cmd = ('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s') % (
                 self.uplink_nic, self.uplink_vswitch)
+            print "Running:%s" %(uplink_cmd)
             out, err = execute_cmd_out(ssh_session, uplink_cmd)
 
         ssh_session.close()
@@ -318,6 +327,7 @@ class ContrailVM(object):
                 connected = True
                 ssh_session = paramiko.SSHClient()
                 ssh_session.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                print "Connecting to ContrailVM ip:%s" %(ip)
                 ssh_session.connect(ip, username=user, password=passwd, timeout=300)
                 sftp = ssh_session.open_sftp()
             except socket.error, paramiko.SSHException:
@@ -334,6 +344,7 @@ class ContrailVM(object):
         sftp.close()
 
         #Set up ntp  
+        print "Updating NTP settings on ContrailVM"
         ntp_cmd = ('ntpdate "%s"') %(self.ntp_server)
         out, err = execute_cmd_out(ssh_session, ntp_cmd)
         ntp_cmd = ('mv /etc/ntp.conf /etc/ntp.conf.orig')
@@ -352,7 +363,7 @@ class ContrailVM(object):
         out, err = execute_cmd_out(ssh_session, ntp_cmd)
 
         # end ntp setup
-
+        print "Starting installation of contrail-setup package.."
         install_cmd = ("/usr/bin/dpkg -i %s") % ("/tmp/contrail_pkg")
         out, err = execute_cmd_out(ssh_session, install_cmd)
         setup_cmd = "/opt/contrail/contrail_packages/setup.sh"
