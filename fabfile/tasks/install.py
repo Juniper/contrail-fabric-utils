@@ -176,7 +176,7 @@ def upgrade_pkgs_node(*args):
             # commands from one of the node in the cluster(cfgm).
             # Installing packages(python-nova, python-cinder) brings in lower version
             # of python-paramiko(1.7.5), fabric-utils requires 1.9.0 or above.
-            # ubuntu does not need this, as pycrypto and paramiko are installed as debian packages. 
+            # ubuntu does not need this, as pycrypto and paramiko are installed as debian packages.
             cmd = "sudo easy_install \
                   /opt/contrail/python_packages/pycrypto-2.6.tar.gz;\
                   sudo easy_install \
@@ -459,6 +459,11 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                 else:
                     vrouter_generic_pkg = run("apt-cache pkgnames contrail-vrouter-$(uname -r)")
                     contrail_vrouter_pkg = vrouter_generic_pkg or 'contrail-vrouter-dkms'
+
+                dpdk = getattr(env, 'dpdk', None)
+                if dpdk:
+                    contrail_vrouter_pkg = 'contrail-vrouter-dpdk'
+
                 pkg = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
 
             if (manage_nova_compute == 'no' and ostype in ['centos', 'redhat']):
@@ -494,7 +499,7 @@ def create_install_repo():
 def create_install_repo_without_openstack():
     """Creates contrail install repo in all nodes excluding openstack node."""
     host_strings = copy.deepcopy(env.roledefs['all'])
-    dummy = [host_strings.remove(openstack_node) 
+    dummy = [host_strings.remove(openstack_node)
              for openstack_node in env.roledefs['openstack']]
     for host_string in host_strings:
         with settings(host_string=host_string):
@@ -512,6 +517,30 @@ def create_install_repo_node(*args):
                 continue
             sudo("sudo /opt/contrail/contrail_packages/setup.sh")
 
+@task
+def create_install_repo_dpdk_node(*args):
+    """Creates contrail install dpdk repo in one or list of nodes.
+    USAGE:fab create_install_repo_dpdk_node:user@1.1.1.1,user@2.2.2.2
+    """
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            # Install/uprgade dpdk-depends-packages
+            sudo("apt-get install dpdk-depends-packages")
+
+            # Setup repo. Script handles automatically case when repo is
+            # already in /etc/apt/sources.list
+            sudo("/opt/contrail/contrail_packages_dpdk/setup.sh")
+
+@task
+@roles('compute')
+def create_install_repo_dpdk():
+    """Creates contrail install dpdk repo on compute nodes configured with
+    DPDK mode.
+    """
+    dpdk = getattr(env, 'dpdk', None)
+    if dpdk:
+        create_install_repo_dpdk_node(env.host_string)
+
 @roles('build')
 @task
 def install_orchestrator():
@@ -526,6 +555,7 @@ def install_contrail(reboot='True'):
     """
     execute('pre_check')
     execute(create_install_repo)
+    execute(create_install_repo_dpdk)
     execute(install_database)
     execute('install_orchestrator')
     execute(install_cfgm)
@@ -546,6 +576,7 @@ def install_without_openstack(manage_nova_compute='yes'):
        If manage_nova_compute = no, User has to install nova-compute in the compute node.
     """
     execute(create_install_repo_without_openstack)
+    execute(create_install_repo_dpdk)
     execute(install_database)
     execute(install_cfgm)
     execute(install_control)
