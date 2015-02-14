@@ -817,7 +817,7 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             upgrade(from_rel, 'compute')
             ostype = detect_ostype()
-            if (ostype == 'ubuntu' and is_lbaas_enabled()):
+            if is_lbaas_enabled():
                 sudo("apt-get -o Dpkg::Options::='--force-confold' install -y haproxy iproute")
             # Populate new params of contrail-vrouter-agent config file
             conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
@@ -831,6 +831,9 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
                 sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             if ostype in ['centos']:
                 execute('setup_vrouter_node', host_string)
+                if is_lbaas_enabled():
+                    sudo('groupadd -f nogroup')
+                    sudo("sed -i s/'Defaults    requiretty'/'#Defaults    requiretty'/g /etc/sudoers")
 
             # Upgrade nova parameters in nova.conf in compute host from 2.0 to 2.1
             if get_openstack_internal_vip() and from_rel in ['2.0']:
