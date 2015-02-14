@@ -476,6 +476,8 @@ def upgrade_database(from_rel, pkg):
 @task
 def upgrade_database_node(from_rel, pkg, *args):
     """Upgrades database pkgs in one or list of nodes. USAGE:fab upgrade_database_node:user@1.1.1.1,user@2.2.2.2"""
+    execute('backup_config', from_rel)
+    execute('backup_config_dir', from_rel)
     for host_string in args:
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
@@ -517,6 +519,8 @@ def upgrade_openstack(from_rel, pkg):
 def upgrade_openstack_node(from_rel, pkg, *args):
     """Upgrades openstack pkgs in one or list of nodes. USAGE:fab upgrade_openstack_node:user@1.1.1.1,user@2.2.2.2"""
     ostype = detect_ostype()
+    execute('backup_config', from_rel)
+    execute('backup_config_dir', from_rel)
     for host_string in args:
         with settings(host_string=host_string):
             with settings(warn_only=True):
@@ -590,6 +594,8 @@ def upgrade_cfgm(from_rel, pkg):
 @task
 def upgrade_cfgm_node(from_rel, pkg, *args):
     """Upgrades config pkgs in one or list of nodes. USAGE:fab upgrade_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
+    execute('backup_config', from_rel)
+    execute('backup_config_dir', from_rel)
     for host_string in args:
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
@@ -667,6 +673,8 @@ def upgrade_control(from_rel, pkg):
 @task
 def upgrade_control_node(from_rel, pkg, *args):
     """Upgrades control pkgs in one or list of nodes. USAGE:fab upgrade_control_node:user@1.1.1.1,user@2.2.2.2"""
+    execute('backup_config', from_rel)
+    execute('backup_config_dir', from_rel)
     for host_string in args:
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
@@ -698,6 +706,8 @@ def upgrade_collector(from_rel, pkg):
 @task
 def upgrade_collector_node(from_rel, pkg, *args):
     """Upgrades analytics pkgs in one or list of nodes. USAGE:fab upgrade_collector_node:user@1.1.1.1,user@2.2.2.2"""
+    execute('backup_config', from_rel)
+    execute('backup_config_dir', from_rel)
     for host_string in args:
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
@@ -774,6 +784,8 @@ def upgrade_webui(from_rel, pkg):
 @task
 def upgrade_webui_node(from_rel, pkg, *args):
     """Upgrades webui pkgs in one or list of nodes. USAGE:fab upgrade_webui_node:user@1.1.1.1,user@2.2.2.2"""
+    execute('backup_config', from_rel)
+    execute('backup_config_dir', from_rel)
     for host_string in args:
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
@@ -796,6 +808,9 @@ def upgrade_vrouter(from_rel, pkg):
 @task
 def upgrade_vrouter_node(from_rel, pkg, *args):
     """Upgrades vrouter pkgs in one or list of nodes. USAGE:fab upgrade_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
+    execute('backup_config', from_rel)
+    execute('backup_config_dir', from_rel)
+    execute('fix_vrouter_configs')
     for host_string in args:
         with  settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
@@ -867,8 +882,6 @@ def upgrade_contrail(from_rel, pkg):
     """Upgrades all the contrail pkgs in all nodes."""
     execute('install_pkg_all', pkg)
     execute('zookeeper_rolling_restart')
-    execute('backup_config', from_rel)
-    execute('backup_config_dir', from_rel)
     execute('stop_cfgm')
     execute('stop_rabbitmq')
     execute('stop_collector')
@@ -881,7 +894,6 @@ def upgrade_contrail(from_rel, pkg):
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
-    execute('fix_vrouter_configs')
     execute('upgrade_vrouter', from_rel, pkg)
     execute('create_default_secgrp_rules')
     execute('compute_reboot')
