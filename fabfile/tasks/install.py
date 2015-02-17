@@ -462,7 +462,7 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
 
                 dpdk = getattr(env, 'dpdk', None)
                 if dpdk:
-                    contrail_vrouter_pkg = 'contrail-vrouter-dpdk'
+                    contrail_vrouter_pkg = 'contrail-vrouter-dpdk-init'
 
                 pkg = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
 
