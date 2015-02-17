@@ -445,8 +445,8 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
        If manage_nova_compute = no, User has to install nova-compute in the compute node.
     """
     for host_string in args:
-        ostype = detect_ostype()
         with  settings(host_string=host_string):
+            ostype = detect_ostype()
             pkg = ['contrail-openstack-vrouter']
 
             # For Ubuntu, Install contrail-vrouter-generic package if one available for
