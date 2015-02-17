@@ -1893,14 +1893,27 @@ def reset_config():
 
 @roles('build')
 @task
-def prov_esxi():
+def prov_esxi(deb=None):
     esxi_info = getattr(testbed, 'esxi_hosts', None)
     if not esxi_info:
+        print 'Error: esxi_info block is not defined in testbed file.Exiting'
         return
-    for host in esxi_info.keys():
-        apply_esxi_defaults(esxi_info[host])
-        configure_esxi_network(esxi_info[host])
-        create_esxi_compute_vm(esxi_info[host])
+    orch = get_orchestrator()
+    if orch is 'vcenter':
+        vcenter_info = getattr(env, 'vcenter', None)
+        if not vcenter_info:
+            print 'Error: vcenter block is not defined in testbed file.Exiting'
+            return
+        for esxi_node in esxi_info.keys():
+            esxi_data = esxi_info[esxi_node]
+            compute_vm_info = esxi_data['contrail_vm']
+            apply_esxi_defaults(esxi_data)
+            provision_esxi(deb, vcenter_info, esxi_data, compute_vm_info)
+    else:
+        for host in esxi_info.keys():
+            apply_esxi_defaults(esxi_info[host])
+            configure_esxi_network(esxi_info[host])
+            create_esxi_compute_vm(esxi_info[host])
 #end prov_compute_vm
 
 @roles('build')
@@ -1910,28 +1923,11 @@ def setup_vcenter():
     if not vcenter_info:
         print 'Error: vcenter block is not defined in testbed file.Exiting'
         return
-    esxi_info = getattr(env, 'compute_vm', None)
+    esxi_info = getattr(testbed, 'esxi_hosts', None)
     if not esxi_info:
         print 'Error: compute_vm block is not defined in testbed file.Exiting'
         return
     provision_vcenter(vcenter_info, esxi_info)
-
-@roles('build')
-@task
-def setup_esxi_computevm(deb=None):
-    compute_vm_info = getattr(env, 'compute_vm', None)
-    if not compute_vm_info:
-        print 'Error: compute_vm block is not defined in testbed file.Exiting'
-        return
-    vcenter_info = getattr(env, 'vcenter', None)
-    if not vcenter_info:
-        print 'Error: vcenter block is not defined in testbed file.Exiting'
-        return
-    for compute_node in env.roledefs['compute']:
-        if compute_node in compute_vm_info.keys():
-                provision_esxi(deb, vcenter_info,compute_vm_info[compute_node])
-        else:
-                print 'Error: compute_vm block does not have compute host.Exiting'
 
 @task
 @roles('build')

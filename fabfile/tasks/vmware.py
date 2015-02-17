@@ -5,7 +5,7 @@ import tempfile
 from fabfile.config import *
 from fabfile.templates import compute_vmx_template
 from fabfile.tasks.install import yum_install, apt_install
-from esxi_prov import ContrailVM as ContrailVM
+from esxi_prov import ContrailVM as ContrailVM, ssh, execute_cmd_out
 from vcenter_prov import Vcenter as Vcenter
 
 def configure_esxi_network(esxi_info):
@@ -126,15 +126,27 @@ def provision_vcenter(vcenter_info, esxi_info):
         vcenter_params['dvswitch_name'] = vcenter_info['dv_switch']['dv_switch_name']
         vcenter_params['dvportgroup_name'] = vcenter_info['dv_port_group']['dv_portgroup_name']
         vcenter_params['dvportgroup_num_ports'] = vcenter_info['dv_port_group']['number_of_ports']
+
         hosts = []
         vms = []
         for host in esxi_info.keys():
                 esxi_data = esxi_info[host]
-                data = esxi_data['esxi']
 
-                esx_list=[data['esx_ip'],data['esx_username'],data['esx_password'],data['esx_ssl_thumbprint']]
+                compute_vm_info = esxi_data['contrail_vm']
+                vm = compute_vm_info['host'].split('@')
+                vm_name = "ContrailVM"
+                vm_ip = vm[1]
+
+                ssh_session = ssh(esxi_data['ip'], esxi_data['username'], esxi_data['password'])
+                get_ssl_thumbprint = ("openssl x509 -in /etc/vmware/ssl/rui.crt -fingerprint -sha1 -noout")
+                out, err = execute_cmd_out(ssh_session, get_ssl_thumbprint)
+                out = out.split()
+                out = out[1].split('=')
+                ssl_thumbprint = out[1]
+
+                esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint
                 hosts.append(esx_list)
-                modified_vm_name = esxi_data['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+_get_var(esxi_data['contrailvm_ip'])
+                modified_vm_name = vm_name+"-"+vcenter_info['datacenter']+"-"+vm_ip
                 vms.append(modified_vm_name)
 
         vcenter_params['hosts'] = hosts
@@ -142,51 +154,48 @@ def provision_vcenter(vcenter_info, esxi_info):
 
         Vcenter(vcenter_params)
 
-
 @task
-def provision_esxi(deb, vcenter_info, compute_vm_info):
+def provision_esxi(deb, vcenter_info, esxi_info, compute_vm_info):
             vm_params = {}
-            modified_vm_name = compute_vm_info['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+_get_var(compute_vm_info['contrailvm_ip'])
+            vm_name = "ContrailVM"
+            host = compute_vm_info['host'].split('@')
+            vm_ip = host[1]
+            modified_vm_name = vm_name+"-"+vcenter_info['datacenter']+"-"+vm_ip
             vm_params['vm'] = modified_vm_name
             vm_params['vmdk'] = "ContrailVM-disk1"
-            vm_params['datastore'] = compute_vm_info['esx_datastore']
-            vm_params['eth0_mac'] = _get_var(compute_vm_info['contrailvm_virtual_mac'])
-            vm_params['eth0_ip'] = _get_var(compute_vm_info['contrailvm_ip'])
-            vm_params['eth0_pg'] = _get_var(compute_vm_info['esxi']['esx_fab_port_group'])
-            vm_params['eth0_vswitch'] = _get_var(compute_vm_info['esxi']['esx_fab_vswitch'])
+            vm_params['datastore'] = esxi_info['datastore']
+            vm_params['eth0_mac'] = compute_vm_info['mac']
+            vm_params['eth0_ip'] = vm_ip
+            vm_params['eth0_pg'] = esxi_info['fabric_port_group']
+            vm_params['eth0_vswitch'] = esxi_info['fabric_vswitch']
             vm_params['eth0_vlan'] = None
-            vm_params['uplink_nic'] = _get_var(compute_vm_info['esxi']['esx_uplink_nic'])
-            vm_params['uplink_vswitch'] = _get_var(compute_vm_info['esxi']['esx_fab_vswitch'])
-            vm_params['server'] = _get_var(compute_vm_info['esxi']['esx_ip'])
-            vm_params['username'] = _get_var(compute_vm_info['esxi']['esx_username'])
-            vm_params['password'] = _get_var(compute_vm_info['esxi']['esx_password'])
-            if 'esx_vmdk' not in compute_vm_info.keys():
+            vm_params['uplink_nic'] = esxi_info['uplink_nic']
+            vm_params['uplink_vswitch'] = esxi_info['fabric_vswitch']
+            vm_params['server'] = esxi_info['ip']
+            vm_params['username'] = esxi_info['username']
+            vm_params['password'] = esxi_info['password']
+            vm_params['vmdk_download_path'] =  compute_vm_info['vmdk_download_path']
+            if 'vmdk' not in compute_vm_info.keys():
                 vm_params['thindisk'] =  None
-                print 'esx_vmdk, which is local vmdk path not found, expecting vmdk_download_path in testbed'
+                print 'vmdk, which is local vmdk path not found, expecting vmdk_download_path in testbed'
                 if 'vmdk_download_path' not in compute_vm_info.keys():
                     print 'No vmdk_download_path specified. Cannot proceed further'
                     return
                 print 'Found vmdk_download_path in testbed.py, proceeding further...'
-                vm_params['vmdk_download_path'] =  _get_var(compute_vm_info['vmdk_download_path'])
+                vm_params['vmdk_download_path'] =  compute_vm_info['vmdk_download_path']
+                print vm_params['vmdk_download_path']
             else:
-                vm_params['thindisk'] =  _get_var(compute_vm_info['esx_vmdk'])
-                vm_params['vmdk_download_path'] = None
-            vm_params['domain'] =  _get_var(compute_vm_info['domain'])
-            vm_params['vm_password'] = _get_var(compute_vm_info['password'])
-            vm_params['vm_server'] = _get_var(compute_vm_info['esx_vm_name'])
-            vm_params['ntp_server'] = _get_var(compute_vm_info['esx_ntp_server'])
+                vm_params['thindisk'] =  compute_vm_info['vmdk']
+            vm_params['vm_password'] = (env.passwords[compute_vm_info['host']])
+            vm_params['vm_server'] = vm_name
+            vm_params['ntp_server'] = compute_vm_info['ntp_server']
             if deb is not None:
                 vm_params['vm_deb'] = deb
             else:
-                print 'deb package not passed as param, expecting in testbed'
-                if 'vm_deb' not in compute_vm_info.keys():
+                print 'deb package not passed as param, expecting in testbed.py'
+                if 'deb' not in compute_vm_info.keys():
                     print 'No deb package section in testbed.py. Exiting!'
                     return
-                vm_params['vm_deb'] = _get_var(compute_vm_info['vm_deb'])
+                vm_params['vm_deb'] = compute_vm_info['deb']
             out = ContrailVM(vm_params)
             print out
-
-
-
-
-                                  
