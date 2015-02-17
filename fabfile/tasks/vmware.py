@@ -44,10 +44,15 @@ def create_vmx (esxi_host):
     vm_mac = esxi_host['contrail_vm']['mac']
     assert vm_mac, "MAC address for contrail-compute-vm must be specified"
 
+    if getattr(testbed, 'vcenter', None):
+        ext_params = compute_vmx_template.vcenter_ext_template
+    else:
+        ext_params = compute_vmx_template.esxi_ext_template.safe_substitute({'__vm_pg__' : vm_pg})
+
     template_vals = { '__vm_name__' : vm_name,
                       '__vm_mac__' : vm_mac,
                       '__fab_pg__' : fab_pg,
-                      '__vm_pg__' : vm_pg,
+                      '__extension_params__' : ext_params,
                     }
     _, vmx_file = tempfile.mkstemp(prefix=vm_name)
     _template_substitute_write(compute_vmx_template.template,
