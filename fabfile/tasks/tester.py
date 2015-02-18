@@ -294,10 +294,10 @@ def setup_test_env():
             with settings(warn_only = True):
                 run('rm -rf /tmp/pip-build-root')
                 if detect_ostype() in ['centos', 'redhat']:
-                    pkg = 'fixtures testtools testresources discover unittest2 \
+                    pkg = 'fixtures testtools testresources discover \
                         testrepository junitxml pytun'
                 elif 'ubuntu' == detect_ostype():
-                    pkg = 'fixtures testtools testresources unittest2 \
+                    pkg = 'fixtures testtools testresources \
                            testrepository junitxml pytun'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
@@ -305,8 +305,10 @@ def setup_test_env():
                     pkg = pkg + ' pyvirtualdisplay selenium'
                 if exists('/opt/contrail/api-venv/bin/activate'):
                     sudo('source /opt/contrail/api-venv/bin/activate && \
+                        pip install --upgrade unittest2 && \
                         pip install --upgrade %s' %pkg)
                 else:
+                    sudo("pip install --upgrade unittest2")
                     sudo("pip install --upgrade %s" %pkg)
                 if not exists('/usr/bin/ant'):
                     pkg_install(['ant'],disablerepo = False)
