@@ -1631,7 +1631,12 @@ def add_tor_agent_node(*args):
             for i in range(len(toragent_dict[host_string])):
                 # Populate the argument to pass for setup-vnc-tor-agent
                 tor_id= int(toragent_dict[host_string][i]['tor_id'])
-                http_server_port = tor_id + 9009
+                tor_name= toragent_dict[host_string][i]['tor_name']
+                tor_tunnel_ip= toragent_dict[host_string][i]['tor_tunnel_ip']
+                tor_vendor_name= toragent_dict[host_string][i]['tor_vendor_name']
+                tsn_name=toragent_dict[host_string][i]['tor_tsn_name']
+                tor_mgmt_ip=toragent_dict[host_string][i]['tor_ip']
+                http_server_port = toragent_dict[host_string][i]['tor_http_server_port']
                 tgt_hostname = sudo("hostname")
                 agent_name= tgt_hostname + '-' + str(tor_id)
                 cmd = "setup-vnc-tor-agent"
