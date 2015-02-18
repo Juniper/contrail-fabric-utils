@@ -334,6 +334,8 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 # tor_name: Name of the tor switch 
 # tor_tunnel_ip: Data plane IP for the tor switch
 # tor_vendor_name: Vendor type for TOR switch
+# tor_http_server_port: HTTP server port. Same will be used by tor agent
+# introspect
 #env.tor_agent = {host10:[{
 #                    'tor_ip':'10.204.217.39', IP of the tor switch
 #                    'tor_id':'1',
@@ -345,6 +347,7 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #                    'tor_name':'bng-contrail-qfx51-2',
 #                    'tor_tunnel_ip':'34.34.34.34',
 #                    'tor_vendor_name':'Juniper'
+#                    'tor_http_server_port': '9010',
 #                       }]
 #                }
 #######################################
