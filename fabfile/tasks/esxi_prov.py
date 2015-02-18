@@ -83,14 +83,13 @@ class ContrailVM(object):
         self.password = vm_params['password']
         self.thindisk = vm_params['thindisk']
         self.vmdk_download_path = vm_params['vmdk_download_path']
-	self.vm_domain = vm_params['domain']
         self.vm_id = 0
 	self.vm_server = vm_params['vm_server']
 	self.vm_password = vm_params['vm_password']
 	self.vm_deb = vm_params['vm_deb']
         self._create_networking()
         print self._create_vm()
-        print self._install_contrailvm_pkg(self.eth0_ip, "root", self.vm_password, self.vm_domain, self.vm_server, self.vm_deb)
+        print self._install_contrailvm_pkg(self.eth0_ip, "root", self.vm_password, self.vm_server, self.vm_deb)
         
     #end __init__    
 
@@ -319,7 +318,7 @@ class ContrailVM(object):
 
     # end _create_networking
 
-    def _install_contrailvm_pkg(self, ip, user, passwd, domain, server ,
+    def _install_contrailvm_pkg(self, ip, user, passwd, server ,
                     pkg):
         MAX_RETRIES = 5
         retries = 0
@@ -372,11 +371,8 @@ class ContrailVM(object):
         setup_cmd = "/opt/contrail/contrail_packages/setup.sh"
         out, err = execute_cmd_out(ssh_session, setup_cmd)
 
-        etc_host_cmd = ('echo "%s %s.%s %s" >> /etc/hosts') % (ip , server, domain, server)
+        etc_host_cmd = ('echo "%s %s" >> /etc/hosts') % (ip , server)
         out, err = execute_cmd_out(ssh_session, etc_host_cmd)
-        etc_host_cmd = ('echo "%s %s >> /etc/hosts') % (ip , server)
-        out, err = execute_cmd_out(ssh_session, etc_host_cmd)
-
 
         # close ssh session
         ssh_session.close()
