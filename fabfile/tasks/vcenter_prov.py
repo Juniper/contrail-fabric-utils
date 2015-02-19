@@ -253,7 +253,7 @@ class Vcenter(object):
                 print out
         else:
             out = '%s did not complete successfully: %s' % (actionName, task.info.error)
-            raise task.info.error
+            raise ValueError("Something went wrong in wait_for_task")
             print out
         return task.info.result
 
