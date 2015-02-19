@@ -33,6 +33,11 @@ def install_test_repo_node(*args):
 @roles('all')
 def cleanup_repo():
     '''Removes all existing repos in all the nodes specified in testbed'''
+    esxi_hosts = getattr(testbed, 'esxi_hosts', None)
+    if esxi_hosts:
+        for esxi in esxi_hosts:
+            if env.host_string == esxi_hosts[esxi]['contrail_vm']['host']:
+                return
     execute('cleanup_repo_node', env.host_string)
 
 @task
@@ -70,6 +75,11 @@ def cleanup_repo_node(*args):
 @roles('all')
 def restore_repo():
     '''Removes all existing repos in all the nodes specified in testbed'''
+    esxi_hosts = getattr(testbed, 'esxi_hosts', None)
+    if esxi_hosts:
+        for esxi in esxi_hosts:
+            if env.host_string == esxi_hosts[esxi]['contrail_vm']['host']:
+                return
     execute('restore_repo_node', env.host_string)
 
 @task
