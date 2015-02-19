@@ -174,18 +174,20 @@ def provision_esxi_node(deb, vcenter_info, esxi_info, compute_vm_info):
             vm_params['server'] = esxi_info['ip']
             vm_params['username'] = esxi_info['username']
             vm_params['password'] = esxi_info['password']
-            if 'vmdk:' not in compute_vm_info.keys():
-                vm_params['thindisk'] =  None
-                print 'vmdk, which is local vmdk path not found, expecting vmdk_download_path in testbed'
-                if 'vmdk_download_path' not in compute_vm_info.keys():
-                    print 'No vmdk_download_path specified. Cannot proceed further'
-                    return
-                print 'Found vmdk_download_path in testbed.py, proceeding further...'
-                vm_params['vmdk_download_path'] =  compute_vm_info['vmdk_download_path']
-                print 'vmdk_download_path is %s' % vm_params['vmdk_download_path']
-            else:
-                vm_params['thindisk'] =  compute_vm_info['vmdk']
+            if 'vmdk_download_path' not in compute_vm_info.keys():
                 vm_params['vmdk_download_path'] = None
+                print 'vmdk_download_path is not found, expecting vmdk in testbed'
+                if compute_vm_info['vmdk'] is None:
+                    print 'No vmdk specified. Cannot proceed further'
+                    return
+                else:
+                    print 'Found vmdk specified in testbed...'
+                    vm_params['thindisk'] = compute_vm_info['vmdk']
+            else:
+                vm_params['thindisk'] = None 
+                print 'Found vmdk_download_path in testbed.py, proceeding further...'
+                vm_params['vmdk_download_path'] = compute_vm_info['vmdk_download_path'] 
+                print 'vmdk_download_path is %s' % vm_params['vmdk_download_path']
             vm_params['vm_password'] = (env.passwords[compute_vm_info['host']])
             vm_params['vm_server'] = vm_name
             vm_params['ntp_server'] = compute_vm_info['ntp_server']
