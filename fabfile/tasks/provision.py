@@ -1569,6 +1569,8 @@ def add_tsn():
 @task
 def add_tsn_node(*args):
     """Enable TSN functionality in particular node. USAGE: fab add_tsn_node."""
+
+    restart = (str(restart).lower() == 'true')
     for host_string in args:
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
@@ -1625,6 +1627,7 @@ def add_tor_agent():
 @task
 def add_tor_agent_node(*args):
     """Enable tor agent functionality in particular node. USAGE: fab add_tor_agent_node."""
+    restart = (str(restart).lower() == 'true')
     for host_string in args:
         with settings(host_string=host_string):
             toragent_dict = getattr(env,'tor_agent', None)
