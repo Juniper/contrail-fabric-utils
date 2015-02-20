@@ -827,6 +827,7 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
                 sudo("openstack-config --set /etc/nova/nova.conf DEFAULT rpc_response_timeout 30")
                 sudo("openstack-config --set /etc/nova/nova.conf DEFAULT report_interval 15")
                 sudo("service %s start" % openstack_compute_service)
+            execute('reboot_node', False, host_string)
 
 @task
 @EXECUTE_TASK
@@ -884,7 +885,7 @@ def upgrade_contrail(from_rel, pkg):
     execute('fix_vrouter_configs')
     execute('upgrade_vrouter', from_rel, pkg)
     execute('create_default_secgrp_rules')
-    execute('compute_reboot')
+    #execute('compute_reboot')
     #Clear the connections cache
     connections.clear()
     execute('restart_openstack_compute')
@@ -913,7 +914,7 @@ def upgrade_without_openstack(pkg):
     execute('fix_vrouter_configs')
     execute('upgrade_vrouter', from_rel, pkg)
     execute('create_default_secgrp_rules')
-    execute('compute_reboot')
+    #execute('compute_reboot')
     #Clear the connections cache
     connections.clear()
     execute('restart_openstack_compute')
