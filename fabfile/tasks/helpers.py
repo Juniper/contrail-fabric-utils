@@ -17,12 +17,12 @@ from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 @task
 @parallel
 @roles('compute')
-def compute_reboot():
+def compute_reboot(waitup=True):
     if env.roledefs['compute']:
-        reboot_node(env.host_string)
+        reboot_node(waitup, env.host_string)
 
 @task
-def reboot_node(*args):
+def reboot_node(waitup, *args):
     for host_string in args:
         user, hostip = host_string.split('@')
         with settings(hide('running'), host_string=host_string, warn_only=True):
@@ -35,6 +35,8 @@ def reboot_node(*args):
 
         print 'Reboot issued; Waiting for the node (%s) to go down...' % hostip
         common.wait_until_host_down(wait=300, host=hostip)
+        if not waitup:
+            return
         print 'Node (%s) is down... Waiting for node to come back' % hostip
         sys.stdout.write('.')
         count = 0

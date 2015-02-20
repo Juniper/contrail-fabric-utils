@@ -233,7 +233,7 @@ def install_interface_name_node(*args, **kwargs):
             rpm = ['contrail-interface-name']
             yum_install(rpm)
             if reboot == 'True':
-                execute(reboot_node, env.host_string)
+                execute(reboot_node, True, env.host_string)
 
 @task
 @EXECUTE_TASK
