@@ -53,6 +53,21 @@ def get_build(pkg='contrail-install-packages'):
         return None
     return pkg_rel
 
+def get_pkg_version_release(pkg='contrail-install-packages'):
+    pkg_rel = None
+    dist = detect_ostype()
+    if dist in ['centos', 'fedora', 'redhat']:
+        cmd = "rpm -q --queryformat '%%{VERSION}-%%{RELEASE}\\n' %s" % pkg
+    elif dist in ['ubuntu']:
+        cmd = "dpkg-query -W -f='${VERSION}\\n' %s" % pkg
+    else:
+        raise Exception("ERROR: Unknown dist (%s)" % dist)
+    pkg_rel = sudo(cmd) or None
+    if pkg_rel.failed or 'is not installed' in pkg_rel or 'is not available' in pkg_rel:
+        print "Package %s not installed." % pkg
+        return None
+    return pkg_rel.split('\r\n') if pkg_rel else pkg_rel
+
 def is_package_installed(pkg_name):
     ostype = detect_ostype()
     if ostype in ['ubuntu']:

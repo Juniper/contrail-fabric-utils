@@ -60,13 +60,18 @@ def install_pkg_node(pkg, *args):
         with settings(host_string=host_string, warn_only=True):
             # Get the package name from .rpm | .deb
             if pkg.endswith('.rpm'):
-                pkgname = local("rpm -qpi %s | grep Name | cut -d':' -f2 | cut -d' ' -f2" % pkg, capture=True).strip()
+                pkgname = local('rpm -qp --queryformat "%%{NAME}" %s' % pkg, capture=True)
+                print "Package Name (%s)" % pkgname
+                pkg_version = local('rpm -qp --queryformat "%%{VERSION}-%%{RELEASE}" %s' % pkg, capture=True)
+                print "Package Version (%s)" % pkg_version
             elif pkg.endswith('.deb'):
-                pkgname = local("dpkg --info %s | grep Package: | cut -d':' -f2" % pkg, capture=True).strip()
-            build = get_build(pkgname)
-            if build and build in pkg:
-                print "Package %s already installed in the node(%s)." % (pkg, host_string)
-                continue
+                pkgname = local("dpkg -I %s | grep -Po '^\s+Package:\s+\K.*'" % pkg, capture=True)
+                pkg_version = local("dpkg -I %s | grep -Po '^\s+Version:\s+\K.*'" % pkg, capture=True)
+            if pkgname:
+                versions = get_pkg_version_release(pkgname)
+                if versions and pkg_version in versions:
+                    print "Package (%s) already installed in the node (%s)." % (pkg, host_string)
+                    continue
             pkg_name = os.path.basename(pkg)
             temp_dir= tempfile.mkdtemp()
             sudo('mkdir -p %s' % temp_dir)
