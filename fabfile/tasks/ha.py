@@ -337,6 +337,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
                 local('sed -i "/^global/a\\        tune.bufsize 16384" %s' % tmp_fname)
                 local('sed -i "/^global/a\\        tune.maxrewrite 1024" %s' % tmp_fname)
                 local('sed -i "/^global/a\        spread-checks 4" %s' % tmp_fname)
+                local('sed -i "/^global/a\        maxconn 10000" %s' % tmp_fname)
                 # Remove default HA config
                 local("sed -i '/listen\sappli1-rewrite/,/rspidel/d' %s" % tmp_fname)
                 local("sed -i '/listen\sappli3-relais/,/rspidel/d' %s" % tmp_fname)
