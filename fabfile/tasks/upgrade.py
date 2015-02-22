@@ -480,6 +480,8 @@ def upgrade_database_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            execute('backup_config', from_rel)
+            execute('backup_config_dir', from_rel)
             if get_release('contrail-openstack-database') in ['1.10', '1.20', '1.21']:
                 sudo("service supervisord-contrail-database stop")
             upgrade(from_rel, 'database')
@@ -523,6 +525,8 @@ def upgrade_openstack_node(from_rel, pkg, *args):
                 sudo("service supervisor-openstack stop")
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            execute('backup_config', from_rel)
+            execute('backup_config_dir', from_rel)
             upgrade(from_rel, 'openstack')
             sku = get_build().split('~')[1]
             if from_rel not in ['1.05', '1.06']:
@@ -594,6 +598,8 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            execute('backup_config', from_rel)
+            execute('backup_config_dir', from_rel)
             upgrade(from_rel, 'cfgm')
             with settings(warn_only=True):
                 execute('restart_cfgm_node', host_string)
@@ -671,6 +677,8 @@ def upgrade_control_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            execute('backup_config', from_rel)
+            execute('backup_config_dir', from_rel)
             upgrade(from_rel, 'control')
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.10', '1.20', '1.30', '1.21']:
@@ -702,6 +710,8 @@ def upgrade_collector_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            execute('backup_config', from_rel)
+            execute('backup_config_dir', from_rel)
             upgrade(from_rel, 'collector')
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.10', '1.20', '1.30', '1.21']:
@@ -778,6 +788,8 @@ def upgrade_webui_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            execute('backup_config', from_rel)
+            execute('backup_config_dir', from_rel)
             upgrade(from_rel, 'webui')
             execute('upgrade_pkgs_node', host_string)
             execute('fix_config_global_js_node', host_string, from_rel=from_rel)
@@ -800,6 +812,9 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
         with  settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
+            execute('backup_config', from_rel)
+            execute('backup_config_dir', from_rel)
+            execute("fix_vrouter_configs_node", host_string)
             upgrade(from_rel, 'compute')
             ostype = detect_ostype()
             if is_lbaas_enabled():
@@ -874,8 +889,6 @@ def upgrade_contrail(from_rel, pkg):
     """Upgrades all the contrail pkgs in all nodes."""
     execute('install_pkg_all', pkg)
     execute('zookeeper_rolling_restart')
-    execute('backup_config', from_rel)
-    execute('backup_config_dir', from_rel)
     execute('stop_cfgm')
     execute('stop_rabbitmq')
     execute('stop_collector')
@@ -888,7 +901,6 @@ def upgrade_contrail(from_rel, pkg):
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
-    execute('fix_vrouter_configs')
     execute('upgrade_vrouter', from_rel, pkg)
     execute('create_default_secgrp_rules')
     #execute('compute_reboot')
@@ -904,8 +916,6 @@ def upgrade_without_openstack(pkg):
     """
     execute('install_pkg_all', pkg)
     execute('zookeeper_rolling_restart')
-    execute('backup_config', from_rel)
-    execute('backup_config_dir', from_rel)
     execute('stop_cfgm')
     execute('stop_rabbitmq')
     execute('stop_collector')
@@ -918,7 +928,6 @@ def upgrade_without_openstack(pkg):
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
-    execute('fix_vrouter_configs')
     execute('upgrade_vrouter', from_rel, pkg)
     execute('create_default_secgrp_rules')
     #execute('compute_reboot')
