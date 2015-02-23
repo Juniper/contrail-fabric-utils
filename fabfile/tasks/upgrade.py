@@ -531,7 +531,7 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             sku = get_build().split('~')[1]
             if from_rel not in ['1.05', '1.06']:
                 # Workaround for bug https://bugs.launchpad.net/juniperopenstack/+bug/1383927
-                if ostype in ['ubuntu']:
+                if ostype in ['ubuntu'] and 'juno' not in sku:
                     rel = get_release('contrail-openstack')
                     buildid = get_build('contrail-openstack')
                     if from_rel in ['1.10', '1.20', '1.21']:
