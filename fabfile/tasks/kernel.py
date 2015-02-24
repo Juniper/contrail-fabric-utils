@@ -61,3 +61,15 @@ def upgrade_kernel_node(*args):
                 print "Upgrading the kernel to 3.13.0-40"
                 apt_install(["linux-image-3.13.0-40-generic",
                              "linux-image-extra-3.13.0-40-generic"])
+
+@task
+@roles('compute')
+def migrate_compute_kernel():
+    execute('create_install_repo_node', env.host_string)
+    execute('migrate_compute_kernel_node', env.host_string)
+
+@task
+def migrate_compute_kernel_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string):
+           sudo('apt-get -o Dpkg::Options::="--force-overwrite" -y install contrail-vrouter-3.13.0-40-generic')
