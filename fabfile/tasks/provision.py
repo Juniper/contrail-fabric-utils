@@ -891,6 +891,7 @@ def setup_collector_node(*args):
         analytics_redis_password = get_redis_password()
         if analytics_redis_password is not None:
             cmd += "--redis_password %s" % analytics_redis_password
+        cmd += "--kafka_enabled %s" % get_kafka_enabled()
 
         internal_vip = get_contrail_internal_vip()
         if internal_vip:
@@ -926,7 +927,8 @@ def setup_database_node(*args):
         database_host=get_control_host_string(host_string)
         database_host_password=env.passwords[host_string]
         tgt_ip = hstr_to_ip(database_host)
-
+        #derive kafka broker id from the list of servers specified
+        broker_id = sorted(database_ip_list).index(tgt_ip)
         # Frame the command line to provision database
         cmd = "setup-vnc-database"
         cmd += " --self_ip %s" % tgt_ip
@@ -946,6 +948,7 @@ def setup_database_node(*args):
             cmd += " --seed_list %s" % (hstr_to_ip(get_control_host_string(env.roledefs['database'][0])))
         cmd += " --zookeeper_ip_list %s" % ' '.join(database_ip_list)
         cmd += " --database_index %d" % (database_host_list.index(database_host) + 1)
+        cmd += " --kafka_broker_id %d" % broker_id
 
         # Execute the provision database script
         with  settings(host_string=host_string):

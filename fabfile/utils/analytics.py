@@ -42,3 +42,6 @@ def get_analytics_statistics_ttl():
 def get_analytics_flow_ttl():
     return getattr(testbed, 'analytics_flow_ttl', None)
 #end get_analytics_flow_ttl
+
+def get_kafka_enabled():
+    return getattr(testbed, 'kafka_enabled', None)
