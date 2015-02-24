@@ -17,7 +17,7 @@ from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 @task
 @parallel
 @roles('compute')
-def compute_reboot(waitup=True):
+def compute_reboot(waitup='yes'):
     if env.roledefs['compute']:
         reboot_node(waitup, env.host_string)
 
@@ -35,7 +35,7 @@ def reboot_node(waitup, *args):
 
         print 'Reboot issued; Waiting for the node (%s) to go down...' % hostip
         common.wait_until_host_down(wait=300, host=hostip)
-        if not waitup:
+        if waitup == 'no':
             return
         print 'Node (%s) is down... Waiting for node to come back' % hostip
         sys.stdout.write('.')

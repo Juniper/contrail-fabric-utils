@@ -237,7 +237,7 @@ def install_interface_name_node(*args, **kwargs):
             rpm = ['contrail-interface-name']
             yum_install(rpm)
             if reboot == 'True':
-                execute(reboot_node, True, env.host_string)
+                execute(reboot_node, 'yes', env.host_string)
 
 @task
 @EXECUTE_TASK
@@ -511,7 +511,9 @@ def create_install_repo_node(*args):
         with settings(host_string=host_string, warn_only=True):
             contrail_setup_pkg = sudo("ls /opt/contrail/contrail_install_repo/contrail-setup*")
             contrail_setup_pkgs = contrail_setup_pkg.split('\n')
-            if (len(contrail_setup_pkgs) == 1 and get_release() in contrail_setup_pkgs[0]):
+            if (len(contrail_setup_pkgs) == 1 and
+                get_release() in contrail_setup_pkgs[0] and
+                get_build().split('~')[0] in contrail_setup_pkgs[0]):
                 print "Contrail install repo created already in node: %s." % host_string
                 continue
             sudo("sudo /opt/contrail/contrail_packages/setup.sh")
