@@ -114,6 +114,10 @@ env.ostypes = {
 #analytics_statistics_ttl = 48
 #analytics_flow_ttl = 48
 
+#following parameter allows to specify minimum amount of disk space in the analytics
+#database partition, if configured amount of space is not present, it will fail provisioning
+#minimum_diskGB = 256
+
 #OPTIONAL BONDING CONFIGURATION
 #==============================
 #Inferface Bonding

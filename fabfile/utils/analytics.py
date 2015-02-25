@@ -42,3 +42,7 @@ def get_analytics_statistics_ttl():
 def get_analytics_flow_ttl():
     return getattr(testbed, 'analytics_flow_ttl', None)
 #end get_analytics_flow_ttl
+
+def get_minimum_diskGB():
+    return getattr(testbed, 'minimum_diskGB', None)
+#end get_analytics_flow_ttl
