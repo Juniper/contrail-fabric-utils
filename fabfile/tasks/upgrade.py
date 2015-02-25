@@ -102,6 +102,7 @@ UPGRADE_SCHEMA = {
                    'backup_files' : ['/etc/contrail/agent_param',
                                      '/etc/contrail/contrail-vrouter-agent.conf',
                                      '/etc/contrail/vrouter_nodemgr_param',
+                                     '/etc/nova/nova.conf',
                                     ],
                    'backup_dirs' : [],
                    'remove_files' : [],
@@ -128,6 +129,15 @@ UBUNTU_R1_30_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-
 UBUNTU_R2_0_TO_R2_0 = copy.deepcopy(UBUNTU_R1_30_TO_R2_0)
 UBUNTU_R2_0_TO_R2_0['database']['rename_files'].remove(('/etc/contrail/contrail-nodemgr-database.conf',
                                                         '/etc/contrail/contrail-database-nodemgr.conf'))
+UBUNTU_R2_0_TO_R2_0['control']['backup_files'].remove('/etc/contrail/dns.conf')
+UBUNTU_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns.conf',
+                                                        '/etc/contrail/contrail-dns.conf'))
+UBUNTU_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.conf',
+                                                        '/etc/contrail/dns/contrail-named.conf'))
+UBUNTU_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/rndc.conf',
+                                                        '/etc/contrail/dns/contrail-rndc.conf'))
+UBUNTU_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.pid',
+                                                        '/etc/contrail/dns/contrail-named.pid'))
 
 CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
 # Add contrail-interface-name to upgrade list if interface rename enabled.
@@ -174,6 +184,15 @@ CENTOS_R2_0_TO_R2_0['database']['backup_files'].remove('/etc/contrail/contrail-n
 CENTOS_R2_0_TO_R2_0['database']['backup_files'].append('/etc/contrail/contrail-database-nodemgr.conf')
 CENTOS_R2_0_TO_R2_0['database']['rename_files'].remove(('/etc/contrail/contrail-nodemgr-database.conf',
                                                         '/etc/contrail/contrail-database-nodemgr.conf'))
+CENTOS_R2_0_TO_R2_0['control']['backup_files'].remove('/etc/contrail/dns.conf')
+CENTOS_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns.conf',
+                                                        '/etc/contrail/contrail-dns.conf'))
+CENTOS_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.conf',
+                                                        '/etc/contrail/dns/contrail-named.conf'))
+CENTOS_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/rndc.conf',
+                                                        '/etc/contrail/dns/contrail-rndc.conf'))
+CENTOS_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.pid',
+                                                        '/etc/contrail/dns/contrail-named.pid'))
 
 def format_upgrade_schema(data, **formater):
     if type(data) is dict:
@@ -786,6 +805,17 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
                 run("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             if ostype in ['centos']:
                 execute('setup_vrouter_node', host_string)
+
+            # Upgrade nova parameters in nova.conf in compute host from 2.0 to 2.1
+            if get_openstack_internal_vip() and from_rel in ['2.0']:
+                nova_conf_file = '/etc/nova/nova.conf'
+                openstack_compute_service = 'openstack-nova-compute'
+                if (ostype == 'ubuntu'):
+                    openstack_compute_service = 'nova-compute'
+                sudo("service %s stop" % openstack_compute_service)
+                sudo("openstack-config --set /etc/nova/nova.conf DEFAULT rpc_response_timeout 30")
+                sudo("openstack-config --set /etc/nova/nova.conf DEFAULT report_interval 15")
+                sudo("service %s start" % openstack_compute_service)
 
 @task
 @EXECUTE_TASK
