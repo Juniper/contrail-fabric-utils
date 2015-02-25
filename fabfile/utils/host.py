@@ -206,3 +206,6 @@ def get_nova_cpu_mode():
 
 def get_nova_cpu_model():
     return get_from_testbed_dict('nova', 'cpu_model', None)
+
+def get_hypervisor(host_string):
+    return get_from_testbed_dict('hypervisor', host_string, 'libvirt')

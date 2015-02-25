@@ -84,6 +84,17 @@ env.ostypes = {
 }
 env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 
+# OPTIONAL COMPUTE HYPERVISOR CHOICE:
+#======================================
+# Compute Hypervisor
+#env.hypervisor = {
+#    host5: 'docker',
+#    host6: 'libvirt',
+#    host10: 'docker',
+#}
+#  Specify the hypervisor to be provisioned in the compute node.(Default=libvirt)
+
+
 # INFORMATION FOR DB BACKUP/RESTORE ..
 #=======================================================
 #Optional,Backup Host configuration if it is not available then it will put in localhost
@@ -99,8 +110,6 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #skip_keyspace=["ContrailAnalytics"]  IF cassandra_backup is selected as custom
 #service token need to define to do  restore of backup data
 #service_token = '53468cf7552bbdc3b94f'
-
-
 
 
 #OPTIONAL ANALYTICS CONFIGURATION

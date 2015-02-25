@@ -221,14 +221,14 @@ def install_interface_name(reboot='True'):
     """Installs interface name package in all nodes defined in compute role."""
     if not env.roledefs['compute']:
         return
-    if detect_ostype() in ['ubuntu', 'redhat']:
-        print "[%s]: Installing interface rename package not required for Ubuntu/Redhat..Skipping it" %env.host_string
-    else:
-        execute("install_interface_name_node", env.host_string, reboot=reboot)
+    execute("install_interface_name_node", env.host_string, reboot=reboot)
 
 @task
 def install_interface_name_node(*args, **kwargs):
     """Installs interface name package in one or list of nodes. USAGE:fab install_interface_name_node:user@1.1.1.1,user@2.2.2.2"""
+    if detect_ostype() in ['ubuntu', 'redhat']:
+        print "[%s]: Installing interface rename package not required for Ubuntu/Redhat..Skipping it" %env.host_string
+        return
     if len(kwargs) == 0:
         reboot = 'True'
     else:
