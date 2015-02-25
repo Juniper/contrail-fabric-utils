@@ -514,6 +514,15 @@ def setup_cmon_schema():
     for host in host_list:
         sudo('%s "GRANT ALL PRIVILEGES on *.* TO cmon@%s IDENTIFIED BY \'cmon\' WITH GRANT OPTION"' %
                (mysql_cmd, host))
+
+    sudo('%s "use cmon; update cmon_configuration set value=1 where param=\'PURGE\'"' % mysql_cmd)
+    sudo('%s "use cmon; update cmon_configuration set value=86400 where param=\'db_schema_stats_collection_interval\'"' % mysql_cmd)
+    sudo('%s "use cmon; update cmon_configuration set value=86400 where param=\'db_stats_collection_interval\'"' % mysql_cmd)
+    sudo('%s "use cmon; update cmon_configuration set value=86400 where param=\'host_stats_collection_interval\'"' % mysql_cmd)
+    sudo('%s "use cmon; update cmon_configuration set value=1440 where param=\'log_collection_interval\'"' % mysql_cmd)
+    sudo('%s "use cmon; update cmon_configuration set value=24 where param=\'db_hourly_stats_collection_interval\'"' % mysql_cmd)
+    sudo('%s "use cmon; update cmon_configuration set value=1 where param=\'BACKUP_RETENTION\'"' % mysql_cmd)
+
     # Restarting mysql in all openstack nodes
     for host_string in env.roledefs['openstack']:
         with settings(host_string=host_string):
