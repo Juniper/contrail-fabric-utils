@@ -829,6 +829,50 @@ def setup_hugepages_node(*args):
 def setup_hugepages():
     setup_hugepages_node(env.host_string)
 
+@task
+def setup_coremask_node(*args):
+    """Setup core mask on one or list of nodes
+    USAGE: fab setup_coremask_node:user@host1,user@host2,...
+    """
+    vrouter_file = '/etc/contrail/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
+
+    for host_string in args:
+        dpdk = getattr(env, 'dpdk', None)
+        if dpdk:
+            if env.host_string in dpdk:
+                try:
+                    coremask = dpdk[env.host_string]['coremask']
+                except KeyError:
+                    print "Error: Core mask for host %s is not defined." \
+                        %(host_string)
+                    sys.exit(1)
+            else:
+                return
+        else:
+            return
+
+        if (coremask == ""):
+            print "Error: Core mask for host %s is not defined." \
+                %(host_string)
+            sys.exit(1)
+
+        # if a list of cpus is provided, -c flag must be passed to taskset
+        if (',' in coremask) or ('-' in coremask):
+            taskset_param = ' -c'
+        else:
+            taskset_param = ''
+
+        with settings(host_string=host_string):
+            # supported coremask format: hex: (0x3f); list: (0,3-5), (0,1,2,3,4,5)
+            # try taskset on a dummy command
+            if run('taskset%s %s true' %(taskset_param, coremask), quiet=True).succeeded:
+                sudo('sed -i \'s/command=/command=taskset%s %s /\' %s' \
+                    %(taskset_param, coremask, vrouter_file))
+            else:
+                print "Error: Core mask %s for host %s is invalid." \
+                    %(coremask, host_string)
+                sys.exit(1)
+
 @roles('openstack')
 @task
 def increase_ulimits():
