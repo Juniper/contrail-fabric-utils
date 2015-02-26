@@ -1021,9 +1021,21 @@ def setup_webui_node(*args):
 
         # Execute the provision webui script
         with  settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
-                with settings(warn_only=True):
+            with settings(warn_only=True):
+                if detect_ostype() == 'ubuntu':
                     sudo('rm /etc/init/supervisor-webui.override')
+                    run("service redis-server start")
+                    #check if the redis-server is running, if not, issue start again
+                    count = 1
+                    while run("service redis-server status | grep not").succeeded:
+                        count += 1
+                        if count > 10:
+                            break
+                        sleep(1)
+                        run("service redis-server start")
+                else:
+                    sudo("chkconfig redis on")
+                    sudo("service redis start")
             with cd(INSTALLER_DIR):
                 sudo(cmd)
 #end setup_webui
