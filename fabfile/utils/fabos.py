@@ -1,5 +1,6 @@
 import os
 import ast
+import tempfile
 
 from fabfile.config import *
 
@@ -84,8 +85,8 @@ def get_as_sudo(src_file, dst_file):
     basename = os.path.basename(src_file.rstrip('/'))
     if not basename or basename in ['*']:
         raise Exception('%s is not a valid path'%src_file)
-    tempdir = run('(tempdir=$(mktemp -d); echo $tempdir)')
-    tmp_file = '%s/tmp%s'% (tempdir, basename)
+    tempdir = tempfile.mkdtemp()
+    tmp_file = '%s/tmp%s' % (tempdir, basename)
     sudo('cp -rf %s %s'%(src_file, tmp_file))
     sudo('chmod -R 777 %s'%tmp_file)
     try:
