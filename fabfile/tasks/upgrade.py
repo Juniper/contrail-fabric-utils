@@ -360,22 +360,28 @@ def upgrade_package(pkgs, ostype):
 @EXECUTE_TASK
 @roles('all')
 def backup_config_dir(from_rel):
-    ostype = detect_ostype()
-    to_rel = get_release()
-    to_build = get_build().split('~')[0]
-    upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
-    for role in upgrade_data.keys():
-        if env.host_string in env.roledefs[role]:
-            with settings(warn_only=True):
-                for config_dir in upgrade_data[role]['backup_dirs']:
-                    cfg_dir_name = os.path.basename(config_dir)
-                    if files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_dir_name):
-                        print "Already the config dir %s is backed up." % cfg_dir_name
-                        continue
-                    sudo('mkdir -p /var/tmp/contrail/%s.upgradesave' % cfg_dir_name)
-                    if sudo('cp -r %s/* /var/tmp/contrail/%s.upgradesave' % (config_dir, cfg_dir_name)).failed:
-                        if not files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_dir_name):
-                            raise RuntimeError("Unable to backup config dir %s, please correct and continue upgrade." % config_dir)
+    execute("backup_config_dir_node", from_rel, env.host_string)
+
+@task
+def backup_config_dir_node(from_rel, *args):
+    for host_string in args:
+        with  settings(host_string=host_string):
+            ostype = detect_ostype()
+            to_rel = get_release()
+            to_build = get_build().split('~')[0]
+            upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
+            for role in upgrade_data.keys():
+                if env.host_string in env.roledefs[role]:
+                    with settings(warn_only=True):
+                        for config_dir in upgrade_data[role]['backup_dirs']:
+                            cfg_dir_name = os.path.basename(config_dir)
+                            if files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_dir_name):
+                                print "Already the config dir %s is backed up." % cfg_dir_name
+                                continue
+                            sudo('mkdir -p /var/tmp/contrail/%s.upgradesave' % cfg_dir_name)
+                            if sudo('cp -r %s/* /var/tmp/contrail/%s.upgradesave' % (config_dir, cfg_dir_name)).failed:
+                                if not files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_dir_name):
+                                    raise RuntimeError("Unable to backup config dir %s, please correct and continue upgrade." % config_dir)
 
 def restore_config_dir(role, upgrade_data):
     for config_dir in upgrade_data[role]['backup_dirs']:
@@ -387,22 +393,28 @@ def restore_config_dir(role, upgrade_data):
 @EXECUTE_TASK
 @roles('all')
 def backup_config(from_rel):
-    ostype = detect_ostype()
-    to_rel = get_release()
-    to_build = get_build().split('~')[0]
-    upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
-    sudo('mkdir -p /var/tmp/contrail')
-    for role in upgrade_data.keys():
-        if env.host_string in env.roledefs[role]:
-            with settings(warn_only=True):
-                for config_file in upgrade_data[role]['backup_files']:
-                    cfg_file_name = os.path.basename(config_file)
-                    if files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_file_name):
-                        print "Already the config file %s is backed up." % cfg_file_name
-                        continue
-                    if sudo('cp %s /var/tmp/contrail/%s.upgradesave' % (config_file, cfg_file_name)).failed:
-                        if not files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_file_name):
-                            raise RuntimeError("Unable to backup config file %s, please correct and continue upgrade." % config_file)
+    execute("backup_config_node", from_rel, env.host_string)
+
+@task
+def backup_config_node(from_rel, *args):
+    for host_string in args:
+        with  settings(host_string=host_string):
+            ostype = detect_ostype()
+            to_rel = get_release()
+            to_build = get_build().split('~')[0]
+            upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
+            sudo('mkdir -p /var/tmp/contrail')
+            for role in upgrade_data.keys():
+                if env.host_string in env.roledefs[role]:
+                    with settings(warn_only=True):
+                        for config_file in upgrade_data[role]['backup_files']:
+                            cfg_file_name = os.path.basename(config_file)
+                            if files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_file_name):
+                                print "Already the config file %s is backed up." % cfg_file_name
+                                continue
+                            if sudo('cp %s /var/tmp/contrail/%s.upgradesave' % (config_file, cfg_file_name)).failed:
+                                if not files.exists('/var/tmp/contrail/%s.upgradesave' % cfg_file_name):
+                                    raise RuntimeError("Unable to backup config file %s, please correct and continue upgrade." % config_file)
 
 def restore_config(role, upgrade_data):
     for config_file in upgrade_data[role]['backup_files']:
@@ -480,8 +492,8 @@ def upgrade_database_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            execute('backup_config', from_rel)
-            execute('backup_config_dir', from_rel)
+            execute('backup_config_node', from_rel, host_string)
+            execute('backup_config_dir_node', from_rel, host_string)
             if get_release('contrail-openstack-database') in ['1.10', '1.20', '1.21']:
                 sudo("service supervisord-contrail-database stop")
             upgrade(from_rel, 'database')
@@ -525,8 +537,8 @@ def upgrade_openstack_node(from_rel, pkg, *args):
                 sudo("service supervisor-openstack stop")
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            execute('backup_config', from_rel)
-            execute('backup_config_dir', from_rel)
+            execute('backup_config_node', from_rel, host_string)
+            execute('backup_config_dir_node', from_rel, host_string)
             upgrade(from_rel, 'openstack')
             sku = get_build().split('~')[1]
             if from_rel not in ['1.05', '1.06']:
@@ -598,8 +610,8 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            execute('backup_config', from_rel)
-            execute('backup_config_dir', from_rel)
+            execute('backup_config_node', from_rel, host_string)
+            execute('backup_config_dir_node', from_rel, host_string)
             upgrade(from_rel, 'cfgm')
             with settings(warn_only=True):
                 execute('restart_cfgm_node', host_string)
@@ -677,8 +689,8 @@ def upgrade_control_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            execute('backup_config', from_rel)
-            execute('backup_config_dir', from_rel)
+            execute('backup_config_node', from_rel, host_string)
+            execute('backup_config_dir_node', from_rel, host_string)
             upgrade(from_rel, 'control')
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.10', '1.20', '1.30', '1.21']:
@@ -710,8 +722,8 @@ def upgrade_collector_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            execute('backup_config', from_rel)
-            execute('backup_config_dir', from_rel)
+            execute('backup_config_node', from_rel, host_string)
+            execute('backup_config_dir_node', from_rel, host_string)
             upgrade(from_rel, 'collector')
             execute('upgrade_pkgs_node', host_string)
             if from_rel in ['1.10', '1.20', '1.30', '1.21']:
@@ -788,8 +800,8 @@ def upgrade_webui_node(from_rel, pkg, *args):
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            execute('backup_config', from_rel)
-            execute('backup_config_dir', from_rel)
+            execute('backup_config_node', from_rel, host_string)
+            execute('backup_config_dir_node', from_rel, host_string)
             upgrade(from_rel, 'webui')
             execute('upgrade_pkgs_node', host_string)
             execute('fix_config_global_js_node', host_string, from_rel=from_rel)
@@ -812,8 +824,8 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
         with  settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
-            execute('backup_config', from_rel)
-            execute('backup_config_dir', from_rel)
+            execute('backup_config_node', from_rel, host_string)
+            execute('backup_config_dir_node', from_rel, host_string)
             execute("fix_vrouter_configs_node", host_string)
             upgrade(from_rel, 'compute')
             ostype = detect_ostype()
