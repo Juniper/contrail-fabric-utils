@@ -69,6 +69,7 @@ frontend quantum-server *:9696
 
 frontend  contrail-api *:8082
     default_backend    contrail-api-backend
+    timeout client 3m
 
 frontend  contrail-discovery *:5998
     default_backend    contrail-discovery-backend
@@ -81,6 +82,7 @@ $__contrail_quantum_servers__
 
 backend contrail-api-backend
     option nolinger
+    timeout server 3m
     balance     roundrobin
 $__contrail_api_backend_servers__
     #server  10.84.14.2 10.84.14.2:9100 check
