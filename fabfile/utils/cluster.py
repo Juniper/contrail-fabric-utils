@@ -89,3 +89,21 @@ def reboot_nodes(*args):
                 sudo('reboot --force', timeout=3)
             except CommandTimeout:
                 pass
+
+def get_tsn_nodes():
+    """Identifies the list of nodes to be provisioned as
+       tsn nodes.
+    """
+    try:
+        return env.roledefs['tsn']
+    except KeyError:
+        return []
+
+def get_toragent_nodes():
+    """Identifies the list of nodes to be provisioned as
+       toragent nodes.
+    """
+    try:
+        return env.roledefs['toragent']
+    except KeyError:
+        return []
