@@ -138,6 +138,7 @@ UBUNTU_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/rndc.c
                                                         '/etc/contrail/dns/contrail-rndc.conf'))
 UBUNTU_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.pid',
                                                         '/etc/contrail/dns/contrail-named.pid'))
+UBUNTU_R2_0_TO_R2_01 = copy.deepcopy(UBUNTU_R2_0_TO_R2_0)
 
 CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
 # Add contrail-interface-name to upgrade list if interface rename enabled.
@@ -193,6 +194,7 @@ CENTOS_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/rndc.c
                                                         '/etc/contrail/dns/contrail-rndc.conf'))
 CENTOS_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.pid',
                                                         '/etc/contrail/dns/contrail-named.pid'))
+CENTOS_R2_0_TO_R2_01 = copy.deepcopy(CENTOS_R2_0_TO_R2_0)
 
 def format_upgrade_schema(data, **formater):
     if type(data) is dict:
@@ -606,7 +608,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             # Populate the new SCHEDULER section in svc_monitor.conf
             conf_file = '/etc/contrail/svc_monitor.conf'
-            if get_release() == '2.0':
+            if get_release() in ['2.0', '2.01']:
                  conf_file = '/etc/contrail/contrail-svc-monitor.conf'
             lbaas_svc_instance_params = {'analytics_server_ip' : hstr_to_ip(env.roledefs['collector'][0]),
                                          'analytics_server_port' : '8081'
