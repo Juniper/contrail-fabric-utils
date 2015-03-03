@@ -1,4 +1,5 @@
 from fabfile.config import testbed
+from fabfile.utils.fabos import detect_ostype, get_openstack_sku
 
 def get_collector_syslog_port():
     env_obj = getattr(testbed, 'env')
@@ -49,3 +50,52 @@ def get_minimum_diskGB():
 
 def get_kafka_enabled():
     return getattr(testbed, 'kafka_enabled', None)
+
+def get_enable_ceilometer():
+    return getattr(testbed, 'enable_ceilometer', True)
+#end get_enable_ceilometer
+
+def is_ceilometer_supported():
+    # Ceilometer should be enabled
+    enable_ceilometer = get_enable_ceilometer()
+    if not enable_ceilometer:
+        return False
+    # Currently supported only on ubuntu icehouse
+    os_type = detect_ostype()
+    openstack_sku = get_openstack_sku()
+    if os_type in ['ubuntu', 'redhat'] and \
+            openstack_sku in ['icehouse']:
+        return True
+    else:
+        return False
+#end is_ceilometer_supported
+
+def is_ceilometer_install_supported():
+    return is_ceilometer_supported()
+#end is_ceilometer_install_supported
+
+def is_ceilometer_provision_supported():
+    supported = is_ceilometer_supported()
+    if not supported:
+        return False
+    # Not supported on redhat
+    os_type = detect_ostype()
+    if os_type == 'redhat':
+        return False
+    return supported
+#end is_ceilometer_provision_supported
+
+def is_ceilometer_compute_install_supported():
+    return is_ceilometer_supported()
+#end is_ceilometer_compute_install_supported
+
+def is_ceilometer_compute_provision_supported():
+    supported = is_ceilometer_supported()
+    if not supported:
+        return False
+    # Not supported on redhat
+    os_type = detect_ostype()
+    if os_type == 'redhat':
+        return False
+    return supported
+#end is_ceilometer_compute_provision_supported
