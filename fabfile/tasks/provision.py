@@ -508,17 +508,6 @@ def setup_cfgm_node(*args):
         fixup_restart_haproxy_in_all_openstack()
 #end setup_cfgm_node
 
-def get_openstack_sku():
-    output = sudo("dpkg-query --show nova-api")
-    if output.find('2013.2') != -1:
-        openstack_sku = 'havana'
-    elif output.find('2014.1') != -1:
-        openstack_sku = 'icehouse'
-    else:
-        print "openstack dist unknown.. assuming icehouse.."
-        openstack_sku = 'icehouse'
-    return openstack_sku
-#end get_openstack_sku
 
 def fixup_ceilometer_conf_common():
     conf_file = '/etc/ceilometer/ceilometer.conf'
@@ -554,6 +543,48 @@ def fixup_ceilometer_conf_keystone(openstack_ip):
         sudo("%s os_username ceilometer" % config_cmd)
         sudo("%s os_auth_url http://%s:5000/v2.0" % (config_cmd, openstack_ip))
 #end fixup_ceilometer_conf_keystone
+
+def fixup_ceilometer_pipeline_conf(analytics_ip):
+    import yaml
+    conf_file = '/etc/ceilometer/pipeline.yaml'
+    sudo('cp %s %s.tmp' % (conf_file, conf_file))
+    with open('%s.tmp' % (conf_file)) as fap:
+        data = fap.read()
+    pipeline_dict = yaml.safe_load(data)
+    # If already configured with 'contrail_source' and/or 'contrail_sink' exit
+    for source in pipeline_dict['sources']:
+        if source['name'] == 'contrail_source':
+            return
+    for sink in pipeline_dict['sinks']:
+        if sink['name'] == 'contrail_sink':
+            return
+    # Edit meters in sources to exclude floating IP meters if '*' is
+    # configured
+    for source in pipeline_dict['sources']:
+        for mname in source['meters']:
+            if mname == '*':
+                source['meters'].append('!ip.floating.*')
+                print('Excluding floating IP meters from source %s' % (source['name']))
+                break
+    # Add contrail source and sinks to the pipeline
+    contrail_source = {'interval': 600,
+                       'meters': ['ip.floating.receive.bytes',
+                                  'ip.floating.receive.packets',
+                                  'ip.floating.transmit.bytes',
+                                  'ip.floating.transmit.packets'],
+                       'name': 'contrail_source',
+                       'sinks': ['contrail_sink']}
+    contrail_source['resources'] = ['contrail://%s:8081/' % (analytics_ip)]
+    contrail_sink = {'publishers': ['rpc://'],
+                     'transformers': None,
+                     'name': 'contrail_sink'}
+    pipeline_dict['sources'].append(contrail_source)
+    pipeline_dict['sinks'].append(contrail_sink)
+    with open('%s.tmp' % (conf_file), 'w') as fap:
+        yaml.safe_dump(pipeline_dict, fap, explicit_start=True,
+                   default_flow_style=False, indent=4)
+    sudo('mv %s.tmp %s' % (conf_file, conf_file))
+#end fixup_ceilometer_pipeline_conf
 
 def setup_ceilometer_mongodb(ip):
     with settings(warn_only=True):
@@ -616,6 +647,7 @@ def setup_ceilometer():
 @task
 def setup_ceilometer_node(*args):
     """Provisions ceilometer services in one or list of nodes. USAGE: fab setup_ceilometer_node:user@1.1.1.1,user@2.2.2.2"""
+    analytics_ip = hstr_to_ip(env.roledefs['collector'][0])
     for host_string in args:
         self_host = get_control_host_string(host_string)
         self_ip = hstr_to_ip(self_host)
@@ -657,6 +689,8 @@ def setup_ceilometer_node(*args):
             if not ceilometer_service_exists:
                 sudo("source /etc/contrail/openstackrc;keystone service-create --name=ceilometer --type=metering --description=\"Telemetry\"")
                 sudo("source /etc/contrail/openstackrc;keystone endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777 --region=RegionOne" %(self_ip, self_ip, self_ip))
+            # Fixup ceilometer pipeline cfg
+            fixup_ceilometer_pipeline_conf(analytics_ip)
             for svc in ceilometer_services:
                 sudo("service %s restart" %(svc))
 #end setup_ceilometer_node
@@ -697,6 +731,8 @@ def setup_openstack():
             execute("setup_openstack_node", env.host_string)
         if is_package_installed('contrail-openstack-dashboard'):
             execute('setup_contrail_horizon_node', env.host_string)
+        if is_ceilometer_provision_supported():
+            setup_ceilometer()
 
 @task
 @roles('openstack')
@@ -1258,6 +1294,8 @@ def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
 def setup_vrouter_node(*args):
     """Provisions nova-compute and vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
     execute("setup_only_vrouter_node", 'yes', 'yes', *args)
+    if is_ceilometer_compute_provision_supported():
+        execute("setup_ceilometer_compute_node", *args)
 
 @task
 def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *args):

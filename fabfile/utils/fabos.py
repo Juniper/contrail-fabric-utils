@@ -28,6 +28,28 @@ def detect_ostype():
     return dist.lower()
 #end detect_ostype
 
+def get_openstack_sku():
+    dist = detect_ostype()
+    if dist in ['ubuntu']:
+        pkg = 'nova-common'
+    elif dist in ['centos', 'fedora', 'redhat']:
+        pkg = 'openstack-nova-common'
+    else:
+        print "Unsupported OS type"
+        return None
+    pkg_ver = get_release(pkg=pkg)
+    if pkg_ver is None:
+        return None
+    if pkg_ver.find('2013.2') != -1:
+        openstack_sku = 'havana'
+    elif pkg_ver.find('2014.1') != -1:
+        openstack_sku = 'icehouse'
+    else:
+        print "OpenStack distribution unknown.. assuming icehouse.."
+        openstack_sku = 'icehouse'
+    return openstack_sku
+#end get_openstack_sku
+
 def get_release(pkg='contrail-install-packages'):
     pkg_ver = None
     dist = detect_ostype() 

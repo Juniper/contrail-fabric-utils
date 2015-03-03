@@ -9,6 +9,8 @@ from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor
 from fabfile.tasks.helpers import reboot_node
+from fabfile.utils.analytics import is_ceilometer_install_supported, \
+    is_ceilometer_compute_install_supported
 
 @task
 @parallel(pool_size=20)
@@ -274,32 +276,40 @@ def install_ceilometer_compute_node(*args):
     """Installs ceilometer compute pkgs in one or list of nodes. USAGE:fab install_ceilometer_compute_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            pkg = ['ceilometer-agent-compute']
+            if not is_ceilometer_compute_install_supported():
+                continue
+            pkg_ubuntu = ['ceilometer-agent-compute']
+            pkg_redhat = ['openstack-ceilometer-compute']
             act_os_type = detect_ostype()
             if act_os_type == 'ubuntu':
-                apt_install(pkg)
+                apt_install(pkg_ubuntu)
+            elif act_os_type in ['redhat']:
+                yum_install(pkg_redhat)
             else:
-                raise RuntimeError('Actual OS Type (%s) != Expected OS Type (%s)'
-                                    'Aborting!' % (act_os_type, 'ubuntu'))
+                raise RuntimeError('Unspported OS type (%s)' % (act_os_type))
 
 @task
 @EXECUTE_TASK
 @roles('openstack')
 def install_ceilometer():
     """Installs ceilometer pkgs in all nodes defined in first node of openstack role."""
-    if env.roledefs['openstack'] and env.host_string == env.roledefs['openstack'][0]:
-        execute("install_ceilometer_node", env.host_string)
+    execute("install_ceilometer_node", env.host_string)
 
 @task
 def install_ceilometer_node(*args):
     """Installs openstack pkgs in one or list of nodes. USAGE:fab install_ceilometer_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
+        if env.roledefs['openstack'] and \
+                host_string != env.roledefs['openstack'][0]:
+            continue
         with settings(host_string=host_string):
-            pkg_havana = ['mongodb', 'ceilometer-api',
+            if not is_ceilometer_install_supported():
+                continue
+            pkg_havana_ubuntu = ['mongodb', 'ceilometer-api',
                 'ceilometer-collector',
                 'ceilometer-agent-central',
                 'python-ceilometerclient']
-            pkg_icehouse = ['mongodb', 'ceilometer-api',
+            pkg_icehouse_ubuntu = ['mongodb', 'ceilometer-api',
                 'ceilometer-collector',
         	'ceilometer-agent-central',
         	'ceilometer-agent-notification',
@@ -307,21 +317,31 @@ def install_ceilometer_node(*args):
         	'ceilometer-alarm-notifier',
 		'python-ceilometerclient',
                 'ceilometer-plugin-contrail']
+            pkg_icehouse_redhat = ['ceilometer-plugin-contrail']
             act_os_type = detect_ostype()
-            if act_os_type == 'ubuntu':
-                #if not is_package_installed('mongodb-server'):
-                #    raise RuntimeError('install_ceilometer: mongodb-server is required to be installed for ceilometer')
-                output = sudo("dpkg-query --show nova-api")
-                if output.find('2013.2') != -1:
-                    apt_install(pkg_havana)
-                elif output.find('2014.1') != -1:
-                    apt_install(pkg_icehouse)
+            openstack_sku = get_openstack_sku()
+            if openstack_sku == 'havana':
+                if act_os_type == 'ubuntu':
+                    pkg_ceilometer = pkg_havana_ubuntu
                 else:
-                    print "install_ceilometer: openstack dist unknown.. assuming icehouse.."
-                    apt_install(pkg_icehouse)
+                    raise RuntimeError('Unsupported OpensStack distribution '
+                        '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
+            elif openstack_sku == 'icehouse':
+                if act_os_type == 'ubuntu':
+                    pkg_ceilometer = pkg_icehouse_ubuntu
+                elif act_os_type in ['redhat']:
+                    pkg_ceilometer = pkg_icehouse_redhat
+                else:
+                    raise RuntimeError('Unsupported OpensStack distribution '
+                        '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
             else:
-                raise RuntimeError('Actual OS Type (%s) != Expected OS Type (%s)'
-                                    'Aborting!' % (act_os_type, 'ubuntu'))
+                raise RuntimeError('Unsupported OpenStack distribution (%s) '
+                    'on (%s)' % (openstack_sku, act_os_type))
+
+            if act_os_type == 'ubuntu':
+                apt_install(pkg_ceilometer)
+            else:
+                yum_install(pkg_ceilometer)
 
 @task
 @EXECUTE_TASK
@@ -343,6 +363,7 @@ def install_openstack_node(*args):
                 apt_install(pkg)
             else:
                 yum_install(pkg)
+            install_ceilometer_node(host_string)
 
 @task
 @EXECUTE_TASK
@@ -495,6 +516,7 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                 apt_install(pkg)
             else:
                 yum_install(pkg)
+            install_ceilometer_compute_node(host_string)
 
 @task
 @EXECUTE_TASK
