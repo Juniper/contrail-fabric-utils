@@ -6,7 +6,8 @@ import tempfile
 from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator
-from fabfile.utils.host import get_from_testbed_dict, get_openstack_internal_vip
+from fabfile.utils.host import get_from_testbed_dict,\
+    get_openstack_internal_vip, get_hypervisor
 from fabfile.tasks.helpers import reboot_node
 
 @task
@@ -489,6 +490,8 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
 
             if ostype == 'ubuntu':
                 sudo('echo "manual" >> /etc/init/supervisor-vrouter.override')
+                if get_hypervisor(host_string) == 'docker':
+                    pkg.append('nova-docker')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
