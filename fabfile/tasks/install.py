@@ -8,6 +8,7 @@ from fabfile.utils.fabos import *
 from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator
 from fabfile.utils.host import get_from_testbed_dict, get_openstack_internal_vip
 from fabfile.tasks.helpers import reboot_node
+from fabfile.utils.analytics import get_enable_ceilometer
 
 @task
 @parallel(pool_size=20)
@@ -286,13 +287,14 @@ def install_ceilometer_compute_node(*args):
 @roles('openstack')
 def install_ceilometer():
     """Installs ceilometer pkgs in all nodes defined in first node of openstack role."""
-    if env.roledefs['openstack'] and env.host_string == env.roledefs['openstack'][0]:
-        execute("install_ceilometer_node", env.host_string)
+    execute("install_ceilometer_node", env.host_string)
 
 @task
 def install_ceilometer_node(*args):
     """Installs openstack pkgs in one or list of nodes. USAGE:fab install_ceilometer_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
+        if env.roledefs['openstack'] and host_string != env.roledefs['openstack'][0]:
+            continue
         with settings(host_string=host_string):
             pkg_havana = ['mongodb', 'ceilometer-api',
                 'ceilometer-collector',
@@ -342,6 +344,9 @@ def install_openstack_node(*args):
                 apt_install(pkg)
             else:
                 yum_install(pkg)
+            # install ceilometer if enabled on the first openstack node
+            if get_enable_ceilometer():
+                install_ceilometer_node(host_string)
 
 @task
 @EXECUTE_TASK
@@ -492,6 +497,9 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                 apt_install(pkg)
             else:
                 yum_install(pkg)
+            # install ceilometer compute if enabled
+            if get_enable_ceilometer():
+                install_ceilometer_compute_node(host_string)
 
 @task
 @EXECUTE_TASK
