@@ -1,6 +1,7 @@
 import string
 import textwrap
 import json
+import socket
 from time import sleep
 
 from fabric.contrib.files import exists
@@ -23,7 +24,7 @@ from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_esxi,\
         configure_esxi_network, create_esxi_compute_vm
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
-        get_vmware_details
+        get_vmware_details, get_tsn_nodes, get_toragent_nodes
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
@@ -697,6 +698,44 @@ def setup_openstack():
         if is_package_installed('contrail-openstack-dashboard'):
             execute('setup_contrail_horizon_node', env.host_string)
 
+@task
+@roles('openstack')
+def setup_nova_aggregate():
+    if env.roledefs['openstack'].index(env.host_string) == 0:
+        # Copy only once in a HA setup
+        copy_openstackrc()
+    execute('setup_nova_aggregate_node', env.host_string)
+
+@task
+def setup_nova_aggregate_node(*args):
+    for compute_host in env.roledefs['compute']:
+        hypervisor = get_hypervisor(compute_host)
+        host_name = None
+        for i in range(5):
+            try:
+                host_name = socket.gethostbyaddr(
+                    hstr_to_ip(compute_host))[0].split('.')[0]
+            except socket.herror:
+                sleep(5)
+                continue
+            else:
+                break
+        if not host_name:
+            raise RuntimeError("Not able to get the hostname of compute host:%s", compute_host)
+        if hypervisor == 'docker':
+            retry = 10
+            while retry:
+                with settings(warn_only=True):
+                    aggregate_list = sudo("(source /etc/contrail/openstackrc; nova aggregate-list)")
+                if aggregate_list.failed:
+                    sleep(6)
+                    retry -= 1
+                    continue
+                break
+            if hypervisor not in aggregate_list:
+                sudo("(source /etc/contrail/openstackrc; nova aggregate-create %s nova/%s)" % (hypervisor, hypervisor))
+            sudo("(source /etc/contrail/openstackrc; nova aggregate-add-host %s %s)" % (hypervisor, host_name))
+
 @roles('openstack')
 @task
 def setup_contrail_horizon():
@@ -1207,10 +1246,9 @@ def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
     if env.roledefs['compute']:
        # Launching of VM is not surrently supported in TSN node.
        # Not proviosning nova_compute incase the compute node is TSN.
-       if 'tsn' in env.roledefs.keys():
-           if  env.host_string in env.roledefs['tsn']:
-               manage_nova_compute='no'
-               configure_nova='no'
+       if 'tsn' in get_tsn_nodes():
+           manage_nova_compute='no'
+           configure_nova='no'
        execute("setup_only_vrouter_node", manage_nova_compute, configure_nova,  env.host_string)
 
 @task
@@ -1615,11 +1653,12 @@ def setup_remote_syslog_node(*args):
     return True
 # end setup_remote_syslog
 
-@roles('tsn')
+@hosts(get_tsn_nodes())
 @task
 def add_tsn():
     """Add the TSN nodes. Enable the compute nodes (mentioned with role TSN in testbed file) with TSN functionality . USAGE: fab add_tsn."""
-    execute("add_tsn_node", env.host_string)
+    if 'tsn' in env.roledefs.keys():
+        execute("add_tsn_node", env.host_string)
 
 @task
 def add_tsn_node(*args):
@@ -1673,11 +1712,12 @@ def add_tsn_node(*args):
             if restart:
                 sudo("service supervisor-vrouter restart")
 
-@roles('toragent')
+@hosts(get_toragent_nodes())
 @task
 def add_tor_agent():
     """Add the tor agent nodes. Enable the compute nodes (mentioned with role toragent in testbed file) with tor agent functionality . USAGE: fab add_tor."""
-    execute("add_tor_agent_node", env.host_string)
+    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():
+        execute("add_tor_agent_node", env.host_string)
 
 @task
 def add_tor_agent_node(*args):
@@ -1782,14 +1822,15 @@ def setup_all(reboot='True'):
     execute('prov_metadata_services')
     execute('prov_encap_type')
     execute('setup_remote_syslog')
-    if 'tsn' in env.roledefs.keys():execute('add_tsn')
-    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():execute('add_tor_agent')
+    execute('add_tsn')
+    execute('add_tor_agent')
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute('compute_reboot')
         #Clear the connections cache
         connections.clear()
         execute('verify_compute')
+    execute('setup_nova_aggregate')
 #end setup_all
 
 @roles('build')
@@ -1820,6 +1861,8 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     execute('prov_metadata_services')
     execute('prov_encap_type')
     execute('setup_remote_syslog')
+    execute('add_tsn')
+    execute('add_tor_agent')
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute(compute_reboot)

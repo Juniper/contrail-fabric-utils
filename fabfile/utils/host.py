@@ -1,7 +1,7 @@
 import paramiko
 from netaddr import *
 
-from fabric.api import env, sudo
+from fabric.api import env, sudo, get, put
 from fabric.context_managers import settings
 
 from fabfile.config import testbed
@@ -43,6 +43,15 @@ def get_service_token():
                 sudo("sudo setup-service-token.sh")
             service_token = sudo("sudo cat /etc/contrail/service.token")
     return service_token
+
+def copy_openstackrc(role='compute'):
+    openstackrc = "/etc/contrail/openstackrc"
+    temprc = "/tmp/openstackrc"
+    with settings(host_string=env.roledefs['openstack'][0]):
+        get(openstackrc, temprc)
+    for host_string in env.roledefs[role]:
+        with settings(host_string=host_string):
+            put(temprc, openstackrc, use_sudo=True)
 
 def get_service_token_opt():
     service_token = get_service_token()
