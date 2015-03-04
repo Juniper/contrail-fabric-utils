@@ -5,8 +5,11 @@ import tempfile
 from fabfile.config import *
 from fabfile.templates import compute_vmx_template
 from fabfile.tasks.install import yum_install, apt_install
-from esxi_prov import ContrailVM as ContrailVM
 from vcenter_prov import Vcenter as Vcenter
+from fabfile.utils.cluster import get_orchestrator, ssh, execute_cmd_out
+import logging as LOG
+import paramiko
+import socket
 
 def configure_esxi_network(esxi_info):
     '''Provision ESXi server'''
@@ -14,41 +17,51 @@ def configure_esxi_network(esxi_info):
     password = esxi_info['password']
     ip = esxi_info['ip']
     assert (user and ip and password), "User, password and IP of the ESXi server must be specified"
-    
-    vm_pg = esxi_info['vm_port_group']
+    orch = get_orchestrator()
+
+    if orch == 'openstack': 
+       vm_pg = esxi_info['vm_port_group']
+       vm_switch = esxi_info['vm_vswitch']
+       vm_switch_mtu = esxi_info['vm_vswitch_mtu']
     fabric_pg = esxi_info['fabric_port_group']
     fab_switch = esxi_info['fabric_vswitch']
-    vm_switch = esxi_info['vm_vswitch']
-    vm_switch_mtu = esxi_info['vm_vswitch_mtu']
     uplink_nic = esxi_info['uplink_nic']
 
     host_string = '%s@%s' %(user, ip)
     with settings(host_string = host_string, password = password, 
                     warn_only = True, shell = '/bin/sh -l -c'):
-        run('esxcli network vswitch standard add --vswitch-name=%s' %(vm_switch))
-        run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(vm_pg, vm_switch))
+        run('esxcli network vswitch standard add --vswitch-name=%s' %(fab_switch))
         run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(fabric_pg, fab_switch))
-        run('esxcli network vswitch standard set -v %s -m %s' % (vm_switch, vm_switch_mtu))
-        run('esxcli network vswitch standard policy security set --vswitch-name=%s --allow-promiscuous=1' % (vm_switch))
-        run('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=4095' %(vm_pg))
         if uplink_nic:
             run('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(uplink_nic, fab_switch))
+        if orch == 'openstack':
+            run('esxcli network vswitch standard add --vswitch-name=%s' %(vm_switch))
+            run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(vm_pg, vm_switch))
+            run('esxcli network vswitch standard set -v %s -m %s' % (vm_switch, vm_switch_mtu))
+            run('esxcli network vswitch standard policy security set --vswitch-name=%s --allow-promiscuous=1' % (vm_switch))
+            run('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=4095' %(vm_pg))
 
-@task
-
-def create_vmx (esxi_host):
+def create_vmx (esxi_host, vm_name):
     '''Creates vmx file for contrail compute VM (non vcenter env)'''
     fab_pg = esxi_host['fabric_port_group']
     vm_pg = esxi_host['vm_port_group']
-    vm_name = esxi_host['contrail_vm']['name']
+
+    orch = get_orchestrator()
+    vm_name = vm_name
     vm_mac = esxi_host['contrail_vm']['mac']
     assert vm_mac, "MAC address for contrail-compute-vm must be specified"
 
+    if orch is 'vcenter':
+        ext_params = compute_vmx_template.vcenter_ext_template
+    else:
+        ext_params = compute_vmx_template.esxi_ext_template.safe_substitute({'__vm_pg__' : vm_pg})
+	
     template_vals = { '__vm_name__' : vm_name,
                       '__vm_mac__' : vm_mac,
                       '__fab_pg__' : fab_pg,
-                      '__vm_pg__' : vm_pg,
+                      '__extension_params__' : ext_params,
                     }
+
     _, vmx_file = tempfile.mkstemp(prefix=vm_name)
     _template_substitute_write(compute_vmx_template.template,
                                template_vals, vmx_file)
@@ -56,15 +69,76 @@ def create_vmx (esxi_host):
     return vmx_file
 #end create_vmx
 
-def create_esxi_compute_vm (esxi_host):
+def update_compute_vm_settings(ip, user, passwd, name, ntp_server):
+    MAX_RETRIES = 5
+    retries = 0
+    connected = False
+
+    while retries <= MAX_RETRIES and connected == False:
+        try:
+            connected = True
+            ssh_session = paramiko.SSHClient()
+            ssh_session.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            print "Connecting to ContrailVM ip:%s" %(ip)
+            ssh_session.connect(ip, username=user, password=passwd, timeout=300)
+        except socket.error, paramiko.SSHException:
+             connected = False
+             ssh_session.close()
+             retries = retries + 1
+             continue
+
+    if retries > MAX_RETRIES:
+            return ( "Connection to %s failed" % (ip))
+
+    #Set up ntp  
+    print "Updating NTP settings on ContrailVM"
+    ntp_cmd = ('ntpdate "%s"') %(ntp_server)
+    out, err = execute_cmd_out(ssh_session, ntp_cmd)
+    ntp_cmd = ('mv /etc/ntp.conf /etc/ntp.conf.orig')
+    out, err = execute_cmd_out(ssh_session, ntp_cmd)
+    ntp_cmd = ('touch /var/lib/ntp/drift')
+    out, err = execute_cmd_out(ssh_session, ntp_cmd)
+    ntp_cmd = ('echo "driftfile /var/lib/ntp/drift" >> /etc/ntp.conf')
+    out, err = execute_cmd_out(ssh_session, ntp_cmd)
+    ntp_cmd = ('echo "server %s" >> /etc/ntp.conf') % (ntp_server)
+    out, err = execute_cmd_out(ssh_session, ntp_cmd)
+    ntp_cmd = ('echo "restrict 127.0.0.1" >> /etc/ntp.conf')
+    out, err = execute_cmd_out(ssh_session, ntp_cmd)
+    ntp_cmd = ('echo "restrict -6 ::1" >> /etc/ntp.conf')
+    out, err = execute_cmd_out(ssh_session, ntp_cmd)
+    ntp_cmd = ('service ntp restart')
+    out, err = execute_cmd_out(ssh_session, ntp_cmd)
+    #end ntp setup
+
+    #update /etc/hosts 
+    etc_host_cmd = ('echo "%s %s" >> /etc/hosts') % (ip , name)
+    out, err = execute_cmd_out(ssh_session, etc_host_cmd)
+
+    # close ssh session
+    ssh_session.close()
+#end update_compute_vm_settings
+
+def create_esxi_compute_vm (esxi_host, vcenter_info):
     '''Spawns contrail vm on openstack managed esxi server (non vcenter env)'''
-    vmx_file = create_vmx(esxi_host)
+
+    orch = get_orchestrator()
     datastore = esxi_host['datastore']
     vmdk = esxi_host['contrail_vm']['vmdk']
-    assert vmdk, "Contrail VM vmdk image should be specified in testbed file"
-    vm_name = esxi_host['contrail_vm']['name']
-    vm_store = datastore + vm_name + '/'
+    if orch == 'openstack':
+        assert vmdk, "Contrail VM vmdk image should be specified in testbed file"
+    if orch ==  'vcenter':
+        if vmdk is None:
+            vmdk = esxi_host['contrail_vm']['vmdk_download_path'] 
+            assert vmdk, "Contrail VM vmdk image or download path should be specified in testbed file"
+    if orch is 'openstack':
+        vm_name = esxi_host['contrail_vm']['name']
+        vm_store = datastore + vm_name + '/'
+    if orch is 'vcenter':
+        name = "ContrailVM"
+        vm_name = name+"-"+vcenter_info['datacenter']+"-"+esxi_host['ip']
+        vm_store = datastore + '/' + vm_name + '/'
 
+    vmx_file = create_vmx(esxi_host, vm_name)
     with settings(host_string = esxi_host['username'] + '@' + esxi_host['ip'],
                   password = esxi_host['password'], warn_only = True,
                   shell = '/bin/sh -l -c'):
@@ -84,7 +158,10 @@ def create_esxi_compute_vm (esxi_host):
          if out.failed:
              raise Exception("Unable to copy %s to %s on %s:%s" % (vmx_file,
                                      vm_store, esxi_host['ip'], out))
-         src_vmdk = '/var/tmp/%s' % os.path.split(vmdk)[-1]
+         if orch == 'openstack':
+             src_vmdk = '/var/tmp/%s' % os.path.split(vmdk)[-1]
+         if orch == 'vcenter':
+             src_vmdk = '/var/tmp/ContrailVM-disk1.vmdk'
          dst_vmdk = vm_store + vm_name + '.vmdk'
          put(vmdk, src_vmdk)
          out = run('vmkfstools -i "%s" -d zeroedthick "%s"' % (src_vmdk, dst_vmdk))
@@ -100,6 +177,13 @@ def create_esxi_compute_vm (esxi_host):
          if out.failed:
              raise Exception("Unable to power on %s on %s:%s" % (vm_name,
                                       esxi_host['ip'], out))
+    contrail_vm_info = esxi_host['contrail_vm']
+    vm_host = contrail_vm_info['host'].split('@')
+    vm_ip = vm_host[1]
+    vm_user = vm_host[0]
+    vm_passwd = env.passwords[contrail_vm_info['host']]
+    ntp_server = contrail_vm_info['ntp_server']
+    update_compute_vm_settings(vm_ip, vm_user, vm_passwd, name, ntp_server)
 #end create_esxi_compute_vm
 
 def _template_substitute(template, vals):
@@ -115,7 +199,7 @@ def _template_substitute_write(template, vals, filename):
 #end _template_substitute_write
 
 @task
-def provision_vcenter(vcenter_info, esxi_info):
+def provision_vcenter(vcenter_info, hosts, vms):
         apt_install(['contrail-vmware-utils'])
         vcenter_params = {}
         vcenter_params['server'] = vcenter_info['server']
@@ -127,67 +211,10 @@ def provision_vcenter(vcenter_info, esxi_info):
         vcenter_params['dvswitch_name'] = vcenter_info['dv_switch']['dv_switch_name']
         vcenter_params['dvportgroup_name'] = vcenter_info['dv_port_group']['dv_portgroup_name']
         vcenter_params['dvportgroup_num_ports'] = vcenter_info['dv_port_group']['number_of_ports']
-        hosts = []
-        vms = []
-        for host in esxi_info.keys():
-                esxi_data = esxi_info[host]
-                data = esxi_data['esxi']
-
-                esx_list=[data['esx_ip'],data['esx_username'],data['esx_password'],data['esx_ssl_thumbprint']]
-                hosts.append(esx_list)
-                modified_vm_name = esxi_data['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+esxi_data['contrailvm_ip']
-                vms.append(modified_vm_name)
 
         vcenter_params['hosts'] = hosts
         vcenter_params['vms'] = vms
 
         Vcenter(vcenter_params)
+#end provision_vcenter
 
-
-@task
-def provision_esxi(deb, vcenter_info, compute_vm_info):
-            vm_params = {}
-            modified_vm_name = compute_vm_info['esx_vm_name']+"-"+vcenter_info['datacenter']+"-"+compute_vm_info['contrailvm_ip']
-            vm_params['vm'] = modified_vm_name
-            vm_params['vmdk'] = "ContrailVM-disk1"
-            vm_params['datastore'] = compute_vm_info['esx_datastore']
-            vm_params['eth0_mac'] = compute_vm_info['contrailvm_virtual_mac']
-            vm_params['eth0_ip'] = compute_vm_info['contrailvm_ip']
-            vm_params['eth0_pg'] = compute_vm_info['esxi']['esx_fab_port_group']
-            vm_params['eth0_vswitch'] = compute_vm_info['esxi']['esx_fab_vswitch']
-            vm_params['eth0_vlan'] = None
-            vm_params['uplink_nic'] = compute_vm_info['esxi']['esx_uplink_nic']
-            vm_params['uplink_vswitch'] = compute_vm_info['esxi']['esx_fab_vswitch']
-            vm_params['server'] = compute_vm_info['esxi']['esx_ip']
-            vm_params['username'] = compute_vm_info['esxi']['esx_username']
-            vm_params['password'] = compute_vm_info['esxi']['esx_password']
-            if 'esx_vmdk' not in compute_vm_info.keys():
-                vm_params['thindisk'] =  None
-                print 'esx_vmdk, which is local vmdk path not found, expecting vmdk_download_path in testbed'
-                if 'vmdk_download_path' not in compute_vm_info.keys():
-                    print 'No vmdk_download_path specified. Cannot proceed further'
-                    return
-                print 'Found vmdk_download_path in testbed.py, proceeding further...'
-                vm_params['vmdk_download_path'] =  compute_vm_info['vmdk_download_path']
-            else:
-                vm_params['thindisk'] =  compute_vm_info['esx_vmdk']
-                vm_params['vmdk_download_path'] = None
-            vm_params['domain'] =  compute_vm_info['domain']
-            vm_params['vm_password'] = compute_vm_info['password']
-            vm_params['vm_server'] = compute_vm_info['esx_vm_name']
-            vm_params['ntp_server'] = compute_vm_info['esx_ntp_server']
-            if deb is not None:
-                vm_params['vm_deb'] = deb
-            else:
-                print 'deb package not passed as param, expecting in testbed'
-                if 'vm_deb' not in compute_vm_info.keys():
-                    print 'No deb package section in testbed.py. Exiting!'
-                    return
-                vm_params['vm_deb'] = compute_vm_info['vm_deb']
-            out = ContrailVM(vm_params)
-            print out
-
-
-
-
-                                  
