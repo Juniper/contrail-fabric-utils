@@ -2,62 +2,40 @@ import os
 import re
 
 from fabfile.config import *
-from fabfile.templates import compute_ovf_template, compute_vmx_template
+from fabfile.templates import compute_vmx_template
 from fabfile.tasks.install import yum_install, apt_install
 from esxi_prov import ContrailVM as ContrailVM
 from vcenter_prov import Vcenter as Vcenter
 
-def _get_var(var, default=None):
-    try:
-        return var
-    except Exception:
-        return default
-#end _get_var
-
 def configure_esxi_network(esxi_info):
-    #ESXI Host Login
-    host_string = '%s@%s' %(esxi_info['username'],
-                           esxi_info['ip'])
-    password = _get_var(esxi_info['password'])
-    
-    compute_pg = _get_var(esxi_info['vm_port_group'],'compute_pg')
-    fabric_pg = _get_var(esxi_info['fabric_port_group'],'fabric_pg')
-    vswitch0 = _get_var(esxi_info['fabric_vswitch'],'vSwitch0')
-    vswitch1 = _get_var(esxi_info['vm_vswitch'],'vSwitch1')
+    '''Provision ESXi server'''
+    user = esxi_info['username']
+    password = esxi_info['password']
+    ip = esxi_info['ip']
+    assert (user and ip and password), "User, password and IP of the ESXi server must be specified"
+
+    vm_pg = esxi_info['vm_port_group']
+    fabric_pg = esxi_info['fabric_port_group']
+    fab_switch = esxi_info['fabric_vswitch']
+    vm_switch = esxi_info['vm_vswitch']
     uplink_nic = esxi_info['uplink_nic']
+
+    host_string = '%s@%s' %(user, ip)
     with settings(host_string = host_string, password = password, 
                     warn_only = True, shell = '/bin/sh -l -c'):
-        run('esxcli network vswitch standard add --vswitch-name=%s' %(
-                vswitch1))
-        run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(compute_pg, vswitch1))
-        run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(fabric_pg, vswitch0))
-        run('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(uplink_nic, vswitch0))
-        run('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=4095' %(compute_pg))
+        run('esxcli network vswitch standard add --vswitch-name=%s' %(vm_switch))
+        run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(vm_pg, vm_switch))
+        run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(fabric_pg, fab_switch))
+        run('esxcli network vswitch standard policy security set --vswitch-name=%s --allow-promiscuous=1' % (vm_switch))
+        run('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=4095' %(vm_pg))
+        if uplink_nic:
+            run('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(uplink_nic, fab_switch))
 
 @task
-
-def create_ovf(compute_vm_info):
-    compute_vm_name = _get_var(compute_vm_info['vm_name'],'Fedora-Compute-VM')
-    compute_vm_vmdk = compute_vm_info['vmdk']
-#    compute_vm_vmdk = 'Fedora-Compute-VM1-disk1.vmdk'
-    compute_pg = _get_var(compute_vm_info['port_group'],'compute_pg')
-    fabric_pg = _get_var(compute_vm_info['esxi']['vm_port_group'],'fabric_pg')
-    ovf_file = '%s.ovf' %(compute_vm_name)
-    template_vals = {'__compute_vm_name__': compute_vm_name,
-                     '__compute_vm_vmdk__': compute_vm_vmdk,
-                     '__compute_pg__': compute_pg,
-                     '__fabric_pg__': fabric_pg,
-                    }
-    _template_substitute_write(compute_ovf_template.template,
-                               template_vals, ovf_file)
-    ovf_file_path = os.path.realpath(ovf_file)
-    print "\n\nOVF File %s created for VM %s" %(ovf_file_path, compute_vm_name)
-#end create_ovf
-    
 def create_vmx (esxi_host):
     '''Creates vmx file for contrail compute VM (non vcenter env)'''
-    fab_pg = esxi_host.get('fabric_port_group', 'fabric_pg')
-    vm_pg = esxi_host.get('vm_port_group', 'compute_pg')
+    fab_pg = esxi_host['fabric_port_group']
+    vm_pg = esxi_host['vm_port_group']
     vm_name = esxi_host['contrail_vm']['name']
     vm_mac = esxi_host['contrail_vm']['mac']
     template_vals = { '__vm_name__' : vm_name,
@@ -66,6 +44,8 @@ def create_vmx (esxi_host):
                       '__vm_pg__' : vm_pg,
                     }
     vmx_file = '%s.vmx' % vm_name
+    assert vm_mac, "MAC address for contrail-compute-vm must be specified"
+
     _template_substitute_write(compute_vmx_template.template,
                                template_vals, vmx_file)
     print "VMX File %s created for VM %s" %(os.path.realpath(vmx_file), vm_name)
@@ -75,8 +55,8 @@ def create_vmx (esxi_host):
 def create_esxi_compute_vm (esxi_host):
     '''Spawns contrail vm on openstack managed esxi server (non vcenter env)'''
     vmx_file = create_vmx(esxi_host)
-    datastore = esxi_host['contrail_vm'].get('datastore', '/vmfs/volumes/datastore1/')
-    vmdk = esxi_host['contrail_vm'].get('vmdk', None)
+    datastore = esxi_host['datastore']
+    vmdk = esxi_host['contrail_vm']['vmdk']
     assert vmdk, "Contrail VM vmdk image should be specified in testbed file"
     vm_name = esxi_host['contrail_vm']['name']
     vm_store = datastore + vm_name + '/'
@@ -163,26 +143,26 @@ def provision_vcenter(vcenter_info, esxi_info):
 def provision_esxi(compute_vm_info):
             vm_params = {}
             vm_params['vm'] = compute_vm_info['esx_vm_name']
-            vm_params['vmdk'] = _get_var(compute_vm_info['vmdk'])
+            vm_params['vmdk'] = compute_vm_info['vmdk']
             vm_params['datastore'] = compute_vm_info['esx_datastore']
-            vm_params['eth0_mac'] = _get_var(compute_vm_info['server_mac'])
-            vm_params['eth0_ip'] = _get_var(compute_vm_info['server_ip'])
-            vm_params['eth0_pg'] = _get_var(compute_vm_info['esxi']['esx_fab_port_group'])
-            vm_params['eth0_vswitch'] = _get_var(compute_vm_info['esxi']['esx_fab_vswitch'])
+            vm_params['eth0_mac'] = compute_vm_info['server_mac']
+            vm_params['eth0_ip'] = compute_vm_info['server_ip']
+            vm_params['eth0_pg'] = compute_vm_info['esxi']['esx_fab_port_group']
+            vm_params['eth0_vswitch'] = compute_vm_info['esxi']['esx_fab_vswitch']
             vm_params['eth0_vlan'] = None
-            vm_params['eth1_vswitch'] = _get_var(compute_vm_info['esx_vm_vswitch'])
-            vm_params['eth1_pg'] = _get_var(compute_vm_info['esx_vm_port_group'])
+            vm_params['eth1_vswitch'] = compute_vm_info['esx_vm_vswitch']
+            vm_params['eth1_pg'] = compute_vm_info['esx_vm_port_group']
             vm_params['eth1_vlan'] = "4095"
-            vm_params['uplink_nic'] = _get_var(compute_vm_info['esxi']['esx_uplink_nic'])
-            vm_params['uplink_vswitch'] = _get_var(compute_vm_info['esxi']['esx_fab_vswitch'])
-            vm_params['server'] = _get_var(compute_vm_info['esxi']['esx_ip'])
-            vm_params['username'] = _get_var(compute_vm_info['esxi']['esx_username'])
-            vm_params['password'] = _get_var(compute_vm_info['esxi']['esx_password'])
-            vm_params['thindisk'] =  _get_var(compute_vm_info['esx_vmdk'])
-            vm_params['domain'] =  _get_var(compute_vm_info['domain'])
-            vm_params['vm_password'] = _get_var(compute_vm_info['password'])
-            vm_params['vm_server'] = _get_var(compute_vm_info['server_id'])
-            vm_params['vm_deb'] = _get_var(compute_vm_info['vm_deb'])
+            vm_params['uplink_nic'] = compute_vm_info['esxi']['esx_uplink_nic']
+            vm_params['uplink_vswitch'] = compute_vm_info['esxi']['esx_fab_vswitch']
+            vm_params['server'] = compute_vm_info['esxi']['esx_ip']
+            vm_params['username'] = compute_vm_info['esxi']['esx_username']
+            vm_params['password'] = compute_vm_info['esxi']['esx_password']
+            vm_params['thindisk'] =  compute_vm_info['esx_vmdk']
+            vm_params['domain'] =  compute_vm_info['domain']
+            vm_params['vm_password'] = compute_vm_info['password']
+            vm_params['vm_server'] = compute_vm_info['server_id']
+            vm_params['vm_deb'] = compute_vm_info['vm_deb']
             out = ContrailVM(vm_params)
             print out
 
