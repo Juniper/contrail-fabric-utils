@@ -1003,13 +1003,13 @@ def setup_database_node(*args):
                 if analytics_data_dir is not None:
                     tmp_dir = analytics_data_dir
                 elif database_dir is not None:
-                    tmp_dir = database_dir + '/ContrailAnalytics'
+                    tmp_dir = database_dir
                 else:
                     if detect_ostype() == 'ubuntu':
                         tmp_dir = sudo("grep -A 1 'data_file_directories:'  /etc/cassandra/cassandra.yaml | grep '-' | cut -d'-' -f2")
                     else:
                         tmp_dir = sudo("grep -A 1 'data_file_directories:'  /etc/cassandra/conf/cassandra.yaml | grep '-' | cut -d'-' -f2")
-                    tmp_dir = tmp_dir.strip() + '/ContrailAnalytics'
+                    tmp_dir = tmp_dir.strip()
                 disk_cmd = "df -Pk " + tmp_dir + " | grep % | awk '{print $2}'"
                 total_disk = sudo(disk_cmd)
                 total_disk = total_disk.strip()
