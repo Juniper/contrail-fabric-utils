@@ -107,3 +107,6 @@ def get_toragent_nodes():
         return env.roledefs['toragent']
     except KeyError:
         return []
+
+def get_ntp_server():
+    return getattr(env, 'ntp_server', None)
