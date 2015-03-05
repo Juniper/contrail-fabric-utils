@@ -559,6 +559,46 @@ def install_orchestrator():
         execute(install_openstack)
         execute(update_keystone_log)
 
+@task
+def get_package_installation_time(package):
+    pkg_versions_list = []
+    with settings(host_string=env.host_string):
+        os_type = detect_ostype()
+        if os_type in ['ubuntu']:
+             pkg_versions = run("grep -Po '(.*)\s+install\s+linux-image-([\d]+.*-generic)' \
+                                 /var/log/dpkg.log")
+             for version_info in pkg_versions.split('\r\n'):
+                 installed_time, package = version_info.split(' install ')
+                 pkg_versions_list.append([time.mktime(time.strptime(installed_time, '%Y-%m-%d %H:%M:%S')),
+                                           package.lstrip('linux-image-')])
+        elif os_type in ['centos', 'redhat', 'fedora']:
+            pkg_versions = run("rpm -q --queryformat='%%{installtime} " \
+                           "%%{VERSION}-%%{RELEASE}.%%{ARCH}\\n' %s" % package)
+            for version_info in pkg_versions.split('\r\n'):
+                installed_time, version = version_info.split()
+                pkg_versions_list.append([int(installed_time), version])
+        else:
+            print 'WARNING: Unsupported OS type (%s)' % os_type
+    pkg_versions_list.sort(key=lambda x: x[0])
+    return pkg_versions_list
+
+@task
+def reboot_on_kernel_update(rebooted_nodes=None):
+    all_nodes = env.roledefs['all']
+    if rebooted_nodes:
+        all_nodes = list(set(all_nodes) - set(rebooted_nodes))
+    if env.roledefs['build'] in all_nodes:
+        all_nodes.remove(env.roledefs['build']).append(env.roledefs['build'])
+    for node in all_nodes:
+        with settings(host_string=node):
+            uname_out = run('uname -r')
+            versions_info = get_package_installation_time('kernel')
+            if uname_out != versions_info[-1][1]:
+                execute('reboot_nodes', node)
+            else:
+                print 'Node (%s) is already booted with new kernel' % node.split('@')[1]
+
+
 @roles('build')
 @task
 def install_contrail(reboot='True'):
@@ -578,6 +618,7 @@ def install_contrail(reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+    execute('reboot_on_kernel_update')
 
 @roles('build')
 @task
