@@ -1,11 +1,12 @@
 import os
 import re
 import copy
+import time
 import tempfile
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
-from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator
+from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator, reboot_nodes
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor
 from fabfile.tasks.helpers import reboot_node
@@ -581,6 +582,61 @@ def install_orchestrator():
         execute(install_openstack)
         execute(update_keystone_log)
 
+@task
+@parallel
+@roles('all')
+def get_package_installation_time(package):
+    '''Retrieve given package's installation time with its version
+       Incase of kernel package, old kernel package will still show up in
+       the installed packages list and will return installation time of all
+       versions
+    '''
+    pkg_versions_list = []
+    os_type = detect_ostype()
+    if os_type in ['ubuntu']:
+        pkg_versions = run("grep -Po '(.*)\s+install\s+linux-image-([\d]+.*-generic)' \
+                           /var/log/dpkg.log")
+        for version_info in pkg_versions.split('\r\n'):
+            installed_time, package = version_info.split(' install ')
+            pkg_versions_list.append((time.mktime(time.strptime(installed_time, '%Y-%m-%d %H:%M:%S')),
+                                     package.lstrip('linux-image-')))
+    elif os_type in ['centos', 'redhat', 'fedora']:
+        pkg_versions = run("rpm -q --queryformat='%%{installtime} " \
+                           "%%{VERSION}-%%{RELEASE}.%%{ARCH}\\n' %s" % package)
+        for version_info in pkg_versions.split('\r\n'):
+            installed_time, version = version_info.split()
+            pkg_versions_list.append((int(installed_time), version))
+    else:
+        print '[%s]: WARNING: Unsupported OS type (%s)' % (env.host_string, os_type)
+
+    # rearrange package version based on its installation time
+    pkg_versions_list.sort(key=lambda x: x[0])
+    return pkg_versions_list
+
+@task
+@roles('build')
+def reboot_on_kernel_update():
+    '''When kernel package is upgraded as a part of any depends,
+       system needs to be rebooted so new kernel is effective
+    '''
+    all_nodes = env.roledefs['all']
+    # moving current node to last to reboot current node at last
+    if env.roledefs['build'] in all_nodes:
+        all_nodes.remove(env.roledefs['build']).append(env.roledefs['build'])
+    nodes_version_info = execute('get_package_installation_time', 'kernel')
+    import pdb; pdb.set_trace()
+    for node in all_nodes:
+        with settings(host_string=node):
+            uname_out = run('uname -r')
+            if node in nodes_version_info.keys():
+                versions_info = nodes_version_info[node]
+                # skip reboot if latest kernel version is same as
+                # current kernel version in the node
+                if uname_out != versions_info[-1][1]:
+                    execute(reboot_nodes, node)
+                else:
+                    print '[%s]: Node is already booted with new kernel' % node
+
 @roles('build')
 @task
 def install_contrail(reboot='True'):
@@ -600,6 +656,7 @@ def install_contrail(reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+    execute('reboot_on_kernel_update')
 
 @roles('build')
 @task
@@ -620,6 +677,7 @@ def install_without_openstack(manage_nova_compute='yes'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name)
+    execute('reboot_on_kernel_update')
 
 @roles('openstack')
 @task
