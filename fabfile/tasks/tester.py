@@ -285,7 +285,7 @@ def setup_test_env():
             with settings(warn_only = True):
                 run('rm -rf /tmp/pip-build-root')
                 if detect_ostype() in ['centos', 'redhat']:
-                    pkg = 'fixtures testtools==1.1.0 testresources discover unittest2 \
+                    pkg = 'fixtures testtools==1.1.0 testresources discover unittest2==0.8.0 \
                         testrepository junitxml pytun'
                 elif 'ubuntu' == detect_ostype():
                     pkg = 'fixtures testtools==1.1.0 testresources\
