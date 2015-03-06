@@ -409,10 +409,11 @@ def setup_cfgm_node(*args):
         cfgm_host_password = env.passwords[host_string]
 
         # Prefer local collector node
-        cfgm_host_list=[]
-        for entry in env.roledefs['cfgm']:
-            cfgm_host_list.append(get_control_host_string(entry))
-        if cfgm_host in cfgm_host_list:
+        cfgm_host_list = [get_control_host_string(entry)\
+                         for entry in env.roledefs['cfgm']]
+        collector_host_list = [get_control_host_string(entry)\
+                              for entry in env.roledefs['collector']]
+        if cfgm_host in collector_host_list:
             collector_ip = tgt_ip
         else:
             # Select based on index
