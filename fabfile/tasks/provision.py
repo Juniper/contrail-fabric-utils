@@ -1038,23 +1038,6 @@ def setup_database_node(*args):
 
         # Execute the provision database script
         with  settings(host_string=host_string):
-            if minimum_diskGB is not None:
-                if analytics_data_dir is not None:
-                    tmp_dir = analytics_data_dir
-                elif database_dir is not None:
-                    tmp_dir = database_dir
-                else:
-                    if detect_ostype() == 'ubuntu':
-                        tmp_dir = sudo("grep -A 1 'data_file_directories:'  /etc/cassandra/cassandra.yaml | grep '-' | cut -d'-' -f2")
-                    else:
-                        tmp_dir = sudo("grep -A 1 'data_file_directories:'  /etc/cassandra/conf/cassandra.yaml | grep '-' | cut -d'-' -f2")
-                    tmp_dir = tmp_dir.strip()
-                disk_cmd = "df -Pk " + tmp_dir + " | grep % | awk '{print $2}'"
-                total_disk = sudo(disk_cmd)
-                total_disk = total_disk.strip()
-                if (int(total_disk)/(1024*1024) < int(minimum_diskGB)):
-                    raise Exception('Minimum disk space for analytics db is not met')
-
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     sudo('rm /etc/init/supervisor-database.override')

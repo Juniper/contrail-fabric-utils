@@ -1096,5 +1096,8 @@ def setup_common():
         ntp_server = get_ntp_server()
         if ntp_server is not None and\
             exists('/etc/ntp.conf'):
-                ntp_cmd = 'echo "server ' + ntp_server + '" >> /etc/ntp.conf'
-                sudo(ntp_cmd)
+                ntp_chk_cmd = 'grep "server ' + ntp_server + '" /etc/ntp.conf'
+                ntp_chk_cmd_out = sudo(ntp_chk_cmd)
+                if ntp_chk_cmd_out == "":
+                    ntp_cmd = 'echo "server ' + ntp_server + '" >> /etc/ntp.conf'
+                    sudo(ntp_cmd)
