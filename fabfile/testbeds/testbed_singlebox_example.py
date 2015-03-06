@@ -57,6 +57,8 @@ env.ostypes = {
     host1:'centos',
 }
 
+#ntp server the servers should point to
+#env.ntp_server = 'ntp.juniper.net'
 
 # INFORMATION FOR DB BACKUP/RESTORE ..
 #=======================================================

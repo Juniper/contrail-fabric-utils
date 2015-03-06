@@ -14,6 +14,7 @@ from fabfile.utils.fabos import *
 from fabric.contrib.files import exists
 import datetime
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
+from fabfile.utils.cluster import get_ntp_server
 
 @task
 @parallel
@@ -1087,3 +1088,13 @@ def set_allow_unsupported_sfp():
         sudo("sed -i '/options ixgbe allow_unsupported_sfp/d' /etc/modprobe.d/ixgbe.conf")
         sudo('echo "options ixgbe allow_unsupported_sfp=1" >> /etc/modprobe.d/ixgbe.conf')
         sudo('rmmod ixgbe; modprobe ixgbe')
+
+@task
+@roles('all')
+def setup_common():
+    with settings(warn_only=True):
+        ntp_server = get_ntp_server()
+        if ntp_server is not None and\
+            exists('/etc/ntp.conf'):
+                ntp_cmd = 'echo "server ' + ntp_server + '" >> /etc/ntp.conf'
+                sudo(ntp_cmd)

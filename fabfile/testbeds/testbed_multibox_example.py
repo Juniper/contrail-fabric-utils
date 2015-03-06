@@ -84,6 +84,9 @@ env.ostypes = {
 }
 env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 
+#ntp server the servers should point to
+#env.ntp_server = 'ntp.juniper.net'
+
 # OPTIONAL COMPUTE HYPERVISOR CHOICE:
 #======================================
 # Compute Hypervisor
