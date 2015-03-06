@@ -308,7 +308,7 @@ def setup_test_env():
                         pip install --upgrade unittest2 && \
                         pip install --upgrade %s' %pkg)
                 else:
-                    sudo("pip install --upgrade unittest2")
+                    sudo("pip install --upgrade unittest2==0.8.0")
                     sudo("pip install --upgrade %s" %pkg)
                 if not exists('/usr/bin/ant'):
                     pkg_install(['ant'],disablerepo = False)
