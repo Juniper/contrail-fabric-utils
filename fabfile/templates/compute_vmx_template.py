@@ -29,11 +29,22 @@ ethernet0.virtualDev = "e1000"
 ethernet0.networkName = "$__fab_pg__"
 ethernet0.addressType = "static"
 ethernet0.address = "$__vm_mac__"
-ethernet1.present = "TRUE"
+chipset.onlineStandby = "FALSE"
+guestOS = "ubuntu-64"
+$__extension_params__
+''')
+
+esxi_eth1_template = string.Template(
+'''ethernet1.present = "TRUE"
 ethernet1.virtualDev = "e1000"
 ethernet1.networkName = "$__vm_pg__"
 ethernet1.addressType = "generated"
-chipset.onlineStandby = "FALSE"
-guestOS = "ubuntu-64"
+''')
+
+esxi_eth2_template = string.Template(
+'''ethernet2.present = "TRUE"
+ethernet2.virtualDev = "e1000"
+ethernet2.networkName = "$__data_pg__"
+ethernet2.addressType = "generated"
 ''')
 
