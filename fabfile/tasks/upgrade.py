@@ -631,9 +631,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                 execute('fixup_restart_haproxy_in_collector_node', host_string)
             execute('upgrade_pkgs_node', host_string)
             # Populate the new SCHEDULER section in svc_monitor.conf
-            conf_file = '/etc/contrail/svc_monitor.conf'
-            if get_release() == '2.10':
-                 conf_file = '/etc/contrail/contrail-svc-monitor.conf'
+            conf_file = '/etc/contrail/contrail-svc-monitor.conf'
             lbaas_svc_instance_params = {'analytics_server_ip' : hstr_to_ip(env.roledefs['collector'][0]),
                                          'analytics_server_port' : '8081'
                                         }
