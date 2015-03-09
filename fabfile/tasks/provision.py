@@ -986,6 +986,18 @@ def setup_collector_node(*args):
         if analytics_redis_password is not None:
             cmd += "--redis_password %s" % analytics_redis_password
         cmd += "--kafka_enabled %s" % get_kafka_enabled()
+        if get_orchestrator() == 'openstack':
+            # Pass keystone arguments in case for openstack orchestrator
+            cmd += " --keystone_ip %s" % get_keystone_ip()
+            cmd += " --keystone_admin_passwd %s" % \
+                    get_keystone_admin_password()
+            cmd += " --keystone_service_tenant_name %s" % \
+                    get_keystone_service_tenant_name()
+            cmd += " --keystone_auth_protocol %s" % \
+                    get_keystone_auth_protocol()
+            cmd += " --keystone_auth_port %s" % get_keystone_auth_port()
+            cmd += " --keystone_admin_token %s" % get_keystone_admin_token()
+            cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
 
         internal_vip = get_contrail_internal_vip()
         if internal_vip:
