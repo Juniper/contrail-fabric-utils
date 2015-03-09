@@ -422,7 +422,7 @@ def add_basic_images(image=None):
                ("converts/ubuntu-traffic.vmdk", "ubuntu-traffic", [10,20]),
                ("converts/centos-min.vmdk", "centos65-ipv6", [10]),
                ("converts/ubuntu-in-net.vmdk", "ubuntu-in-net", []),
-               ("converts/redmine-isc-dhcp-server.vmdk", "ubuntu-dhcp-server", []),
+               ("converts/ubuntu-dhcp-server.vmdk", "ubuntu-dhcp-server", []),
                ("converts/cirros-0.3.0-x86_64-disk.vmdk", "cirros", [1,10]),
                ("vsrx/junos-vsrx-12.1-transparent.img", "vsrx-bridge", []),
                ("vsrx/junos-vsrx-12.1-in-network.img", "vsrx", []),
