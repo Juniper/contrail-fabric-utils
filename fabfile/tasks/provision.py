@@ -600,7 +600,12 @@ def setup_ceilometer_mongodb(ip):
             sleep(1)
             run("service mongodb restart")
         cmd = "mongo --host " + ip + " --eval 'db = db.getSiblingDB(\"ceilometer\"); db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", roles: [ \"readWrite\", \"dbAdmin\" ]})'"
-        sudo(cmd);
+        count = 1
+        while not sudo(cmd).succeeded:
+            count += 1
+            if count > 10:
+                raise RuntimeError("Not able to add ceilometer mongodb user")
+            sleep(1)
 #end setup_ceilometer_mongodb
 
 @task
