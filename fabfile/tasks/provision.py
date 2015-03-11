@@ -546,9 +546,11 @@ def fixup_ceilometer_conf_keystone(openstack_ip):
 
 def fixup_ceilometer_pipeline_conf(analytics_ip):
     import yaml
-    conf_file = '/etc/ceilometer/pipeline.yaml'
-    sudo('cp %s %s.tmp' % (conf_file, conf_file))
-    with open('%s.tmp' % (conf_file)) as fap:
+    rconf_file = '/etc/ceilometer/pipeline.yaml'
+    conf_file = 'pipeline.yaml'
+    ltemp_dir = tempfile.mkdtemp()
+    get(rconf_file, ltemp_dir)
+    with open('%s/%s' % (ltemp_dir, conf_file)) as fap:
         data = fap.read()
     pipeline_dict = yaml.safe_load(data)
     # If already configured with 'contrail_source' and/or 'contrail_sink' exit
@@ -580,10 +582,14 @@ def fixup_ceilometer_pipeline_conf(analytics_ip):
                      'name': 'contrail_sink'}
     pipeline_dict['sources'].append(contrail_source)
     pipeline_dict['sinks'].append(contrail_sink)
-    with open('%s.tmp' % (conf_file), 'w') as fap:
+    with open('%s/%s' % (ltemp_dir, conf_file), 'w') as fap:
         yaml.safe_dump(pipeline_dict, fap, explicit_start=True,
                    default_flow_style=False, indent=4)
-    sudo('mv %s.tmp %s' % (conf_file, conf_file))
+    rtemp_dir = sudo('(tempdir=$(mktemp -d); echo $tempdir)')
+    put('%s/%s' % (ltemp_dir, conf_file), rtemp_dir, use_sudo=True)
+    sudo('mv %s/%s %s' % (rtemp_dir, conf_file, rconf_file))
+    local('rm -rf %s' % (ltemp_dir))
+    sudo('rm -rf %s' % (rtemp_dir))
 #end fixup_ceilometer_pipeline_conf
 
 def setup_ceilometer_mongodb(ip):
