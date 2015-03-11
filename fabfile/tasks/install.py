@@ -615,7 +615,7 @@ def get_package_installation_time(package):
 
 @task
 @roles('build')
-def reboot_on_kernel_update():
+def reboot_on_kernel_update(reboot='True'):
     '''When kernel package is upgraded as a part of any depends,
        system needs to be rebooted so new kernel is effective
     '''
@@ -632,7 +632,12 @@ def reboot_on_kernel_update():
                 # skip reboot if latest kernel version is same as
                 # current kernel version in the node
                 if uname_out != versions_info[-1][1]:
-                    execute(reboot_nodes, node)
+                    print '[%s]: Node is booted with old kernel, Reboot required' % node
+                    if reboot == 'True':
+                        execute(reboot_nodes, node)
+                    else:
+                        print '[%s]: WARNING:: Reboot is skipped as Reboot=False is set. ' \
+                              'Reboot manually before setup to avoid misconfiguration!' % node
                 else:
                     print '[%s]: Node is already booted with new kernel' % node
 
@@ -655,11 +660,11 @@ def install_contrail(reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
-    execute('reboot_on_kernel_update')
+    execute('reboot_on_kernel_update', reboot)
 
 @roles('build')
 @task
-def install_without_openstack(manage_nova_compute='yes'):
+def install_without_openstack(manage_nova_compute='yes', reboot='True'):
     """Installs required contrail packages in all nodes as per the role definition except the openstack.
        User has to install the openstack node with their custom openstack pakckages.
        If manage_nova_compute = no, User has to install nova-compute in the compute node.
@@ -675,8 +680,8 @@ def install_without_openstack(manage_nova_compute='yes'):
     execute(upgrade_pkgs_without_openstack)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
-        execute(install_interface_name)
-    execute('reboot_on_kernel_update')
+        execute(install_interface_name, reboot)
+    execute('reboot_on_kernel_update', reboot)
 
 @roles('openstack')
 @task
