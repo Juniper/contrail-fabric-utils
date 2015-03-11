@@ -13,6 +13,7 @@ from fabfile.tasks.provision import setup_vrouter_node,\
          get_openstack_credentials
 from fabfile.tasks.install import create_install_repo_node,\
          install_interface_name_node, install_vrouter_node, apt_install
+from fabfile.utils.multitenancy import get_mt_opts
 
 @task
 def add_vrouter_node(*args):
@@ -49,8 +50,8 @@ def detach_vrouter_node(*args):
             sudo("service supervisor-vrouter stop")
             sudo("service %s stop" % nova_compute)
         with settings(host_string=cfgm_host, pasword=cfgm_host_password):
-            sudo("python /opt/contrail/utils/provision_vrouter.py --host_name %s --host_ip %s --api_server_ip %s --oper del" %
-                (compute_hostname, host_string.split('@')[1], cfgm_ip))
+            sudo("python /opt/contrail/utils/provision_vrouter.py --host_name %s --host_ip %s --api_server_ip %s --oper del %s" %
+                (compute_hostname, host_string.split('@')[1], cfgm_ip, get_mt_opts()))
     execute("restart_control")
 
 @task
