@@ -538,7 +538,7 @@ def install_contrail(reboot='True'):
 
 @roles('build')
 @task
-def install_without_openstack(manage_nova_compute='yes'):
+def install_without_openstack(manage_nova_compute='yes', reboot='True'):
     """Installs required contrail packages in all nodes as per the role definition except the openstack.
        User has to install the openstack node with their custom openstack pakckages.
        If manage_nova_compute = no, User has to install nova-compute in the compute node.
@@ -553,7 +553,7 @@ def install_without_openstack(manage_nova_compute='yes'):
     execute(upgrade_pkgs_without_openstack)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
-        execute(install_interface_name)
+        execute(install_interface_name, reboot)
 
 @roles('openstack')
 @task
