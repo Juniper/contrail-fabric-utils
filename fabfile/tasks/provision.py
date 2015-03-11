@@ -1436,7 +1436,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
                 cmd += " --vmware_passwd %s" % esxi_data['password']
                 cmd += " --vmware_vmpg_vswitch %s" % esxi_data['vm_vswitch']
                 cmd += " --vmware_vmpg_vswitch_mtu %s" % esxi_data['vm_vswitch_mtu']
-                cmd += " --vmware_fabpg_vswitch_mtu 1496"
+                cmd += " --vmware_datanic_mtu 1496"
             if vmware_info:
                 # Vmware provisioning parameters
                 cmd += " --vmware %s" % vmware_info['esxi']['esx_ip']
