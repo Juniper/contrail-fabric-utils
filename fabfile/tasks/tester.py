@@ -367,7 +367,10 @@ def run_sanity(feature='sanity', test=None):
     test_delay_factor = os.environ.get("TEST_DELAY_FACTOR") or "1.0"
     test_retry_factor = os.environ.get("TEST_RETRY_FACTOR") or "1.0"
 
-    env_vars = " TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s" % (test_delay_factor, test_retry_factor)
+    date_string = dt.now().strftime('%Y-%m-%d_%H:%M:%S')
+    env_vars = " TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s SCRIPT_TS=%s " % (
+        test_delay_factor, test_retry_factor, date_string)
+
     if os.environ.has_key('GUESTVM_IMAGE'):
         env_vars = env_vars + ' ci_image=%s' %(os.environ['GUESTVM_IMAGE'])
     suites = {'svc_firewall' : ['%s/scripts/servicechain/firewall/sanity.py' % repo,
