@@ -627,7 +627,8 @@ def setup_ceilometer_compute_node(*args):
     openstack_host = get_control_host_string(env.roledefs['openstack'][0])
     openstack_ip = hstr_to_ip(openstack_host)
     for host_string in args:
-        with  settings(host_string=host_string):
+        with settings(host_string=host_string):
+            os_type = detect_ostype()
             with settings(warn_only=True):
                 compute_ceilometer_present = sudo("grep '^instance_usage_audit =' /etc/nova/nova.conf").succeeded
             if not compute_ceilometer_present:
@@ -637,14 +638,61 @@ def setup_ceilometer_compute_node(*args):
                 sudo("%s notify_on_state_change vm_and_task_state" % config_cmd)
                 sudo("%s instance_usage_audit_period hour" % config_cmd)
                 sudo("%s instance_usage_audit True" % config_cmd)
-                sudo("service nova-compute restart")
+                if os_type == 'ubuntu':
+                    nova_services = ['nova-compute']
+                elif os_type in ['redhat']:
+                    nova_services = ['openstack-nova-compute']
+                else:
+                    raise RuntimeError("Unsupported OS Type (%s)", os_type)
+                for svc in nova_services:
+                    sudo("service %s restart" % (svc))
 
             if host_string != openstack_host:
-                #ceilometer.conf updates
-                fixup_ceilometer_conf_common()
-                fixup_ceilometer_conf_keystone(openstack_ip)
+                # copy over ceilometer.conf from the first openstack node
+                conf_file = '/etc/ceilometer/ceilometer.conf'
+                local_tempdir = tempfile.mkdtemp()
+                with lcd(local_tempdir):
+                    with settings(host_string = openstack_host):
+                        get(conf_file, local_tempdir)
+                tempdir = run('(tempdir=$(mktemp -d); echo $tempdir)')
+                put('%s/ceilometer.conf' % (local_tempdir), tempdir, use_sudo=True)
+                sudo('mv %s/ceilometer.conf %s' % (tempdir, conf_file))
+                local('rm -rf %s' % (local_tempdir))
+                sudo('rm -rf %s' % (tempdir))
+                if os_type == 'ubuntu':
+                    ceilometer_services = ['ceilometer-agent-compute']
+                elif os_type in ['redhat']:
+                    ceilometer_services = ['openstack-ceilometer-compute']
+                else:
+                    raise RuntimeError("Unsupported OS Type (%s)", os_type)
+                for svc in ceilometer_services:
+                    sudo("service %s restart" % (svc))
 
-            sudo("service ceilometer-agent-compute restart")
+@task
+@roles('openstack')
+def setup_contrail_ceilometer_plugin():
+    """Provisions contrail ceilometer plugin in the first node defined in openstack role."""
+    if env.roledefs['openstack'] and env.host_string == env.roledefs['openstack'][0]:
+        execute("setup_contrail_ceilometer_plugin_node", env.host_string)
+
+@task
+def setup_contrail_ceilometer_plugin_node(*args):
+    """Provisions contrail ceilometer plugin in one or list of nodes.
+       USAGE: fab setup_contrail_ceilometer_plugin_node:user@1.1.1.1,user@2.2.2.2"""
+    analytics_ip = hstr_to_ip(env.roledefs['collector'][0])
+    for host_string in args:
+        with settings(host_string=host_string):
+            # Fixup ceilometer pipeline.yaml cfg
+            fixup_ceilometer_pipeline_conf(analytics_ip)
+            os_type = detect_ostype()
+            if os_type == 'ubuntu':
+                ceilometer_services = ['ceilometer-agent-central']
+            elif os_type in ['redhat']:
+                ceilometer_services = ['openstack-ceilometer-central']
+            else:
+                raise RuntimeError("Unsupported OS Type (%s)", os_type)
+            for svc in ceilometer_services:
+                sudo("service %s restart" % (svc))
 
 @task
 @roles('openstack')

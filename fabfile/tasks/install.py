@@ -292,6 +292,57 @@ def install_ceilometer_compute_node(*args):
 @task
 @EXECUTE_TASK
 @roles('openstack')
+def install_contrail_ceilometer_plugin():
+    """Installs contrail ceilometer plugin pkgs in the first node of openstack role."""
+    execute("install_contrail_ceilometer_plugin_node", env.host_string)
+
+@task
+def install_contrail_ceilometer_plugin_node(*args):
+    """Installs contrail ceilometer plugin pkgs in one or list of nodes.
+       USAGE:fab install_contrail_ceilometer_plugin_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        if env.roledefs['openstack'] and \
+                host_string != env.roledefs['openstack'][0]:
+            continue
+        with settings(host_string=host_string):
+            if not is_ceilometer_install_supported():
+                continue
+            pkg_contrail_ceilometer = ['ceilometer-plugin-contrail']
+            act_os_type = detect_ostype()
+            openstack_sku = get_openstack_sku()
+            if openstack_sku == 'icehouse':
+                if not act_os_type in ['ubuntu', 'redhat']:
+                    raise RuntimeError('Unsupported OpenStack distribution '
+                        '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
+            else:
+                raise RuntimeError('Unsupported OpenStack distribution (%s) '
+                    'on (%s)' % (openstack_sku, act_os_type))
+
+            if act_os_type == 'ubuntu':
+                apt_install(pkg_contrail_ceilometer)
+            elif act_os_type in ['redhat']:
+                # We need to copy the pkg from the cfgm node
+                # and then install it on the openstack node
+                cfgm_node = env.roledefs['cfgm'][0]
+                if host_string != cfgm_node:
+                    local_tempdir = tempfile.mkdtemp()
+                    with lcd(local_tempdir):
+                        for pkg in pkg_contrail_ceilometer:
+                            with settings(host_string = cfgm_node):
+                                get('/opt/contrail/contrail_install_repo/%s*.rpm' % (pkg), local_tempdir)
+                    output = local("ls %s/*.rpm" % (local_tempdir), capture=True)
+                    pkg_list = output.split('\n')
+                    for pkg in pkg_list:
+                        install_pkg_node(pkg, host_string)
+                    local('rm -rf %s' % (local_tempdir))
+                else:
+                    yum_install(pkg_contrail_ceilometer)
+            else:
+                yum_install(pkg_contrail_ceilometer)
+
+@task
+@EXECUTE_TASK
+@roles('openstack')
 def install_ceilometer():
     """Installs ceilometer pkgs in all nodes defined in first node of openstack role."""
     execute("install_ceilometer_node", env.host_string)
@@ -325,7 +376,7 @@ def install_ceilometer_node(*args):
                 if act_os_type == 'ubuntu':
                     pkg_ceilometer = pkg_havana_ubuntu
                 else:
-                    raise RuntimeError('Unsupported OpensStack distribution '
+                    raise RuntimeError('Unsupported OpenStack distribution '
                         '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
             elif openstack_sku == 'icehouse':
                 if act_os_type == 'ubuntu':
@@ -333,7 +384,7 @@ def install_ceilometer_node(*args):
                 elif act_os_type in ['redhat']:
                     pkg_ceilometer = pkg_icehouse_redhat
                 else:
-                    raise RuntimeError('Unsupported OpensStack distribution '
+                    raise RuntimeError('Unsupported OpenStack distribution '
                         '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
             else:
                 raise RuntimeError('Unsupported OpenStack distribution (%s) '
@@ -341,6 +392,20 @@ def install_ceilometer_node(*args):
 
             if act_os_type == 'ubuntu':
                 apt_install(pkg_ceilometer)
+            elif act_os_type in ['redhat']:
+                # We need to copy the pkg from the cfgm node
+                # and then install it on the openstack node
+                cfgm_node = env.roledefs['cfgm'][0]
+                local_tempdir = tempfile.mkdtemp()
+                with lcd(local_tempdir):
+                    for pkg in pkg_ceilometer:
+                        with settings(host_string = cfgm_node):
+                            get('/opt/contrail/contrail_install_repo/%s*.rpm' % (pkg), local_tempdir)
+                output = local("ls %s/*.rpm" % (local_tempdir), capture=True)
+                pkg_list = output.split('\n')
+                for pkg in pkg_list:
+                    install_pkg_node(pkg, host_string)
+                local('rm -rf %s' % (local_tempdir))
             else:
                 yum_install(pkg_ceilometer)
 
