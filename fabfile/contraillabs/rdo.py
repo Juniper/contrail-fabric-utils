@@ -20,6 +20,13 @@ def install_rhosp5_repo():
 
 @task
 @roles('openstack')
+def install_rhosp6_repo():
+    """ copy local repo locations """
+    put('fabfile/contraillabs/repo/rhosp6_local.repo', '/etc/yum.repos.d/rhosp6_local.repo')
+    run('yum clean all')
+
+@task
+@roles('openstack')
 def setup_rhosp_node():
     """Set up RHOSP Node"""
     execute(install_rhosp5_repo)
@@ -32,11 +39,13 @@ def setup_rhosp_node():
     with settings(warn_only=True):
         run("service openstack-nova-compute status")
     run("service openstack-nova-compute stop")
+    run("chkconfig openstack-nova-compute off")
     with settings(warn_only=True):
         run("service openstack-nova-compute status")
     with settings(warn_only=True):
         run("service neutron-server status")
     run("service neutron-server stop")
+    run("chkconfig neutron-server off")
     with settings(warn_only=True):
         run("service neutron-server status")
     with settings(warn_only=True):

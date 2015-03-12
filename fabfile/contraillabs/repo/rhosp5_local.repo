@@ -1,5 +1,6 @@
 [rhosp5-local-repo]
 name=rhosp5-local-repo
 baseurl=http://10.84.5.100/rhel/rhosp/packages
+enabled=1
 priority=1
 gpgcheck=0

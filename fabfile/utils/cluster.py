@@ -66,7 +66,7 @@ def get_nodes_to_upgrade_pkg(package, os_type, *args, **kwargs):
         with settings(host_string=host_string, warn_only=True):
             act_os_type = detect_ostype()
             if act_os_type == os_type:
-                installed = run("dpkg -l | grep %s" % package)
+                installed = sudo("dpkg -l | grep %s" % package)
                 if not installed:
                     nodes.append(host_string)
                 elif (version and
@@ -79,6 +79,25 @@ def get_nodes_to_upgrade_pkg(package, os_type, *args, **kwargs):
                 raise RuntimeError('Actual OS Type (%s) != Expected OS Type (%s)'
                                     'Aborting!' % (act_os_type, os_type))
     return nodes
+
+def get_package_installed_info(package, os_type, *nodes):
+    """Check if given package is installed in nodes and return
+       installation info
+    """
+    pkg_status = {'installed': [], 'not_installed': []}
+    for host_string in nodes:
+        with settings(host_string=host_string, warn_only=True):
+            if os_type.lower() in ['ubuntu']:
+               cmd = 'dpkg -l %s' % package
+            elif os_type.lower() in ['centos', 'redhat', 'fedora']:
+                cmd = 'rpm -q %s' % package
+            else:
+                raise RuntimeError('[%s]: Unsupported OS Type (%s)' % (host_string, os_type))
+            if sudo(cmd).succeeded:
+                pkg_status['installed'].append(host_string)
+                continue
+        pkg_status['not_installed'].append(host_string)
+    return pkg_status
 
 def reboot_nodes(*args):
     """reboots the given nodes"""
