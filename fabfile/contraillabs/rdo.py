@@ -32,11 +32,13 @@ def setup_rhosp_node():
     with settings(warn_only=True):
         run("service openstack-nova-compute status")
     run("service openstack-nova-compute stop")
+    run("chkconfig openstack-nova-compute off")
     with settings(warn_only=True):
         run("service openstack-nova-compute status")
     with settings(warn_only=True):
         run("service neutron-server status")
     run("service neutron-server stop")
+    run("chkconfig neutron-server off")
     with settings(warn_only=True):
         run("service neutron-server status")
     with settings(warn_only=True):
