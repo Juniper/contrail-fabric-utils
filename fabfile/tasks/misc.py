@@ -6,7 +6,8 @@ import socket
 from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.utils.fabos import detect_ostype, get_linux_distro
-from fabfile.utils.host import get_control_host_string, hstr_to_ip
+from fabfile.utils.host import get_control_host_string, hstr_to_ip,\
+    get_env_passwords
 from fabfile.utils.cluster import get_nodes_to_upgrade_pkg, reboot_nodes
 from fabfile.tasks.helpers import reboot_node
 from fabfile.tasks.provision import setup_vrouter_node,\
@@ -38,7 +39,7 @@ def add_vrouter_node(*args):
 def detach_vrouter_node(*args):
     """Detaches one/more compute node from the existing cluster."""
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-    cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
+    cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
     cfgm_ip = hstr_to_ip(cfgm_host)
     nova_compute = "openstack-nova-compute"
     if detect_ostype() in ['ubuntu']:

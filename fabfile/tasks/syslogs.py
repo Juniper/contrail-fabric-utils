@@ -2,6 +2,7 @@ from datetime import datetime as dt
 
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype
+from fabfile.utils.host import get_env_passwords
 from fabric.contrib.files import exists
 
 @roles('all')
@@ -120,7 +121,7 @@ def attach_logs_cores(bug_id, timestamp=None, duration=None):
     execute(get_cassandra_db_files)
     with hide('everything'):
         for host in env.roledefs['all']:
-            with settings( host_string= host, password= env.passwords[host],
+            with settings( host_string=host, password=get_env_passwords(host),
                            connection_attempts=3, timeout=20, warn_only=True):
                 get('/var/log/logs_*.tgz', '%s/' %( folder ) )
                 get('/var/crashes/*gz', '%s/' %( folder ) )

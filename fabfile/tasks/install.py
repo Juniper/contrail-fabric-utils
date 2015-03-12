@@ -6,9 +6,10 @@ import tempfile
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
-from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator, reboot_nodes
+from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator,\
+     reboot_nodes
 from fabfile.utils.host import get_from_testbed_dict,\
-    get_openstack_internal_vip, get_hypervisor
+    get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
 from fabfile.utils.analytics import is_ceilometer_install_supported, \
     is_ceilometer_compute_install_supported
@@ -551,7 +552,7 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                 if dkms_status is not None:
                     contrail_vrouter_pkg = 'contrail-vrouter-dkms'
                 else:
-                    vrouter_generic_pkg = run("apt-cache pkgnames contrail-vrouter-$(uname -r)")
+                    vrouter_generic_pkg = sudo("apt-cache pkgnames contrail-vrouter-$(uname -r)")
                     contrail_vrouter_pkg = vrouter_generic_pkg or 'contrail-vrouter-dkms'
 
                 dpdk = getattr(env, 'dpdk', None)
@@ -661,14 +662,14 @@ def get_package_installation_time(package):
     pkg_versions_list = []
     os_type = detect_ostype()
     if os_type in ['ubuntu']:
-        pkg_versions = run("grep -Po '(.*)\s+install\s+linux-image-([\d]+.*-generic)' \
+        pkg_versions = sudo("grep -Po '(.*)\s+install\s+linux-image-([\d]+.*-generic)' \
                            /var/log/dpkg.log")
         for version_info in pkg_versions.split('\r\n'):
             installed_time, package = version_info.split(' install ')
             pkg_versions_list.append((time.mktime(time.strptime(installed_time, '%Y-%m-%d %H:%M:%S')),
                                      package.lstrip('linux-image-')))
     elif os_type in ['centos', 'redhat', 'fedora']:
-        pkg_versions = run("rpm -q --queryformat='%%{installtime} " \
+        pkg_versions = sudo("rpm -q --queryformat='%%{installtime} " \
                            "%%{VERSION}-%%{RELEASE}.%%{ARCH}\\n' %s" % package)
         for version_info in pkg_versions.split('\r\n'):
             installed_time, version = version_info.split()
@@ -693,7 +694,7 @@ def reboot_on_kernel_update(reboot='True'):
     nodes_version_info = execute('get_package_installation_time', 'kernel')
     for node in all_nodes:
         with settings(host_string=node):
-            uname_out = run('uname -r')
+            uname_out = sudo('uname -r')
             if node in nodes_version_info.keys():
                 versions_info = nodes_version_info[node]
                 # skip reboot if latest kernel version is same as
@@ -835,7 +836,7 @@ def update_config_option(role, file_path, section, option, value, service):
     cmd1 = "openstack-config --set " + file_path + " " +  section + " " + option + " " + value
     cmd2= "service " + service + " restart"
     for host in env.roledefs[role]:
-        with settings(host_string=host, password=env.passwords[host]):
+        with settings(host_string=host, password=get_env_passwords(host)):
             sudo(cmd1)
             sudo(cmd2)
 # end update_config_option

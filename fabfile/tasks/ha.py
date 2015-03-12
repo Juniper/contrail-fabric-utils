@@ -5,9 +5,9 @@ from fabfile.templates import openstack_haproxy, collector_haproxy
 from fabfile.tasks.helpers import enable_haproxy
 from fabfile.utils.fabos import detect_ostype, get_as_sudo
 from fabfile.utils.host import get_keystone_ip, get_control_host_string,\
-                               hstr_to_ip, get_from_testbed_dict, get_service_token,\
-                               get_openstack_internal_vip, get_openstack_external_vip,\
-                               get_contrail_internal_vip, get_contrail_external_vip
+    hstr_to_ip, get_from_testbed_dict, get_service_token, get_env_passwords,\
+    get_openstack_internal_vip, get_openstack_external_vip,\
+    get_contrail_internal_vip, get_contrail_external_vip
 
 @task
 @EXECUTE_TASK
@@ -106,9 +106,9 @@ def setup_glance_images_loc():
 def sync_keystone_ssl_certs():
     host_string = env.host_string
     temp_dir= tempfile.mkdtemp()
-    with settings(host_string=env.roledefs['openstack'][0], password=env.passwords[env.roledefs['openstack'][0]]):
+    with settings(host_string=env.roledefs['openstack'][0], password=get_env_passwords(env.roledefs['openstack'][0])):
        get_as_sudo('/etc/keystone/ssl/', temp_dir)
-    with settings(host_string=host_string, password=env.passwords[host_string]):
+    with settings(host_string=host_string, password=get_env_passwords(host_string)):
         put('%s/ssl/' % temp_dir, '/etc/keystone/', use_sudo=True)
         sudo('service keystone restart')
 
@@ -116,7 +116,7 @@ def sync_keystone_ssl_certs():
 def fix_wsrep_cluster_address():
     openstack_host_list = [get_control_host_string(openstack_host) for openstack_host in env.roledefs['openstack']]
     galera_ip_list = [hstr_to_ip(galera_host) for galera_host in openstack_host_list]
-    with settings(host_string=env.roledefs['openstack'][0], password=env.passwords[env.roledefs['openstack'][0]]):
+    with settings(host_string=env.roledefs['openstack'][0], password=get_env_passwords(env.roledefs['openstack'][0])):
         wsrep_conf = '/etc/mysql/my.cnf'
         if detect_ostype() in ['ubuntu']:
             wsrep_conf = '/etc/mysql/conf.d/wsrep.cnf'
@@ -128,10 +128,10 @@ def fix_wsrep_cluster_address():
 @roles('build')
 def bootstrap_galera_cluster():
     openstack_node = env.roledefs['openstack'][0]
-    with settings(host_string=openstack_node, password=env.passwords[openstack_node]):
+    with settings(host_string=openstack_node, password=get_env_passwords(openstack_node)):
         sudo("service mysql start --wsrep_cluster_address=gcomm://")
     for openstack_node in env.roledefs['openstack'][1:]:
-        with settings(host_string=openstack_node, password=env.passwords[openstack_node]):
+        with settings(host_string=openstack_node, password=get_env_passwords(openstack_node)):
             sudo("service mysql restart")
 
 
@@ -419,7 +419,7 @@ def fix_cmon_param_and_add_keys_to_compute():
     cmon_param = '/etc/contrail/ha/cmon_param'
     compute_host_list = []
     for host_string in env.roledefs['compute']:
-        with settings(host_string=host_string, password=env.passwords[host_string]):
+        with settings(host_string=host_string, password=get_env_passwords(host_string)):
             host_name = sudo('hostname')
         compute_host_list.append(host_name)
 
@@ -429,7 +429,7 @@ def fix_cmon_param_and_add_keys_to_compute():
         amqp_in_role = 'openstack'
     amqp_host_list = []
     for host_string in env.roledefs[amqp_in_role]:
-        with settings(host_string=host_string, password=env.passwords[host_string]):
+        with settings(host_string=host_string, password=get_env_passwords(host_string)):
             host_name = sudo('hostname')
         amqp_host_list.append(host_name)
 

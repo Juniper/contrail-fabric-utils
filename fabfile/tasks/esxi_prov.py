@@ -35,7 +35,10 @@ def ssh(host, user, passwd, log=LOG):
     """
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    ssh.connect(host, username=user, password=passwd)
+    if passwd:
+        ssh.connect(host, username=user, password=passwd)
+    else:
+        ssh.connect(host, username=user, key_filename=env.keyfilenme)
     return ssh
 # end ssh
 
@@ -328,7 +331,10 @@ class ContrailVM(object):
                 ssh_session = paramiko.SSHClient()
                 ssh_session.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                 print "Connecting to ContrailVM ip:%s" %(ip)
-                ssh_session.connect(ip, username=user, password=passwd, timeout=300)
+                if passwd:
+                    ssh_session.connect(ip, username=user, password=passwd, timeout=300)
+                else:
+                    ssh.connect(host, username=user, key_filename=env.keyfilenme, timeout=300)
                 sftp = ssh_session.open_sftp()
             except socket.error, paramiko.SSHException:
                 connected = False

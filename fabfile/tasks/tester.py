@@ -99,7 +99,7 @@ def setup_test_env():
        
         host_dict['name'] = host_name
         host_dict['username'] = host_string.split('@')[0]
-        host_dict['password'] = env.passwords[host_string]
+        host_dict['password'] =get_env_passwords(host_string)
         host_dict['roles'] = []
   
         if not internal_vip:
@@ -165,7 +165,7 @@ def setup_test_env():
                 host_dict['name'] = 'contrail-vip'     
                 with settings(host_string = env.roledefs['cfgm'][0]):
                     host_dict['username'] = host_string.split('@')[0]
-                    host_dict['password'] = env.passwords[host_string]
+                    host_dict['password'] = get_env_passwords(host_string)
                 host_dict['roles'] = []
                 role_dict = {'type': 'openstack', 'params': {'cfgm': cfgm_host_name}}
                 host_dict['roles'].append(role_dict)
@@ -502,7 +502,7 @@ def export_testbed_details(filename='testbed_vars'):
     api_server_host_string = testbed.env.roledefs['cfgm'][0]
     api_server_host_ip = testbed.env.roledefs['cfgm'][0].split('@')[1]
     api_server_host_user = testbed.env.roledefs['cfgm'][0].split('@')[0]
-    api_server_host_password = env.passwords[api_server_host_string]
+    api_server_host_password = get_env_passwords(api_server_host_string)
     public_network_rt = getattr(testbed, 'public_vn_rtgt', None)
     public_network_subnet = getattr(testbed, 'public_vn_subnet', None)
     router_asn = getattr(testbed, 'router_asn', '64512')

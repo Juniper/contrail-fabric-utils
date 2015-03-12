@@ -411,7 +411,7 @@ def setup_cfgm_node(*args):
     for host_string in args:
         cfgm_host=get_control_host_string(host_string)
         tgt_ip = hstr_to_ip(cfgm_host)
-        cfgm_host_password = env.passwords[host_string]
+        cfgm_host_password = get_env_passwords(host_string)
 
         # Prefer local collector node
         cfgm_host_list = [get_control_host_string(entry)\
@@ -599,7 +599,7 @@ def setup_ceilometer_mongodb(ip):
         sudo("service mongodb start")
         # check if the mongodb is running, if not, issue start again
         count = 1
-        while run("service mongodb status | grep not").succeeded:
+        while sudo("service mongodb status | grep not").succeeded:
             count += 1
             if count > 10:
                 break
@@ -663,7 +663,7 @@ def setup_ceilometer_compute_node(*args):
                 with lcd(local_tempdir):
                     with settings(host_string = openstack_host):
                         get(conf_file, local_tempdir)
-                tempdir = run('(tempdir=$(mktemp -d); echo $tempdir)')
+                tempdir = sudo('(tempdir=$(mktemp -d); echo $tempdir)')
                 put('%s/ceilometer.conf' % (local_tempdir), tempdir, use_sudo=True)
                 sudo('mv %s/ceilometer.conf %s' % (tempdir, conf_file))
                 local('rm -rf %s' % (local_tempdir))
@@ -868,7 +868,7 @@ def setup_openstack_node(*args):
         self_host = get_control_host_string(host_string)
         self_ip = hstr_to_ip(self_host)
         mgmt_self_ip = hstr_to_ip(host_string)
-        openstack_host_password = env.passwords[host_string]
+        openstack_host_password = get_env_passwords(host_string)
         keystone_ip = get_keystone_ip(ignore_vip=True, openstack_node=env.host_string)
         openstack_admin_password = get_keystone_admin_password()
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
@@ -978,32 +978,32 @@ def setup_collector_node(*args):
         with  settings(host_string=host_string):
             with settings(warn_only=True):
                 if detect_ostype() == 'ubuntu':
-                    run("service redis-server stop")
-                    run("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
+                    sudo("service redis-server stop")
+                    sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
                     #If redis passwd sepcified add that to the conf file
                     if get_redis_password():
-                        run("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis/redis.conf")
-                    run("service redis-server start")
+                        sudo("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis/redis.conf")
+                    sudo("service redis-server start")
                     #check if the redis-server is running, if not, issue start again
                     count = 1
-                    while run("service redis-server status | grep not").succeeded:
+                    while sudo("service redis-server status | grep not").succeeded:
                         count += 1
                         if count > 10:
                             break
                         sleep(1)
-                        run("service redis-server restart")
+                        sudo("service redis-server restart")
                 else:
                     sudo("service redis stop")
                     sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis.conf")
                     #If redis passwd sepcified add that to the conf file
                     if get_redis_password():
-                        run("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis.conf")
+                        sudo("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis.conf")
                     sudo("chkconfig redis on")
                     sudo("service redis start")
 
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
-        collector_host_password = env.passwords[host_string]
+        collector_host_password = get_env_passwords(host_string)
         collector_host = get_control_host_string(host_string)
         ncollectors = len(env.roledefs['collector'])
         redis_master_host = get_control_host_string(env.roledefs['collector'][0])
@@ -1099,7 +1099,7 @@ def setup_database_node(*args):
         database_host_list = [get_control_host_string(entry) for entry in env.roledefs['database']]
         database_ip_list = [hstr_to_ip(db_host) for db_host in database_host_list]
         database_host=get_control_host_string(host_string)
-        database_host_password=env.passwords[host_string]
+        database_host_password=get_env_passwords(host_string)
         tgt_ip = hstr_to_ip(database_host)
         #derive kafka broker id from the list of servers specified
         broker_id = sorted(database_ip_list).index(tgt_ip)
@@ -1150,7 +1150,7 @@ def setup_webui_node(*args):
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_ip = hstr_to_ip(cfgm_host)
         webui_host = get_control_host_string(host_string)
-        cfgm_host_password=env.passwords[host_string]
+        cfgm_host_password=get_env_passwords(host_string)
         ncollectors = len(env.roledefs['collector'])
         database_host_list=[]
         for entry in env.roledefs['database']:
@@ -1176,11 +1176,11 @@ def setup_webui_node(*args):
         if redis_password is not None:
             if detect_ostype() == 'ubuntu':
                 redis_conf_path = '/etc/redis/redis.conf'
-                run("service redis-server stop")
+                sudo("service redis-server stop")
             else:
                 redis_conf_path = '/etc/redis.conf'
-                run("service redis stop")
-            run("sed -i '/^# requirepass/ c\ requirepass " +
+                sudo("service redis stop")
+            sudo("sed -i '/^# requirepass/ c\ requirepass " +
                 redis_password + "' " + redis_conf_path)
         # Frame the command line to provision webui
         cmd = "setup-vnc-webui"
@@ -1227,15 +1227,15 @@ def setup_webui_node(*args):
             with settings(warn_only=True):
                 if detect_ostype() == 'ubuntu':
                     sudo('rm /etc/init/supervisor-webui.override')
-                    run("service redis-server start")
+                    sudo("service redis-server start")
                     #check if the redis-server is running, if not, issue start again
                     count = 1
-                    while run("service redis-server status | grep not").succeeded:
+                    while sudo("service redis-server status | grep not").succeeded:
                         count += 1
                         if count > 10:
                             break
                         sleep(1)
-                        run("service redis-server start")
+                        sudo("service redis-server start")
                 else:
                     sudo("chkconfig redis on")
                     sudo("service redis start")
@@ -1270,7 +1270,7 @@ def setup_control_node(*args):
     for host_string in args:
         fixup_irond_config(host_string)
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_host_password=env.passwords[env.roledefs['cfgm'][0]]
+        cfgm_host_password=get_env_passwords(env.roledefs['cfgm'][0])
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         control_host = get_control_host_string(host_string)
         tgt_ip = hstr_to_ip(control_host)
@@ -1414,10 +1414,10 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
         #qpidd_changes_for_ubuntu()
         ncontrols = len(env.roledefs['control'])
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
+        cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
-        cfgm_passwd = env.passwords[env.roledefs['cfgm'][0]]
+        cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
         compute_host = get_control_host_string(host_string)
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
 
@@ -1783,10 +1783,10 @@ def add_tsn_node(restart=True,*args):
     restart = (str(restart).lower() == 'true')
     for host_string in args:
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
+        cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
-        cfgm_passwd = env.passwords[env.roledefs['cfgm'][0]]
+        cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
         compute_host = get_control_host_string(host_string)
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
         compute_mgmt_ip= host_string.split('@')[1]
@@ -1797,18 +1797,18 @@ def add_tsn_node(restart=True,*args):
         # Stop if running on TSN node
         with settings(host_string=host_string, warn_only=True):
             compute_hostname = sudo("hostname")
-            if run("service nova-compute status | grep running").succeeded:
+            if sudo("service nova-compute status | grep running").succeeded:
                 # Stop the service
-                run("service nova-compute stop")
+                sudo("service nova-compute stop")
                 if detect_ostype() in ['ubuntu']:
-                    run('echo "manual" >> /etc/init/nova-compute.override')
+                    sudo('echo "manual" >> /etc/init/nova-compute.override')
                 else:
-                    run('chkconfig nova-compute off')
+                    sudo('chkconfig nova-compute off')
                 # Remove TSN node from nova manage service list
                 # Mostly require when converting an exiting compute to TSN
                 openstack_host = get_control_host_string(env.roledefs['openstack'][0])
                 with settings(host_string=openstack_host, warn_only=True):
-                    run("nova-manage service disable --host=%s --service=nova-compute" %(compute_hostname))
+                    sudo("nova-manage service disable --host=%s --service=nova-compute" %(compute_hostname))
         orch = get_orchestrator()
         if orch is 'openstack':
             admin_user, admin_password = get_openstack_credentials()
@@ -1821,7 +1821,7 @@ def add_tsn_node(restart=True,*args):
                         %(compute_hostname, compute_control_ip, cfgm_ip,
                           admin_user, admin_password,
                           admin_tenant_name, keystone_ip)
-            run("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
+            sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
         with settings(host_string=host_string, warn_only=True):
             nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
             sudo("openstack-config --set %s DEFAULT agent_mode tsn" % nova_conf_file)
@@ -1869,10 +1869,10 @@ def add_tor_agent_node(restart=True, *args):
                 with cd(INSTALLER_DIR):
                     sudo(cmd)
                 cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-                cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
+                cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
                 cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
                 cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
-                cfgm_passwd = env.passwords[env.roledefs['cfgm'][0]]
+                cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
                 compute_host = get_control_host_string(host_string)
                 (tgt_ip, tgt_gw) = get_data_ip(host_string)
                 compute_mgmt_ip= host_string.split('@')[1]
@@ -1899,8 +1899,8 @@ def add_tor_agent_node(restart=True, *args):
                       agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
                       admin_tenant_name, keystone_ip)
                 with settings(host_string = '%s@%s' %(cfgm_user, cfgm_ip), password=cfgm_passwd):
-                    run("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
-                    run("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
+                    sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
+                    sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
             if restart:
                 sudo("service supervisor-vrouter restart")
 @task
@@ -2295,10 +2295,10 @@ def setup_esx_zone():
     esx = getattr(testbed, 'esxi_hosts', None)
     if esx is None:
         return
-    run("(source /etc/contrail/openstackrc; nova aggregate-create esx esx)")
+    sudo("(source /etc/contrail/openstackrc; nova aggregate-create esx esx)")
     cmd = "(source /etc/contrail/openstackrc; nova aggregate-add-host esx %s)"
     for server in esx:
-        run(cmd % esx[server]['contrail_vm']['name'])
+        sudo(cmd % esx[server]['contrail_vm']['name'])
 # end setup_esx_zone
 
 @hosts(env.roledefs['openstack'][0:1])
