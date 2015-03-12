@@ -21,6 +21,9 @@ def configure_esxi_network(esxi_info):
     vm_switch = esxi_info['vm_vswitch']
     vm_switch_mtu = esxi_info['vm_vswitch_mtu']
     uplink_nic = esxi_info['uplink_nic']
+    data_pg = esxi_info.get('data_port_group', None)
+    data_switch = esxi_info.get('data_vswitch', None)
+    data_nic = esxi_info.get('data_nic', None)
 
     host_string = '%s@%s' %(user, ip)
     with settings(host_string = host_string, password = password, 
@@ -33,20 +36,34 @@ def configure_esxi_network(esxi_info):
         run('esxcli network vswitch standard portgroup set --portgroup-name=%s --vlan-id=4095' %(vm_pg))
         if uplink_nic:
             run('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(uplink_nic, fab_switch))
+        if data_switch:
+            run('esxcli network vswitch standard add --vswitch-name=%s' %(data_switch))
+        if data_nic:
+            assert data_switch, "Data vSwitch must be specified to add data nic"
+            run('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(data_nic, data_switch))
+        if data_pg:
+            assert data_switch, "Data vSwitch must be specified to create data port group"
+            run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(data_pg, data_switch))
 
 
 def create_vmx (esxi_host):
     '''Creates vmx file for contrail compute VM (non vcenter env)'''
     fab_pg = esxi_host['fabric_port_group']
     vm_pg = esxi_host['vm_port_group']
+    data_pg = esxi_host.get('data_port_group', None)
     vm_name = esxi_host['contrail_vm']['name']
     vm_mac = esxi_host['contrail_vm']['mac']
     assert vm_mac, "MAC address for contrail-compute-vm must be specified"
 
+    ext_params = compute_vmx_template.esxi_eth1_template.safe_substitute({'__vm_pg__' : vm_pg})
+    if data_pg:
+        data_intf = compute_vmx_template.esxi_eth2_template.safe_substitute({'__data_pg__' : data_pg})
+        ext_params += data_intf
+
     template_vals = { '__vm_name__' : vm_name,
                       '__vm_mac__' : vm_mac,
                       '__fab_pg__' : fab_pg,
-                      '__vm_pg__' : vm_pg,
+                      '__extension_params__' : ext_params,
                     }
     _, vmx_file = tempfile.mkstemp(prefix=vm_name)
     _template_substitute_write(compute_vmx_template.template,
