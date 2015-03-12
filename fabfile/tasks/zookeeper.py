@@ -3,7 +3,7 @@ import tempfile
 
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype, get_as_sudo
-from fabfile.utils.host import hstr_to_ip
+from fabfile.utils.host import hstr_to_ip, get_env_passwords
 from fabfile.tasks.upgrade import upgrade_package, remove_package
 
 @task
@@ -73,7 +73,7 @@ def zookeeper_rolling_restart():
 
     for new_node in new_nodes:
         zk_index = (database_nodes.index(new_node) + len(cfgm_nodes) + 1)
-        with settings(host_string=new_node, password=env.passwords[new_node]):
+        with settings(host_string=new_node, password=get_env_passwords(new_node)):
             pdist = detect_ostype()
             print "Install zookeeper in the new node."
             execute('create_install_repo_node', new_node)
@@ -93,7 +93,7 @@ def zookeeper_rolling_restart():
             sudo('sudo echo "%s" > /var/lib/zookeeper/myid' % (zk_index))
 
     print "Add new nodes to existing zookeeper quorum"
-    with settings(host_string=cfgm_nodes[0], password=env.passwords[cfgm_nodes[0]]):
+    with settings(host_string=cfgm_nodes[0], password=get_env_passwords(cfgm_nodes[0])):
         for new_node in new_nodes:
             zk_index = (database_nodes.index(new_node) + len(cfgm_nodes) + 1)
             sudo('echo "server.%d=%s:2888:3888" >> %s' % (zk_index, hstr_to_ip(new_node), zoo_cfg))
@@ -102,7 +102,7 @@ def zookeeper_rolling_restart():
 
     print "Restart zookeeper in all nodes to make new nodes join zookeeper quorum"
     for zookeeper_node in cfgm_nodes + new_nodes:
-        with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
+        with settings(host_string=zookeeper_node, password=get_env_passwords(zookeeper_node)):
             put(tmp_dir+'/zoo.cfg', zoo_cfg, use_sudo=True)
             print "Start Zookeeper in new database node"
             execute('restart_zookeeper')
@@ -113,11 +113,11 @@ def zookeeper_rolling_restart():
     zoo_nodes = cfgm_nodes + database_nodes
     for old_node in old_nodes:
         zoo_nodes.remove(old_node)
-        with settings(host_string=old_node, password=env.passwords[old_node]):
+        with settings(host_string=old_node, password=get_env_passwords(old_node)):
             print "Stop Zookeeper in old cfgm node"
             execute('stop_zookeeper')
             for zoo_node in zoo_nodes:
-                with settings(host_string=zoo_node, password=env.passwords[zoo_node]):
+                with settings(host_string=zoo_node, password=get_env_passwords(zoo_node)):
                     sudo("sed -i '/^server.*%s:2888:3888/d' %s" % (hstr_to_ip(zoo_node), zoo_cfg))
             retries = 3
             while retries:
@@ -141,7 +141,7 @@ def zookeeper_rolling_restart():
                     retries -= 1
                     if retries:
                         for zoo_node in zoo_nodes:
-                            with settings(host_string=zoo_node, password=env.passwords[zoo_node]):
+                            with settings(host_string=zoo_node, password=get_env_passwords(zoo_node)):
                                 execute('restart_zookeeper')
                         continue
                     print "Zookeeper quorum is not formed. Fix it and retry upgrade"
@@ -149,7 +149,7 @@ def zookeeper_rolling_restart():
                     exit(1)
           
     print "Correct the server id in zoo.cfg for the new nodes in the zookeeper quorum"
-    with settings(host_string=database_nodes[0], password=env.passwords[database_nodes[0]]):
+    with settings(host_string=database_nodes[0], password=get_env_passwords(database_nodes[0])):
         sudo("sed -i '/^server.*3888/d' %s" % zoo_cfg)
         for zookeeper_node in database_nodes:
             zk_index = (database_nodes.index(zookeeper_node) + 1)
@@ -160,19 +160,19 @@ def zookeeper_rolling_restart():
     print "Correct the myid in myid file for the new nodes in the zookeeper quorum"
     for zookeeper_node in database_nodes:
         zk_index = (database_nodes.index(zookeeper_node) + 1)
-        with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
+        with settings(host_string=zookeeper_node, password=get_env_passwords(zookeeper_node)):
             print "put cluster-unique zookeeper's instance id in myid"
             sudo('sudo echo "%s" > /var/lib/zookeeper/myid' % (zk_index))
             execute('stop_zookeeper')
 
     print "Restart all the zookeeper nodes in the new quorum"
     for zookeeper_node in database_nodes:
-        with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
+        with settings(host_string=zookeeper_node, password=get_env_passwords(zookeeper_node)):
             put(tmp_dir+'/zoo.cfg', zoo_cfg, use_sudo=True)
             execute('restart_zookeeper')
 
     print "Make sure leader/folower election is complete"
-    with settings(host_string=zookeeper_node, password=env.passwords[zookeeper_node]):
+    with settings(host_string=zookeeper_node, password=get_env_passwords(zookeeper_node)):
         retries = 3
         while retries:
             zookeeper_status = verfiy_zookeeper(*database_nodes)

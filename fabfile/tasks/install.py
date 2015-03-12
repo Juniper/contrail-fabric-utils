@@ -6,9 +6,10 @@ import tempfile
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
-from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator, reboot_nodes
+from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator,\
+     reboot_nodes
 from fabfile.utils.host import get_from_testbed_dict,\
-    get_openstack_internal_vip, get_hypervisor
+    get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
 from fabfile.utils.analytics import is_ceilometer_install_supported, \
     is_ceilometer_compute_install_supported
@@ -833,7 +834,7 @@ def update_config_option(role, file_path, section, option, value, service):
     cmd1 = "openstack-config --set " + file_path + " " +  section + " " + option + " " + value
     cmd2= "service " + service + " restart"
     for host in env.roledefs[role]:
-        with settings(host_string=host, password=env.passwords[host]):
+        with settings(host_string=host, password=get_env_passwords(host)):
             sudo(cmd1)
             sudo(cmd2)
 # end update_config_option

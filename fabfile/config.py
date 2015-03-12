@@ -23,8 +23,9 @@ else:
 
 # Fabric 1.7.0 and above expects the keys/host_strings in env.passwords to be with :port
 # Adding host_strings with :22, to make the fabric-utils compatabile with it.
-for key in env.passwords.keys():
-    env.passwords.update({key+':22' : env.passwords[key]})
+if hasattr(env, 'passwords'):
+    for key in env.passwords.keys():
+        env.passwords.update({key+':22' : env.passwords[key]})
 
 # Set default rabbit role as cfgm.
 env.roledefs['rabbit'] = env.roledefs['cfgm']

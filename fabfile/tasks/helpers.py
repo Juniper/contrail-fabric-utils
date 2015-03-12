@@ -3,6 +3,7 @@ import sys
 import socket
 import os
 import time
+import tempfile
 from copy import deepcopy
 import collections
 
@@ -44,7 +45,7 @@ def reboot_node(waitup, *args):
         count = 0
         while not verify_sshd(hostip,
                           user,
-                          env.passwords[host_string]):
+                          get_env_passwords(host_string)):
             sys.stdout.write('.')
             sleep(2)
             count+=1
@@ -243,7 +244,7 @@ def check_ssh():
     sshd_down_hosts = ''
     for host_string in env.roledefs["all"]:
         user, hostip = host_string.split('@')
-        password = env.passwords[host_string]
+        password = get_env_passwords(host_string)
         if not verify_sshd(hostip, user, password):
             sshd_down_hosts += "%s : %s\n" % (host_string, password)
 
@@ -256,6 +257,7 @@ def check_ssh():
 @task
 def all_command(command):
     sudo(command)
+    #run(command)
 #end all_command
 
 @roles('all')
@@ -715,7 +717,7 @@ def wait_till_all_up(attempts=90, interval=10, node=None, waitdown=True, contrai
         count = 0
         while not verify_sshd(hostip,
                 user,
-                env.passwords[node]):
+                get_env_passwords(node)):
             sys.stdout.write('.')
             sleep(int(interval))
             count+=1
@@ -1091,3 +1093,39 @@ def setup_common():
                 if ntp_chk_cmd_out == "":
                     ntp_cmd = 'echo "server ' + ntp_server + '" >> /etc/ntp.conf'
                     sudo(ntp_cmd)
+
+@task
+@roles('build')
+def ssh_copy_id(id_file=None):
+    if not getattr(env, 'password', None):
+        raise RuntimeError("env.password not populated, please use:\n\t fab -I ssh_copy_id")
+        return
+    # Created temporary password file
+    fd, fname = tempfile.mkstemp()
+    with open(fname, 'w') as fd:
+        fd.write(env.password)
+
+    ssh_config = os.path.expanduser('~/.ssh/config')
+    contrail_ssh_config = '%s.contrailbackup' % ssh_config
+    # Bckup old ssh config file if exists.
+    if os.path.isfile(ssh_config):
+        os.rename(ssh_config, contrail_ssh_config)
+
+    # Create ssh config with options to skip StrictHostKeyChecking
+    config_lines = ['StrictHostKeyChecking no\n', 'UserKnownHostsFile=/dev/null']
+    with open(ssh_config, 'w+') as fd:
+        fd.writelines(config_lines)
+
+    # Add the public keys to the nodes in cluster
+    cmd = 'sshpass -f %s ssh-copy-id ' % fname
+    if id_file:
+        cmd += '-i %s ' % id_file
+    for host_string in env.roledefs['all']:
+        print "Copying key to %s" % host_string
+        local('%s %s' % (cmd, host_string))
+    # Restore the old ssh config file
+    os.remove(ssh_config)
+    if os.path.isfile(contrail_ssh_config):
+        os.rename(contrail_ssh_config, ssh_config)
+    # Remove temporary password file.
+    os.remove(fname)
