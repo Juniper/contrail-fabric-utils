@@ -20,7 +20,7 @@ def setup_webui_storage(mode):
     storage_webui_ip = hstr_to_ip(host_string)
 
     #get webui host password
-    storage_webui_host_password = env.passwords[host_string]
+    storage_webui_host_password = get_env_.passwords(host_string)
 
     cinder_vip = get_cinder_ha_vip()
     if cinder_vip != 'none':
@@ -66,7 +66,7 @@ def create_storage_setup_cmd(mode):
                                                 env.roledefs['all']):
             if entry == sthostentry:
                 storage_hostnames.append(sthostname)
-                storage_host_password=env.passwords[entry]
+                storage_host_password=get_env_passwords(entry)
                 storage_pass_list.append(storage_host_password)
                 storage_host = get_control_host_string(entry)
                 storage_data_ip=get_data_ip(storage_host)[0]
@@ -84,7 +84,7 @@ def create_storage_setup_cmd(mode):
             if entry == sthostentry and \
                             entry != env.roledefs['storage-master'][0]:
                 storage_hostnames.append(sthostname)
-                storage_host_password=env.passwords[entry]
+                storage_host_password=get_env_passwords(entry)
                 storage_pass_list.append(storage_host_password)
                 storage_host = get_control_host_string(entry)
                 storage_data_ip=get_data_ip(storage_host)[0]
@@ -93,7 +93,7 @@ def create_storage_setup_cmd(mode):
         for sthostname, sthostentry in zip(env.hostnames['all'],
                                                 env.roledefs['all']):
             if entry == sthostentry:
-                collector_pass_list.append(env.passwords[entry])
+                collector_pass_list.append(get_env_passwords(entry))
                 collector_host = get_control_host_string(entry)
                 collector_data_ip=get_data_ip(collector_host)[0]
                 collector_host_list.append(collector_data_ip)
@@ -121,7 +121,7 @@ def create_storage_setup_cmd(mode):
     storage_master_ip=get_data_ip(storage_master)[0]
     cfm = env.roledefs['cfgm'][0]
     cfm_ip = get_data_ip(cfm)[0]
-    storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
+    storage_master_password=get_env_passwords(env.roledefs['storage-master'][0])
     # Argument details
     # storage-setup-mode - setup/unconfigure/reconfigure - First time 
     #                      setup/Remove all configuration/Do a reconfigure
@@ -188,7 +188,7 @@ def setup_nfs_live_migration(mode):
         for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
             if entry == sthostentry:
                 storage_hostnames.append(sthostname)
-                storage_host_password=env.passwords[entry]
+                storage_host_password=get_env_passwords(entry)
                 storage_pass_list.append(storage_host_password)
                 storage_host = get_control_host_string(entry)
                 storage_data_ip=get_data_ip(storage_host)[0]
@@ -197,14 +197,14 @@ def setup_nfs_live_migration(mode):
             for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
                 if entry == sthostentry and entry != env.roledefs['storage-master'][0]:
                     storage_hostnames.append(sthostname)
-                    storage_host_password=env.passwords[entry]
+                    storage_host_password=get_env_passwords(entry)
                     storage_pass_list.append(storage_host_password)
                     storage_host = get_control_host_string(entry)
                     storage_data_ip=get_data_ip(storage_host)[0]
                     storage_host_list.append(storage_data_ip)
         storage_master=env.roledefs['storage-master'][0]
         storage_master_ip=get_data_ip(storage_master)[0]
-        storage_master_password=env.passwords[env.roledefs['storage-master'][0]]
+        storage_master_password=get_env_passwords(env.roledefs['storage-master'][0])
         cfm = env.roledefs['cfgm'][0]
         cfm_ip = get_data_ip(cfm)[0]
 

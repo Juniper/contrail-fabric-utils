@@ -202,7 +202,10 @@ def verify_sshd(host, user, password):
         try:
             client = paramiko.SSHClient()
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-            client.connect(host, username=user, password=password, timeout=5)
+            if password:
+                client.connect(host, username=user, password=password, timeout=5)
+            else:
+                client.connect(host, username=user, key_filename=env.key_filename, timeout=5)
         except Exception,e:
             return False
         return True
@@ -218,3 +221,6 @@ def get_nova_cpu_model():
 
 def get_hypervisor(host_string):
     return get_from_testbed_dict('hypervisor', host_string, 'libvirt')
+
+def get_env_passwords(host_string):
+    return get_from_testbed_dict('passwords', host_string, None)

@@ -3,12 +3,13 @@ import re
 import time
 
 from fabfile.config import *
-from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node, rabbitmq_env_conf
+from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node,\
+    rabbitmq_env_conf
 from fabfile.utils.fabos import detect_ostype
 from fabfile.tasks.helpers import disable_iptables
 from fabfile.utils.host import get_from_testbed_dict, get_control_host_string,\
-                               hstr_to_ip, get_openstack_internal_vip,\
-                               get_contrail_internal_vip
+    hstr_to_ip, get_openstack_internal_vip, get_contrail_internal_vip,\
+    get_env_passwords
 
 global ctrl
 ctrl = "-ctrl"
@@ -90,7 +91,7 @@ def set_guest_user_permissions():
 def rabbitmq_env():
     erl_node_name = None
     rabbit_env_conf = '/etc/rabbitmq/rabbitmq-env.conf'
-    with settings(host_string=env.host_string, password=env.passwords[env.host_string]):
+    with settings(host_string=env.host_string, password=get_env_passwords(env.host_string)):
       host_name = sudo('hostname -s') + ctrl
       erl_node_name = "rabbit@%s" % (host_name)
     rabbitmq_env_template = rabbitmq_env_conf
@@ -115,7 +116,7 @@ def config_rabbitmq():
         print "CONFIG_RABBITMQ: Skip creating rabbitmq.config for Single node setup"
         return
     for host_string in env.roledefs['rabbit']:
-        with settings(host_string=host_string, password=env.passwords[host_string]):
+        with settings(host_string=host_string, password=get_env_passwords(host_string)):
             host_name = sudo('hostname -s') + ctrl
         rabbit_hosts.append("\'rabbit@%s\'" % host_name)
     rabbit_hosts = ', '.join(rabbit_hosts)
