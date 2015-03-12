@@ -105,6 +105,7 @@ UPGRADE_SCHEMA = {
                                      '/etc/contrail/contrail-vrouter-agent.conf',
                                      '/etc/contrail/vrouter_nodemgr_param',
                                      '/etc/nova/nova.conf',
+                                     '/etc/libvirt/qemu.conf',
                                     ],
                    'backup_dirs' : [],
                    'remove_files' : [],
@@ -118,10 +119,12 @@ if get_openstack_internal_vip():
     UPGRADE_SCHEMA['openstack']['upgrade'].append('contrail-openstack-ha')
 
 # Ubuntu Release upgrade
-UBUNTU_R1_10_TO_R2_10 = copy.deepcopy(UPGRADE_SCHEMA)
-UBUNTU_R1_20_TO_R2_10 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_UPGRADE_SCHEMA['compute']['backup_files'].remove('/etc/libvirt/qemu.conf')
+UBUNTU_R1_10_TO_R2_10 = copy.deepcopy(UBUNTU_UPGRADE_SCHEMA)
+UBUNTU_R1_20_TO_R2_10 = copy.deepcopy(UBUNTU_UPGRADE_SCHEMA)
 UBUNTU_R1_21_TO_R2_10 = copy.deepcopy(UBUNTU_R1_20_TO_R2_10)
-UBUNTU_R1_30_TO_R2_10 = copy.deepcopy(UPGRADE_SCHEMA)
+UBUNTU_R1_30_TO_R2_10 = copy.deepcopy(UBUNTU_UPGRADE_SCHEMA)
 UBUNTU_R1_30_TO_R2_10['cfgm']['backup_files'].remove('/etc/contrail/svc_monitor.conf')
 UBUNTU_R1_30_TO_R2_10['cfgm']['backup_files'].remove('/etc/contrail/schema_transformer.conf')
 UBUNTU_R1_30_TO_R2_10['cfgm']['backup_files'] += ['/etc/contrail/contrail-svc-monitor.conf',
@@ -847,7 +850,6 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
                 sudo("openstack-config --set %s DEFAULT log_local 1" % conf_file)
                 sudo("openstack-config --set %s DEFAULT log_level SYS_NOTICE" % conf_file)
             if ostype in ['centos']:
-                execute('setup_vrouter_node', host_string)
                 if is_lbaas_enabled():
                     sudo('groupadd -f nogroup')
                     sudo("sed -i s/'Defaults    requiretty'/'#Defaults    requiretty'/g /etc/sudoers")
