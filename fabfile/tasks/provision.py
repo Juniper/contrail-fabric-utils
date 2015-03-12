@@ -1507,7 +1507,8 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
 
         dpdk = getattr(env, 'dpdk', None)
         if dpdk:
-            cmd += " --dpdk"
+            if env.host_string in dpdk:
+                cmd += " --dpdk"
 
         # Setup hugepages if necessary
         setup_hugepages_node(host_string)

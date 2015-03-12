@@ -796,7 +796,10 @@ def setup_hugepages_node(*args):
         # get required size of hugetlbfs
         dpdk = getattr(env, 'dpdk', None)
         if dpdk:
-            factor = int(dpdk[env.host_string]['huge_pages'])
+            if env.host_string in dpdk:
+                factor = int(dpdk[env.host_string]['huge_pages'])
+            else:
+                return
         else:
             return
 
