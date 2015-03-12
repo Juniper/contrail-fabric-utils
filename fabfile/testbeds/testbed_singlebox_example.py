@@ -44,13 +44,18 @@ env.hostnames = {
     'all': ['a0s1']
 }
 
-env.password = 'secret'
-#Passwords of each host
+# Passwords of each host
+# for passwordless login's no need to set env.passwords,
+# instead populate env.key_filename in testbed.py with public key.
 env.passwords = {
     host1: 'secret',
   #  backup_node: 'secret',
     host_build: 'secret',
 }
+
+# SSH Public key file path for passwordless logins
+# if env.passwords is not specified.
+#env.key_filename = '/root/.ssh/id_rsa.pub'
 
 #For reimage purpose
 env.ostypes = {

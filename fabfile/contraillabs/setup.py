@@ -4,7 +4,7 @@ import os.path
 
 from fabfile.config import *
 import fabfile.common as common
-from fabfile.utils.host import verify_sshd
+from fabfile.utils.host import verify_sshd, get_env_passwords
 
 @task
 @parallel
@@ -17,7 +17,7 @@ def check_reimage_status():
     sys.stdout.write('.')
     while not verify_sshd(hostip,
                           user,
-                          env.passwords[env.host_string]):
+                          get_env_passwords(env.host_string)):
         sys.stdout.write('.')
         sys.stdout.flush()
         sleep(2)

@@ -411,7 +411,7 @@ def setup_cfgm_node(*args):
     for host_string in args:
         cfgm_host=get_control_host_string(host_string)
         tgt_ip = hstr_to_ip(cfgm_host)
-        cfgm_host_password = env.passwords[host_string]
+        cfgm_host_password = get_env_passwords(host_string)
 
         # Prefer local collector node
         cfgm_host_list = [get_control_host_string(entry)\
@@ -849,7 +849,7 @@ def setup_openstack_node(*args):
         self_host = get_control_host_string(host_string)
         self_ip = hstr_to_ip(self_host)
         mgmt_self_ip = hstr_to_ip(host_string)
-        openstack_host_password = env.passwords[host_string]
+        openstack_host_password = get_env_passwords(host_string)
         keystone_ip = get_keystone_ip(ignore_vip=True, openstack_node=env.host_string)
         openstack_admin_password = get_keystone_admin_password()
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
@@ -984,7 +984,7 @@ def setup_collector_node(*args):
 
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
-        collector_host_password = env.passwords[host_string]
+        collector_host_password = get_env_passwords(host_string)
         collector_host = get_control_host_string(host_string)
         ncollectors = len(env.roledefs['collector'])
         redis_master_host = get_control_host_string(env.roledefs['collector'][0])
@@ -1080,7 +1080,7 @@ def setup_database_node(*args):
         database_host_list = [get_control_host_string(entry) for entry in env.roledefs['database']]
         database_ip_list = [hstr_to_ip(db_host) for db_host in database_host_list]
         database_host=get_control_host_string(host_string)
-        database_host_password=env.passwords[host_string]
+        database_host_password=get_env_passwords(host_string)
         tgt_ip = hstr_to_ip(database_host)
         #derive kafka broker id from the list of servers specified
         broker_id = sorted(database_ip_list).index(tgt_ip)
@@ -1131,7 +1131,7 @@ def setup_webui_node(*args):
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_ip = hstr_to_ip(cfgm_host)
         webui_host = get_control_host_string(host_string)
-        cfgm_host_password=env.passwords[host_string]
+        cfgm_host_password=get_env_passwords(host_string)
         ncollectors = len(env.roledefs['collector'])
         database_host_list=[]
         for entry in env.roledefs['database']:
@@ -1251,7 +1251,7 @@ def setup_control_node(*args):
     for host_string in args:
         fixup_irond_config(host_string)
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_host_password=env.passwords[env.roledefs['cfgm'][0]]
+        cfgm_host_password=get_env_passwords(env.roledefs['cfgm'][0])
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         control_host = get_control_host_string(host_string)
         tgt_ip = hstr_to_ip(control_host)
@@ -1395,10 +1395,10 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
         #qpidd_changes_for_ubuntu()
         ncontrols = len(env.roledefs['control'])
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
+        cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
-        cfgm_passwd = env.passwords[env.roledefs['cfgm'][0]]
+        cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
         compute_host = get_control_host_string(host_string)
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
 
@@ -1763,10 +1763,10 @@ def add_tsn_node(restart=True,*args):
     restart = (str(restart).lower() == 'true')
     for host_string in args:
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
+        cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
         cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
-        cfgm_passwd = env.passwords[env.roledefs['cfgm'][0]]
+        cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
         compute_host = get_control_host_string(host_string)
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
         compute_mgmt_ip= host_string.split('@')[1]
@@ -1849,10 +1849,10 @@ def add_tor_agent_node(restart=True, *args):
                 with cd(INSTALLER_DIR):
                     sudo(cmd)
                 cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-                cfgm_host_password = env.passwords[env.roledefs['cfgm'][0]]
+                cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
                 cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
                 cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
-                cfgm_passwd = env.passwords[env.roledefs['cfgm'][0]]
+                cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
                 compute_host = get_control_host_string(host_string)
                 (tgt_ip, tgt_gw) = get_data_ip(host_string)
                 compute_mgmt_ip= host_string.split('@')[1]
