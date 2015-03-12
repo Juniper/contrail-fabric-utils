@@ -670,31 +670,29 @@ def install_orchestrator():
         execute(update_keystone_log)
 
 @task
-@parallel
+@EXECUTE_TASK
 @roles('all')
-def get_package_installation_time(package):
+def get_package_installation_time(os_type, package):
     '''Retrieve given package's installation time with its version
        Incase of kernel package, old kernel package will still show up in
        the installed packages list and will return installation time of all
        versions
     '''
     pkg_versions_list = []
-    os_type = detect_ostype()
     if os_type in ['ubuntu']:
-        pkg_versions = sudo("grep -Po '(.*)\s+install\s+linux-image-([\d]+.*-generic)' \
-                           /var/log/dpkg.log")
-        for version_info in pkg_versions.split('\r\n'):
-            installed_time, package = version_info.split(' install ')
-            pkg_versions_list.append((time.mktime(time.strptime(installed_time, '%Y-%m-%d %H:%M:%S')),
-                                     package.lstrip('linux-image-')))
+        cmd = "cd /var/lib/dpkg/info && find . -type f -name \"%s\.list\" " \
+              "-exec sh -c \'pkg=$(echo \"$0\" | sed -e \"s|\./\(.*\)\.list|\\1|g\"); " \
+              "echo $(stat -c \"%%Y\" \"$0\") $(dpkg-query -W -f=\"\\\${Version}\\n\" \"$pkg\")\' {} \;" % package
     elif os_type in ['centos', 'redhat', 'fedora']:
-        pkg_versions = sudo("rpm -q --queryformat='%%{installtime} " \
-                           "%%{VERSION}-%%{RELEASE}.%%{ARCH}\\n' %s" % package)
-        for version_info in pkg_versions.split('\r\n'):
-            installed_time, version = version_info.split()
-            pkg_versions_list.append((int(installed_time), version))
+        cmd = "rpm -q --queryformat='%%{installtime} " \
+              "%%{VERSION}-%%{RELEASE}.%%{ARCH}\\n' %s" % package
     else:
         print '[%s]: WARNING: Unsupported OS type (%s)' % (env.host_string, os_type)
+
+    pkg_versions = sudo(cmd)
+    for version_info in pkg_versions.split('\r\n'):
+        installed_time, version = version_info.split()
+        pkg_versions_list.append((int(installed_time), version))
 
     # rearrange package version based on its installation time
     pkg_versions_list.sort(key=lambda x: x[0])
@@ -710,7 +708,21 @@ def reboot_on_kernel_update(reboot='True'):
     # moving current node to last to reboot current node at last
     if env.roledefs['build'] in all_nodes:
         all_nodes.remove(env.roledefs['build']).append(env.roledefs['build'])
-    nodes_version_info = execute('get_package_installation_time', 'kernel')
+    with settings(host_string=env.roledefs['cfgm'][0]):
+        os_type = detect_ostype()
+    if os_type in ['ubuntu']:
+        nodes_version_info_act = execute('get_package_installation_time', os_type,
+                                         '*linux-image-[0-9]*-generic')
+        # replace minor version with '-generic'
+        nodes_version_info = {}
+        for key, values in nodes_version_info_act.items():
+            nodes_version_info[key] = [(index0, ".".join(index1.split('.')[:-1]) + '-generic') \
+                                       for index0, index1 in values]
+    elif os_type in ['centos', 'redhat', 'fedora']:
+        nodes_version_info = execute('get_package_installation_time', os_type, 'kernel')
+    else:
+        print '[%s]: WARNING: Unsupported OS type (%s)' % (env.host_string, os_type)
+
     for node in all_nodes:
         with settings(host_string=node):
             uname_out = sudo('uname -r')
@@ -747,6 +759,7 @@ def install_contrail(reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+    execute('reboot_on_kernel_update', reboot)
 
 @roles('build')
 @task
@@ -767,6 +780,7 @@ def install_without_openstack(manage_nova_compute='yes', reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+    execute('reboot_on_kernel_update', reboot)
 
 @roles('openstack')
 @task
