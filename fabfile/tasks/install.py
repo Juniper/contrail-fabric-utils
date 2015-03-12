@@ -551,7 +551,7 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                 if dkms_status is not None:
                     contrail_vrouter_pkg = 'contrail-vrouter-dkms'
                 else:
-                    vrouter_generic_pkg = run("apt-cache pkgnames contrail-vrouter-$(uname -r)")
+                    vrouter_generic_pkg = sudo("apt-cache pkgnames contrail-vrouter-$(uname -r)")
                     contrail_vrouter_pkg = vrouter_generic_pkg or 'contrail-vrouter-dkms'
 
                 dpdk = getattr(env, 'dpdk', None)
@@ -659,14 +659,14 @@ def get_package_installation_time(package):
     pkg_versions_list = []
     os_type = detect_ostype()
     if os_type in ['ubuntu']:
-        pkg_versions = run("grep -Po '(.*)\s+install\s+linux-image-([\d]+.*-generic)' \
+        pkg_versions = sudo("grep -Po '(.*)\s+install\s+linux-image-([\d]+.*-generic)' \
                            /var/log/dpkg.log")
         for version_info in pkg_versions.split('\r\n'):
             installed_time, package = version_info.split(' install ')
             pkg_versions_list.append((time.mktime(time.strptime(installed_time, '%Y-%m-%d %H:%M:%S')),
                                      package.lstrip('linux-image-')))
     elif os_type in ['centos', 'redhat', 'fedora']:
-        pkg_versions = run("rpm -q --queryformat='%%{installtime} " \
+        pkg_versions = sudo("rpm -q --queryformat='%%{installtime} " \
                            "%%{VERSION}-%%{RELEASE}.%%{ARCH}\\n' %s" % package)
         for version_info in pkg_versions.split('\r\n'):
             installed_time, version = version_info.split()
@@ -691,7 +691,7 @@ def reboot_on_kernel_update(reboot='True'):
     nodes_version_info = execute('get_package_installation_time', 'kernel')
     for node in all_nodes:
         with settings(host_string=node):
-            uname_out = run('uname -r')
+            uname_out = sudo('uname -r')
             if node in nodes_version_info.keys():
                 versions_info = nodes_version_info[node]
                 # skip reboot if latest kernel version is same as
@@ -725,6 +725,7 @@ def install_contrail(reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+    execute('reboot_on_kernel_update', reboot)
 
 @roles('build')
 @task
@@ -745,6 +746,7 @@ def install_without_openstack(manage_nova_compute='yes', reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+    execute('reboot_on_kernel_update', reboot)
 
 @roles('openstack')
 @task
