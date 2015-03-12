@@ -725,6 +725,7 @@ def install_contrail(reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+    execute('reboot_on_kernel_update', reboot)
 
 @roles('build')
 @task
@@ -745,6 +746,7 @@ def install_without_openstack(manage_nova_compute='yes', reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+    execute('reboot_on_kernel_update', reboot)
 
 @roles('openstack')
 @task
