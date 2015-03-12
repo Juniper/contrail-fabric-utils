@@ -38,15 +38,10 @@ def bringup_test_setup(build, reimage=False):
         fname = os.path.basename(build)
         name, ftype = os.path.splitext(fname)
         if reimage:
-            if ftype == '.iso':
-                execute('all_reimage', build)
-                buildid = build.split('-')[1]
-            elif ftype == '.rpm' and env.ostypes[cfgm] == 'centos':
-                execute('all_reimage', '')
-            elif ftype == '.deb' and env.ostypes[cfgm] == 'ubuntu':
+            if ftype in ['.rpm', '.deb']:
                 execute('all_reimage')
             else:
-                raise RuntimeError('Unsuported package or mismatch in testbed.ostypes and package.')
+                raise RuntimeError('Unsuported package file: %s.' % build)
             execute('check_reimage_status')
     else:
         print "Package %s not found." % build

@@ -143,39 +143,29 @@ def all_reimage(build_param="@LATEST"):
             if 'ostypes' in env.keys():
                 if 'xen' in env.ostypes[host]:
                     pass
-                elif 'fedora' in env.ostypes[host]:
-                    # Fedora
-                    local(
-                        "/cs-shared/cf/bin/reimage %s %s" %
-                        (hostname, build_param))
+                elif 'ubuntu1404' == env.ostypes[host]:
+                    base_img = 'ubuntu-14.04'
                 elif 'ubuntu' in env.ostypes[host]:
-                    with settings(warn_only=True):
-                        if local(
-                                "/cs-shared/cf/bin/ubuntu.reimage %s" %
-                                (hostname)).failed:
-                            local(
-                                "/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s ubuntu-12.04.3" %
-                                (hostname))
-                elif 'cent63' in env.ostypes[host]:
-                    local("/cs-shared/cf/bin/centos63.reimage %s" % (hostname))
-                else:
-                    # CentOS
-                    with settings(warn_only=True):
-                        if local(
-                                "/cs-shared/cf/bin/centos.reimage %s %s" %
-                                (hostname, build_param)).failed:
-                            local(
-                                "/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" %
-                                (hostname))
+                    base_img = 'ubuntu-12.04.3'
+                elif 'centos70' == env.ostypes[host]:
+                    base_img = 'centos-7.0'
+                elif 'centos65' == env.ostypes[host]:
+                    base_img = 'centos-6.5'
+                elif 'centos' in env.ostypes[host]:
+                    base_img = 'centos-6.4'
+                elif 'redhat70' in env.ostypes[host]:
+                    base_img = 'redhat-7.0'
+                elif 'redhat' in env.ostypes[host]:
+                    base_img = 'redhat'
+                with settings(warn_only=True):
+                    local(
+                        "/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" %
+                        (hostname, base_img))
             else:
                 # CentOS
-                with settings(warn_only=True):
-                    if local(
-                            "/cs-shared/cf/bin/centos.reimage %s %s" %
-                            (hostname, build_param)).failed:
-                        local(
-                            "/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" %
-                            (hostname))
+                    local(
+                        "/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.5" %
+                        (hostname))
             sleep(5)
 # end all_reimage
 
