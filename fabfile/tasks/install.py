@@ -526,6 +526,77 @@ def install_orchestrator():
         execute(install_openstack)
         execute(update_keystone_log)
 
+@task
+@EXECUTE_TASK
+@roles('all')
+def get_package_installation_time(os_type, package):
+    '''Retrieve given package's installation time with its version
+       Incase of kernel package, old kernel package will still show up in
+       the installed packages list and will return installation time of all
+       versions
+    '''
+    pkg_versions_list = []
+    if os_type in ['ubuntu']:
+        cmd = "cd /var/lib/dpkg/info && find . -type f -name \"%s\.list\" " \
+              "-exec sh -c \'pkg=$(echo \"$0\" | sed -e \"s|\./\(.*\)\.list|\\1|g\"); " \
+              "echo $(stat -c \"%%Y\" \"$0\") $(dpkg-query -W -f=\"\\\${Version}\\n\" \"$pkg\")\' {} \;" % package
+    elif os_type in ['centos', 'redhat', 'fedora']:
+        cmd = "rpm -q --queryformat='%%{installtime} " \
+              "%%{VERSION}-%%{RELEASE}.%%{ARCH}\\n' %s" % package
+    else:
+        print '[%s]: WARNING: Unsupported OS type (%s)' % (env.host_string, os_type)
+
+    pkg_versions = sudo(cmd)
+    for version_info in pkg_versions.split('\r\n'):
+        installed_time, version = version_info.split()
+        pkg_versions_list.append((int(installed_time), version))
+
+    # rearrange package version based on its installation time
+    pkg_versions_list.sort(key=lambda x: x[0])
+    return pkg_versions_list
+
+@task
+@roles('build')
+def reboot_on_kernel_update(reboot='True'):
+    '''When kernel package is upgraded as a part of any depends,
+       system needs to be rebooted so new kernel is effective
+    '''
+    all_nodes = env.roledefs['all']
+    # moving current node to last to reboot current node at last
+    if env.roledefs['build'] in all_nodes:
+        all_nodes.remove(env.roledefs['build']).append(env.roledefs['build'])
+    with settings(host_string=env.roledefs['cfgm'][0]):
+        os_type = detect_ostype()
+    if os_type in ['ubuntu']:
+        nodes_version_info_act = execute('get_package_installation_time', os_type,
+                                         '*linux-image-[0-9]*-generic')
+        # replace minor version with '-generic'
+        nodes_version_info = {}
+        for key, values in nodes_version_info_act.items():
+            nodes_version_info[key] = [(index0, ".".join(index1.split('.')[:-1]) + '-generic') \
+                                       for index0, index1 in values]
+    elif os_type in ['centos', 'redhat', 'fedora']:
+        nodes_version_info = execute('get_package_installation_time', os_type, 'kernel')
+    else:
+        print '[%s]: WARNING: Unsupported OS type (%s)' % (env.host_string, os_type)
+
+    for node in all_nodes:
+        with settings(host_string=node):
+            uname_out = sudo('uname -r')
+            if node in nodes_version_info.keys():
+                versions_info = nodes_version_info[node]
+                # skip reboot if latest kernel version is same as
+                # current kernel version in the node
+                if uname_out != versions_info[-1][1]:
+                    print '[%s]: Node is booted with old kernel, Reboot required' % node
+                    if reboot == 'True':
+                        execute(reboot_nodes, node)
+                    else:
+                        print '[%s]: WARNING:: Reboot is skipped as Reboot=False is set. ' \
+                              'Reboot manually before setup to avoid misconfiguration!' % node
+                else:
+                    print '[%s]: Node is already booted with new kernel' % node
+
 @roles('build')
 @task
 def install_contrail(reboot='True'):
@@ -544,6 +615,7 @@ def install_contrail(reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+    execute('reboot_on_kernel_update', reboot)
 
 @roles('build')
 @task
@@ -563,6 +635,7 @@ def install_without_openstack(manage_nova_compute='yes', reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+    execute('reboot_on_kernel_update', reboot)
 
 @roles('openstack')
 @task
