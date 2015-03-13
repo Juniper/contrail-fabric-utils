@@ -1340,7 +1340,7 @@ def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
     if env.roledefs['compute']:
        # Launching of VM is not surrently supported in TSN node.
        # Not proviosning nova_compute incase the compute node is TSN.
-       if 'tsn' in get_tsn_nodes():
+       if env.host_string in get_tsn_nodes():
            manage_nova_compute='no'
            configure_nova='no'
        execute("setup_only_vrouter_node", manage_nova_compute, configure_nova,  env.host_string)
