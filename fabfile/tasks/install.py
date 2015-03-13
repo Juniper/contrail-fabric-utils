@@ -556,7 +556,8 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
 
                 dpdk = getattr(env, 'dpdk', None)
                 if dpdk:
-                    contrail_vrouter_pkg = 'contrail-vrouter-dpdk-init'
+                    if env.host_string in dpdk:
+                        contrail_vrouter_pkg = 'contrail-vrouter-dpdk-init'
 
                 pkg = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
 
@@ -638,7 +639,8 @@ def create_install_repo_dpdk():
     """
     dpdk = getattr(env, 'dpdk', None)
     if dpdk:
-        create_install_repo_dpdk_node(env.host_string)
+        if env.host_string in dpdk:
+            create_install_repo_dpdk_node(env.host_string)
 
 @roles('build')
 @task
