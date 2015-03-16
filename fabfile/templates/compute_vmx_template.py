@@ -25,13 +25,16 @@ scsi0:0.present = "TRUE"
 scsi0:0.fileName = "$__vm_name__.vmdk"
 scsi0:0.deviceType = "scsi-hardDisk"
 ethernet0.present = "TRUE"
-ethernet0.virtualDev = "e1000"
 ethernet0.networkName = "$__fab_pg__"
 ethernet0.addressType = "static"
 ethernet0.address = "$__vm_mac__"
 chipset.onlineStandby = "FALSE"
 guestOS = "ubuntu-64"
 $__extension_params__
+''')
+
+esxi_ext_template = string.Template(
+'''ethernet0.virtualDev = "e1000"
 ''')
 
 esxi_eth1_template = string.Template(
@@ -47,4 +50,21 @@ ethernet2.virtualDev = "e1000"
 ethernet2.networkName = "$__data_pg__"
 ethernet2.addressType = "generated"
 ''')
+
+vcenter_ext_template = '''pciBridge0.present = "TRUE"
+svga.present = "TRUE"
+pciBridge4.present = "TRUE"
+pciBridge4.virtualDev = "pcieRootPort"
+pciBridge4.functions = "8"
+pciBridge5.present = "TRUE"
+pciBridge5.virtualDev = "pcieRootPort"
+pciBridge5.functions = "8"
+pciBridge6.present = "TRUE"
+pciBridge6.virtualDev = "pcieRootPort"
+pciBridge6.functions = "8"
+pciBridge7.present = "TRUE"
+pciBridge7.virtualDev = "pcieRootPort"
+pciBridge7.functions = "8"
+ethernet0.virtualDev = "vmxnet3"
+'''
 

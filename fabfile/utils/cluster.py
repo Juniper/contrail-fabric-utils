@@ -1,8 +1,40 @@
+import logging as LOG
+import paramiko
+
 from fabric.api import env, settings, run
 
 from fabos import detect_ostype, get_release, get_build
 from fabfile.config import *
 
+def ssh(host, user, passwd, log=LOG):
+    """ SSH to any host.
+    """
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(host, username=user, password=passwd)
+    return ssh
+# end ssh 
+       
+def execute_cmd(session, cmd, log=LOG):
+    """Executing long running commands in background has issues
+    So implemeted this to execute the command.
+    """
+    log.debug("Executing command: %s" % cmd)
+    stdin, stdout, stderr = session.exec_command(cmd)
+# end execute_cmd
+
+def execute_cmd_out(session, cmd, log=LOG):
+    """Executing long running commands in background through fabric has issues
+    So implemeted this to execute the command.
+    """
+    stdin, stdout, stderr = session.exec_command(cmd)
+    out = None
+    err = None
+    out = stdout.read()
+    err = stderr.read()
+        #log.debug("STDERR: %s", err)
+    return (out, err)
+# end execute_cmd_out
 
 def get_orchestrator():
     return getattr(env, 'orchestrator', 'openstack')
@@ -39,7 +71,6 @@ def get_vgw_details(compute_host_string):
 def get_vmware_details(compute_host_string):
     vmware = False
     esxi_data = {}
-    vmware_info = {}
     esxi_info = getattr(testbed, 'esxi_hosts', None)
     if esxi_info:
         for host in esxi_info.keys():
@@ -48,15 +79,17 @@ def get_vmware_details(compute_host_string):
             if (esxi_data['contrail_vm']['host'] == compute_host_string):
                 vmware = True
                 break
+    return (vmware, esxi_data)
 
-    compute_vm_info = getattr(testbed, 'compute_vm', None)
-    if compute_vm_info:
-        hosts = compute_vm_info.keys()
-        if compute_host_string in hosts:
-            vmware = True
-            vmware_info = compute_vm_info[compute_host_string]
-
-    return (vmware, esxi_data, vmware_info)
+def get_esxi_ssl_thumbprint(esxi_data):
+    ssh_session = ssh(esxi_data['ip'], esxi_data['username'], esxi_data['password'])
+    get_ssl_thumbprint = ("openssl x509 -in /etc/vmware/ssl/rui.crt -fingerprint -sha1 -noout")
+    out, err = execute_cmd_out(ssh_session, get_ssl_thumbprint)
+    out = out.split()
+    out = out[1].split('=')
+    ssl_thumbprint = out[1]
+    print 'ssl thumbprint of the ESXi host %s is %s' % (esxi_data['ip'], ssl_thumbprint)
+    return (ssl_thumbprint)
 
 def get_nodes_to_upgrade_pkg(package, os_type, *args, **kwargs):
     """get the list of nodes in which th given package needs to be upgraded"""
