@@ -605,13 +605,22 @@ def setup_ceilometer_mongodb(ip):
                 break
             sleep(1)
             run("service mongodb restart")
-        cmd = "mongo --host " + ip + " --eval 'db = db.getSiblingDB(\"ceilometer\"); db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", roles: [ \"readWrite\", \"dbAdmin\" ]})'"
+        # check if ceilometer user has already been added
         count = 1
-        while not sudo(cmd).succeeded:
+        cmd = "mongo --host " + ip + " --quiet --eval \"db.system.users.find({'user':'ceilometer'}).count()\" ceilometer"
+        output = sudo(cmd)
+        while not output.succeeded:
             count += 1
             if count > 10:
-                raise RuntimeError("Not able to add ceilometer mongodb user")
+                raise RuntimeError("Not able to connect to mongodb")
             sleep(1)
+            output = sudo(cmd)
+        # Does user ceilometer exist
+        if output == "1":
+            return
+        cmd = "mongo --host " + ip + " --eval 'db = db.getSiblingDB(\"ceilometer\"); db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", roles: [ \"readWrite\", \"dbAdmin\" ]})'"
+        if not sudo(cmd).succeeded:
+            raise RuntimeError("Not able to add ceilometer mongodb user")
 #end setup_ceilometer_mongodb
 
 @task
@@ -711,7 +720,7 @@ def setup_ceilometer_node(*args):
         self_host = get_control_host_string(host_string)
         self_ip = hstr_to_ip(self_host)
 
-        with  settings(host_string=host_string):
+        with settings(host_string=host_string):
             openstack_sku = get_openstack_sku()
 
             if openstack_sku == 'havana':
@@ -734,9 +743,19 @@ def setup_ceilometer_node(*args):
                 sudo("openstack-config --set %s database connection %s" % (conf_file, value))
             fixup_ceilometer_conf_common()
             #keystone auth params
+            cmd = "source /etc/contrail/openstackrc;keystone user-get ceilometer"
             with settings(warn_only=True):
-                ceilometer_user_exists = sudo("source /etc/contrail/openstackrc;keystone user-list | grep ceilometer").succeeded
-            if not ceilometer_user_exists:
+                output = sudo(cmd)
+            count = 1
+            while not output.succeeded and \
+                    "Unable to establish connection" in output:
+                count += 1
+                if count > 10:
+                    raise RuntimeError("Unable to connect to keystone")
+                sleep(1)
+                with settings(warn_only=True):
+                    output = sudo(cmd)
+            if not output.succeeded:
                 sudo("source /etc/contrail/openstackrc;keystone user-create --name=ceilometer --pass=CEILOMETER_PASS --tenant=service --email=ceilometer@example.com")
                 sudo("source /etc/contrail/openstackrc;keystone user-role-add --user=ceilometer --tenant=service --role=admin")
 
