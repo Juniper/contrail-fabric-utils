@@ -63,8 +63,11 @@ def is_ceilometer_supported():
     # Currently supported only on ubuntu icehouse
     os_type = detect_ostype()
     openstack_sku = get_openstack_sku()
-    if os_type in ['ubuntu', 'redhat'] and \
+    if os_type in ['redhat'] and \
             openstack_sku in ['icehouse']:
+        return True
+    elif os_type in ['ubuntu'] and \
+            openstack_sku in ['icehouse', 'juno']:
         return True
     else:
         return False

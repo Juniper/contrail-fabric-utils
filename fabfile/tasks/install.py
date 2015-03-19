@@ -315,6 +315,10 @@ def install_contrail_ceilometer_plugin_node(*args):
                 if not act_os_type in ['ubuntu', 'redhat']:
                     raise RuntimeError('Unsupported OpenStack distribution '
                         '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
+            elif openstack_sku == 'juno':
+                if not act_os_type in ['ubuntu']:
+                    raise RuntimeError('Unsupported OpenStack distribution '
+                        '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
             else:
                 raise RuntimeError('Unsupported OpenStack distribution (%s) '
                     'on (%s)' % (openstack_sku, act_os_type))
@@ -370,6 +374,15 @@ def install_ceilometer_node(*args):
         	'ceilometer-alarm-notifier',
 		'python-ceilometerclient',
                 'ceilometer-plugin-contrail']
+            pkg_juno_ubuntu = ['mongodb-server', 'mongodb-clients',
+                'python-pymongo', 'ceilometer-api',
+                'ceilometer-collector',
+                'ceilometer-agent-central',
+                'ceilometer-agent-notification',
+                'ceilometer-alarm-evaluator',
+                'ceilometer-alarm-notifier',
+                'python-ceilometerclient',
+                'ceilometer-plugin-contrail']
             pkg_icehouse_redhat = ['ceilometer-plugin-contrail']
             act_os_type = detect_ostype()
             openstack_sku = get_openstack_sku()
@@ -384,6 +397,12 @@ def install_ceilometer_node(*args):
                     pkg_ceilometer = pkg_icehouse_ubuntu
                 elif act_os_type in ['redhat']:
                     pkg_ceilometer = pkg_icehouse_redhat
+                else:
+                    raise RuntimeError('Unsupported OpenStack distribution '
+                        '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
+            elif openstack_sku == 'juno':
+                if act_os_type == 'ubuntu':
+                    pkg_ceilometer = pkg_juno_ubuntu
                 else:
                     raise RuntimeError('Unsupported OpenStack distribution '
                         '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
