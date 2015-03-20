@@ -476,7 +476,7 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
                       ]
             if getattr(testbed, 'haproxy', False):
                 pkg.append('haproxy')
-            if (ostype == 'ubuntu' and is_lbaas_enabled()):
+            if is_lbaas_enabled():
                 pkg.append('haproxy')
                 pkg.append('iproute')
 
