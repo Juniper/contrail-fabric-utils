@@ -510,6 +510,8 @@ def add_basic_images(image=None):
                ("vsrx/junos-vsrx-12.1-transparent.img", "vsrx-bridge", []),
                ("vsrx/junos-vsrx-12.1-in-network.img", "vsrx", []),
                ("analyzer/analyzer-vm-console.qcow2", "analyzer", []),
+               ("converts/ubuntu-dns-server.vmdk", "ubuntu-dns-server", []),
+               ("converts/ubuntu-dhcpdns-server.vmdk", "ubuntu-dhcpdns-server", []),
              ]
 
     for (loc, name, sizes) in images:
