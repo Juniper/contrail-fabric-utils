@@ -20,10 +20,10 @@ from fabfile.tasks.helpers import *
 from fabfile.utils.vcenter import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
-from fabfile.tasks.vmware import provision_vcenter, provision_esxi_node,\
+from fabfile.tasks.vmware import provision_vcenter,\
         configure_esxi_network, create_esxi_compute_vm
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
-        get_vmware_details
+        get_vmware_details, get_esxi_vms_and_hosts 
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
@@ -1162,6 +1162,9 @@ def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
            if  env.host_string in env.roledefs['tsn']:
                manage_nova_compute='no'
                configure_nova='no'
+       if get_orchestrator() == 'vcenter':
+           manage_nova_compute='no'
+           configure_nova='no'
        execute("setup_only_vrouter_node", manage_nova_compute, configure_nova,  env.host_string)
 
 @task
@@ -1295,22 +1298,14 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
                 cmd += " --vgw_gateway_routes %s" % str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
 
         # Contrail with vmware as orchestrator
-        (vmware, esxi_data, vmware_info) = get_vmware_details(host_string)
-        if vmware:
-            if esxi_data:
-                apply_esxi_defaults(esxi_data)
-                # Esxi provisioning parameters
-            	cmd += " --vmware %s" % esxi_data['ip']
-                cmd += " --vmware_username %s" % esxi_data['username']
-                cmd += " --vmware_passwd %s" % esxi_data['password']
-                cmd += " --vmware_vmpg_vswitch %s" % esxi_data['vm_vswitch']
-                cmd += " --vmware_vmpg_vswitch_mtu %s" % esxi_data['vm_vswitch_mtu']
-            if vmware_info:
-                # Vmware provisioning parameters
-                cmd += " --vmware %s" % vmware_info['esxi']['esx_ip']
-                cmd += " --vmware_username %s" % vmware_info['esxi']['esx_ip']
-                cmd += " --vmware_passwd %s" % vmware_info['esxi']['esx_password']
-                cmd += " --vmware_vmpg_vswitch %s" % vmware_info['esx_vm_vswitch']
+        esxi_data = get_vmware_details(host_string)
+        if esxi_data:
+            apply_esxi_defaults(esxi_data)
+            cmd += " --vmware %s" % esxi_data['ip']
+            cmd += " --vmware_username %s" % esxi_data['username']
+            cmd += " --vmware_passwd %s" % esxi_data['password']
+            cmd += " --vmware_vmpg_vswitch %s" % esxi_data['vm_vswitch']
+            cmd += " --vmware_vmpg_vswitch_mtu %s" % esxi_data['vm_vswitch_mtu']
 
         # Execute the script to provision compute node.
         with  settings(host_string=host_string):
@@ -1910,28 +1905,49 @@ def reset_config():
 
 @roles('build')
 @task
-def prov_esxi(deb=None):
+def prov_esxi(*args):
+    esxi_info = getattr(testbed, 'esxi_hosts', None)
+    if not esxi_info:
+        print 'Info: esxi_hosts block is not defined in testbed file. Exiting'
+        return
+    orch =  get_orchestrator()
+    if orch == 'vcenter':
+        vcenter_info = getattr(env, 'vcenter', None)
+        if not vcenter_info:
+            print 'Info: vcenter block is not defined in testbed file.Exiting'
+            return
+    if args:
+        host_list = args
+    else:
+        host_list = esxi_info.keys()
+
+    for host in host_list:
+         with settings(host=host):
+               if host in esxi_info.keys():
+                   apply_esxi_defaults(esxi_info[host])
+                   configure_esxi_network(esxi_info[host])
+                   if orch == 'openstack':
+                       create_esxi_compute_vm(esxi_info[host], None)
+                   if orch == 'vcenter':
+                       create_esxi_compute_vm(esxi_info[host], vcenter_info)
+               else:
+                   print 'Info: esxi_hosts block does not have the esxi host.Exiting'
+#end prov_compute_vm
+
+@roles('build')
+@task
+def add_esxi_to_vcenter(*args):
+    vcenter_info = getattr(env, 'vcenter', None)
+    if not vcenter_info:
+        print 'Error: vcenter block is not defined in testbed file.Exiting'
+        return
     esxi_info = getattr(testbed, 'esxi_hosts', None)
     if not esxi_info:
         print 'Error: esxi_hosts block is not defined in testbed file.Exiting'
         return
-    orch = get_orchestrator()
-    if orch is 'vcenter':
-        vcenter_info = getattr(env, 'vcenter', None)
-        if not vcenter_info:
-            print 'Error: vcenter block is not defined in testbed file.Exiting'
-            return
-        for esxi_node in esxi_info.keys():
-            esxi_data = esxi_info[esxi_node]
-            compute_vm_info = esxi_data['contrail_vm']
-            apply_esxi_defaults(esxi_data)
-            provision_esxi_node(deb, vcenter_info, esxi_data, compute_vm_info)
-    else:
-        for host in esxi_info.keys():
-            apply_esxi_defaults(esxi_info[host])
-            configure_esxi_network(esxi_info[host])
-            create_esxi_compute_vm(esxi_info[host])
-#end prov_compute_vm
+    host_list = args
+    (hosts, vms) = get_esxi_vms_and_hosts(host_list)
+    provision_vcenter(vcenter_info, hosts, vms)
 
 @roles('build')
 @task
@@ -1944,7 +1960,9 @@ def setup_vcenter():
     if not esxi_info:
         print 'Error: esxi_hosts block is not defined in testbed file.Exiting'
         return
-    provision_vcenter(vcenter_info, esxi_info)
+    host_list = esxi_info.keys()
+    (hosts, vms) = get_esxi_vms_and_hosts(host_list)
+    provision_vcenter(vcenter_info, hosts, vms)
 
 @task
 @roles('build')
