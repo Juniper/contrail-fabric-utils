@@ -3,7 +3,6 @@ from fabric.api import env, settings, run
 from fabos import detect_ostype, get_release, get_build
 from fabfile.config import *
 
-
 def get_orchestrator():
     return getattr(env, 'orchestrator', 'openstack')
 
@@ -37,26 +36,46 @@ def get_vgw_details(compute_host_string):
     return vgw_details
 
 def get_vmware_details(compute_host_string):
-    vmware = False
     esxi_data = {}
-    vmware_info = {}
     esxi_info = getattr(testbed, 'esxi_hosts', None)
     if esxi_info:
         for host in esxi_info.keys():
             esxi_data = esxi_info[host]
             data = esxi_data['contrail_vm']
             if (esxi_data['contrail_vm']['host'] == compute_host_string):
-                vmware = True
-                break
+                 return esxi_data
+            else:
+                 continue 
+    return None 
 
-    compute_vm_info = getattr(testbed, 'compute_vm', None)
-    if compute_vm_info:
-        hosts = compute_vm_info.keys()
-        if compute_host_string in hosts:
-            vmware = True
-            vmware_info = compute_vm_info[compute_host_string]
+def get_esxi_ssl_thumbprint(esxi_data):
+    host_string = '%s@%s' %(esxi_data['username'], esxi_data['ip'])
+    with settings(host_string = host_string, password = esxi_data['password'],
+                    warn_only = True, shell = '/bin/sh -l -c'):
+          out = run('openssl x509 -in /etc/vmware/ssl/rui.crt -fingerprint -sha1 -noout')
+          out = out.split()
+          out = out[7].split('=')
+          ssl_thumbprint = out[1]
+          print 'ssl thumbprint of the ESXi host %s is %s' % (esxi_data['ip'], ssl_thumbprint)
+    return ssl_thumbprint
 
-    return (vmware, esxi_data, vmware_info)
+def get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list):
+    hosts = []
+    vms = []
+    for host in host_list:
+         with settings(host=host):
+               if host in esxi_info.keys():
+                   esxi_data = esxi_info[host]
+                   vm_name = "ContrailVM"
+                   ssl_thumbprint = get_esxi_ssl_thumbprint(esxi_data)
+                   esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint
+                   hosts.append(esx_list)
+                   modified_vm_name = vm_name+"-"+vcenter_info['datacenter']+"-"+esxi_data['ip']
+                   vms.append(modified_vm_name)
+               else: 
+                   print 'Info: esxi_hosts block does not have the esxi host.Exiting'
+                   return
+    return (hosts,vms)
 
 def get_nodes_to_upgrade_pkg(package, os_type, *args, **kwargs):
     """get the list of nodes in which th given package needs to be upgraded"""
