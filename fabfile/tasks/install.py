@@ -546,6 +546,7 @@ def install_vrouter(manage_nova_compute='yes'):
         # Nova compute need not required for TSN node
         if 'tsn' in env.roledefs.keys():
             if  env.host_string in env.roledefs['tsn']: manage_nova_compute='no'
+        if get_orchestrator() is 'vcenter': manage_nova_compute='no'
         execute("install_only_vrouter_node", manage_nova_compute, env.host_string)
 
 @task
