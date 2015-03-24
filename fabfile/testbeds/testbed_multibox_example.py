@@ -403,8 +403,6 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #              optional, if vmdk_download_path is specified
 #        vmdk_download_path: download path of the contrail-vmdk.vmdk used to spawn vm  
 #                            optional, if vmdk is specified
-#        deb: absolute path of the contrail package to be installed on contrailvm
-#             optional, if contrail package is specified in command line
 #        ntp_server: ntp server ip for the contrail vm 
 ######################################################################################
 #esxi_hosts = {
