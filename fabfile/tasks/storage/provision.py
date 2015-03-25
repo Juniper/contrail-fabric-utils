@@ -20,7 +20,7 @@ def setup_webui_storage(mode):
     storage_webui_ip = hstr_to_ip(host_string)
 
     #get webui host password
-    storage_webui_host_password = get_env_.passwords(host_string)
+    storage_webui_host_password = get_env_passwords(host_string)
 
     cinder_vip = get_cinder_ha_vip()
     if cinder_vip != 'none':
