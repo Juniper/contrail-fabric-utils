@@ -242,7 +242,7 @@ class Vcenter(object):
                 return dc_moref
     
     def wait_for_task(self, task, actionName='job', hideResult=False):
-        while task.info.state == self.pyVmomi.vim.TaskInfo.State.running:
+        while task.info.state == (self.pyVmomi.vim.TaskInfo.State.running or self.pyVmomi.vim.TaskInfo.State.queued):
             time.sleep(2)
         if task.info.state == self.pyVmomi.vim.TaskInfo.State.success:
             if task.info.result is not None and not hideResult:
@@ -251,10 +251,9 @@ class Vcenter(object):
             else:
                 out = '%s completed successfully.' % actionName
                 print out
-        else:
-            out = '%s did not complete successfully: %s' % (actionName, task.info.error)
-            raise ValueError("Something went wrong in wait_for_task")
-            print out
+        elif task.info.state == self.pyVmomi.vim.TaskInfo.State.error:
+            out = 'Error - %s did not complete successfully: %s' % (actionName, task.info.error)
+            raise ValueError(out)
         return task.info.result
 
     def print_vm_info(self, virtual_machine, depth=1):
