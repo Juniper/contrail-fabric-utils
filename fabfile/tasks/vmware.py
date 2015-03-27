@@ -109,12 +109,13 @@ def create_esxi_compute_vm (esxi_host, vcenter_info):
     '''Spawns contrail vm on openstack managed esxi server (non vcenter env)'''
     orch = get_orchestrator()
     datastore = esxi_host['datastore']
-    vmdk = esxi_host['contrail_vm']['vmdk']
-    if orch == 'openstack':
-        assert vmdk, "Contrail VM vmdk image should be specified in testbed file"
-    if orch ==  'vcenter':
-        if vmdk is None:
-            vmdk = esxi_host['contrail_vm']['vmdk_download_path']
+    if 'vmdk_download_path' in esxi_host['contrail_vm'].keys():
+         vmdk_download_path = esxi_host['contrail_vm']['vmdk_download_path']
+         run("wget -O /tmp/ContrailVM-disk1.vmdk %s" % vmdk_download_path)
+         vmdk = "/tmp/ContrailVM-disk1.vmdk"
+    else:
+         vmdk = esxi_host['contrail_vm']['vmdk']
+         if vmdk is None:
             assert vmdk, "Contrail VM vmdk image or download path should be specified in testbed file"
     if orch is 'openstack':
         vm_name = esxi_host['contrail_vm']['name']
