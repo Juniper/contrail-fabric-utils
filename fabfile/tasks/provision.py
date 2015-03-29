@@ -1946,8 +1946,8 @@ def add_esxi_to_vcenter(*args):
         print 'Error: esxi_hosts block is not defined in testbed file.Exiting'
         return
     host_list = args
-    (hosts, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
-    provision_vcenter(vcenter_info, hosts, vms)
+    (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
+    provision_vcenter(vcenter_info, hosts, clusters, vms)
 
 @roles('build')
 @task
@@ -1961,8 +1961,8 @@ def setup_vcenter():
         print 'Error: esxi_hosts block is not defined in testbed file.Exiting'
         return
     host_list = esxi_info.keys()
-    (hosts, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
-    provision_vcenter(vcenter_info, hosts, vms)
+    (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
+    provision_vcenter(vcenter_info, hosts, clusters, vms)
 
 @task
 @roles('build')
