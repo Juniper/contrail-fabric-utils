@@ -371,7 +371,7 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #        'password': 'Contrail123!',
 #        'auth': 'https',
 #        'datacenter': 'kd_dc',
-#        'cluster': 'kd_cluster',
+#        'cluster': ['kd_cluster_1','kd_cluster_2'],
 #        'dv_switch': { 'dv_switch_name': 'kd_dvswitch',
 #                     },
 #        'dv_port_group': { 'dv_portgroup_name': 'kd_dvportgroup',
@@ -396,6 +396,7 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #    uplinck_nic: the nic used for underlay
 #                 optional, defaults to None
 #    data_store: the datastore on esxi where the vmdk is copied to
+#    cluster: name of the cluster to which this esxi is added
 #    contrail_vm information:
 #        mac: the virtual mac address for the contrail vm
 #        host: the contrail_vm ip in the form of 'user@contrailvm_ip'
@@ -411,6 +412,7 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #             'username': 'root',
 #             'password': 'c0ntrail123',
 #             'datastore': "/vmfs/volumes/ds1",
+#             'cluster': "kd_cluster_1",
 #             'contrail_vm': {
 #                   'mac': "00:50:56:05:ba:ba",
 #                   'host': "root@2.2.2.2",

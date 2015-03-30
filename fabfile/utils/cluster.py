@@ -62,20 +62,22 @@ def get_esxi_ssl_thumbprint(esxi_data):
 def get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list):
     hosts = []
     vms = []
+    clusters = []
     for host in host_list:
          with settings(host=host):
                if host in esxi_info.keys():
                    esxi_data = esxi_info[host]
                    vm_name = "ContrailVM"
                    ssl_thumbprint = get_esxi_ssl_thumbprint(esxi_data)
-                   esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint
+                   esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint,esxi_data['cluster']
                    hosts.append(esx_list)
                    modified_vm_name = vm_name+"-"+vcenter_info['datacenter']+"-"+esxi_data['ip']
                    vms.append(modified_vm_name)
                else: 
                    print 'Info: esxi_hosts block does not have the esxi host.Exiting'
                    return
-    return (hosts,vms)
+    clusters = vcenter_info['cluster']
+    return (hosts,clusters,vms)
 
 def get_nodes_to_upgrade_pkg(package, os_type, *args, **kwargs):
     """get the list of nodes in which th given package needs to be upgraded"""

@@ -18,16 +18,18 @@ class Vcenter(object):
         self.dvportgroup_num_ports = vcenter_params['dvportgroup_num_ports']
         self.hosts = vcenter_params['hosts']
         self.vms = vcenter_params['vms']
+        self.clusters = vcenter_params['clusters']
         
         try:
             
             self.connect_to_vcenter() 
             datacenter = self.create_datacenter(dcname=self.datacenter_name)
-            cluster=self.create_cluster(self.cluster_name,datacenter)
+            for cluster_name in self.clusters:
+                 cluster=self.create_cluster(cluster_name,datacenter)
             network_folder = datacenter.networkFolder
 	    for host_info in self.hosts:
-            	self.add_host(cluster,host_info[0],host_info[3],host_info[1],host_info[2])
-            dvs=self.create_dvSwitch(self.service_instance, network_folder, cluster, self.dvswitch_name)
+                self.add_host(host_info[4],host_info[0],host_info[3],host_info[1],host_info[2])
+            dvs=self.create_dvSwitch(self.service_instance, network_folder, self.clusters, self.dvswitch_name)
             self.add_dvPort_group(self.service_instance,dvs, self.dvportgroup_name)
             for vm_name in self.vms:
                 self.add_vm_to_dvpg(self.service_instance,vm_name,dvs, self.dvportgroup_name)
@@ -56,7 +58,7 @@ class Vcenter(object):
             cluster = host_folder.CreateClusterEx(name=cluster_name, spec=cluster_spec)
             return cluster
 
-    def add_host(self, cluster, hostname, sslthumbprint, username, password):
+    def add_host(self, cluster_name, hostname, sslthumbprint, username, password):
         host = self.get_obj([self.pyVmomi.vim.HostSystem], hostname)
         if host is not None:
             print("host already exists") 
@@ -64,8 +66,11 @@ class Vcenter(object):
         else:
             if hostname is None:
                 raise ValueError("Missing value for name.")
+            cluster = self.get_obj([self.pyVmomi.vim.ClusterComputeResource], cluster_name)
             if cluster is None:
-                raise ValueError("Missing value for cluster.")
+                error = 'Error - Cluster %s not found. Unable to add host %s' % (cluster_name, hostname)
+                raise ValueError(error)
+
             try:
                 #openssl x509 -in /etc/vmware/ssl/rui.crt -fingerprint -sha1 -noout
                 hostspec = self.pyVmomi.vim.host.ConnectSpec(hostName=hostname,sslThumbprint=sslthumbprint,userName=username, password=password)
@@ -165,13 +170,14 @@ class Vcenter(object):
             self.wait_for_task(task, si)
         print "Succesfully added  ContrailVM:%s to the DV port group" %(vm_name)
 
-    def create_dvSwitch(self, si, network_folder, cluster, dvs_name):
+    def create_dvSwitch(self, si, network_folder, clusters, dvs_name):
         dvs = self.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], dvs_name)
         if dvs is not None:
             print("dvswitch already exists") 
             return dvs
         else:
             pnic_specs = []
+            host_list = []
             dvs_host_configs = []
             uplink_port_names = []
             pvlan_configs = []
@@ -202,7 +208,13 @@ class Vcenter(object):
 
             dvs_config_spec.name = dvs_name
             dvs_config_spec.uplinkPortPolicy = self.pyVmomi.vim.DistributedVirtualSwitch.NameArrayUplinkPortPolicy()
-            hosts = cluster.host
+            for cluster_name in clusters:
+                cluster = self.get_obj([self.pyVmomi.vim.ClusterComputeResource], cluster_name)
+                host_list.append(cluster.host)
+            hosts = []
+            for mo in host_list:
+                for host in mo:
+                    hosts.append(host)
             for x in range(len(hosts)):
                 uplink_port_names.append("dvUplink%d" % x)
 
