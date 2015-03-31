@@ -1950,7 +1950,7 @@ def add_esxi_to_vcenter(*args):
     else:
         host_list = esxi_info.keys()
     (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
-    provision_vcenter(vcenter_info, hosts, clusters, vms)
+    provision_vcenter(vcenter_info, hosts, clusters, vms, 'True')
 
 @roles('build')
 @task
@@ -1965,7 +1965,7 @@ def setup_vcenter():
         return
     host_list = esxi_info.keys()
     (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
-    provision_vcenter(vcenter_info, hosts, clusters, vms)
+    provision_vcenter(vcenter_info, hosts, clusters, vms, 'False')
 
 @task
 @roles('build')

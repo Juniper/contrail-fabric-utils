@@ -186,7 +186,7 @@ def _template_substitute_write(template, vals, filename):
 #end _template_substitute_write
 
 @task
-def provision_vcenter(vcenter_info, hosts, clusters, vms):
+def provision_vcenter(vcenter_info, hosts, clusters, vms, update_dvs):
         apt_install(['contrail-vmware-utils'])
         vcenter_params = {}
         vcenter_params['server'] = vcenter_info['server']
@@ -202,6 +202,7 @@ def provision_vcenter(vcenter_info, hosts, clusters, vms):
         vcenter_params['hosts'] = hosts
         vcenter_params['vms'] = vms
         vcenter_params['clusters'] = clusters
+        vcenter_params['update_dvs'] = update_dvs
 
         Vcenter(vcenter_params)
 #end provision_vcenter
