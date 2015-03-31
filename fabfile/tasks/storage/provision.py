@@ -183,28 +183,18 @@ def setup_nfs_live_migration(mode):
         storage_pass_list=[]
         storage_host_list=[]
         storage_hostnames=[]
-        # One storage master is enough to configure nfs live-migration
-        entry = env.roledefs['storage-master'][0]
-        for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
-            if entry == sthostentry:
-                storage_hostnames.append(sthostname)
-                storage_host_password=get_env_passwords(entry)
-                storage_pass_list.append(storage_host_password)
-                storage_host = get_control_host_string(entry)
-                storage_data_ip=get_data_ip(storage_host)[0]
-                storage_host_list.append(storage_data_ip)
-        for entry in env.roledefs['storage-compute']:
+        for entry in env.roledefs['compute']:
             for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
-                if entry == sthostentry and entry != env.roledefs['storage-master'][0]:
+                if entry == sthostentry:
                     storage_hostnames.append(sthostname)
                     storage_host_password=get_env_passwords(entry)
                     storage_pass_list.append(storage_host_password)
                     storage_host = get_control_host_string(entry)
                     storage_data_ip=get_data_ip(storage_host)[0]
                     storage_host_list.append(storage_data_ip)
-        storage_master=env.roledefs['storage-master'][0]
+        storage_master=env.roledefs['openstack'][0]
         storage_master_ip=get_data_ip(storage_master)[0]
-        storage_master_password=get_env_passwords(env.roledefs['storage-master'][0])
+        storage_master_password=get_env_passwords(env.roledefs['openstack'][0])
         cfm = env.roledefs['cfgm'][0]
         cfm_ip = get_data_ip(cfm)[0]
 
@@ -222,8 +212,8 @@ def setup_nfs_live_migration(mode):
                 # storage-host-tokens - password for all the nodes (storage master + storage compute)
                 # live-migration - Enable/Disable live migration
                 # nfs-live-migration - NFS Livemigration configuration (Image path, subnet, host)
-                cmd= "PASSWORD=%s setup-vnc-livemigration --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s --nfs-live-migration %s" \
-                    %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), get_nfs_live_migration_opts())
+                cmd= "PASSWORD=%s setup-vnc-livemigration --storage-setup-mode %s --storage-master %s --storage-master-token %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s --nfs-live-migration %s" \
+                    %(storage_master_password, mode, storage_master_ip, storage_master_password, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), get_nfs_live_migration_opts())
                 print cmd
                 sudo(cmd)
 #end setup_nfs_live_migration_services
@@ -237,9 +227,9 @@ def setup_compute_storage():
 
 @task
 def setup_storage_compute_node(*args):
-	"""Provisions storage compute services in one or list of nodes"""
-	#dummy for now
-	return
+        """Provisions storage compute services in one or list of nodes"""
+        #dummy for now
+        return
 
 @task
 @roles('build')
