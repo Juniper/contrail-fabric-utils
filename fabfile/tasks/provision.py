@@ -1635,7 +1635,8 @@ def add_tor_agent_node(restart=True, *args):
                     run("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
                     run("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
             if restart:
-                sudo("service supervisor-vrouter restart")
+                sudo("supervisorctl -c /etc/contrail/supervisord_vrouter.conf update")
+
 @task
 @hosts(env.roledefs['all'])
 def cleanup_remote_syslog():
