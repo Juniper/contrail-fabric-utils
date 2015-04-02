@@ -337,34 +337,15 @@ def get_remote_path(path):
     remote_dir = "~/%s" % path.replace(user_home,'')
     return remote_dir
 
-def get_module(suite):
-    module = os.path.splitext(os.path.basename(suite))[0]
-    pkg = os.path.dirname(suite.split('/scripts/')[-1:][0]).replace('/', '.')
-    if pkg:
-        module = '%s.%s' % (pkg, module)
-    else:
-        module = module
-    return module
-
-def get_testcases(suites):
-    """Retuns the list of testcases in the specified unittest module."""
-    tests = []
-    classfinder = re.compile(r"^class\s+(.*)\(\s*.*", re.MULTILINE)
-    testfinder = re.compile(r"^\s+def\s+(test_.*)\(\s*", re.MULTILINE)
-    for suite in suites:
-        module = get_module(suite)
-        with open(suite, 'r') as suite:
-            data = suite.readlines()
-        for line in data:
-            classmatch = classfinder.search(line)
-            if classmatch:
-                testclass = classmatch.group(1)
-                continue
-            testmatch = testfinder.search(line)
-            if testmatch:
-                test = testmatch.group(1)
-                tests.append('%s.%s.%s' % (module.strip(), testclass.strip(), test.strip()))
-    return tests
+def get_test_features(feature=None):
+    cmd = "python contrail-test list"
+    if feature:
+        cmd += " -f %s" % feature
+    cfgm_host = env.roledefs['cfgm'][0]
+    with settings(hide('everything'), host_string=cfgm_host):
+        with cd('%s/tools/' % env.test_repo_dir):
+            features = sudo(cmd)
+    return features.split("\r\n")
 
 @roles('build')
 @task
@@ -379,38 +360,7 @@ def run_sanity(feature='sanity', test=None):
 
     if os.environ.has_key('GUESTVM_IMAGE'):
         env_vars = env_vars + ' ci_image=%s' %(os.environ['GUESTVM_IMAGE'])
-    suites = {'svc_firewall' : ['%s/scripts/servicechain/firewall/sanity.py' % repo,
-                                '%s/scripts/servicechain/firewall/regression.py' % repo],
-              'floating_ip'  : ['%s/scripts/floating_ip_tests.py' % repo],
-              'mx'           : ['%s/scripts/mx_test.py' % repo],
-              'headless'     : ['%s/scripts/headless_vrouter/test_headless_vrouter.py' % repo],
-              'rsyslog'      : ['%s/scripts/rsyslog/sdn_rsyslog_tests.py' % repo],
-              'policy'       : ['%s/scripts/NewPolicyTests.py' % repo,
-                                '%s/scripts/policyTrafficTests.py' % repo,
-                                '%s/scripts/policy_api_test.py' % repo,
-                                '%s/scripts/sdn_tests.py' % repo,
-                                '%s/scripts/NewPolicyTestsBase.py' % repo],
-              'analytics'    : ['%s/scripts/analytics_tests_with_setup.py' % repo],
-              'basic_vn_vm'  : ['%s/scripts/vm_vn_tests.py' % repo],
-              'ha_service_sanity'  : ['%s/scripts/ha/ha_service_sanity.py' % repo],
-              'ha_reboot_sanity'  : ['%s/scripts/ha/ha_reboot_sanity.py' % repo],
-              'webui'       : ['%s/scripts/webui/tests_with_setup_base_webui.py' % repo],
-              'devstack'       : ['%s/scripts/devstack_sanity_tests_with_setup.py' % repo],
-              'svc_mirror'   : ['%s/scripts/servicechain/mirror/sanity.py' % repo,
-                                '%s/scripts/servicechain/mirror/regression.py' % repo],
-              'vpc'          : ['%s/scripts/vpc/sanity.py' % repo],
-              'sec_group'    : ['%s/scripts/securitygroup/sanity_base.py' % repo,
-                                '%s/scripts/securitygroup/regression.py' % repo],
-              'multi_tenancy': ['%s/scripts/test_perms.py' % repo],
-              'vdns'         : ['%s/scripts/vdns/vdns_tests.py' % repo],
-              'discovery'    : ['%s/scripts/discovery_tests_with_setup.py' % repo],
-              'analytics_scale' : ['%s/scripts/analytics_scale_tests_with_setup.py' % repo],
-              'performance'  : ['%s/scripts/performance/sanity.py' % repo],
-              'multitenancy'  : ['%s/scripts/test_perms.py' % repo],
-              'ecmp'            : ['%s/scripts/ecmp/sanity_with_setup.py' %repo],
-              'evpn'            : ['%s/scripts/evpn/evpn_tests.py' %repo],
-              'vgw'             : ['%s/scripts/vgw/vgw_tests.py' %repo],
-              }
+
     if feature in ('upgrade','upgrade_only'):
         with settings(host_string = env.roledefs['cfgm'][0]):
                 put("./fabfile/testbeds/testbed.py", "/opt/contrail/utils/fabfile/testbeds/testbed.py", use_sudo=True)
@@ -419,37 +369,31 @@ def run_sanity(feature='sanity', test=None):
                     put(test,"/tmp/temp/", use_sudo=True)
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
-    with settings(host_string = env.roledefs['cfgm'][0]):
-        if exists('/opt/contrail/api-venv/bin/activate'):
-            pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
-        else :
-            pre_cmd = ''
-    cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
-    cmds = {'sanity'       : pre_cmd + '%s ./run_tests.sh --sanity --send-mail -U' % (env_vars),
-            'quick_sanity' : pre_cmd + '%s ./run_tests.sh -T quick_sanity --send-mail -t' % (env_vars),
-            'ci_sanity'    : pre_cmd + '%s ./run_tests.sh -T ci_sanity --send-mail -U' % (env_vars),
-            'ci_sanity_WIP'    : pre_cmd + '%s ./run_tests.sh -T ci_sanity_WIP --send-mail -U' % (env_vars),
-            'ci_svc_sanity': pre_cmd + '%s python ci_svc_sanity_suite.py' % (env_vars),
-            'regression'   : pre_cmd + '%s python regression_tests.py' % (env_vars),
-            'upgrade'      : pre_cmd + '%s ./run_tests.sh -T upgrade --send-mail -U' % (env_vars),
-            'webui_sanity' : pre_cmd + '%s python webui_tests_suite.py' % (env_vars),
-            'ci_webui_sanity' : pre_cmd + '%s python ci_webui_sanity.py' % (env_vars),
-            'devstack_sanity' : pre_cmd + '%s python devstack_sanity_tests_with_setup.py' % (env_vars),
-            'upgrade_only' : pre_cmd + '%s python upgrade/upgrade_only.py' % (env_vars)
+    cmds = {'sanity'       : './run_tests.sh --sanity --send-mail -U',
+            'quick_sanity' : './run_tests.sh -T quick_sanity --send-mail -t',
+            'ci_sanity'    : './run_tests.sh -T ci_sanity --send-mail -U',
+            'ci_sanity_WIP': './run_tests.sh -T ci_sanity_WIP --send-mail -U',
+            'ci_svc_sanity': 'python ci_svc_sanity_suite.py',
+            'regression'   : 'python regression_tests.py',
+            'upgrade'      : './run_tests.sh -T upgrade --send-mail -U',
+            'webui_sanity' : 'python webui_tests_suite.py',
+            'ci_webui_sanity' : 'python ci_webui_sanity.py',
+            'devstack_sanity' : 'python devstack_sanity_tests_with_setup.py',
+            'upgrade_only' : 'python upgrade/upgrade_only.py'
              }
     if CONTROLLER_TYPE == 'Cloudstack':
         env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../fixtures:.:./cloudstack:/opt/contrail/cloudstack' TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s" % (test_delay_factor, test_retry_factor)
-        cmds = {'sanity'   : pre_cmd + '%s python cloudstack/cs_sanity_suite.py' % (env_vars)
+        cmds = {'sanity'   : 'python cloudstack/cs_sanity_suite.py'
                }
 
-    if (feature != 'help' and
-        feature not in suites.keys() + cmds.keys()):
-        print "ERROR: Unsuported feature '%s'" % feature
-        feature = 'help'
+    if feature != 'help':
+        if feature not in get_test_features() + cmds.keys():
+            print "ERROR: Unsuported feature '%s'" % feature
+            feature = 'help'
 
     if feature == 'help':
         print "Usage: fab run_sanity[<:feature>[,list]|[,<testcase>]]"
-        print "       fab run_sanity[:%s]" % ' | :'.join(suites.keys() + cmds.keys())
+        print "       fab run_sanity[:%s]" % ' | :'.join(get_test_features() + cmds.keys())
         print "\n<:feature> is Optional; Default's to <:sanity>"
         print "<:feature><,list> Lists the testcase in the specified <feature> as below,"
         print "\tmod1.class1.test1"
@@ -461,26 +405,30 @@ def run_sanity(feature='sanity', test=None):
         return
 
     if feature not in cmds.keys():
+        tests = get_test_features(feature)
         if test == 'list':
-            print "\nList of tests:\n\t" + '\n\t'.join(get_testcases(suites[feature]))
+            print "\nList of tests:\n\t" + '\n\t'.join(tests)
             return
         elif test:
-            tests = get_testcases(suites[feature])
-            if test not in tests:
-                print "Test '%s' not present in %s." % (test, suites[feature])
+            if any(test in a_test for a_test in tests):
+                pass
+            else:
+                print "Test '%s' not present." % test
                 return
         else:
-            tests = [get_module(suite) for suite in suites[feature]]
             test = ' '.join(tests)
 
     execute(setup_test_env)
     cfgm_host = env.roledefs['cfgm'][0]
     with settings(host_string = cfgm_host):
-        with cd('%s/' %(get_remote_path(env.test_repo_dir))):
-            if feature in cmds.keys():
-                sudo(cmds[feature])
-                return
-            sudo(cmd + test)
+        if feature in cmds.keys():
+            with cd('%s/' %(get_remote_path(env.test_repo_dir))):
+                cmd = '%s %s' % (env_vars, cmds[feature])
+                sudo(cmd)
+        else:
+            with cd('%s/tools/' %(get_remote_path(env.test_repo_dir))):
+                cmd = '%s python contrail-test run -T ' % (env_vars)
+                sudo(cmd + test)
 
 #end run_sanity
 
