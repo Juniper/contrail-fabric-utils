@@ -902,6 +902,12 @@ def setup_openstack_node(*args):
         if openstack_ip_list:
             cmd += ' --openstack_ip_list %s' % openstack_ip_list
 
+        osapi_compute_workers, conductor_workers = get_nova_workers()
+        if osapi_compute_workers:
+            cmd += ' --osapi_compute_workers %s' % osapi_compute_workers
+        if conductor_workers:
+            cmd += ' --conductor_workers %s' % conductor_workers
+
         # Execute the provision openstack script
         with  settings(host_string=host_string):
             with cd(INSTALLER_DIR):
