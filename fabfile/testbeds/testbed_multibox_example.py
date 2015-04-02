@@ -159,6 +159,10 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #analytics_statistics_ttl = 48
 #analytics_flow_ttl = 48
 
+#following parameter allows to specify minimum amount of disk space in the analytics
+#database partition, if configured amount of space is not present, it will fail provisioning
+#minimum_diskGB = 256
+
 #OPTIONAL BONDING CONFIGURATION
 #==============================
 #Inferface Bonding
@@ -279,6 +283,8 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #    'service_token' : '33c57636fbc2c5552fd2', #Common service token for for all openstack services
 #    'amqp_host' : '10.204.217.19',            #IP of AMQP Server to be used in openstack
 #    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
+#    'osapi_compute_workers' : 40,             #Default 40, For low memory system reduce the osapi compute workers thread.
+#    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
 #}
 
 # Link-Local Metadata Service

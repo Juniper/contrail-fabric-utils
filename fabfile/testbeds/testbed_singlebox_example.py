@@ -65,6 +65,14 @@ env.ostypes = {
 #ntp server the servers should point to
 #env.ntp_server = 'ntp.juniper.net'
 
+# OPTIONAL COMPUTE HYPERVISOR CHOICE:
+#======================================
+# Compute Hypervisor
+#env.hypervisor = {
+#    host1: 'docker',
+#}
+#  Specify the hypervisor to be provisioned in the compute node.(Default=libvirt)
+
 # INFORMATION FOR DB BACKUP/RESTORE ..
 #=======================================================
 #Optional,Backup Host configuration if it is not available then it will put in localhost
@@ -212,6 +220,8 @@ env.ostypes = {
 #    'service_token' : '33c57636fbc2c5552fd2', #Common service token for for all openstack services
 #    'amqp_host' : '10.204.217.19',            #IP of AMQP Server to be used in openstack
 #    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
+#    'osapi_compute_workers' : 40,             #Default 40, For low memory system reduce the osapi compute workers thread.
+#    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
 #}
 
 # Neutron specific configuration 
