@@ -4,6 +4,7 @@ os_username = 'admin'
 os_password = 'contrail123'
 os_tenant_name = 'demo'
 
+host9 = 'root@10.84.26.9'
 host10 = 'root@10.84.26.10'
 host11 = 'root@10.84.26.11'
 host12 = 'root@10.84.26.12'
@@ -28,27 +29,30 @@ router_asn = 64512
 public_vn_rtgt = 12345
 public_vn_subnet = '10.84.34.0/23'
 
-host_build = 'root@10.84.26.15'
+host_build = 'root@10.84.26.23'
 
 env.roledefs = {
-    'all': [host10, host11, host12, host13, host14, host15, host16, host17, host18, host23, host24, host25, host26, host27, host28, host29, host30, host31],
-    'cfgm': [host15, host23],
-    'openstack': [host14],
-    'webui': [host23],
-    'control': [host15, host23],
-    'compute': [host10, host11, host12, host13, host16, host17, host18, host24, host25, host26, host27, host28, host29, host30, host31],
-    'collector': [host15, host23],
-    'database': [host15, host23],
+    'all': [host9,host10, host11, host12, host13, host15, host16, host17, host18, host23,
+            host24, host25, host26, host27, host28, host29, host30, host31],
+    'cfgm': [host23, host24, host25],
+    'openstack': [host23, host24, host25],
+    'webui': [host23, host24, host25],
+    'control': [host23, host24, host25],
+    'compute': [host9, host10, host11, host12, host13, host14, host15, host16, host17, host18, host26, host27, host28, host29, host30, host31],
+    'collector': [host23, host24, host25],
+    'database': [host23, host24, host25],
     'build': [host_build],
-    'storage-master': [host14],
-    'storage-compute': [host11, host12, host13, host16, host17, host18, host24, host25, host26, host27, host28, host29, host30],
+    'storage-master': [host23, host24, host25],
+    'storage-compute': [host9, host10, host11, host12, host13, host15],
 }
 
 env.hostnames = {
-    'all': ['b6s10', 'b6s11', 'b6s12', 'b6s13', 'b6s14', 'b6s15', 'b6s16', 'b6s17', 'b6s18', 'b6s23', 'b6s24', 'b6s25', 'b6s26', 'b6s27', 'b6s28', 'b6s29', 'b6s30', 'b6s31']
+    'all': ['b6s9','b6s10', 'b6s11', 'b6s12', 'b6s13', 'b6s14', 'b6s15', 'b6s16', 'b6s17', 'b6s18',
+            'b6s23', 'b6s24', 'b6s25', 'b6s26', 'b6s27', 'b6s28', 'b6s29', 'b6s30', 'b6s31', 'b6s32']
 }
 
 bond= {
+    host9 : { 'name': 'bond0', 'member': ['p6p1','p6p2'], 'mode':'802.3ad' },
     host10 : { 'name': 'bond0', 'member': ['eth2','eth3'], 'mode':'802.3ad' },
     host11 : { 'name': 'bond0', 'member': ['eth2','eth3'], 'mode':'802.3ad' },
     host12 : { 'name': 'bond0', 'member': ['eth2','eth3'], 'mode':'802.3ad' },
@@ -71,6 +75,7 @@ bond= {
 }
 
 control_data = {
+    host9 : { 'ip': '192.168.69.10/24', 'gw' : '192.168.69.254', 'device':'bond0' },
     host10 : { 'ip': '192.168.69.9/24', 'gw' : '192.168.69.254', 'device':'bond0' },
     host11 : { 'ip': '192.168.69.6/24', 'gw' : '192.168.69.254', 'device':'bond0' },
     host12 : { 'ip': '192.168.69.7/24', 'gw' : '192.168.69.254', 'device':'bond0' },
@@ -93,32 +98,35 @@ control_data = {
 }
 
 static_route  = {
+    host9 : [{ 'ip': '192.168.68.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' }],
     host10 : [{ 'ip': '192.168.68.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' }],
     host11 : [{ 'ip': '192.168.68.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' }],
     host12 : [{ 'ip': '192.168.68.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' }],
     host13 : [{ 'ip': '192.168.68.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' }],
     host14 : [{ 'ip': '192.168.68.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' }],
-    host15 : [{ 'ip': '192.168.68.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' },
-              { 'ip': '192.168.100.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' }],
+    host15 : [{ 'ip': '192.168.68.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' }],
     host16 : [{ 'ip': '192.168.68.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' }],
     host17 : [{ 'ip': '192.168.68.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' }],
     host18 : [{ 'ip': '192.168.68.0', 'netmask' : '255.255.255.0', 'gw':'192.168.69.254', 'intf': 'bond0' }],
     host23 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' },
               { 'ip': '192.168.100.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }],
-    host24 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }],
-    host25 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }],
+    host24 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' },
+              { 'ip': '192.168.100.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }],
+    host25 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' },
+              { 'ip': '192.168.100.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }],
     host26 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }],
     host27 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }],
     host28 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }],
     host29 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }],
     host30 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }],
-    host31 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }]
+    host31 : [{ 'ip': '192.168.69.0', 'netmask' : '255.255.255.0', 'gw':'192.168.68.254', 'intf': 'bond0' }],
 
 }
 
 env.password = 'c0ntrail123'
 
 env.passwords = {
+    host9: 'c0ntrail123',
     host10: 'c0ntrail123',
     host11: 'c0ntrail123',
     host12: 'c0ntrail123',
@@ -143,6 +151,7 @@ env.passwords = {
 }
 
 env.ostypes = {
+    host9: 'ubuntu',
     host10: 'ubuntu',
     host11: 'ubuntu',
     host12: 'ubuntu',
@@ -165,15 +174,16 @@ env.ostypes = {
 }
 
 storage_node_config = {
-    host11 : { 'disks' : ['/dev/sdb'], 'journal' : ['/dev/sdc']  },
-    host12 : { 'disks' : ['/dev/sdb'], 'journal' : ['/dev/sdc']  },
-    host13 : { 'disks' : ['/dev/sdb'], 'journal' : ['/dev/sdc']  },
+    host11 : { 'disks' : ['/dev/sdc'], 'journal' : ['/dev/sdd']  },
+    host12 : { 'disks' : ['/dev/sdc'], 'journal' : ['/dev/sdd']  },
+    host13 : { 'disks' : ['/dev/sdc'], 'journal' : ['/dev/sdd']  },
 }
+
 #not doing HA as Cepf doesnt support HA.
 env.ha= {
-#   'internal_vip': '192.168.69.200',
-#   'external_vip': '10.84.24.200',
-#    'nfs_server'      : '3.3.3.3',                #IP address of the NFS Server which will be mounted to /var/lib/glance/images of openstack Node, Defaults to env.roledefs['compute'][0]
+    'internal_vip': '192.168.68.251',
+    'external_vip': '10.84.26.251',
+#    'nfs_server'      : '3.3.3.3',                #IP address of the NFS Server which will be mounted to /var/lib/glance/images of openstack Node, Defaults t                                                   # o env.roledefs['compute'][0]
 #    'nfs_glance_path' : '/var/tmp/images/',       #NFS Server path to save images, Defaults to /var/tmp/glance-images/
 }
 
