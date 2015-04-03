@@ -53,12 +53,6 @@ def setup_rhosp_node():
     sudo('source keystonerc_admin && keystone user-password-update --pass %s admin' % openstack_password)
     sudo("sed -i -e 's/export OS_PASSWORD=.*/export OS_PASSWORD=%s/' keystonerc_admin " % openstack_password)
     with settings(warn_only=True):
-        sudo("service openstack-nova-compute status")
-    sudo("service openstack-nova-compute stop")
-    sudo("chkconfig openstack-nova-compute off")
-    with settings(warn_only=True):
-        sudo("service openstack-nova-compute status")
-    with settings(warn_only=True):
         sudo("service neutron-server status")
     sudo("service neutron-server stop")
     sudo("chkconfig neutron-server off")
@@ -71,7 +65,13 @@ def setup_rhosp_node():
             sudo("ln -s /root/keystonerc_admin /etc/contrail/openstackrc")
     cfgm_0_ip = testbed.env['roledefs']['cfgm'][0].split('@')[1]
     keystone_ip = get_keystone_ip()
-    sudo("source /etc/contrail/openstackrc; nova service-disable $(hostname) nova-compute")
+    # openstack is not a compute node, so no need to run compute services from redhat openstack
+    if env.host_string not in testbed.env['roledefs']['compute']:
+        sudo("service openstack-nova-compute status")
+        sudo("service openstack-nova-compute stop")
+        sudo("chkconfig openstack-nova-compute off")
+        sudo("service openstack-nova-compute status")
+        sudo("source /etc/contrail/openstackrc; nova service-disable $(hostname) nova-compute")
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT network_api_class nova.network.neutronv2.api.API")
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_url http://%s:9696" % cfgm_0_ip)
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_admin_auth_url http://%s:35357/v2.0" % keystone_ip)
