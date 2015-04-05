@@ -439,7 +439,8 @@ def add_images(image=None):
                ("Tier2-Web-Snapshot.qcow2", "Tier2-Web"),
                ("Tier2-DB-Snapshot.qcow2", "Tier2-DB"),
                ("vsrx-fw-no-ping.qcow2", "vsrx-fw-no-ping"),
-               ("sugarcrm.vmdk", "sugarcrm") 
+               ("sugarcrm.vmdk", "sugarcrm") ,
+               ("docker/phusion-baseimage-enablesshd.tar", "phusion-baseimage-enablesshd"),
              ]
 
     for (loc, name) in images:
@@ -453,6 +454,10 @@ def add_images(image=None):
 
         if ".vmdk" in loc:
             sudo("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format ovf --disk-format vmdk --file "+remote+")")
+        elif "docker" in loc:
+            image_name = remote.split(".tar")[0]
+            sudo("docker load -i %s" % remote)
+            sudo("(source /etc/contrail/openstackrc; docker save '"+image_name+"'| glance image-create --name '"+name+"' --is-public True --container-format docker --disk-format raw)")
         else:
             sudo("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format ovf --disk-format qcow2 --file "+remote+")")
         sudo("rm "+remote)
