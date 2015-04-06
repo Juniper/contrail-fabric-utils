@@ -186,7 +186,7 @@ def install_cloudstack_packages(pkg=None):
     check_cs_version_in_config()
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     if not 'systemvm_template' in env:
-        env.systemvm_template = "http://10.84.5.100/cloudstack/vm_templates/systemvm64template-unknown-xen.vhd.bz2"
+        env.systemvm_template = "http://10.84.5.120/cs-shared/cloudstack/vm_templates/systemvm64template-unknown-xen.vhd.bz2"
     run('sh /opt/contrail/cloudstack-utils/cloudstack-install.sh %s %s %s %s' %
                 (env.config['nfs_share_path'], env.systemvm_template, env.host, env.cs_version))
     execute(cloudstack_api_setup)
