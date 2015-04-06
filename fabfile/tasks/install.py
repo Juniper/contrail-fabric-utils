@@ -759,6 +759,8 @@ def install_contrail(reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+        #Clear the connections cache
+        connections.clear()
     execute('reboot_on_kernel_update', reboot)
 
 @roles('build')
