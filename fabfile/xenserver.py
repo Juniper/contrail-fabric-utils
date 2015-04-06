@@ -40,7 +40,7 @@ def reimage():
         print 'Applying SP1 patch...'
         if not 'xen62sp1_repo' in env:
             print 'Xen SP1 repo not set. Defaulting to the US repo'
-            env.xen62sp1_repo = 'http://10.84.5.100/xen62sp1'
+            env.xen62sp1_repo = 'http://10.84.5.120/cs-shared/xen62sp1'
         sudo('cd /tmp && wget %s/XS62ESP1.xsupdate && wget %s/XS62ESP1-src-pkgs.tar.bz2' % (env.xen62sp1_repo, env.xen62sp1_repo))
         sudo('xe patch-upload file-name=/tmp/XS62ESP1.xsupdate')
         sudo('xe patch-pool-apply uuid=0850b186-4d47-11e3-a720-001b2151a503')

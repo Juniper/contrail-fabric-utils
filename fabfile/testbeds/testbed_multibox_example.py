@@ -416,7 +416,7 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #             'contrail_vm': {
 #                   'mac': "00:50:56:05:ba:ba",
 #                   'host': "root@2.2.2.2",
-#                   'vmdk_download_path': "http://10.84.5.100/vmware/vmdk/ContrailVM-disk1.vmdk",
+#                   'vmdk_download_path': "http://10.84.5.120/cs-shared/vmware/vmdk/ContrailVM-disk1.vmdk",
 #                   'ntp_server': "10.84.9.17",
 #             }
 #       }
