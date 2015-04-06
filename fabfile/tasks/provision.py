@@ -1,3 +1,4 @@
+import os
 import string
 import textwrap
 import json
@@ -1871,6 +1872,23 @@ def add_tor_agent_node(restart=True, *args):
                 # Execute the provision toragent script
                 with cd(INSTALLER_DIR):
                     sudo(cmd)
+                # In SSL mode, create the SSL cert and private key files
+                if toragent_dict[host_string][i]['tor_ovs_protocol'].lower() == 'pssl':
+                    domain_name = sudo("domainname -f")
+                    cert_file = "/etc/contrail/ssl/certs/tor." + str(tor_id) + ".cert.pem"
+                    privkey_file = "/etc/contrail/ssl/private/tor." + str(tor_id) + ".privkey.pem"
+                    ssl_cmd = "openssl req -new -x509 -sha256 -newkey rsa:4096 -nodes -subj \"/C=US/ST=Global/L="
+                    ssl_cmd += tor_name + "/O=" + tor_vendor_name + "/CN=" + domain_name + "\""
+                    ssl_cmd += " -keyout " + privkey_file + " -out " + cert_file
+                    sudo(ssl_cmd)
+                    # if CA cert file is specified, copy it to the target
+                    if 'ca_cert_file' in toragent_dict[host_string][i] and \
+                        os.path.isfile(toragent_dict[host_string][i]['ca_cert_file']):
+                        with open(toragent_dict[host_string][i]['ca_cert_file'], "r") as certfile:
+                            certdata = certfile.read()
+                        ca_cert_cmd = "echo \"" + certdata + "\" > /etc/contrail/ssl/certs/cacert.pem "
+                        sudo(ca_cert_cmd)
+
                 cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
                 cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
                 cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
