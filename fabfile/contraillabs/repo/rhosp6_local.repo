@@ -1,6 +1,6 @@
 [rhosp6-local-repo]
 name=rhosp6-local-repo
-baseurl=http://10.84.5.100/rhel/rhosp6/packages
+baseurl=http://10.84.5.120/cs-shared/rhel/rhosp6/packages
 enabled=1
 priority=1
 gpgcheck=0

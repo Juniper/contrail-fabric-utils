@@ -12,7 +12,7 @@ builder = 'vjoshi@10.204.216.56'
 env.password = 'c0ntrail123'
 env.cs_version = '4.3.0'
 env.xen_ver = '6.2SP1'
-env.xen62sp1_repo = 'http://10.84.5.100/xen62sp1'
+env.xen62sp1_repo = 'http://10.84.5.120/cs-shared/xen62sp1'
 
 env.hosts = [
     controller,
