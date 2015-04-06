@@ -65,7 +65,7 @@ def create_vmx (esxi_host, vm_name):
         ext_params = compute_vmx_template.vcenter_ext_template
     else:
         eth0_type = "e1000"
-        ext_params = compute_vmx_template.esxi_ext_template.safe_substitute({'__vm_pg__' : vm_pg})
+        ext_params = compute_vmx_template.esxi_eth1_template.safe_substitute({'__vm_pg__' : vm_pg})
 
     if data_pg:
         data_intf = compute_vmx_template.esxi_eth2_template.safe_substitute({'__data_pg__' : data_pg})
@@ -84,7 +84,7 @@ def create_vmx (esxi_host, vm_name):
     return vmx_file
 #end create_vmx
 
-def update_compute_vm_settings(ip, user, passwd, name, ntp_server):
+def update_compute_vm_settings(ip, user, passwd, vm_name, ntp_server):
 
     host_string = '%s@%s' %(user, ip)
     with settings(host_string = host_string, password = passwd,
@@ -102,7 +102,7 @@ def update_compute_vm_settings(ip, user, passwd, name, ntp_server):
           #end ntp setup
 
           #update /etc/hosts
-          run('echo "%s %s" >> /etc/hosts' %(ip , name))
+          run('echo "%s %s" >> /etc/hosts' %(ip , vm_name))
 #end update_compute_vm_settings
 
 def create_esxi_compute_vm (esxi_host, vcenter_info):
@@ -170,7 +170,7 @@ def create_esxi_compute_vm (esxi_host, vcenter_info):
     vm_user = vm_host[0]
     vm_passwd = env.passwords[contrail_vm_info['host']]
     ntp_server = contrail_vm_info['ntp_server']
-    update_compute_vm_settings(vm_ip, vm_user, vm_passwd, name, ntp_server)
+    update_compute_vm_settings(vm_ip, vm_user, vm_passwd, vm_name, ntp_server)
 #end create_esxi_compute_vm
 
 def _template_substitute(template, vals):
