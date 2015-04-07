@@ -84,27 +84,6 @@ def create_vmx (esxi_host, vm_name):
     return vmx_file
 #end create_vmx
 
-def update_compute_vm_settings(ip, user, passwd, vm_name, ntp_server):
-
-    host_string = '%s@%s' %(user, ip)
-    with settings(host_string = host_string, password = passwd,
-                    warn_only = True, connection_attempts = 5):
-          #Set up ntp
-          print "Updating NTP settings on ContrailVM"
-          run('ntpdate %s' %(ntp_server))
-          run('mv /etc/ntp.conf /etc/ntp.conf.orig')
-          run('touch /var/lib/ntp/drift')
-          run('echo "driftfile /var/lib/ntp/drift" >> /etc/ntp.conf')
-          run('echo "server %s" >> /etc/ntp.conf' %(ntp_server))
-          run('echo "restrict 127.0.0.1" >> /etc/ntp.conf')
-          run('echo "restrict -6 ::1" >> /etc/ntp.conf')
-          run('service ntp restart')
-          #end ntp setup
-
-          #update /etc/hosts
-          run('echo "%s %s" >> /etc/hosts' %(ip , vm_name))
-#end update_compute_vm_settings
-
 def create_esxi_compute_vm (esxi_host, vcenter_info):
     '''Spawns contrail vm on openstack managed esxi server (non vcenter env)'''
     orch = get_orchestrator()
@@ -164,13 +143,6 @@ def create_esxi_compute_vm (esxi_host, vcenter_info):
          if out.failed:
              raise Exception("Unable to power on %s on %s:%s" % (vm_name,
                                       esxi_host['ip'], out))
-    contrail_vm_info = esxi_host['contrail_vm']
-    vm_host = contrail_vm_info['host'].split('@')
-    vm_ip = vm_host[1]
-    vm_user = vm_host[0]
-    vm_passwd = env.passwords[contrail_vm_info['host']]
-    ntp_server = contrail_vm_info['ntp_server']
-    update_compute_vm_settings(vm_ip, vm_user, vm_passwd, vm_name, ntp_server)
 #end create_esxi_compute_vm
 
 def _template_substitute(template, vals):

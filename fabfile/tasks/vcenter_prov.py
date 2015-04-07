@@ -248,6 +248,7 @@ class Vcenter(object):
             print "dvSwitch %s does not exist" % dvs_name
             return
         else:
+            host_list = []
             add_hosts = []
             dvs_host_configs = []
             uplink_port_names = []
