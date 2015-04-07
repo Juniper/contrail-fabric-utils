@@ -429,7 +429,7 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 # esx_vmdk: the absolute path of the contrail-vmdk used to spawn vm
 #OR
 # if esx_vmdk is not provided vmdk_download_path should be given to download vmdk
-#example: 'vmdk_download_path' : "http://10.84.5.100/vmware/vmdk/ContrailVM-disk1.vmdk",
+#example: 'vmdk_download_path' : "http://10.84.5.120//cs-shared/vmware/vmdk/ContrailVM-disk1.vmdk",
 # vm_deb: absolute path of the contrail package installed on contrailvm if not provided on commandline
 # password: root password for the contrailvm
 # domain: domain of the contrailvm

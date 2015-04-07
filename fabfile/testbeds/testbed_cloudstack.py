@@ -13,7 +13,7 @@ builder = 'root@10.84.5.100'
 env.password = 'c0ntrail123'
 env.cs_version = '4.3.0'
 env.xen_ver = '6.2SP1'
-env.xen62sp1_repo = 'http://10.84.5.100/xen62sp1'
+env.xen62sp1_repo = 'http://10.84.5.120/cs-shared/xen62sp1'
 
 env.roledefs = {
     'control': [controller],
@@ -28,9 +28,9 @@ config = {
     # Repos, NFS, etc.
     'nfs_share_path': '10.84.5.6:/cs-attic',
     'yum_repo_host': '10.84.5.100',
-    'vm_template_url': 'http://10.84.5.100/cloudstack/vm_templates/centos56-x86_64-xen.vhd.bz2',
+    'vm_template_url': 'http://10.84.5.120/cs-shared/cloudstack/vm_templates/centos56-x86_64-xen.vhd.bz2',
     'vm_template_name': 'CentOS 5.6',
-    'vsrx_template_url': 'http://10.84.5.100/cloudstack/vm_templates/juniper-vsrx-nat.vhd.bz2',
+    'vsrx_template_url': 'http://10.84.5.120/cs-shared/cloudstack/vm_templates/juniper-vsrx-nat.vhd.bz2',
     'vsrx_template_name': 'Juniper vSRX',
     'mx_ip': '10.84.18.252',
     'route_target': '1002',
