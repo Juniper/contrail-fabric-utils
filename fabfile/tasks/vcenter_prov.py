@@ -31,9 +31,9 @@ class Vcenter(object):
 	    for host_info in self.hosts:
                 self.add_host(host_info[4],host_info[0],host_info[3],host_info[1],host_info[2])
             if self.update_dvs is 'True':
-                dvs = self.reconfigure_dvSwitch(self.service_instance, cluster, self.dvswitch_name)
+                dvs = self.reconfigure_dvSwitch(self.service_instance, self.clusters, self.dvswitch_name)
             else:
-                dvs=self.create_dvSwitch(self.service_instance, network_folder, cluster, self.dvswitch_name)
+                dvs=self.create_dvSwitch(self.service_instance, network_folder, self.clusters, self.dvswitch_name)
             self.add_dvPort_group(self.service_instance,dvs, self.dvportgroup_name)
             for vm_name in self.vms:
                 self.add_vm_to_dvpg(self.service_instance,vm_name,dvs, self.dvportgroup_name)
