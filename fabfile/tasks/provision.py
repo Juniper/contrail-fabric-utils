@@ -57,9 +57,11 @@ def get_openstack_credentials():
 
 def fixup_restart_haproxy_in_all_cfgm(nworkers):
     template = string.Template("""
+#contrail-config-marker-start
+
 global
         tune.maxrewrite 1024
-#contrail-config-marker-start
+
 listen contrail-config-stats :5937
    mode http
    stats enable
@@ -97,6 +99,8 @@ $__contrail_disc_backend_servers__
     #server  10.84.14.2 10.84.14.2:9110 check
     #server  10.84.14.2 10.84.14.2:9111 check
 
+$__tor_agent_ha_config__
+
 $__rabbitmq_config__
 #contrail-config-marker-end
 """)
@@ -107,6 +111,7 @@ $__rabbitmq_config__
     api_server_lines = ''
     disc_listen_port = 9110
     disc_server_lines = ''
+    tor_agent_ha_config = ''
     rabbitmq_config = """
 listen  rabbitmq 0.0.0.0:5673
     mode tcp
@@ -139,6 +144,10 @@ listen  rabbitmq 0.0.0.0:5673
         # Dont add rabbitmq confing twice in haproxy, as setup_ha has added already.
         rabbitmq_config = ''
 
+    # create TOR agent configuration for the HA proxy
+    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():
+        tor_agent_ha_config = get_all_tor_agent_haproxy_config(env.roledefs['toragent'])
+
     for host_string in env.roledefs['cfgm']:
         haproxy_config = template.safe_substitute({
             '__contrail_quantum_servers__': q_server_lines,
@@ -147,6 +156,7 @@ listen  rabbitmq 0.0.0.0:5673
             '__contrail_hap_user__': 'haproxy',
             '__contrail_hap_passwd__': 'contrail123',
             '__rabbitmq_config__': rabbitmq_config,
+            '__tor_agent_ha_config__': tor_agent_ha_config,
             })
 
         with settings(host_string=host_string):
@@ -170,6 +180,51 @@ listen  rabbitmq 0.0.0.0:5673
             sudo("service haproxy restart")
 
 # end fixup_restart_haproxy_in_all_cfgm
+
+# Get HA proxy configuration for a TOR agent
+def get_tor_agent_haproxy_config(proxy_name, proxy_port, ip1, port1, ip2, port2):
+    tor_agent_ha_config = '\n'
+    tor_agent_ha_config = tor_agent_ha_config + 'listen %s :%s\n' %(proxy_name, str(proxy_port))
+    tor_agent_ha_config = tor_agent_ha_config + '    mode tcp\n'
+    tor_agent_ha_config = tor_agent_ha_config + '    server %s %s:%s\n' %(ip1, ip1, str(port1))
+    tor_agent_ha_config = tor_agent_ha_config + '    server %s %s:%s\n' %(ip2, ip2, str(port2))
+    tor_agent_ha_config = tor_agent_ha_config + '\n'
+    return tor_agent_ha_config
+#end get_tor_agent_haproxy_config
+
+# Get HA proxy configuration for all TOR agents
+def get_all_tor_agent_haproxy_config(*args):
+    tor_agent_ha_config = ''
+    for host_list in args:
+        for host_string in host_list:
+            with settings(host_string=host_string):
+                toragent_dict = getattr(env, 'tor_agent', None)
+                for i in range(len(toragent_dict[host_string])):
+                    if 'tor_ha_ip' in toragent_dict[host_string][i] and \
+                        'tor_ha_ovs_port' in toragent_dict[host_string][i]:
+                        proxy_name = 'contrail-tor-agent-' + toragent_dict[host_string][i]['tor_id']
+                        ip1 = host_string.split('@',1)[1]
+                        port1 = int(toragent_dict[host_string][i]['tor_ovs_port'])
+                        ip2 = toragent_dict[host_string][i]['tor_ha_ip']
+                        port2 = int(toragent_dict[host_string][i]['tor_ha_ovs_port'])
+                        tor_agent_ha_config = tor_agent_ha_config + get_tor_agent_haproxy_config(proxy_name, port1, ip1, port1, ip2, port2)
+    return tor_agent_ha_config
+#end get_all_tor_agent_haproxy_config
+
+@roles('cfgm')
+@task
+def setup_haproxy_config():
+    """Provisions HA proxy service in all nodes defined in cfgm role."""
+    if env.roledefs['cfgm']:
+        execute("setup_haproxy_config_node", env.host_string)
+
+@task
+def setup_haproxy_config_node(*args):
+    """Provisions HA proxy service in one or list of nodes."""
+
+    nworkers = 1
+    fixup_restart_haproxy_in_all_cfgm(nworkers)
+#end setup_haproxy_node
 
 def fixup_restart_haproxy_in_one_compute(compute_host_string):
     compute_haproxy_template = string.Template("""

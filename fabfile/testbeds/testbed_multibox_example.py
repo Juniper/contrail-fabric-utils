@@ -350,21 +350,24 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #-------------------------------------
 # tor_ip: IP of the tor switch
 # tor_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
+# tor_type: Always ovs
 # tor_ovs_port: Port number to be used by ovs
-# tor_ovs_protocol: Connection protocol to be used by ovs. Currently only TCP
+# tor_ovs_protocol: Connection protocol between TOR Agent and TOR (tcp / pssl)
 # tor_tsn_ip: TSN node ip 
-#env.tor_agent =
-#{host3:[{'tor_ip':'10.204.217.39','tor_id':'1','tor_ovs_port':'9999','tor_ovs_protocol':'tcp','tor_tsn_ip':'10.204.221.35'}]}
-
-# tor_tsn_ip: TSN node ip
 # tor_tsn_name: Name of the TSN node
 # tor_name: Name of the tor switch 
 # tor_tunnel_ip: Data plane IP for the tor switch
 # tor_vendor_name: Vendor type for TOR switch
-# tor_http_server_port: HTTP server port. Same will be used by tor agent
-# introspect
+# tor_http_server_port: HTTP server port. Same will be used by tor agent for introspect
+# ca_cert_file: Path where the CA certificate file is stored on the node where fab is run.
+#               Fab copies the file to node where TOR agent is run.
+#               Used when tor_ovs_protocol is pssl.
+#               The certificates on the TOR are based on this CA cert.
+# tor_ha_ip: IP of the TOR agent where redundant TOR Agent will run.
+# tor_ha_ovs_port: Port number used for OVS by the redundant TOR agent.
+#
 #env.tor_agent = {host10:[{
-#                    'tor_ip':'10.204.217.39', IP of the tor switch
+#                    'tor_ip':'10.204.217.39',
 #                    'tor_id':'1',
 #                    'tor_type':'ovs',
 #                    'tor_ovs_port':'9999',
@@ -375,6 +378,9 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #                    'tor_tunnel_ip':'34.34.34.34',
 #                    'tor_vendor_name':'Juniper'
 #                    'tor_http_server_port': '9010',
+#                    'ca_cert_file':'/root/ca_cert.pem',
+#                    'tor_ha_ip':'10.204.217.100',
+#                    'tor_ha_ovs_port':'9888',
 #                       }]
 #                }
 #######################################
