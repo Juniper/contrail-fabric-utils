@@ -226,6 +226,13 @@ def setup_test_env():
             mail_server = env.mail_server
             mail_port = env.mail_port
 
+        vcenter = getattr(env, 'vcenter', None)
+        vc_ip = vcenter['server'] if vcenter else ''
+        vc_port = vcenter['port'] if vcenter else ''
+        vc_user = vcenter['username'] if vcenter else ''
+        vc_pwd = vcenter['password'] if vcenter else ''
+        vc_dc = vcenter['datacenter'] if vcenter else ''
+
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__testbed_json_file__'   : 'sanity_testbed.json',
              '__nova_keypair_name__'   : key,
@@ -268,7 +275,12 @@ def setup_test_env():
              '__stop_on_fail__'        : stop_on_fail,
              '__ha_setup__'            : getattr(testbed, 'ha_setup', ''),
              '__ipmi_username__'       : getattr(testbed, 'ipmi_username', ''),
-             '__ipmi_password__'       : getattr(testbed, 'ipmi_password', '')
+             '__ipmi_password__'       : getattr(testbed, 'ipmi_password', ''),
+             '__vcenter_server__'      : vc_ip,
+             '__vcenter_port__'        : vc_port,
+             '__vcenter_user__'        : vc_user,
+             '__vcenter_passwd__'      : vc_pwd,
+             '__vcenter_dc__'          : vc_dc,
             })
 
         fd, fname = tempfile.mkstemp()
