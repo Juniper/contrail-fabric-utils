@@ -224,3 +224,8 @@ def get_hypervisor(host_string):
 
 def get_env_passwords(host_string):
     return get_from_testbed_dict('passwords', host_string, None)
+
+def get_nova_workers():
+    osapi_compute_workers = get_from_testbed_dict('openstack', 'osapi_compute_workers', 40)
+    conductor_workers = get_from_testbed_dict('openstack', 'conductor_workers', 40)
+    return (osapi_compute_workers, conductor_workers)
