@@ -338,7 +338,7 @@ def config_demo():
 def add_images(image=None):
     mount=None
     if '10.84' in env.host:
-        mount= '10.84.5.100'
+        mount= '10.84.5.120/cs-shared'
     elif '10.204' in env.host:
         mount= '10.204.216.51'
     if not mount :
@@ -412,7 +412,7 @@ def preload_image_to_esx(url, glance_id, sizes, version):
 def add_basic_images(image=None):
     mount=None
     if '10.84' in env.host:
-        mount= '10.84.5.100'
+        mount= '10.84.5.120/cs-shared'
     elif '10.204' in env.host:
         mount= '10.204.216.51'
     if not mount :
