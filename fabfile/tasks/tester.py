@@ -345,6 +345,8 @@ def get_test_features(feature=None):
     with settings(hide('everything'), host_string=cfgm_host):
         remote_test_dir = get_remote_path(env.test_repo_dir)
         if not exists(remote_test_dir):
+            print "Setting up test enviroinment in the first cfgm..."
+            print "Will take maximum of 2 minutes"
             execute(setup_test_env)
         with cd('%s/tools/' % remote_test_dir):
             features = sudo(cmd)
@@ -363,6 +365,8 @@ def run_sanity(feature='sanity', test=None):
 
     if os.environ.has_key('GUESTVM_IMAGE'):
         env_vars = env_vars + ' ci_image=%s' %(os.environ['GUESTVM_IMAGE'])
+    elif env.has_key('guestvm_image'):
+        env_vars = env_vars + ' ci_image=%s' % env.get('guestvm_image')
 
     if feature in ('upgrade','upgrade_only'):
         with settings(host_string = env.roledefs['cfgm'][0]):
