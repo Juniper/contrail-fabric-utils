@@ -93,7 +93,13 @@ def setup_glance_images_loc():
     nfs_server = get_from_testbed_dict('ha', 'nfs_server', None)
     nfs_glance_path = get_from_testbed_dict('ha', 'nfs_glance_path', '/var/tmp/glance-images/')
     if not nfs_server:
-        with settings(host_string=env.roledefs['compute'][0]):
+        try:
+            nfs_server = filter(lambda compute: compute not in env.roledefs.get('tsn', []),
+                                env.roledefs['compute'])[0]
+            print "NFS server is: %s" % nfs_server
+        except IndexError:
+            raise RuntimeError("Please specifiy an NFS Server, No computes can be used as NFS server.")
+        with settings(host_string=nfs_server):
             sudo('mkdir -p /var/tmp/glance-images/')
             sudo('chmod 777 /var/tmp/glance-images/')
             sudo('echo "/var/tmp/glance-images *(rw,sync,no_subtree_check)" >> /etc/exports')
