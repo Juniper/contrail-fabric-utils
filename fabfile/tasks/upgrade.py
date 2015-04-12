@@ -401,6 +401,16 @@ def restore_config_dir(role, upgrade_data):
 def backup_config(from_rel):
     execute("backup_config_node", from_rel, env.host_string)
 
+def fix_tsn_toragent_backup_config_node(host_string, upgrade_data):
+    if host_string env.roledefs['tsn']:
+        upgrade_data['compute']['backup_files'].remove('/etc/nova/nova.conf')
+        upgrade_data['compute']['backup_files'].remove('/etc/libvirt/qemu.conf')
+        upgrade_data['compute']['upgrade'].remove('contrail-openstack-vrouter')
+    if host_string env.roledefs['toragent']:
+        upgrade_data['compute']['backup_files'].append('/etc/contrail/contrail-tor-agent*.conf')
+        upgrade_data['compute']['backup_files'].append('/etc/contrail/supervisord_vrouter_files/contrail-tor-agent*.ini')
+    return upgrade_data
+
 @task
 def backup_config_node(from_rel, *args):
     for host_string in args:
@@ -409,6 +419,8 @@ def backup_config_node(from_rel, *args):
             to_rel = get_release()
             to_build = get_build().split('~')[0]
             upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
+            if host_string in env.roledefs['tsn'] or host_string in env.roledefs['toragent']:
+                upgrade_data = fix_tsn_toragent_backup_config_node(from_rel, host_string, upgrade_data)
             sudo('mkdir -p /var/tmp/contrail')
             for role in upgrade_data.keys():
                 if env.host_string in env.roledefs[role]:
@@ -464,11 +476,27 @@ def rename_files(role, upgrade_data):
         for old_conf_file, new_conf_file in upgrade_data[role]['rename_files']:
             sudo("mv %s %s" % (old_conf_file, new_conf_file))
 
+def fix_tsn_toragent_upgrade_node(host_string, upgrade_data):
+    with  settings(host_string=host_string):
+        ostype = detect_ostype()
+        if ostype in ['ubuntu']:
+            dkms_status = get_build('contrail-vrouter-dkms')
+            if dkms_status is not None:
+                contrail_vrouter_pkg = 'contrail-vrouter-dkms'
+            else:
+                vrouter_generic_pkg = sudo("apt-cache pkgnames contrail-vrouter-$(uname -r)")
+                contrail_vrouter_pkg = vrouter_generic_pkg or 'contrail-vrouter-dkms'
+            upgrade_data['compute']['upgrade'].append('contrail_vrouter_pkg')
+            upgrade_data['compute']['upgrade'].append('contrail-vrouter-common')
+    return upgrade_data
+
 def upgrade(from_rel, role):
     ostype = detect_ostype()
     to_rel = get_release()
     to_build = get_build().split('~')[0]
     upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
+    if host_string in env.roledefs['tsn']:
+        upgrade_data = fix_tsn_toragent_upgrade_node(host_string, upgrade_data)
     #backup_config(role, upgrade_data)
     if ostype == 'centos':
         #buildid = get_build('contrail-setup')
