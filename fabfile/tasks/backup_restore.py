@@ -1,10 +1,13 @@
+import subprocess
 from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.utils.host import *
 from fabric.contrib.files import exists
 from fabfile.utils.fabos import detect_ostype
 from fabfile.tasks.services import *
+from fabfile.tasks.zookeeper import *
 import string
+import time
 
 # Define global path for taking backup and restore
 backup_path = '~/contrail_bkup_data/'
@@ -19,12 +22,14 @@ def backup_data():
     Backup will happen for following tasks.
     1.Cassandra_db
     2.Mysql_db
-    3.Instances_data
+    3.zookeeper data
+    4.Instances_data
     '''
     try:
         execute(backup_cassandra_db)
         execute(backup_mysql_db)
         execute(backup_glance_image)
+        execute(backup_zookeeper_data)
         execute(backup_nova_instance_data)
 
     except SystemExit:
@@ -39,12 +44,16 @@ def restore_data():
     Restore will happen for following tasks.
     1.Cassandra_db
     2.Mysql_db
-    3.Instances_data
+    3.zookeeper data
+    4.Instances_data
     '''
     try:
         execute(restore_cassandra_db)
         execute(restore_mysql_db)
         execute(restore_glance_image)
+        execute(restore_zookeeper_data)
+        execute(reset_mysql_service_token)
+        execute(restart_neutron_server)
         execute(restore_nova_instance_data)
 
     except SystemExit:
@@ -112,6 +121,25 @@ def backup_glance_image():
 
 # end backup_glance_image
 
+@task
+def backup_zookeeper_data():
+    '''
+    Get target backup node & call main function - backup_zookeeper
+    Testbed.py is inspected for remote_node definition.
+        Option available to define destination path in case of remote node..
+    '''
+    db_datas = getattr(testbed, 'backup_db_path', None)
+    backup_node = getattr(testbed, 'backup_node', None)
+    store_db = 'local'
+    if backup_node:
+        store_db = 'remote'
+    try:
+        execute(backup_zookeeper, db_datas, store_db)
+    except SystemExit:
+        raise SystemExit("\nBackup zookeeper data Failed .... Aborting")
+
+# end backup_zookeeper_data
+
 
 @task
 def backup_nova_instance_data():
@@ -163,16 +191,17 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
         if exists('backup_info.txt'):
             sudo('rm -rf backup_info.txt')
         with cd(db_path):
-            skip_key = getattr(testbed, 'skip_keyspace', None)
-            if not skip_key:
-                print "Need to Define the keyspace names in testbed.py if your are selected as custom snapshot. So that it will omit those keyspace name during the  database snapshot"
-                raise SystemExit()
-            cs_key = sudo('ls')
-            cs_key = cs_key.translate(string.maketrans("\n\t\r", "   "))
-            custom_key = replace_key(cs_key, skip_key)
-        nodetool_cmd = 'nodetool -h localhost -p 7199 snapshot'
-        if cassandra_backup == 'custom':
-            nodetool_cmd = 'nodetool -h localhost -p 7199 snapshot %s ' % custom_key
+            if cassandra_backup == 'custom':
+                skip_key = getattr(testbed, 'skip_keyspace', None)
+                if not skip_key: 
+                    print "Need to Define the keyspace names in testbed.py if your are selected as custom snapshot. So that it will omit those keyspace name during the  database snapshot"
+                    raise SystemExit()
+                cs_key = sudo('ls')
+                cs_key = cs_key.translate(string.maketrans("\n\t\r", "   "))
+                custom_key = replace_key(cs_key, skip_key)
+                nodetool_cmd = 'nodetool -h localhost -p 7199 snapshot %s ' % custom_key
+            else:
+                nodetool_cmd = 'nodetool -h localhost -p 7199 snapshot'
         sudo(nodetool_cmd)
         snapshot_list = sudo("find %s/  -name 'snapshots' " % db_path)
         snapshot_list = snapshot_list.split('\r\n')
@@ -285,6 +314,51 @@ def backup_instance_image(db_datas, store_db='local'):
                 remote_path)
             sudo(remote_bk_cmd)
 # end backup_instances_images
+
+@roles('database')
+def backup_zookeeper(db_datas, store_db='local'):
+    """Backup zookeeper data to all database nodes """
+    host = env.host_string
+    global backup_path, final_dir
+    msg = "Processing zookeeper backup and default path for backup data is ~/contrail_bkup_data/hostname/zookeeper  in ({HOST}) \n"
+    with settings(host_string=host):
+        host_name = sudo('hostname')
+        if store_db == 'local':
+            print (msg.format(HOST=host_name))
+        if store_db == 'remote':
+            msg = "Processing zookeeper data Backup into remote host:({HOST}) and default path is ~/contrail_bkup_data/hostname/zookeeper or backup path is defined as per testbed.py file \n"
+            remote_host = env.roledefs['backup'][0]
+            print (msg.format(HOST=remote_host))
+        data_path = sudo("grep  'dataDir'   /etc/zookeeper/conf/zoo.cfg")
+        zoo_path = data_path.split('=')
+        zoo_path = zoo_path[-1]
+        zoo_path = zoo_path.strip() 
+        db_path = zoo_path
+        execute(verify_disk_space, db_datas, db_path, store_db)
+        remote_image_path = '%s%s/' % (backup_path, host_name)
+        if db_datas:
+            remote_image_path = final_dir + '%s/' % (host_name)
+        if store_db == 'local':
+            sudo(
+                ' rsync -az --progress  %s  %s ' %
+                (zoo_path, remote_image_path))
+        execute(
+            backup_info_file,
+            remote_image_path,
+            backup_type='zookeeper data')
+        if store_db == 'local':
+            sudo('cp backup_info.txt %s' % remote_image_path)
+        if store_db == 'remote':
+            remote_path = '%s' % (remote_image_path)
+            source_path = '%s  ' % (zoo_path)
+            execute(ssh_key_gen)
+            remote_cmd='rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress    %s   %s:%s' %(  source_path,remote_host,remote_path)
+            sudo(remote_cmd)   
+            remote_bk_cmd = 'scp -o "StrictHostKeyChecking no" -r  backup_info.txt  %s:%s' % (
+                remote_host,
+                remote_path)
+            sudo(remote_bk_cmd)
+# end backup_zookeeper
 
 
 @roles('compute')
@@ -435,7 +509,7 @@ def restore_cassandra_db():
     # Check for Cassandra DB restore script in DB nodes.
     for host in env.roledefs['database']:
         with settings(host_string=host):
-            if not exists('/opt/contrail/utils/cass-db-restore-v5.sh'):
+            if not exists('/opt/contrail/utils/cass-db-restore.sh'):
                 raise AttributeError(
                     "\nRestore cassandra db script path doesnot find for the host:%s .... Aborting" %
                     host)
@@ -509,6 +583,29 @@ def restore_glance_image():
 
 # end  restore_glance_image
 
+@task
+def restore_zookeeper_data():
+    '''
+    Restore zookeeper data to database nodes with following steps:
+    1. Get target backup node [can be local or remote node]
+    2. Stop services and restore from the target node..
+    '''
+
+    backup_node = getattr(testbed, 'backup_node', None)
+    backup_data_path = getattr(testbed, 'backup_db_path', None)
+    store_db = 'local'
+    if backup_node:
+        store_db = 'remote'
+
+    try:
+        execute(stop_zookeeper)
+        execute(restore_zookeeper, backup_data_path, store_db)
+        execute(start_zookeeper)
+    except SystemExit:
+        raise SystemExit("\nRestore zookeeper data failed .... Aborting")
+
+# end  restore_zookeeper_data
+
 
 @task
 def restore_nova_instance_data():
@@ -533,6 +630,46 @@ def restore_nova_instance_data():
         raise SystemExit("\nRestore instance data failed .... Aborting")
 
 # end  restore_nova_instance_data
+
+
+@roles('cfgm')
+def restart_neutron_server():
+    sudo('service neutron-server restart')
+    time.sleep(5)
+
+@roles('openstack')
+def reset_mysql_service_token():
+    '''after restoring the backup, the mysql and service token will be overwritten with that of old tokens.
+       reset these with new tokens '''
+
+    host = env.host_string
+    with settings(host_string=host, warn_only=True):
+        mysql_pass = sudo('cat /etc/contrail/mysql.token')
+        sudo('service supervisor-openstack stop')
+        sudo('service mysql stop')
+        cmd="mysqld --skip-grant-tables & sleep 5;"
+        sudo(cmd, pty=False)
+        time.sleep(5)
+        cmd="mysql mysql -e \"UPDATE user SET Password=PASSWORD('%s') WHERE User='root';FLUSH PRIVILEGES;\"" %mysql_pass
+        sudo(cmd)
+        sudo('service mysql restart')
+        sudo('find / -name keystone-signing* | xargs -L1 rm -rf')
+        sudo('service supervisor-openstack start')
+        time.sleep(10)
+        stoken=sudo('cat /etc/contrail/service.token')
+        cmd = "source /etc/contrail/openstackrc;" 
+        cmd1 = "keystone user-password-update --pass %s neutron;" %stoken 
+        cmd = cmd + cmd1
+        cmd1 = "keystone user-password-update --pass %s nova;" %stoken
+        cmd = cmd + cmd1
+        cmd1 = "keystone user-password-update --pass %s glance;" %stoken 
+        cmd = cmd + cmd1
+        cmd1 = "keystone user-password-update --pass %s cinder" %stoken
+        cmd = cmd + cmd1
+        sudo(cmd)
+        time.sleep(3)
+
+# end reset_mysql_service_token
 
 
 @task
@@ -611,7 +748,7 @@ def restore_cassandra(backup_data_path='', store_db='local'):
         if snapshot_list:
             with cd(snapshot_list):
                 snapshot_name = sudo('ls -t | head -n1')
-            cmd = '/opt/contrail/utils/cass-db-restore-v5.sh -b  %s -s %s  -n %s' % (
+            cmd = '/opt/contrail/utils/cass-db-restore.sh -b  %s -s %s  -n %s' % (
                 db_path,
                 snapshot_dir,
                 snapshot_name)
@@ -741,6 +878,63 @@ def restore_instance_image(backup_data_path, store_db='local'):
                 (remote_image_path,images_path ))
 
   # end restore_glance_images
+
+@roles('database')
+def restore_zookeeper(backup_data_path, store_db='local'):
+    """Restore zookeeper data to all database nodes  """
+    #import pdb;pdb.set_trace()
+    global backup_path
+    host = env.host_string
+    msg = "Restoring backed-up data in ({HOST}).\n"
+    with settings(host_string=host):
+        host_name = sudo('hostname')
+        data_path = sudo("grep  'dataDir'   /etc/zookeeper/conf/zoo.cfg")
+        zoo_path = data_path.split('=')
+        zoo_path = zoo_path[-1]
+        zoo_path = zoo_path.strip()
+        zoo_path = zoo_path.split('zookeeper')
+        zoo_path = zoo_path[0]
+        remote_data_path = '%s%s/' % (backup_path, host_name)
+    if backup_data_path:
+        if store_db == 'local':
+            with settings(host_string=host):
+                for bk_path in backup_data_path:
+                    snapshot_path = bk_path + '%s/' % (host_name)
+                    if exists('%szookeeper/' % snapshot_path):
+                        remote_data_path = snapshot_path
+        if store_db == 'remote':
+            with settings(host_string=env.roledefs['backup'][0]):
+                for bk_path in backup_data_path:
+                    snapshot_path = bk_path + '%s/' % (host_name)
+                    if exists('%szookeeper/' % snapshot_path):
+                        remote_data_path = snapshot_path
+    if store_db == 'remote':
+        msg = "Restoring backed-up data from remote host:({HOST}) \n"
+        remote_host = env.roledefs['backup'][0]
+        print (msg.format(HOST=remote_host))
+        remote_path = '%szookeeper' % (remote_data_path)
+        with settings(host_string=env.roledefs['backup'][0]):
+            if not exists(remote_path):
+                print "Remote path doesnot exist ... So aborting the restore zookeeper data."
+                execute(start_zookeeper)
+                raise SystemExit()
+        execute(ssh_key_gen)
+        with settings(host_string=host):
+            sudo('rm -rf %szookeeper' %zoo_path)
+            remote_cmd='rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress   %s:%s    %s' %(remote_host, remote_path, zoo_path)
+            sudo(remote_cmd)
+    with settings(host_string=host):
+        if store_db == 'local':
+            print (msg.format(HOST=host_name))
+            remote_path = '%szookeeper' % (remote_data_path)
+            if not exists(remote_path):
+                print "Remote path doesnot exist ... So aborting the restore zookeeper data ."
+                execute(start_zookeeper)
+                raise SystemExit()
+            sudo('rm -rf %szookeeper' %zoo_path)
+            sudo('rsync -az --progress  %s  %s ' % (remote_path, zoo_path ))
+
+  # end restore_zookeeper
 
 
 @roles('compute')

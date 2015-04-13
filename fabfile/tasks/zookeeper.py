@@ -24,7 +24,20 @@ def restart_zookeeper():
         if sudo("service zookeeper restart").failed:
             sudo(restart_cmd)
 
+
 @task
+@roles('database')
+def start_zookeeper():
+    '''start zookeeper process'''
+    start_cmd = "/usr/lib/zookeeper/bin/zkServer.sh start"
+    if detect_ostype() in ['ubuntu']:
+        start_cmd = "/usr/share/zookeeper/bin/zkServer.sh start"
+    with settings(warn_only=True):
+        if sudo("service zookeeper start").failed:
+            sudo(start_cmd)
+
+@task
+@roles('database')
 def stop_zookeeper():
     stop_cmd = "/usr/lib/zookeeper/bin/zkServer.sh stop"
     if detect_ostype() in ['ubuntu']:
