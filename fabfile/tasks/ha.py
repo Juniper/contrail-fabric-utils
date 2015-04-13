@@ -75,11 +75,21 @@ def tune_tcp():
         if sudo("grep '^net.unix.max_dgram_qlen' /etc/sysctl.conf").failed:
             sudo('echo "net.unix.max_dgram_qlen = 1000" >> /etc/sysctl.conf')
 
+def get_nfs_server():
+    try:
+        # Treat a first compute which is not a tsn node as nfs server.
+        nfs_server = filter(lambda compute: compute not in env.roledefs.get('tsn', []),
+                            env.roledefs['compute'])[0]
+        print "NFS server is: %s" % nfs_server
+        return nfs_server
+    except IndexError:
+        raise RuntimeError("Please specifiy a NFS Server, No computes can be used as NFS server.")
+
 @task
 @EXECUTE_TASK
 @roles('openstack')
 def mount_glance_images():
-    nfs_server = get_from_testbed_dict('ha', 'nfs_server', hstr_to_ip(env.roledefs['compute'][0]))
+    nfs_server = get_from_testbed_dict('ha', 'nfs_server', hstr_to_ip(get_nfs_server()))
     nfs_glance_path = get_from_testbed_dict('ha', 'nfs_glance_path', '/var/tmp/glance-images/')
     with settings(warn_only=True):
         out = sudo('sudo mount %s:%s /var/lib/glance/images' % (nfs_server, nfs_glance_path))
@@ -93,7 +103,8 @@ def setup_glance_images_loc():
     nfs_server = get_from_testbed_dict('ha', 'nfs_server', None)
     nfs_glance_path = get_from_testbed_dict('ha', 'nfs_glance_path', '/var/tmp/glance-images/')
     if not nfs_server:
-        with settings(host_string=env.roledefs['compute'][0]):
+        nfs_server = get_nfs_server()
+        with settings(host_string=nfs_server):
             sudo('mkdir -p /var/tmp/glance-images/')
             sudo('chmod 777 /var/tmp/glance-images/')
             sudo('echo "/var/tmp/glance-images *(rw,sync,no_subtree_check)" >> /etc/exports')
