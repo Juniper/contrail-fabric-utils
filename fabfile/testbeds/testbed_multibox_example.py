@@ -361,10 +361,14 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 # tor_http_server_port: HTTP server port. Same will be used by tor agent for introspect
 # ca_cert_file: Path where the CA certificate file is stored on the node where fab is run.
 #               Fab copies the file to node where TOR agent is run.
-#               Used when tor_ovs_protocol is pssl.
+#               This is optional and is required only when tor_ovs_protocol is pssl.
 #               The certificates on the TOR are based on this CA cert.
 # tor_ha_ip: IP of the TOR agent where redundant TOR Agent will run.
+#            This is optional and is required only when tor_ovs_protocol is pssl.
+# tor_ha_id: tor_id of the same TOR on the redundant node.
+#            This is optional and is required only when tor_ovs_protocol is pssl.
 # tor_ha_ovs_port: Port number used for OVS by the redundant TOR agent.
+#                  This is optional and is required only when tor_ovs_protocol is pssl.
 #
 #env.tor_agent = {host10:[{
 #                    'tor_ip':'10.204.217.39',
@@ -380,6 +384,7 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #                    'tor_http_server_port': '9010',
 #                    'ca_cert_file':'/root/ca_cert.pem',
 #                    'tor_ha_ip':'10.204.217.100',
+#                    'tor_ha_id':'1',
 #                    'tor_ha_ovs_port':'9888',
 #                       }]
 #                }
