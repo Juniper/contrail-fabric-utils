@@ -879,6 +879,15 @@ def setup_nova_aggregate():
 
 @task
 def setup_nova_aggregate_node(*args):
+    docker = any(['docker' == get_hypervisor(compute_host)
+                  for compute_host in env.roledefs['compute']])
+    libvirt = any(['libvirt' == get_hypervisor(compute_host)
+                  for compute_host in env.roledefs['compute']])
+    if not (libvirt and docker):
+        # Not a hybrid setup(libvirt + docker)
+        # No need for the compute aggregate
+        return
+
     for compute_host in env.roledefs['compute']:
         hypervisor = get_hypervisor(compute_host)
         host_name = None
