@@ -197,16 +197,20 @@ env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
 #    host4 : { 'disks' : ['/dev/sdc', '/dev/sdd'], 'journal' : ['/dev/sde', '/dev/sdf'] },
 #    host5 : { 'disks' : ['/dev/sdc:/dev/sde', '/dev/sdd:/dev/sde'], 'ssd-disks' : ['/dev/sdf', '/dev/sdg'] },
 #    host6 : { 'disks' : ['/dev/sdc', '/dev/sdd'], 'local-disks' : ['/dev/sde'], 'local-ssd-disks' : ['/dev/sdf'] },
+#    host7 : { 'nfs' : ['10.10.10.10:/nfs', '11.11.11.11:/nfs']},
 #}
 
-#live migration config
+#Base Openstack live migration configuration.
 #live_migration = True
+#Fix uid/gid for nova/libvirt-qemu so the ids are same across all nodes.
+#nova_uid_fix = True
 
-#Enable this for External NFS server
+#Following are NFS based live migration configuration
+#Enable this for External NFS server based live migration
 #ext_nfs_livem = True
 #ext_nfs_livem_mount = '11.1.0.1:/nfsvol'
 
-#Enable this for Ceph based NFS VM server
+#Enable this for Ceph based NFS VM server based live migration
 #ceph_nfs_livem = True
 #ceph_nfs_livem_subnet = '192.168.10.253/24'
 #ceph_nfs_livem_image = '/ubuntu/livemnfs.qcow2'
