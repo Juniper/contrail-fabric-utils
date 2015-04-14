@@ -27,6 +27,9 @@ def get_ceph_nfs_migration_host():
 def get_ext_nfs_migration_mount():
     return getattr(testbed, 'ext_nfs_livem_mount', None)
 
+def get_nova_uid_fix_enabled():
+    return getattr(testbed, 'nova_uid_fix', None)
+
 def get_nfs_live_migration_opts():
     nfs_live_migration_opts = "disabled"
     if get_ext_nfs_migration_enable():
@@ -40,3 +43,9 @@ def get_live_migration_opts():
     if get_live_migration_enable():
         live_migration_opts = "enabled"
     return live_migration_opts
+
+def get_nova_uid_fix_opt():
+    nova_uid_fix_opt = "disabled"
+    if get_nova_uid_fix_enabled():
+        nova_uid_fix_opt = "enabled"
+    return nova_uid_fix_opt
