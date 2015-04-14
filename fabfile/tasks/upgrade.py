@@ -138,6 +138,7 @@ UBUNTU_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/rndc.c
                                                         '/etc/contrail/dns/contrail-rndc.conf'))
 UBUNTU_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.pid',
                                                         '/etc/contrail/dns/contrail-named.pid'))
+UBUNTU_R1_20_TO_R2_01 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R2_0_TO_R2_01 = copy.deepcopy(UBUNTU_R2_0_TO_R2_0)
 
 CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
@@ -194,6 +195,7 @@ CENTOS_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/rndc.c
                                                         '/etc/contrail/dns/contrail-rndc.conf'))
 CENTOS_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.pid',
                                                         '/etc/contrail/dns/contrail-named.pid'))
+CENTOS_R1_20_TO_R2_01 = copy.deepcopy(CENTOS_R1_10_TO_R2_0)
 CENTOS_R2_0_TO_R2_01 = copy.deepcopy(CENTOS_R2_0_TO_R2_0)
 
 def format_upgrade_schema(data, **formater):
