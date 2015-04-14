@@ -74,6 +74,8 @@ def tune_tcp():
             sudo('echo "net.ipv4.tcp_fin_timeout = 30" >> /etc/sysctl.conf')
         if sudo("grep '^net.unix.max_dgram_qlen' /etc/sysctl.conf").failed:
             sudo('echo "net.unix.max_dgram_qlen = 1000" >> /etc/sysctl.conf')
+        if run("grep '^net.ipv4.ip_nonlocal_bind' /etc/sysctl.conf").failed:
+            run('echo "net.ipv4.ip_nonlocal_bind = 1" >> /etc/sysctl.conf')
 
 @task
 @EXECUTE_TASK
