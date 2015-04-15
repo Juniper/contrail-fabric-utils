@@ -78,6 +78,9 @@ RPMS_DIR = '~/rpms'
 env.disable_known_hosts=True
 
 CONTROLLER_TYPE = 'Openstack'
+if hasattr(env, 'orchestrator'):
+    if env.orchestrator == 'vcenter':
+        CONTROLLER_TYPE = 'Vcenter'
 # Import cloudstack functions for appropriate testbeds
 if hasattr(testbed, 'controller_type'):
     if testbed.controller_type == 'Cloudstack':

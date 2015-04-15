@@ -82,6 +82,9 @@ def get_region_name_opt():
 
 
 def get_keystone_ip(ignore_vip=False, openstack_node=None):
+    orch = getattr(env, 'orchestrator', 'openstack')
+    if orch == 'vcenter':
+        return None
     if openstack_node:
         openstack_host = get_control_host_string(openstack_node)
     else:
