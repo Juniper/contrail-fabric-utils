@@ -200,13 +200,13 @@ def get_all_tor_agent_haproxy_config(*args):
             with settings(host_string=host_string):
                 toragent_dict = getattr(env, 'tor_agent', None)
                 for i in range(len(toragent_dict[host_string])):
-                    if 'tor_ha_ip' in toragent_dict[host_string][i] and \
-                        'tor_ha_ovs_port' in toragent_dict[host_string][i]:
+                    if 'standby_tor_agent_ip' in toragent_dict[host_string][i] and \
+                        'standby_tor_agent_tor_ovs_port' in toragent_dict[host_string][i]:
                         proxy_name = 'contrail-tor-agent-' + toragent_dict[host_string][i]['tor_id']
                         ip1 = host_string.split('@',1)[1]
                         port1 = int(toragent_dict[host_string][i]['tor_ovs_port'])
-                        ip2 = toragent_dict[host_string][i]['tor_ha_ip']
-                        port2 = int(toragent_dict[host_string][i]['tor_ha_ovs_port'])
+                        ip2 = toragent_dict[host_string][i]['standby_tor_agent_ip']
+                        port2 = int(toragent_dict[host_string][i]['standby_tor_agent_tor_ovs_port'])
                         tor_agent_ha_config = tor_agent_ha_config + get_tor_agent_haproxy_config(proxy_name, port1, ip1, port1, ip2, port2)
     return tor_agent_ha_config
 #end get_all_tor_agent_haproxy_config
@@ -1942,13 +1942,32 @@ def add_tor_agent_node(restart=True, *args):
                     ssl_cmd += tor_name + "/O=" + tor_vendor_name + "/CN=" + domain_name + "\""
                     ssl_cmd += " -keyout " + privkey_file + " -out " + cert_file
                     sudo(ssl_cmd)
+
+                    # when we have HA configured for the agent, ensure that both
+                    # TOR agents use same SSL certificates. Copy the created
+                    # files to the corresponding HA node as well.
+                    if 'standby_tor_agent_ip' in toragent_dict[host_string][i] and \
+                       'standby_tor_agent_tor_id' in toragent_dict[host_string][i]:
+                        for node in env.roledefs['all']:
+                            if node.split('@')[1] == toragent_dict[host_string][i]['standby_tor_agent_ip']:
+                                ha_tor_id = str(toragent_dict[host_string][i]['standby_tor_agent_tor_id'])
+                                cert_ha_file = '/etc/contrail/ssl/certs/tor.' + ha_tor_id + '.cert.pem'
+                                priv_ha_file = '/etc/contrail/ssl/private/tor.' + ha_tor_id + '.privkey.pem'
+                                temp_cert_file = tempfile.mktemp()
+                                temp_priv_file = tempfile.mktemp()
+                                get(cert_file, temp_cert_file)
+                                get(privkey_file, temp_priv_file)
+                                with settings(host_string=node):
+                                    put(temp_cert_file, cert_ha_file)
+                                    put(temp_priv_file, priv_ha_file)
+                                os.remove(temp_cert_file)
+                                os.remove(temp_priv_file)
+                                break
+
                     # if CA cert file is specified, copy it to the target
                     if 'ca_cert_file' in toragent_dict[host_string][i] and \
                         os.path.isfile(toragent_dict[host_string][i]['ca_cert_file']):
-                        with open(toragent_dict[host_string][i]['ca_cert_file'], "r") as certfile:
-                            certdata = certfile.read()
-                        ca_cert_cmd = "echo \"" + certdata + "\" > /etc/contrail/ssl/certs/cacert.pem "
-                        sudo(ca_cert_cmd)
+                        put(toragent_dict[host_string][i]['ca_cert_file'], '/etc/contrail/ssl/certs/cacert.pem')
 
                 cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
                 cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
