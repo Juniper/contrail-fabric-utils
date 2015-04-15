@@ -206,7 +206,7 @@ def yum_install(rpms, disablerepo = True):
     # redhat platform installs from multiple repos
     if os_type in ['redhat']:
         cmd = "yum -y --nogpgcheck install "
-    if os_type in ['centos', 'fedora', 'redhat']:
+    if os_type in ['centos', 'fedora', 'redhat', 'centoslinux']:
         for rpm in rpms:
             sudo(cmd + rpm)
 
@@ -219,7 +219,7 @@ def apt_install(debs):
 def pkg_install(pkgs,disablerepo = True):
     if detect_ostype() in ['ubuntu']:
         apt_install(pkgs)
-    elif detect_ostype() in ['centos', 'fedora', 'redhat']:
+    elif detect_ostype() in ['centos', 'fedora', 'redhat', 'centoslinux']:
         yum_install(pkgs , disablerepo = disablerepo)
 
 @task
@@ -673,6 +673,8 @@ def install_contrail(reboot='True'):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
+        #Clear the connections cache
+        connections.clear()
     execute('reboot_on_kernel_update', reboot)
 
 @roles('build')
