@@ -182,7 +182,7 @@ def install_cloudstack_packages(pkg=None):
         put(pkg, '%s/%s' % (temp_dir, pkg_name), use_sudo=True)
         sudo('cd %s && tar xvjf %s && sh ./cloudstack_setup.sh' %(temp_dir, pkg_name))
 
-    sudo('yum install --disablerepo=* --enablerepo=contrail_install_repo -y contrail-cloudstack-utils')
+    sudo('yum install --disablerepo=* --enablerepo=contrail* -y contrail-cloudstack-utils')
     check_cs_version_in_config()
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     if not 'systemvm_template' in env:
@@ -205,7 +205,7 @@ def install_contrail_packages(pkg=None):
     orchestrator_ip = host_string_to_ip(env.roledefs['orchestrator'][0])
     cfgm_ip = host_string_to_ip(env.roledefs['cfgm'][0])
     control_ip = host_string_to_ip(env.roledefs['control'][0])
-    sudo('yum install --disablerepo=* --enablerepo=contrail_install_repo -y contrail-cloudstack-utils')
+    sudo('yum install --disablerepo=* --enablerepo=contrail* -y contrail-cloudstack-utils')
     sudo('sh /opt/contrail/cloudstack-utils/contrail-install.sh 127.0.0.1')
 
     # analytics venv installation
