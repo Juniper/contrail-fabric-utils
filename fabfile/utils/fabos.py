@@ -23,8 +23,11 @@ def detect_ostype():
     (dist, version, extra) = get_linux_distro()
     if extra is not None and 'xen' in extra:
         dist = 'xen'
-    if 'red hat' in dist.lower():
+    elif 'red hat' in dist.lower():
         dist = 'redhat'
+    elif 'centos linux' in dist.lower():
+        dist = 'centoslinux'
+
     return dist.lower()
 #end detect_ostype
 
@@ -55,7 +58,8 @@ def get_openstack_sku():
 def get_release(pkg='contrail-install-packages'):
     pkg_ver = None
     dist = detect_ostype() 
-    if dist in ['centos', 'fedora', 'redhat']:
+    print "Dist is %s" % dist
+    if dist in ['centos', 'fedora', 'redhat', 'centoslinux']:
         cmd = "rpm -q --queryformat '%%{VERSION}' %s" %pkg
     elif dist in ['ubuntu']:
         cmd = "dpkg -s %s | grep Version: | cut -d' ' -f2 | cut -d'-' -f1" %pkg
@@ -68,7 +72,7 @@ def get_release(pkg='contrail-install-packages'):
 def get_build(pkg='contrail-install-packages'):
     pkg_rel = None
     dist = detect_ostype()
-    if dist in ['centos', 'fedora', 'redhat']:
+    if dist in ['centos', 'fedora', 'redhat', 'centoslinux']:
         cmd = "rpm -q --queryformat '%%{RELEASE}' %s" %pkg
     elif dist in ['ubuntu']:
         cmd = "dpkg -s %s | grep Version: | cut -d' ' -f2 | cut -d'-' -f2" %pkg
@@ -97,7 +101,7 @@ def is_package_installed(pkg_name):
     ostype = detect_ostype()
     if ostype in ['ubuntu']:
         cmd = 'dpkg-query -l "%s" | grep -q ^.i'
-    elif ostype in ['centos','fedora']:
+    elif ostype in ['centos','fedora', 'centoslinux', 'redhat']:
         cmd = 'rpm -qi %s '
     cmd = cmd % (pkg_name)
     with settings(warn_only=True):
