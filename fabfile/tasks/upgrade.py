@@ -425,8 +425,9 @@ def backup_config_node(from_rel, *args):
             to_rel = get_release()
             to_build = get_build().split('~')[0]
             upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
-            if host_string in env.roledefs['tsn'] or host_string in env.roledefs['toragent']:
-                upgrade_data = fix_tsn_toragent_backup_config_node(from_rel, host_string, upgrade_data)
+            if 'tsn' in env.roledefs.keys() or 'toragent' in env.roledefs.keys():
+                if host_string in env.roledefs['tsn'] or host_string in env.roledefs['toragent']:
+                    upgrade_data = fix_tsn_toragent_backup_config_node(from_rel, host_string, upgrade_data)
             sudo('mkdir -p /var/tmp/contrail')
             for role in upgrade_data.keys():
                 if env.host_string in env.roledefs[role]:
@@ -502,8 +503,9 @@ def upgrade(from_rel, role):
     to_rel = get_release()
     to_build = get_build().split('~')[0]
     upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
-    if host_string in env.roledefs['tsn']:
-        upgrade_data = fix_tsn_toragent_upgrade_node(host_string, upgrade_data)
+    if 'tsn' in env.roledefs.keys():
+        if host_string in env.roledefs['tsn']:
+            upgrade_data = fix_tsn_toragent_upgrade_node(host_string, upgrade_data)
     #backup_config(role, upgrade_data)
     if ostype == 'centos':
         #buildid = get_build('contrail-setup')
