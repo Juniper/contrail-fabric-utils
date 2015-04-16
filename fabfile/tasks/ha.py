@@ -437,11 +437,12 @@ def fix_cmon_param_and_add_keys_to_compute():
     sudo("echo '%s' >> %s" % (computes, cmon_param))
     sudo("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
     sudo("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
-    sudo("echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % cmon_param)
-    sudo("echo 'RABBITMQ_RESET=False' >> %s" % cmon_param)
+    sudo("echo 'PERIODIC_RMQ_CHK_INTER=120' >> %s" % cmon_param)
+    sudo("echo 'RABBITMQ_RESET=True' >> %s" % cmon_param)
     amqps = 'DIPHOSTS=("' + '" "'.join(amqp_host_list) + '")'
     sudo("echo '%s' >> %s" % (amqps, cmon_param))
     sudo("echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % cmon_param)
+    sudo("echo 'EVIP="'%s'"' >> %s" % (get_openstack_external_vip(),cmon_param))
     id_rsa_pubs = {}
     if files.exists('~/.ssh', use_sudo=True):
         sudo('chmod 700 ~/.ssh')
@@ -474,7 +475,8 @@ def create_and_copy_service_token():
                 sudo("echo '%s' > /etc/contrail/service.token" % service_token)
 
 @task
-@hosts(*env.roledefs['openstack'][:1])
+@serial
+@roles('openstack')
 def setup_cmon_schema():
     """Task to configure cmon schema in the openstack nodes to monitor galera cluster"""
     if len(env.roledefs['openstack']) <= 1:
