@@ -442,6 +442,7 @@ def fix_cmon_param_and_add_keys_to_compute():
     amqps = 'DIPHOSTS=("' + '" "'.join(amqp_host_list) + '")'
     sudo("echo '%s' >> %s" % (amqps, cmon_param))
     sudo("echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % cmon_param)
+    sudo("echo 'EVIP="'%s'"' >> %s" % (get_openstack_external_vip(),cmon_param))
     id_rsa_pubs = {}
     if files.exists('~/.ssh', use_sudo=True):
         sudo('chmod 700 ~/.ssh')
