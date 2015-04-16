@@ -149,6 +149,7 @@ UBUNTU_R2_01_TO_R2_10 = copy.deepcopy(UBUNTU_R2_0_TO_R2_10)
 UBUNTU_R2_01_TO_R2_11 = copy.deepcopy(UBUNTU_R2_01_TO_R2_10)
 UBUNTU_R2_10_TO_R2_10 = copy.deepcopy(UBUNTU_R2_0_TO_R2_10)
 UBUNTU_R2_10_TO_R2_11 = copy.deepcopy(UBUNTU_R2_01_TO_R2_10)
+UBUNTU_R2_11_TO_R2_11 = copy.deepcopy(UBUNTU_R2_10_TO_R2_11)
 
 CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
 # Add contrail-interface-name to upgrade list if interface rename enabled.
@@ -209,6 +210,7 @@ CENTOS_R2_01_TO_R2_10 = copy.deepcopy(CENTOS_R2_0_TO_R2_10)
 CENTOS_R2_01_TO_R2_11 = copy.deepcopy(CENTOS_R2_01_TO_R2_10)
 CENTOS_R2_10_TO_R2_10 = copy.deepcopy(CENTOS_R2_0_TO_R2_10)
 CENTOS_R2_10_TO_R2_11 = copy.deepcopy(CENTOS_R2_01_TO_R2_10)
+CENTOS_R2_11_TO_R2_11 = copy.deepcopy(CENTOS_R2_10_TO_R2_11)
 
 def format_upgrade_schema(data, **formater):
     if type(data) is dict:
@@ -409,12 +411,18 @@ def backup_config(from_rel):
 
 def fix_tsn_toragent_backup_config_node(host_string, upgrade_data):
     if host_string in env.roledefs['tsn']:
-        upgrade_data['compute']['backup_files'].remove('/etc/nova/nova.conf')
-        upgrade_data['compute']['backup_files'].remove('/etc/libvirt/qemu.conf')
-        upgrade_data['compute']['upgrade'].remove('contrail-openstack-vrouter')
+        if '/etc/nova/nova.conf' in upgrade_data['compute']['backup_files']:
+            upgrade_data['compute']['backup_files'].remove('/etc/nova/nova.conf')
+        if '/etc/libvirt/qemu.conf' in upgrade_data['compute']['backup_files']:
+            upgrade_data['compute']['backup_files'].remove('/etc/libvirt/qemu.conf')
     if host_string in env.roledefs['toragent']:
-        upgrade_data['compute']['backup_files'].append('/etc/contrail/contrail-tor-agent*.conf')
-        upgrade_data['compute']['backup_files'].append('/etc/contrail/supervisord_vrouter_files/contrail-tor-agent*.ini')
+        for agent in env.tor_agent[host_string]:
+            conf_filename = 'contrail-tor-agent-' + agent['tor_id'] + '.conf'
+            ini_filename = 'contrail-tor-agent-' + agent['tor_id'] + '.ini'
+            if '/etc/contrail/' + conf_filename not in upgrade_data['compute']['backup_files']:
+                upgrade_data['compute']['backup_files'].append('/etc/contrail/' + conf_filename)
+            if '/etc/contrail/supervisord_vrouter_files/' + ini_filename not in upgrade_data['compute']['backup_files']:
+                upgrade_data['compute']['backup_files'].append('/etc/contrail/supervisord_vrouter_files/' + ini_filename)
     return upgrade_data
 
 @task
@@ -425,8 +433,9 @@ def backup_config_node(from_rel, *args):
             to_rel = get_release()
             to_build = get_build().split('~')[0]
             upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
-            if host_string in env.roledefs['tsn'] or host_string in env.roledefs['toragent']:
-                upgrade_data = fix_tsn_toragent_backup_config_node(from_rel, host_string, upgrade_data)
+            if ('tsn' in env.roledefs.keys() and host_string in env.roledefs['tsn']) or \
+               ('toragent' in env.roledefs.keys() and host_string in env.roledefs['toragent']):
+                upgrade_data = fix_tsn_toragent_backup_config_node(host_string, upgrade_data)
             sudo('mkdir -p /var/tmp/contrail')
             for role in upgrade_data.keys():
                 if env.host_string in env.roledefs[role]:
@@ -485,7 +494,8 @@ def rename_files(role, upgrade_data):
 def fix_tsn_toragent_upgrade_node(host_string, upgrade_data):
     with  settings(host_string=host_string):
         ostype = detect_ostype()
-        upgrade_data['compute']['upgrade'].remove('contrail-openstack-vrouter')
+        if 'contrail-openstack-vrouter' in upgrade_data['compute']['upgrade']:
+            upgrade_data['compute']['upgrade'].remove('contrail-openstack-vrouter')
         if ostype in ['ubuntu']:
             dkms_status = get_build('contrail-vrouter-dkms')
             if dkms_status is not None:
@@ -493,8 +503,10 @@ def fix_tsn_toragent_upgrade_node(host_string, upgrade_data):
             else:
                 vrouter_generic_pkg = sudo("apt-cache pkgnames contrail-vrouter-$(uname -r)")
                 contrail_vrouter_pkg = vrouter_generic_pkg or 'contrail-vrouter-dkms'
-            upgrade_data['compute']['upgrade'].append('contrail_vrouter_pkg')
-            upgrade_data['compute']['upgrade'].append('contrail-vrouter-common')
+            if contrail_vrouter_pkg not in upgrade_data['compute']['upgrade']:
+                upgrade_data['compute']['upgrade'].append(contrail_vrouter_pkg)
+            if 'contrail-vrouter-common' not in upgrade_data['compute']['upgrade']:
+                upgrade_data['compute']['upgrade'].append('contrail-vrouter-common')
     return upgrade_data
 
 def upgrade(from_rel, role):
@@ -502,8 +514,8 @@ def upgrade(from_rel, role):
     to_rel = get_release()
     to_build = get_build().split('~')[0]
     upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
-    if host_string in env.roledefs['tsn']:
-        upgrade_data = fix_tsn_toragent_upgrade_node(host_string, upgrade_data)
+    if 'tsn' in env.roledefs.keys() and env.host_string in env.roledefs['tsn']:
+        upgrade_data = fix_tsn_toragent_upgrade_node(env.host_string, upgrade_data)
     #backup_config(role, upgrade_data)
     if ostype == 'centos':
         #buildid = get_build('contrail-setup')
@@ -661,7 +673,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
                 sudo('supervisorctl -s unix:///tmp/supervisord_config.sock update')
                 execute('stop_cfgm_node', host_string)
             sudo('chkconfig supervisor-support-service on')
-            if from_rel in ['1.10', '1.20', '1.21', '2.0', '2.01', '2.10']:
+            if from_rel in ['1.10', '1.20', '1.21', '2.0', '2.01', '2.10', '2.11']:
                 with settings(warn_only=True):
                     sudo("kill -9 $(ps ax | grep irond.jar | grep -v grep | awk '{print $1}')")
                 if detect_ostype() == 'centos':
@@ -892,7 +904,7 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
                     sudo("sed -i s/'Defaults    requiretty'/'#Defaults    requiretty'/g /etc/sudoers")
 
             # Upgrade nova parameters in nova.conf in compute host from 2.0 to 2.1
-            if get_openstack_internal_vip() and from_rel in ['2.0', '2.01', '2.10']:
+            if get_openstack_internal_vip() and from_rel in ['2.0', '2.01', '2.10', '2.11']:
                 nova_conf_file = '/etc/nova/nova.conf'
                 openstack_compute_service = 'openstack-nova-compute'
                 if (ostype == 'ubuntu'):
