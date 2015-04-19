@@ -8,6 +8,9 @@ from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator,\
      reboot_nodes
+from fabfile.utils.install import get_compute_ceilometer_pkgs,\
+     get_compute_pkgs, get_ceilometer_plugin_pkgs,\
+     get_openstack_ceilometer_pkgs
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
@@ -280,14 +283,11 @@ def install_ceilometer_compute_node(*args):
         with settings(host_string=host_string):
             if not is_ceilometer_compute_install_supported():
                 continue
-            pkg_ubuntu = ['ceilometer-agent-compute']
-            pkg_redhat = ['openstack-ceilometer-compute']
-            act_os_type = detect_ostype()
-            if act_os_type == 'ubuntu':
-                apt_install(pkg_ubuntu)
-            elif act_os_type in ['redhat']:
-                yum_install(pkg_redhat)
+            pkgs = get_compute_ceilometer_pkgs()
+            if pkgs:
+                pkg_install(pkgs)
             else:
+                act_os_type = detect_ostype()
                 raise RuntimeError('Unspported OS type (%s)' % (act_os_type))
 
 @task
@@ -308,18 +308,10 @@ def install_contrail_ceilometer_plugin_node(*args):
         with settings(host_string=host_string):
             if not is_ceilometer_install_supported():
                 continue
-            pkg_contrail_ceilometer = ['ceilometer-plugin-contrail']
+            pkg_contrail_ceilometer = get_ceilometer_plugin_pkgs()
             act_os_type = detect_ostype()
             openstack_sku = get_openstack_sku()
-            if openstack_sku == 'icehouse':
-                if not act_os_type in ['ubuntu', 'redhat']:
-                    raise RuntimeError('Unsupported OpenStack distribution '
-                        '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
-            elif openstack_sku == 'juno':
-                if not act_os_type in ['ubuntu']:
-                    raise RuntimeError('Unsupported OpenStack distribution '
-                        '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
-            else:
+            if not pkg_contrail_ceilometer:
                 raise RuntimeError('Unsupported OpenStack distribution (%s) '
                     'on (%s)' % (openstack_sku, act_os_type))
 
@@ -362,54 +354,12 @@ def install_ceilometer_node(*args):
         with settings(host_string=host_string):
             if not is_ceilometer_install_supported():
                 continue
-            pkg_havana_ubuntu = ['mongodb', 'ceilometer-api',
-                'ceilometer-collector',
-                'ceilometer-agent-central',
-                'python-ceilometerclient']
-            pkg_icehouse_ubuntu = ['mongodb', 'ceilometer-api',
-                'ceilometer-collector',
-        	'ceilometer-agent-central',
-        	'ceilometer-agent-notification',
-        	'ceilometer-alarm-evaluator',
-        	'ceilometer-alarm-notifier',
-		'python-ceilometerclient',
-                'ceilometer-plugin-contrail']
-            pkg_juno_ubuntu = ['mongodb-server', 'mongodb-clients',
-                'python-pymongo', 'ceilometer-api',
-                'ceilometer-collector',
-                'ceilometer-agent-central',
-                'ceilometer-agent-notification',
-                'ceilometer-alarm-evaluator',
-                'ceilometer-alarm-notifier',
-                'python-ceilometerclient',
-                'ceilometer-plugin-contrail']
-            pkg_icehouse_redhat = ['ceilometer-plugin-contrail']
+            pkg_ceilometer = get_openstack_ceilometer_pkgs()
             act_os_type = detect_ostype()
             openstack_sku = get_openstack_sku()
-            if openstack_sku == 'havana':
-                if act_os_type == 'ubuntu':
-                    pkg_ceilometer = pkg_havana_ubuntu
-                else:
-                    raise RuntimeError('Unsupported OpenStack distribution '
-                        '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
-            elif openstack_sku == 'icehouse':
-                if act_os_type == 'ubuntu':
-                    pkg_ceilometer = pkg_icehouse_ubuntu
-                elif act_os_type in ['redhat']:
-                    pkg_ceilometer = pkg_icehouse_redhat
-                else:
-                    raise RuntimeError('Unsupported OpenStack distribution '
-                        '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
-            elif openstack_sku == 'juno':
-                if act_os_type == 'ubuntu':
-                    pkg_ceilometer = pkg_juno_ubuntu
-                else:
-                    raise RuntimeError('Unsupported OpenStack distribution '
-                        '(%s) on OS type (%s)' % (openstack_sku, act_os_type))
-            else:
+            if not pkg_ceilometer:
                 raise RuntimeError('Unsupported OpenStack distribution (%s) '
                     'on (%s)' % (openstack_sku, act_os_type))
-
             if act_os_type == 'ubuntu':
                 apt_install(pkg_ceilometer)
             elif act_os_type in ['redhat']:
@@ -561,48 +511,13 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
     for host_string in args:
         with  settings(host_string=host_string):
             ostype = detect_ostype()
-            pkg = ['contrail-openstack-vrouter']
-
-            # For Ubuntu, Install contrail-vrouter-generic package if one available for
-            # node's kernel version or install contrail-vrouter-dkms
-            # If dkms is already installed, continue to upgrade contrail-vrouter-dkms
-            if ostype in ['ubuntu']:
-                dkms_status = get_build('contrail-vrouter-dkms')
-                if dkms_status is not None:
-                    contrail_vrouter_pkg = 'contrail-vrouter-dkms'
-                else:
-                    vrouter_generic_pkg = sudo("apt-cache pkgnames contrail-vrouter-$(uname -r)")
-                    contrail_vrouter_pkg = vrouter_generic_pkg or 'contrail-vrouter-dkms'
-
-                dpdk = getattr(env, 'dpdk', None)
-                if dpdk:
-                    if env.host_string in dpdk:
-                        contrail_vrouter_pkg = 'contrail-vrouter-dpdk-init'
-
-                pkg = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
-
-            if (manage_nova_compute == 'no' and ostype in ['centos', 'redhat']):
-                pkg = ['contrail-vrouter-common',
-                       'openstack-utils',
-                       'contrail-nova-vif',
-                      ]
-            elif (manage_nova_compute== 'no' and ostype in ['ubuntu']):
-                pkg = [contrail_vrouter_pkg,
-                       'contrail-vrouter-common'
-                      ]
-            if getattr(testbed, 'haproxy', False):
-                pkg.append('haproxy')
-            if (ostype == 'ubuntu' and is_lbaas_enabled()):
-                pkg.append('haproxy')
-                pkg.append('iproute')
+            pkgs = get_compute_pkgs(manage_nova_compute)
 
             if ostype == 'ubuntu':
                 sudo('echo "manual" >> /etc/init/supervisor-vrouter.override')
-                if get_hypervisor(host_string) == 'docker':
-                    pkg.append('nova-docker')
-                apt_install(pkg)
+                apt_install(pkgs)
             else:
-                yum_install(pkg)
+                yum_install(pkgs)
             install_ceilometer_compute_node(host_string)
 
 @task
