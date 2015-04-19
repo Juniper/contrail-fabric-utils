@@ -6,6 +6,11 @@ import tempfile
 from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.utils.host import get_openstack_internal_vip, get_from_testbed_dict
+from fabfile.utils.analytics import is_ceilometer_install_supported,\
+     is_ceilometer_compute_install_supported
+from fabfile.utils.install import get_compute_ceilometer_pkgs,\
+     get_compute_pkgs, get_ceilometer_plugin_pkgs,\
+     get_openstack_ceilometer_pkgs
 
 def get_pkg_list():
     dont_remove_list = [
@@ -157,6 +162,9 @@ def uninstall_openstack_node(*args):
             pkg = ['contrail-openstack']
             if len(env.roledefs['openstack']) > 1 and get_openstack_internal_vip():
                 pkg.append('contrail-openstack-ha')
+            if is_ceilometer_install_supported():
+                pkg += get_openstack_ceilometer_pkgs()
+                pkg += get_ceilometer_plugin_pkgs()
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     sudo("umount /var/lib/glance/images")
@@ -305,35 +313,14 @@ def uninstall_only_vrouter_node(manage_nova_compute='yes', *args):
     for host_string in args:
         ostype = detect_ostype()
         with  settings(host_string=host_string):
-            pkg = ['contrail-openstack-vrouter']
-            if (manage_nova_compute == 'no' and ostype in ['centos']):
-                pkg = ['contrail-vrouter',
-                       'abrt',
-                       #'openstack-nova-compute',
-                       'openstack-utils',
-                       'python-thrift',
-                       #'librabbitmq',
-                       'contrail-nova-vif',
-                       'contrail-setup',
-                       'contrail-nodemgr',
-                       'contrail-vrouter-init',
-                      ]
-            elif (manage_nova_compute== 'no' and ostype in ['ubuntu']):
-                pkg = ['contrail-nodemgr',
-                       'contrail-setup',
-                       'contrail-vrouter-init',
-                       #'nova-compute',
-                       'python-iniparse',
-                       #'python-novaclient',
-                       'contrail-nova-vif',
-                       #'librabbitmq0',
-                       'linux-crashdump',
-                       'contrail-vrouter'
-                      ]
-            if getattr(testbed, 'haproxy', False):
-                pkg.append('haproxy')
+            manage_nova_compute = 'no'
+            if is_package_installed('contrail-openstack-vrouter'):
+                manage_nova_compute = 'yes'
+            pkgs = get_compute_pkgs(manage_nova_compute)
             if ostype == 'ubuntu':
-                apt_uninstall(pkg)
+                if is_ceilometer_compute_install_supported():
+                    pkgs.append('ceilometer-agent-compute')
+                apt_uninstall(pkgs)
                 sudo("sed -i  's/inet manual/inet dhcp/g' /etc/network/interfaces")
             else:
                 pkgs = get_pkg_list()
