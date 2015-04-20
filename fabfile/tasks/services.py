@@ -147,7 +147,7 @@ def restart_openstack_node(*args):
 @roles('compute')
 def restart_openstack_compute():
     """Restarts the contrail openstack compute service."""
-    if env.host_string in env.roledefs['tsn']:
+    if 'tsn' in env.roledefs.keys() and env.host_string in env.roledefs['tsn']:
         return
     if detect_ostype() in ['ubuntu']:
         sudo('service nova-compute restart')
