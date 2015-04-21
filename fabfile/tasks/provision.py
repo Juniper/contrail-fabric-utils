@@ -2043,6 +2043,20 @@ def setup_esx_zone():
     if esx is None:
         return
     run("(source /etc/contrail/openstackrc; nova aggregate-create esx esx)")
+
+    cmd = "(source /etc/contrail/openstackrc; nova host-describe %s)"
+    for server in esx:
+        with settings(warn_only=True):
+            retry = 10
+            while retry:
+               retry -= 1
+               ret = run(cmd % esx[server]['contrail_vm']['name'])
+               if ret.succeeded:
+                   break
+               elif retry == 0:
+                   raise Exception("%s host not found" % esx[server]['contrail_vm']['name'])
+               sleep(1)
+
     cmd = "(source /etc/contrail/openstackrc; nova aggregate-add-host esx %s)"
     for server in esx:
         run(cmd % esx[server]['contrail_vm']['name'])
