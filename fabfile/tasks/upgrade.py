@@ -9,6 +9,7 @@ from fabfile.utils.cluster import is_lbaas_enabled
 from fabfile.config import *
 from fabfile.tasks.helpers import insert_line_to_file
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
+from fabfile.tasks.install import yum_install, apt_install
 
 # upgrade schema
 UPGRADE_SCHEMA = {
@@ -893,6 +894,19 @@ def fix_vrouter_configs_node(*args):
         new_kmod = 'kmod=vrouter'
         insert_line_to_file(pattern=old_kmod, line=new_kmod, file_name=agent_param)
 
+@roles('build')
+@task
+def upgrade_orchestrator(from_rel, pkg):
+    if get_orchestrator() is 'openstack':
+        execute('upgrade_openstack', from_rel, pkg)
+    if get_orchestrator() is 'vcenter':
+        execute('upgrade_vcenter')
+
+@roles('build')
+@task
+def upgrade_vcenter():
+    apt_install(['contrail-vmware-utils'])
+
 @task
 @roles('build')
 def upgrade_contrail(from_rel, pkg):
@@ -902,7 +916,7 @@ def upgrade_contrail(from_rel, pkg):
     execute('stop_cfgm')
     execute('stop_rabbitmq')
     execute('stop_collector')
-    execute('upgrade_openstack', from_rel, pkg)
+    execute('upgrade_orchestrator', from_rel, pkg)
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_cfgm', from_rel, pkg)
     execute('setup_rabbitmq_cluster', True)
