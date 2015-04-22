@@ -75,20 +75,11 @@ def tune_tcp():
         if sudo("grep '^net.unix.max_dgram_qlen' /etc/sysctl.conf").failed:
             sudo('echo "net.unix.max_dgram_qlen = 1000" >> /etc/sysctl.conf')
 
-def get_nfs_server():
-    try:
-        nfs_server = filter(lambda compute: compute not in env.roledefs.get('tsn', []),
-                            env.roledefs['compute'])[0]
-        print "NFS server is: %s" % nfs_server
-        return nfs_server
-    except IndexError:
-        raise RuntimeError("Please specifiy a NFS Server, No computes can be used as NFS server.")
-
 @task
 @EXECUTE_TASK
 @roles('openstack')
 def mount_glance_images():
-    nfs_server = get_from_testbed_dict('ha', 'nfs_server', hstr_to_ip(get_nfs_server()))
+    nfs_server = get_from_testbed_dict('ha', 'nfs_server', hstr_to_ip(env.roledefs['compute'][0]))
     nfs_glance_path = get_from_testbed_dict('ha', 'nfs_glance_path', '/var/tmp/glance-images/')
     with settings(warn_only=True):
         out = sudo('sudo mount %s:%s /var/lib/glance/images' % (nfs_server, nfs_glance_path))
@@ -102,8 +93,7 @@ def setup_glance_images_loc():
     nfs_server = get_from_testbed_dict('ha', 'nfs_server', None)
     nfs_glance_path = get_from_testbed_dict('ha', 'nfs_glance_path', '/var/tmp/glance-images/')
     if not nfs_server:
-        nfs_server = get_nfs_server()
-        with settings(host_string=nfs_server):
+        with settings(host_string=env.roledefs['compute'][0]):
             sudo('mkdir -p /var/tmp/glance-images/')
             sudo('chmod 777 /var/tmp/glance-images/')
             sudo('echo "/var/tmp/glance-images *(rw,sync,no_subtree_check)" >> /etc/exports')
@@ -447,11 +437,12 @@ def fix_cmon_param_and_add_keys_to_compute():
     sudo("echo '%s' >> %s" % (computes, cmon_param))
     sudo("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
     sudo("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
-    sudo("echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % cmon_param)
-    sudo("echo 'RABBITMQ_RESET=False' >> %s" % cmon_param)
+    sudo("echo 'PERIODIC_RMQ_CHK_INTER=120' >> %s" % cmon_param)
+    sudo("echo 'RABBITMQ_RESET=True' >> %s" % cmon_param)
     amqps = 'DIPHOSTS=("' + '" "'.join(amqp_host_list) + '")'
     sudo("echo '%s' >> %s" % (amqps, cmon_param))
     sudo("echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % cmon_param)
+    sudo("echo 'EVIP="'%s'"' >> %s" % (get_openstack_external_vip(),cmon_param))
     id_rsa_pubs = {}
     if files.exists('~/.ssh', use_sudo=True):
         sudo('chmod 700 ~/.ssh')
@@ -484,7 +475,8 @@ def create_and_copy_service_token():
                 sudo("echo '%s' > /etc/contrail/service.token" % service_token)
 
 @task
-@hosts(*env.roledefs['openstack'][:1])
+@serial
+@roles('openstack')
 def setup_cmon_schema():
     """Task to configure cmon schema in the openstack nodes to monitor galera cluster"""
     if len(env.roledefs['openstack']) <= 1:
