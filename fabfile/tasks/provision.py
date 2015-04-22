@@ -20,6 +20,7 @@ from fabfile.tasks.install import *
 from fabfile.tasks.verify import *
 from fabfile.tasks.helpers import *
 from fabfile.utils.vcenter import *
+from fabfile.utils.commandline import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter,\
@@ -49,12 +50,6 @@ def setup_cfgm():
     """Provisions config services in all nodes defined in cfgm role."""
     if env.roledefs['cfgm']:
         execute("setup_cfgm_node", env.host_string)
-
-def get_openstack_credentials():
-    ks_admin_user = get_keystone_admin_user()
-    ks_admin_password = get_keystone_admin_password()
-    return ks_admin_user, ks_admin_password
-# end get_openstack_credentials
 
 def fixup_restart_haproxy_in_all_cfgm(nworkers):
     template = string.Template("""
@@ -456,37 +451,14 @@ $__contrail_quantum_servers__
 def setup_cfgm_node(*args):
     """Provisions config services in one or list of nodes. USAGE: fab setup_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
 
-    nworkers = 1
-    quantum_port = '9697'
-
     for host_string in args:
         # Enable settings for Ubuntu
         with  settings(host_string=host_string):
             enable_haproxy()
+    nworkers = 1
     fixup_restart_haproxy_in_all_cfgm(nworkers)
 
     for host_string in args:
-        cfgm_host=get_control_host_string(host_string)
-        tgt_ip = hstr_to_ip(cfgm_host)
-        cfgm_host_password = get_env_passwords(host_string)
-
-        # Prefer local collector node
-        cfgm_host_list = [get_control_host_string(entry)\
-                         for entry in env.roledefs['cfgm']]
-        collector_host_list = [get_control_host_string(entry)\
-                              for entry in env.roledefs['collector']]
-        if cfgm_host in collector_host_list:
-            collector_ip = tgt_ip
-        else:
-            # Select based on index
-            hindex = cfgm_host_list.index(cfgm_host)
-            hindex = hindex % len(env.roledefs['collector'])
-            collector_host = get_control_host_string(env.roledefs['collector'][hindex])
-            collector_ip = hstr_to_ip(collector_host)
-        mt_opt = '--multi_tenancy' if get_mt_enable() else ''
-        cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host)) for cassandra_host in env.roledefs['database']]
-        amqp_server_ip = get_contrail_amqp_server()
-        orch = get_orchestrator()
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
@@ -494,53 +466,22 @@ def setup_cfgm_node(*args):
                     sudo('rm /etc/init/neutron-server.override')
 
             # Frame the command line to provision config node
-            cmd = "setup-vnc-config"
-            cmd += " --self_ip %s" % tgt_ip
-            cmd += " --collector_ip %s %s" % (collector_ip, mt_opt)
-            cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
-            cmd += " --zookeeper_ip_list %s" % ' '.join(cassandra_ip_list)
-            cmd += " --quantum_port %s" % quantum_port
-            cmd += " --nworkers %d" % nworkers
-            cmd += " --service_token %s" % get_service_token()
-            cmd += " --amqp_server_ip %s" % amqp_server_ip
-            cmd += " --orchestrator %s" % orch
-            haproxy = get_haproxy()
-            if haproxy:
-                cmd += " --haproxy %s" % haproxy
-            if orch == 'openstack':
-                openstack_admin_password = get_keystone_admin_password()
-                keystone_ip = get_keystone_ip()
-                # Pass keystone arguments in case for openstack orchestrator
-                cmd += " --keystone_ip %s" % keystone_ip
-                cmd += " --keystone_admin_passwd %s" % openstack_admin_password
-                cmd += " --keystone_service_tenant_name %s" % get_keystone_service_tenant_name()
-                cmd += " --keystone_auth_protocol %s" % get_keystone_auth_protocol()
-                cmd += " --keystone_auth_port %s" % get_keystone_auth_port()
-                cmd += " --keystone_admin_token %s" % get_keystone_admin_token()
-                cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
-                cmd += " --region_name %s" % get_region_name()
-                manage_neutron = get_manage_neutron()
-                if manage_neutron == 'no':
-                    # Skip creating neutron service tenant/user/role etc in keystone.
-                    cmd += ' --manage_neutron %s' % manage_neutron
-            else:
-                cmd += ' --manage_neutron no'
-            internal_vip = get_contrail_internal_vip()
-            if internal_vip:
-                # Highly available setup
-                cmd += ' --internal_vip %s' % (internal_vip)
-
+            cmd = frame_vnc_config_cmd(host_string)
             # Execute the provision config script
             with cd(INSTALLER_DIR):
                 sudo(cmd)
 
+            orch = get_orchestrator()
             if orch == 'vcenter':
                 # Frame the command  to provision vcenter-plugin
                 vcenter_info = getattr(env, 'vcenter', None)
                 if not vcenter_info:
                     print 'Error: vcenter block is not defined in testbed file.Exiting'
                     return
-                cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+                cassandra_ip_list = [hstr_to_ip(get_control_host_string(\
+                    cassandra_host)) for cassandra_host in env.roledefs['database']]
+                cfgm_ip = get_contrail_internal_vip() or\
+                    hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
                 cmd = "setup-vcenter-plugin"
                 cmd += " --vcenter_url %s" % vcenter_info['server']
                 cmd += " --vcenter_username %s" % vcenter_info['username']
@@ -555,7 +496,6 @@ def setup_cfgm_node(*args):
             # Execute the provision vcenter-plugin script
             with cd(INSTALLER_DIR):
                 sudo(cmd)
-
 
     # HAPROXY fixups
     haproxy = get_haproxy_opt()
@@ -918,51 +858,9 @@ def setup_openstack_node(*args):
     """Provisions openstack services in one or list of nodes. USAGE: fab setup_openstack_node:user@1.1.1.1,user@2.2.2.2"""
     #qpidd_changes_for_ubuntu()
 
-    amqp_server_ip = get_openstack_amqp_server()
     for host_string in args:
-        openstack_ip_list = []
-        self_host = get_control_host_string(host_string)
-        self_ip = hstr_to_ip(self_host)
-        mgmt_self_ip = hstr_to_ip(host_string)
-        openstack_host_password = get_env_passwords(host_string)
-        keystone_ip = get_keystone_ip(ignore_vip=True, openstack_node=env.host_string)
-        openstack_admin_password = get_keystone_admin_password()
-        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_ip = hstr_to_ip(cfgm_host)
-        internal_vip = get_openstack_internal_vip()
-
         # Frame the command line to provision openstack
-        cmd = "setup-vnc-openstack"
-        cmd += " --self_ip %s" % self_ip
-        cmd += " --keystone_ip %s" % keystone_ip
-        cmd += " --keystone_admin_passwd %s" % openstack_admin_password
-        cmd += " --cfgm_ip %s " % cfgm_ip
-        cmd += " --keystone_auth_protocol %s" % get_keystone_auth_protocol()
-        cmd += " --amqp_server_ip %s" % amqp_server_ip
-        cmd += " --quantum_service_protocol %s" % get_quantum_service_protocol()
-        cmd += " --service_token %s" % get_service_token()
-        cmd += ' --openstack_index %s' % (env.roledefs['openstack'].index(host_string) + 1)
-        haproxy = get_haproxy()
-        if haproxy:
-            cmd += " --haproxy %s" % haproxy
-        if internal_vip:
-            # Highly available setup
-            openstack_ip_list = ' '.join([hstr_to_ip(openstack_host) for openstack_host in env.roledefs['openstack']])
-            cmd += ' --internal_vip %s' % (internal_vip)
-            cmd += ' --mgmt_self_ip %s' % mgmt_self_ip
-        contrail_internal_vip = get_contrail_internal_vip()
-        if contrail_internal_vip:
-            # Highly available setup with multiple interface
-            cmd += ' --contrail_internal_vip %s' % (contrail_internal_vip)
-        if openstack_ip_list:
-            cmd += ' --openstack_ip_list %s' % openstack_ip_list
-
-        osapi_compute_workers, conductor_workers = get_nova_workers()
-        if osapi_compute_workers:
-            cmd += ' --osapi_compute_workers %s' % osapi_compute_workers
-        if conductor_workers:
-            cmd += ' --conductor_workers %s' % conductor_workers
-
+        cmd = frame_vnc_openstack_cmd(host_string)
         # Execute the provision openstack script
         with  settings(host_string=host_string):
             with cd(INSTALLER_DIR):
@@ -1063,76 +961,8 @@ def setup_collector_node(*args):
                     sudo("chkconfig redis on")
                     sudo("service redis start")
 
-        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
-        collector_host_password = get_env_passwords(host_string)
-        collector_host = get_control_host_string(host_string)
-        ncollectors = len(env.roledefs['collector'])
-        redis_master_host = get_control_host_string(env.roledefs['collector'][0])
-        if collector_host == redis_master_host:
-            is_redis_master = True
-        else:
-            is_redis_master = False
-        tgt_ip = hstr_to_ip(collector_host)
-        cassandra_host_list = [get_control_host_string(cassandra_host) for cassandra_host in env.roledefs['database']]
-        if collector_host in cassandra_host_list:
-            cassandra_host_list.remove(collector_host)
-            cassandra_host_list.insert(0, collector_host)
-        cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in cassandra_host_list]
-        redis_master_ip = hstr_to_ip(redis_master_host)
-
         # Frame the command line to provision collector
-        cmd = "setup-vnc-collector"
-        cmd += " --cassandra_ip_list %s" % (' '.join(cassandra_ip_list))
-        cmd += " --cfgm_ip %s" % cfgm_ip
-        cmd += " --self_collector_ip %s" % tgt_ip
-        cmd += " --num_nodes %d " % ncollectors
-        analytics_syslog_port = get_collector_syslog_port()
-        if analytics_syslog_port is not None:
-            cmd += "--analytics_syslog_port %d " % analytics_syslog_port
-        analytics_database_ttl = get_database_ttl()
-        if analytics_database_ttl is not None:
-            cmd += "--analytics_data_ttl %d " % analytics_database_ttl
-        else:
-            #if nothing is provided we default to 48h
-            cmd += "--analytics_data_ttl 48 "
-        analytics_config_audit_ttl = get_analytics_config_audit_ttl()
-        if analytics_config_audit_ttl is not None:
-            cmd += "--analytics_config_audit_ttl %d " % analytics_config_audit_ttl
-        else:
-            cmd += "--analytics_config_audit_ttl -1 "
-        analytics_statistics_ttl = get_analytics_statistics_ttl()
-        if analytics_statistics_ttl is not None:
-            cmd += "--analytics_statistics_ttl %d " % analytics_statistics_ttl
-        else:
-            cmd += "--analytics_statistics_ttl -1 "
-        analytics_flow_ttl = get_analytics_flow_ttl()
-        if analytics_flow_ttl is not None:
-            cmd += "--analytics_flow_ttl %d " % analytics_flow_ttl
-        else:
-            cmd += "--analytics_flow_ttl -1 "
-        analytics_redis_password = get_redis_password()
-        if analytics_redis_password is not None:
-            cmd += "--redis_password %s " % analytics_redis_password
-        cmd += "--kafka_enabled %s" % get_kafka_enabled()
-        if get_orchestrator() == 'openstack':
-            # Pass keystone arguments in case for openstack orchestrator
-            ks_admin_user, ks_admin_password = get_openstack_credentials()
-            cmd += " --keystone_ip %s" % get_keystone_ip()
-            cmd += " --keystone_admin_user %s" % ks_admin_user
-            cmd += " --keystone_admin_passwd %s" % ks_admin_password
-            cmd += " --keystone_admin_tenant_name %s" % \
-                    get_keystone_service_tenant_name()
-            cmd += " --keystone_auth_protocol %s" % \
-                    get_keystone_auth_protocol()
-            cmd += " --keystone_auth_port %s" % get_keystone_auth_port()
-            cmd += " --keystone_admin_token %s" % get_keystone_admin_token()
-            cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
-
-        internal_vip = get_contrail_internal_vip()
-        if internal_vip:
-            # Highly Available setup
-            cmd += " --internal_vip %s" % internal_vip
+        cmd = frame_vnc_collector_cmd(host_string)
 
         # Execute the provision collector script
         with  settings(host_string=host_string):
@@ -1155,40 +985,8 @@ def setup_database():
 def setup_database_node(*args):
     """Provisions database services in one or list of nodes. USAGE: fab setup_database_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
-        database_host = host_string
-        database_host_list = [get_control_host_string(entry) for entry in env.roledefs['database']]
-        database_ip_list = [hstr_to_ip(db_host) for db_host in database_host_list]
-        database_host=get_control_host_string(host_string)
-        database_host_password=get_env_passwords(host_string)
-        tgt_ip = hstr_to_ip(database_host)
-        #derive kafka broker id from the list of servers specified
-        broker_id = sorted(database_ip_list).index(tgt_ip)
         # Frame the command line to provision database
-        cmd = "setup-vnc-database"
-        cmd += " --self_ip %s" % tgt_ip
-        cmd += " --cfgm_ip %s" % cfgm_ip
-        database_dir = get_database_dir()
-        if database_dir is not None:
-            cmd += " --data_dir %s" % database_dir
-        analytics_data_dir = get_analytics_data_dir()
-        if analytics_data_dir is not None:
-            cmd += " --analytics_data_dir %s" % analytics_data_dir
-        ssd_data_dir = get_ssd_data_dir()
-        if ssd_data_dir is not None:
-            cmd += " --ssd_data_dir %s" % ssd_data_dir
-        if (len(env.roledefs['database'])>2):
-            cmd += " --seed_list %s" % ','.join(database_ip_list[:2])
-        else:
-            cmd += " --seed_list %s" % (hstr_to_ip(get_control_host_string(env.roledefs['database'][0])))
-        cmd += " --zookeeper_ip_list %s" % ' '.join(database_ip_list)
-        cmd += " --database_index %d" % (database_host_list.index(database_host) + 1)
-        minimum_diskGB = get_minimum_diskGB()
-        if minimum_diskGB is not None:
-            cmd += " --minimum_diskGB %s" % minimum_diskGB
-        cmd += " --kafka_broker_id %d" % broker_id
-
+        cmd = frame_vnc_database_cmd(host_string)
         # Execute the provision database script
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
@@ -1209,29 +1007,6 @@ def setup_webui():
 def setup_webui_node(*args):
     """Provisions webui services in one or list of nodes. USAGE: fab setup_webui_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_ip = hstr_to_ip(cfgm_host)
-        webui_host = get_control_host_string(host_string)
-        cfgm_host_password=get_env_passwords(host_string)
-        ncollectors = len(env.roledefs['collector'])
-        database_host_list=[]
-        for entry in env.roledefs['database']:
-            database_host_list.append(get_control_host_string(entry))
-        webui_host_list=[]
-        for entry in env.roledefs['webui']:
-            webui_host_list.append(get_control_host_string(entry))
-        # Prefer local collector node
-        if webui_host in env.roledefs['collector']:
-            collector_ip = hstr_to_ip(webui_host)
-        else:
-            # Select based on index
-            hindex = webui_host_list.index(webui_host)
-            hindex = hindex % ncollectors
-            collector_host = get_control_host_string(env.roledefs['collector'][hindex])
-            collector_ip = hstr_to_ip(collector_host)
-        cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in database_host_list]
-        orch = get_orchestrator()
-
         # If redis password is specified in testbed file, then add that to the
         # redis config file
         redis_password = get_redis_password()
@@ -1245,45 +1020,7 @@ def setup_webui_node(*args):
             sudo("sed -i '/^# requirepass/ c\ requirepass " +
                 redis_password + "' " + redis_conf_path)
         # Frame the command line to provision webui
-        cmd = "setup-vnc-webui"
-        cmd += " --cfgm_ip %s" % cfgm_ip
-        cmd += " --collector_ip %s" % collector_ip
-        cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
-        cmd += " --orchestrator %s" % orch
-        if redis_password is not None:
-            cmd += " --redis_password %s" % redis_password
-        internal_vip = get_openstack_internal_vip()
-        if internal_vip:
-            # Highly available setup
-            cmd += " --internal_vip %s" % internal_vip
-        contrail_internal_vip = get_contrail_internal_vip()
-        if contrail_internal_vip:
-            # Highly available setup with multiple interfaces
-            cmd += " --contrail_internal_vip %s" % contrail_internal_vip
-
-        if orch == 'openstack':
-            openstack_host = get_control_host_string(env.roledefs['openstack'][0])
-            openstack_ip = hstr_to_ip(openstack_host)
-            keystone_ip = get_keystone_ip()
-            ks_admin_user, ks_admin_password = get_openstack_credentials()
-            cmd += " --keystone_ip %s" % keystone_ip
-            cmd += " --openstack_ip %s" % openstack_ip
-            cmd += " --admin_user %s" % ks_admin_user
-            cmd += " --admin_password %s" % ks_admin_password
-            cmd += " --admin_token %s" % get_keystone_admin_token()
-            cmd += " --admin_tenant_name %s" % get_keystone_admin_tenant_name()
-        elif orch == 'vcenter':
-            vcenter_info = getattr(env, 'vcenter', None)
-            if not vcenter_info:
-                print 'Error: vcenter block is not defined in testbed file.Exiting'
-                return
-            # vcenter provisioning parameters
-            cmd += " --vcenter_ip %s" % vcenter_info['server']
-            cmd += " --vcenter_port %s" % vcenter_info['port']
-            cmd += " --vcenter_auth %s" % vcenter_info['auth']
-            cmd += " --vcenter_datacenter %s" % vcenter_info['datacenter']
-            cmd += " --vcenter_dvswitch %s" % vcenter_info['dv_switch']['dv_switch_name']
-
+        cmd = frame_vnc_webui_cmd(host_string)
         # Execute the provision webui script
         with  settings(host_string=host_string):
             with settings(warn_only=True):
@@ -1331,34 +1068,14 @@ def setup_control_node(*args):
     """Provisions control services in one or list of nodes. USAGE: fab setup_control_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         fixup_irond_config(host_string)
-        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_host_password=get_env_passwords(env.roledefs['cfgm'][0])
-        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
-        control_host = get_control_host_string(host_string)
-        tgt_ip = hstr_to_ip(control_host)
-        collector_host_list=[]
-        for entry in env.roledefs['collector']:
-            collector_host_list.append(get_control_host_string(entry))
-        control_host_list=[]
-        for entry in env.roledefs['control']:
-            control_host_list.append(get_control_host_string(entry))
-        # Prefer local collector node
-        if control_host in collector_host_list:
-            collector_ip = tgt_ip
-        else:
-            # Select based on index
-            hindex = control_host_list.index(control_host)
-            hindex = hindex % len(env.roledefs['collector'])
-            collector_host = get_control_host_string(env.roledefs['collector'][hindex])
-            collector_ip = hstr_to_ip(collector_host)
+        cmd = frame_vnc_control_cmd(host_string)
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     sudo('rm /etc/init/supervisor-control.override')
                     sudo('rm /etc/init/supervisor-dns.override')
             with cd(INSTALLER_DIR):
-                sudo("setup-vnc-control --self_ip %s --cfgm_ip %s --collector_ip %s" \
-                     %(tgt_ip, cfgm_ip, collector_ip))
+                sudo(cmd)
                 if detect_ostype() == 'centos':
                     sudo("service contrail-control restart")
 #end setup_control
@@ -1469,121 +1186,20 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
                                      'service_neutron_metadata_proxy',
                                      'neutron_metadata_proxy_shared_secret')
             metadata_secret = secret if status == 'True' else None
-        cpu_mode = get_nova_cpu_mode()
-        cpu_model = get_nova_cpu_model()
 
     for host_string in args:
         # Enable haproxy for Ubuntu
         with  settings(host_string=host_string):
             enable_haproxy()
-        #qpidd_changes_for_ubuntu()
-        ncontrols = len(env.roledefs['control'])
-        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
-        cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
-        cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
-        compute_host = get_control_host_string(host_string)
-        (tgt_ip, tgt_gw) = get_data_ip(host_string)
-
-        compute_mgmt_ip= host_string.split('@')[1]
-        compute_control_ip= hstr_to_ip(compute_host)
-
         haproxy = get_haproxy_opt()
         if haproxy:
             # setup haproxy and enable
             fixup_restart_haproxy_in_one_compute(host_string)
 
-        amqp_server_ip = get_contrail_amqp_server()
-        # Using amqp running in openstack node
-        if (get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes' or
-            get_from_testbed_dict('openstack', 'amqp_host', None)):
-            amqp_server_ip = get_openstack_amqp_server()
-
         # Frame the command line to provision compute node.
-        cmd = "setup-vnc-compute"
-        cmd += " --self_ip %s" % compute_control_ip
-        cmd += " --cfgm_ip %s" % cfgm_ip
-        cmd += " --cfgm_user %s" % cfgm_user
-        cmd += " --cfgm_passwd %s" % cfgm_passwd
-        cmd += " --ncontrols %s" % ncontrols
-        cmd += " --amqp_server_ip %s" % amqp_server_ip
-        cmd += " --service_token %s" % get_service_token()
-        cmd += " --orchestrator %s" % get_orchestrator()
-        cmd += " --hypervisor %s" % get_hypervisor(host_string)
-        haproxy = get_haproxy()
-        if haproxy:
-            cmd += " --haproxy %s" % haproxy
-        if tgt_ip != compute_mgmt_ip:
-            cmd += " --non_mgmt_ip %s" % tgt_ip
-            cmd += " --non_mgmt_gw %s" % tgt_gw
-
-        if orch == 'openstack':
-            openstack_mgmt_ip = hstr_to_ip(env.roledefs['openstack'][0])
-            keystone_ip = get_keystone_ip()
-            ks_auth_protocol = get_keystone_auth_protocol()
-            ks_auth_port = get_keystone_auth_port()
-            ks_admin_user, ks_admin_password = get_openstack_credentials()
-            openstack_admin_password = get_keystone_admin_password()
-            cmd += " --keystone_ip %s" % keystone_ip
-            cmd += " --openstack_mgmt_ip %s" % openstack_mgmt_ip
-            cmd += " --keystone_auth_protocol %s" % ks_auth_protocol
-            cmd += " --keystone_auth_port %s" % ks_auth_port
-            cmd += " --quantum_service_protocol %s" % get_quantum_service_protocol()
-            cmd += " --keystone_admin_user %s" % ks_admin_user
-            cmd += " --keystone_admin_password %s" % ks_admin_password
-            if metadata_secret:
-                cmd += " --metadata_secret %s" % metadata_secret
-            if cpu_mode is not None:
-                cmd += " --cpu_mode %s" % cpu_mode
-                if cpu_mode == 'custom':
-                    if cpu_model is None:
-                        raise Exception('cpu model is required for custom cpu mode')
-                    cmd += " --cpu_model %s" % cpu_model
-
-        # HA arguments
-        internal_vip = get_openstack_internal_vip()
-        if internal_vip:
-            # Highly availbale setup
-            cmd += " --internal_vip %s" % internal_vip
-        external_vip = get_from_testbed_dict('ha', 'external_vip', None)
-        if external_vip:
-            cmd += ' --external_vip %s' % external_vip
-        if manage_nova_compute == 'no':
-            cmd = cmd + "  --no_contrail_openstack"
-        contrail_internal_vip = get_contrail_internal_vip()
-        if contrail_internal_vip:
-            # Highly availbale setup with mulitple interfaces
-            cmd += " --contrail_internal_vip %s" % contrail_internal_vip
-        if internal_vip or contrail_internal_vip:
-            cmd += " --mgmt_self_ip %s" % compute_mgmt_ip
-
-        if configure_nova == 'no':
-            cmd = cmd + "  --no_nova_config"
-
-        # Simple Gateway(vgw) arguments
-        (set_vgw, gateway_routes, public_subnet, public_vn_name, vgw_intf_list) = get_vgw_details(host_string)
-        if set_vgw:
-            cmd += " --vgw_public_subnet %s" % str([(';'.join(str(e) for e in public_subnet)).replace(" ","")])
-            cmd += " --vgw_public_vn_name %s" % str([(';'.join(str(e) for e in public_vn_name)).replace(" ","")])
-            cmd += " --vgw_intf_list %s" % str([(';'.join(str(e) for e in vgw_intf_list)).replace(" ","")])
-            if gateway_routes:
-                cmd += " --vgw_gateway_routes %s" % str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
-
-        # Contrail with vmware as orchestrator
-        esxi_data = get_vmware_details(host_string)
-        if esxi_data:
-            apply_esxi_defaults(esxi_data)
-            cmd += " --vmware %s" % esxi_data['ip']
-            cmd += " --vmware_username %s" % esxi_data['username']
-            cmd += " --vmware_passwd %s" % esxi_data['password']
-            cmd += " --vmware_vmpg_vswitch %s" % esxi_data['vm_vswitch']
-            cmd += " --vmware_vmpg_vswitch_mtu %s" % esxi_data['vm_vswitch_mtu']
-
-        dpdk = getattr(env, 'dpdk', None)
-        if dpdk:
-            if env.host_string in dpdk:
-                cmd += " --dpdk"
+        cmd = frame_vnc_compute_cmd(host_string, metadata_secret=metadata_secret,
+                                    manage_nova_compute=manage_nova_compute,
+                                    configure_nova=configure_nova)
 
         # Setup hugepages if necessary
         setup_hugepages_node(host_string)

@@ -150,6 +150,12 @@ def get_keystone_admin_password():
     return get_from_testbed_dict('keystone', 
             'admin_password', ks_admin_password) 
 
+def get_openstack_credentials():
+    ks_admin_user = get_keystone_admin_user()
+    ks_admin_password = get_keystone_admin_password()
+    return ks_admin_user, ks_admin_password
+# end get_openstack_credentials
+
 def get_keystone_service_tenant_name():
     return get_from_testbed_dict('keystone', 'service_tenant', 'service')
 
