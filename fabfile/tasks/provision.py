@@ -1611,72 +1611,81 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
                 sudo(cmd)
 #end setup_vrouter
 
-@roles('cfgm')
 @task
+@EXECUTE_TASK
+@roles('cfgm')
+def prov_config_node():
+    cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+    tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+    tgt_hostname = sudo("hostname")
+
+    with cd(UTILS_DIR):
+        cmd = "python provision_config_node.py"
+        cmd += " --api_server_ip %s" % cfgm_ip
+        cmd += " --host_name %s" % tgt_hostname
+        cmd += " --host_ip %s" % tgt_ip
+        cmd += " --oper add"
+        cmd += " %s" % get_mt_opts()
+        sudo(cmd)
+#end prov_config_node
+
+@task
+@EXECUTE_TASK
+@roles('database')
 def prov_database_node():
     cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+    tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+    tgt_hostname = sudo("hostname")
 
-    for database_host in env.roledefs['collector']:
-        with settings(host_string = database_host):
-            tgt_ip = hstr_to_ip(get_control_host_string(database_host))
-            tgt_hostname = sudo("hostname")
-
-        with cd(UTILS_DIR):
-            cmd = "python provision_database_node.py"
-            cmd += " --api_server_ip %s" % cfgm_ip
-            cmd += " --host_name %s" % tgt_hostname
-            cmd += " --host_ip %s" % tgt_ip
-            cmd += " --oper add"
-            cmd += " %s" % get_mt_opts()
-            sudo(cmd)
+    with cd(UTILS_DIR):
+        cmd = "python provision_database_node.py"
+        cmd += " --api_server_ip %s" % cfgm_ip
+        cmd += " --host_name %s" % tgt_hostname
+        cmd += " --host_ip %s" % tgt_ip
+        cmd += " --oper add"
+        cmd += " %s" % get_mt_opts()
+        sudo(cmd)
 #end prov_database_node
 
-@roles('cfgm')
 @task
+@EXECUTE_TASK
+@roles('collector')
 def prov_analytics_node():
     cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+    tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+    tgt_hostname = sudo("hostname")
 
-    for analytics_host in env.roledefs['collector']:
-        with settings(host_string = analytics_host):
-            tgt_ip = hstr_to_ip(get_control_host_string(analytics_host))
-            tgt_hostname = sudo("hostname")
-
-        with cd(UTILS_DIR):
-            cmd = "python provision_analytics_node.py"
-            cmd += " --api_server_ip %s" % cfgm_ip
-            cmd += " --host_name %s" % tgt_hostname
-            cmd += " --host_ip %s" % tgt_ip
-            cmd += " --oper add"
-            cmd += " %s" % get_mt_opts()
-            sudo(cmd)
+    with cd(UTILS_DIR):
+        cmd = "python provision_analytics_node.py"
+        cmd += " --api_server_ip %s" % cfgm_ip
+        cmd += " --host_name %s" % tgt_hostname
+        cmd += " --host_ip %s" % tgt_ip
+        cmd += " --oper add"
+        cmd += " %s" % get_mt_opts()
+        sudo(cmd)
 #end prov_analytics_node
 
-@roles('cfgm')
 @task
+@EXECUTE_TASK
+@roles('control')
 def prov_control_bgp():
     cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+    tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+    tgt_hostname = sudo("hostname")
 
-    control_host_list=[]
-    for entry in env.roledefs['control']:
-        control_host_list.append(get_control_host_string(entry))
-    for control_host in env.roledefs['control']:
-        with settings(host_string = control_host):
-            tgt_ip = hstr_to_ip(get_control_host_string(control_host))
-            tgt_hostname = sudo("hostname")
-
-        with cd(UTILS_DIR):
-            print "Configuring global system config with the ASN"
-            cmd = "python provision_control.py"
-            cmd += " --api_server_ip %s" % cfgm_ip
-            cmd += " --api_server_port 8082"
-            cmd += " --router_asn %s" % testbed.router_asn
-            cmd += " %s" % get_mt_opts()
-            sudo(cmd)
-            print "Adding control node as bgp router"
-            cmd += " --host_name %s" % tgt_hostname
-            cmd += " --host_ip %s" % tgt_ip
-            cmd += " --oper add"
-            sudo(cmd)
+    with cd(UTILS_DIR):
+        print "Configuring global system config with the ASN"
+        cmd = "python provision_control.py"
+        cmd += " --api_server_ip %s" % cfgm_ip
+        cmd += " --api_server_port 8082"
+        cmd += " --router_asn %s" % testbed.router_asn
+        cmd += " %s" % get_mt_opts()
+        sudo(cmd)
+        print "Adding control node as bgp router"
+        cmd += " --host_name %s" % tgt_hostname
+        cmd += " --host_ip %s" % tgt_ip
+        cmd += " --oper add"
+        sudo(cmd)
 #end prov_control_bgp
 
 @roles('cfgm')
@@ -2075,6 +2084,7 @@ def setup_all(reboot='True'):
     execute('setup_webui')
     execute('verify_webui')
     execute('setup_vrouter')
+    execute('prov_config_node')
     execute('prov_database_node')
     execute('prov_analytics_node')
     execute('prov_control_bgp')
@@ -2115,6 +2125,7 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     execute('setup_webui')
     execute('verify_webui')
     execute('setup_vrouter', manage_nova_compute)
+    execute('prov_config_node')
     execute('prov_database_node')
     execute('prov_analytics_node')
     execute('prov_control_bgp')
