@@ -49,7 +49,7 @@ def get_minimum_diskGB():
 #end get_analytics_flow_ttl
 
 def get_kafka_enabled():
-    return getattr(testbed, 'kafka_enabled', None)
+    return getattr(testbed, 'kafka_enabled', True)
 
 def get_enable_ceilometer():
     return getattr(testbed, 'enable_ceilometer', True)
