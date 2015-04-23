@@ -260,7 +260,11 @@ def add_reserved_ports_node(ports, *args):
                 sudo('echo "net.ipv4.ip_local_reserved_ports = %s" >> /etc/sysctl.conf' % ports)
             else:
                 sudo("sed -i 's/net.ipv4.ip_local_reserved_ports\s*=\s*/net.ipv4.ip_local_reserved_ports=%s,/' /etc/sysctl.conf" % ports)
-            sudo("sysctl -p")
+
+            # Centos returns non zero return code for "sysctl -p".
+            # However the ports are reserved properly.
+            with settings(warn_only=True):
+                sudo("sysctl -p")
 
 @task
 @EXECUTE_TASK
