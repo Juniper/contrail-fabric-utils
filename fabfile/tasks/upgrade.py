@@ -432,7 +432,7 @@ def backup_config_node(from_rel, *args):
             ostype = detect_ostype()
             to_rel = get_release()
             to_build = get_build().split('~')[0]
-            upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
+            upgrade_data = copy.deepcopy(get_upgrade_schema(ostype, from_rel, to_rel, to_build))
             if ('tsn' in env.roledefs.keys() and host_string in env.roledefs['tsn']) or \
                ('toragent' in env.roledefs.keys() and host_string in env.roledefs['toragent']):
                 upgrade_data = fix_tsn_toragent_backup_config_node(host_string, upgrade_data)
@@ -513,7 +513,7 @@ def upgrade(from_rel, role):
     ostype = detect_ostype()
     to_rel = get_release()
     to_build = get_build().split('~')[0]
-    upgrade_data = get_upgrade_schema(ostype, from_rel, to_rel, to_build)
+    upgrade_data = copy.deepcopy(get_upgrade_schema(ostype, from_rel, to_rel, to_build))
     if 'tsn' in env.roledefs.keys() and env.host_string in env.roledefs['tsn']:
         upgrade_data = fix_tsn_toragent_upgrade_node(env.host_string, upgrade_data)
     #backup_config(role, upgrade_data)
@@ -526,6 +526,9 @@ def upgrade(from_rel, role):
     upgrade_package(upgrade_data[role]['upgrade'], ostype)
     if ostype == 'ubuntu':
         remove_package(upgrade_data[role]['remove'], ostype)
+    if ('tsn' in env.roledefs.keys() and env.host_string in env.roledefs['tsn']) or \
+       ('toragent' in env.roledefs.keys() and env.host_string in env.roledefs['toragent']):
+        upgrade_data = fix_tsn_toragent_backup_config_node(env.host_string, upgrade_data)
     restore_config(role, upgrade_data)
     restore_config_dir(role, upgrade_data)
     rename_files(role, upgrade_data)
