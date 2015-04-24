@@ -534,14 +534,13 @@ def setup_cfgm_node(*args):
             with cd(INSTALLER_DIR):
                 sudo(cmd)
 
-            # Frame the command  to provision vcenter-plugin
-            vcenter_info = getattr(env, 'vcenter', None)
-            if not vcenter_info:
-                print 'Error: vcenter block is not defined in testbed file.Exiting'
-                return
-            cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
-
             if orch == 'vcenter':
+                # Frame the command  to provision vcenter-plugin
+                vcenter_info = getattr(env, 'vcenter', None)
+                if not vcenter_info:
+                    print 'Error: vcenter block is not defined in testbed file.Exiting'
+                    return
+                cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
                 cmd = "setup-vcenter-plugin"
                 cmd += " --vcenter_url %s" % vcenter_info['server']
                 cmd += " --vcenter_username %s" % vcenter_info['username']
