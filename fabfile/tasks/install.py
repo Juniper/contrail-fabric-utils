@@ -2,6 +2,8 @@ import os
 import re
 import copy
 import time
+import glob
+import tarfile
 import tempfile
 
 from fabfile.config import *
@@ -10,7 +12,8 @@ from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator,\
      reboot_nodes
 from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_compute_pkgs, get_ceilometer_plugin_pkgs, get_openstack_pkgs,\
-     get_openstack_ceilometer_pkgs
+     get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz, \
+     create_apt_repo_from_tgz
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
@@ -199,7 +202,7 @@ def upgrade_pkgs_node(*args):
 
 def yum_install(rpms, disablerepo = True):
     if disablerepo:
-        cmd = "yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo install "
+        cmd = "yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail* install "
     else:
         cmd = "yum -y --nogpgcheck install "
     os_type = detect_ostype()
@@ -522,20 +525,59 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
 @task
 @EXECUTE_TASK
 @roles('all')
-def create_install_repo():
+def create_install_repo(*tgzs):
     """Creates contrail install repo in all nodes."""
-    execute("create_install_repo_node", env.host_string)
+    if len(tgzs) == 0:
+        execute("create_install_repo_node", env.host_string)
+    else:
+        execute("create_install_repo_from_tgz_node", env.host_string, *tgzs)
 
 @task
 @roles('build')
-def create_install_repo_without_openstack():
+def create_install_repo_without_openstack(*tgzs):
     """Creates contrail install repo in all nodes excluding openstack node."""
-    host_strings = copy.deepcopy(env.roledefs['all'])
-    dummy = [host_strings.remove(openstack_node)
-             for openstack_node in env.roledefs['openstack']]
-    for host_string in host_strings:
+    if len(tgzs) == 0:
+        cmd = 'create_install_repo_node'
+    else:
+        cmd = 'create_install_repo_from_tgz_node'
+
+    for host_string in env.roledefs['all']:
+        if host_string in env.roledefs['openstack']:
+            continue
         with settings(host_string=host_string):
-            execute("create_install_repo_node", host_string)
+            execute(cmd, host_string, *tgzs)
+
+@task
+def create_install_repo_from_tgz_node(host_string, *tgzs):
+    """Create contrail repos from each tgz files in the given node
+       * tgzs can be absolute/relative paths or a pattern
+    """
+    # verify tgz's availability
+    cant_use = []
+    usable_tgz_files = []
+    for tgz in tgzs:
+        tgz_files = os.path.abspath(os.path.expanduser(tgz))
+        tgz_file_list = glob.glob(tgz_files)
+        for tgz_file in tgz_file_list:
+            if not os.access(tgz_file, os.R_OK):
+                cant_use.append(tgz_file)
+            elif not tarfile.is_tarfile(tgz_file):
+                cant_use.append(tgz_file)
+            else:
+                usable_tgz_files.append(tgz_file)
+
+    if len(cant_use) != 0:
+        print "ERROR: TGZ file mentioned below are not readable or", \
+              "not a valid tgz file or do not exists"
+        print "\n".join(cant_use)
+
+    for tgz in usable_tgz_files:
+        with settings(host_string=host_string, warn_only=True):
+            os_type = detect_ostype()
+            if os_type in ['centos', 'fedora', 'redhat']:
+                create_yum_repo_from_tgz(tgz)
+            elif os_type in ['ubuntu']:
+                create_apt_repo_from_tgz(tgz)
 
 @task
 def create_install_repo_node(*args):
@@ -656,11 +698,12 @@ def reboot_on_kernel_update(reboot='True'):
 
 @roles('build')
 @task
-def install_contrail(reboot='True'):
+def install_contrail(*tgzs, **kwargs):
     """Installs required contrail packages in all nodes as per the role definition.
     """
+    reboot = kwargs.get('reboot', 'True')
     execute('pre_check')
-    execute(create_install_repo)
+    execute(create_install_repo, *tgzs)
     execute(create_install_repo_dpdk)
     execute(install_database)
     execute('install_orchestrator')
@@ -679,12 +722,14 @@ def install_contrail(reboot='True'):
 
 @roles('build')
 @task
-def install_without_openstack(manage_nova_compute='yes', reboot='True'):
+def install_without_openstack(*tgzs, **kwargs):
     """Installs required contrail packages in all nodes as per the role definition except the openstack.
        User has to install the openstack node with their custom openstack pakckages.
        If manage_nova_compute = no, User has to install nova-compute in the compute node.
     """
-    execute(create_install_repo_without_openstack)
+    manage_nova_compute = kwargs.get('manage_nova_compute', 'yes')
+    reboot = kwargs.get('reboot', 'True')
+    execute(create_install_repo_without_openstack, *tgzs)
     execute(create_install_repo_dpdk)
     execute(install_database)
     execute(install_cfgm)
