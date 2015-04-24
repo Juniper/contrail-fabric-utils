@@ -327,7 +327,7 @@ def setup_test_env():
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
                 if 'centos' == detect_ostype():
-                    sudo("yum -y --disablerepo=* --enablerepo=contrail_install_repo install tcpdump")
+                    sudo("yum -y --disablerepo=* --enablerepo=contrail* install tcpdump")
                 if 'redhat' == detect_ostype():
                     sudo("yum -y install tcpdump")
 #end setup_test_env

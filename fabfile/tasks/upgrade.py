@@ -277,7 +277,7 @@ def upgrade_zookeeper_node(*args):
             with settings(warn_only=True):
                 sudo('rpm -e --nodeps zookeeper zookeeper-lib zkpython')
             yum_install(['zookeeper'])
-            sudo('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo reinstall contrail-config')
+            sudo('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail* reinstall contrail-config')
             sudo('chkconfig zookeeper on')
 
 @task
@@ -346,7 +346,7 @@ def upgrade_package(pkgs, ostype):
     if ostype in ['centos', 'fedora']:
         sudo('yum clean all')
         for pkg in pkgs:
-            sudo('yum -y --disablerepo=* --enablerepo=contrail_install_repo install %s' % pkg)
+            sudo('yum -y --disablerepo=* --enablerepo=contrail* install %s' % pkg)
     elif ostype in ['ubuntu']:
         execute('backup_source_list')
         execute('create_contrail_source_list')
@@ -425,7 +425,7 @@ def restore_config(role, upgrade_data):
 def downgrade_package(pkgs, ostype):
     for pkg in pkgs:
         if ostype in ['centos', 'fedora']:
-            sudo('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail_install_repo install %s' % pkg)
+            sudo('yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail* install %s' % pkg)
         elif ostype in ['ubuntu']:
             sudo('DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install %s' % pkg)
 
@@ -832,7 +832,7 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
                 if (ostype == 'ubuntu'):
                     sudo("apt-get -o Dpkg::Options::='--force-confold' install -y haproxy iproute")
                 if (ostype == 'centos'):
-                    sudo("yum -y --disablerepo=* --enablerepo=contrail_install_repo install haproxy iproute")
+                    sudo("yum -y --disablerepo=* --enablerepo=contrail* install haproxy iproute")
             # Populate new params of contrail-vrouter-agent config file
             conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
             lbaas_svc_instance_params = {'netns_command' : '/usr/bin/opencontrail-vrouter-netns',
