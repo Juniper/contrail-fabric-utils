@@ -1043,18 +1043,16 @@ def check_and_setup_rabbitmq_cluster():
 
 def fixup_device_manager_config(host_string):
     # contrail-device-manager.conf
-    cfgm_ip = hstr_to_ip(host_string)
-    rabbit_host = cfgm_ip
+    cfgm_ip = hstr_to_ip(get_control_host_string(host_string))
     rabbit_port = 5672
     internal_vip = get_contrail_internal_vip()
     if internal_vip:
-        rabbit_host = internal_vip
         rabbit_port = 5673
     cassandra_host_list = [get_control_host_string(cassandra_host) for cassandra_host in env.roledefs['database']]
     cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in cassandra_host_list]
     cassandra_server_list = [(cassandra_server_ip, '9160') for cassandra_server_ip in cassandra_ip_list]
     zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
-    template_vals = {'__rabbit_server_ip__': rabbit_host,
+    template_vals = {'__rabbit_server_ip__': get_contrail_amqp_server(),
                      '__rabbit_server_port__': rabbit_port,
                      '__contrail_api_server_ip__': internal_vip or cfgm_ip,
                      '__contrail_api_server_port__': '8082',
