@@ -357,8 +357,14 @@ verify_on_setup=$__test_verify_on_setup__
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
                 if exists('/opt/contrail/api-venv/bin/activate'):
-                    run('source /opt/contrail/api-venv/bin/activate && pip install %s' %pkg)
+                    run('source /opt/contrail/api-venv/bin/activate && \
+                         pip install linecache2 && --upgrade unittest2 && \
+                         pip install %s' %pkg)
                 else:
+                    # Avoid installing linecache2 as dependency on unittest2
+                    # Avoid "TypeError: dist must be a Distribution instance"
+                    sudo("pip install linecache2")
+                    sudo("pip install --upgrade unittest2")
                     run("pip install %s" %pkg)
 
         for host_string in env.roledefs['compute']:
