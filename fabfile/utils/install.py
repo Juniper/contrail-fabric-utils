@@ -40,8 +40,10 @@ def get_compute_pkgs(manage_nova_compute='yes'):
 
         if env.host_string in getattr(env, 'dpdk', []):
             contrail_vrouter_pkg = 'contrail-vrouter-dpdk-init'
-
-        pkgs.append(contrail_vrouter_pkg)
+        # This order of installation matters, because in a node with
+        # non recommended kernel installed, contrail-vrouter-dkms pkg
+        # needs to get installed first before contrail-openstack-vrouter.
+        pkgs = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
 
     # Append only vrouter and contrail vrouter dependent packages
     # no need to append the contrail-openstack-vrouter, which when
