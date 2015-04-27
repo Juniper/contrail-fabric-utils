@@ -84,7 +84,7 @@ def create_vmx (esxi_host, vm_name):
     return vmx_file
 #end create_vmx
 
-def create_esxi_compute_vm (esxi_host, vcenter_info):
+def create_esxi_compute_vm (esxi_host, vcenter_info, power_on):
     '''Spawns contrail vm on openstack managed esxi server (non vcenter env)'''
     orch = get_orchestrator()
     datastore = esxi_host['datastore']
@@ -139,6 +139,10 @@ def create_esxi_compute_vm (esxi_host, vcenter_info):
          if out.failed:
              raise Exception("Unable to register VM %s on %s:%s" % (vm_name,
                                       esxi_host['ip'], out))
+
+         if (power_on == False):
+             return
+
          out = run("vim-cmd vmsvc/power.on %s" % out)
          if out.failed:
              raise Exception("Unable to power on %s on %s:%s" % (vm_name,
@@ -156,6 +160,29 @@ def _template_substitute_write(template, vals, filename):
     outfile.write(data)
     outfile.close()
 #end _template_substitute_write
+
+@task
+def provision_dvs_fab(vcenter_info, esxi_info, host_list):
+    apt_install(['contrail-vmware-utils'])
+    dvs_params = {}
+
+    dvs_params['name'] = vcenter_info['dv_switch_fab']['dv_switch_name']
+    dvs_params['dvportgroup_name'] = vcenter_info['dv_port_group_fab']['dv_portgroup_name']
+    dvs_params['dvportgroup_num_ports'] = vcenter_info['dv_port_group_fab']['number_of_ports']
+    dvs_params['dvportgroup_uplink'] = vcenter_info['dv_port_group_fab']['uplink']
+
+    dvs_params['vcenter_server'] = vcenter_info['server']
+    dvs_params['vcenter_username'] = vcenter_info['username']
+    dvs_params['vcenter_password'] = vcenter_info['password']
+
+    dvs_params['cluster_name'] = vcenter_info['cluster']
+    dvs_params['datacenter_name'] = vcenter_info['datacenter']
+
+    dvs_params['esxi_info'] = esxi_info
+    dvs_params['host_list'] = host_list
+
+    dvs_fab(dvs_params)
+#end provision_dvs_fab
 
 @task
 def provision_vcenter(vcenter_info, hosts, clusters, vms, update_dvs):
