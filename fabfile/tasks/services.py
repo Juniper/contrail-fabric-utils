@@ -3,6 +3,17 @@ from misc import zoolink
 from fabfile.utils.fabos import detect_ostype
 
 @task
+@roles('cfgm')
+def stop_rabbitmq():
+    with settings(warn_only=True):
+        sudo('service supervisor-support-service stop')
+
+@task
+@roles('cfgm')
+def restart_rabbitmq():
+    sudo('service supervisor-support-service restart')
+
+@task
 def stop_and_disable_qpidd():
     """stops the qpidd and disables it."""
     execute(stop_and_disable_qpidd_node, env.host_string)
