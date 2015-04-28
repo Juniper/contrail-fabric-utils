@@ -1666,8 +1666,9 @@ def setup_orchestrator():
             execute('sync_keystone_ssl_certs')
             execute('setup_cluster_monitors')
         execute('verify_openstack')
-    elif orch == 'vcenter':
-        execute('setup_vcenter')
+    #setup_vcenter can be called outside of setup_all and need not be below. So commenting.
+    #elif orch == 'vcenter':
+        #execute('setup_vcenter')
 
 @roles('build')
 @task
