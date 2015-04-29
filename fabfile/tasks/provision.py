@@ -1248,11 +1248,14 @@ def prov_config_node():
 @EXECUTE_TASK
 @roles('database')
 def prov_database_node():
-    cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+    cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+    cfgm_ip = hstr_to_ip(cfgm_host)
+    cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
     tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
     tgt_hostname = sudo("hostname")
 
-    with cd(UTILS_DIR):
+    with settings(cd(UTILS_DIR), host_string=cfgm_host,
+                  password=cfgm_host_password):
         cmd = "python provision_database_node.py"
         cmd += " --api_server_ip %s" % cfgm_ip
         cmd += " --host_name %s" % tgt_hostname
@@ -1266,11 +1269,14 @@ def prov_database_node():
 @EXECUTE_TASK
 @roles('collector')
 def prov_analytics_node():
-    cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+    cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+    cfgm_ip = hstr_to_ip(cfgm_host)
+    cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
     tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
     tgt_hostname = sudo("hostname")
 
-    with cd(UTILS_DIR):
+    with settings(cd(UTILS_DIR), host_string=cfgm_host,
+                  password=cfgm_host_password):
         cmd = "python provision_analytics_node.py"
         cmd += " --api_server_ip %s" % cfgm_ip
         cmd += " --host_name %s" % tgt_hostname
@@ -1284,11 +1290,14 @@ def prov_analytics_node():
 @EXECUTE_TASK
 @roles('control')
 def prov_control_bgp():
-    cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+    cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+    cfgm_ip = hstr_to_ip(cfgm_host)
+    cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
     tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
     tgt_hostname = sudo("hostname")
 
-    with cd(UTILS_DIR):
+    with settings(cd(UTILS_DIR), host_string=cfgm_host,
+                  password=cfgm_host_password):
         print "Configuring global system config with the ASN"
         cmd = "python provision_control.py"
         cmd += " --api_server_ip %s" % cfgm_ip
