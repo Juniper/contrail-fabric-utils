@@ -6,6 +6,7 @@ from cluster import *
 from analytics import *
 from interface import *
 from multitenancy import *
+from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
 def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     database_host = host_string
