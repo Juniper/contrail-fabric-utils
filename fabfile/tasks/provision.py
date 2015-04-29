@@ -199,7 +199,7 @@ def get_all_tor_agent_haproxy_config(*args):
                     if 'standby_tor_agent_ip' in toragent_dict[host_string][i] and \
                         'standby_tor_agent_tor_ovs_port' in toragent_dict[host_string][i]:
                         proxy_name = 'contrail-tor-agent-' + toragent_dict[host_string][i]['tor_id']
-                        ip1 = host_string.split('@',1)[1]
+                        ip1=hstr_to_ip(get_control_host_string(host_string))
                         port1 = int(toragent_dict[host_string][i]['tor_ovs_port'])
                         ip2 = toragent_dict[host_string][i]['standby_tor_agent_ip']
                         port2 = int(toragent_dict[host_string][i]['standby_tor_agent_tor_ovs_port'])
@@ -1577,7 +1577,7 @@ def add_tor_agent_node(restart=True, *args):
                     if 'standby_tor_agent_ip' in toragent_dict[host_string][i] and \
                        'standby_tor_agent_tor_id' in toragent_dict[host_string][i]:
                         for node in env.roledefs['all']:
-                            if node.split('@')[1] == toragent_dict[host_string][i]['standby_tor_agent_ip']:
+                            if hstr_to_ip(get_control_host_string(node)) == toragent_dict[host_string][i]['standby_tor_agent_ip']:
                                 ha_tor_id = str(toragent_dict[host_string][i]['standby_tor_agent_tor_id'])
                                 cert_ha_file = '/etc/contrail/ssl/certs/tor.' + ha_tor_id + '.cert.pem'
                                 priv_ha_file = '/etc/contrail/ssl/private/tor.' + ha_tor_id + '.privkey.pem'
