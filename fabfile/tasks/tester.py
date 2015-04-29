@@ -53,7 +53,8 @@ def setup_test_env():
     sanity_testbed_dict = {
         'hosts': [],
         'vgw': [],
-        'hosts_ipmi': []
+        'hosts_ipmi': [],
+        'tor':[],
     }
 
     sample_ini_file = env.test_repo_dir + '/' + 'sanity_params.ini.sample'
@@ -151,7 +152,23 @@ def setup_test_env():
             host_dict['roles'].append(role_dict)
 
         sanity_testbed_dict['hosts'].append(host_dict)
-        if env.has_key('vgw'): sanity_testbed_dict['vgw'].append(env.vgw)
+    if env.has_key('vgw'): sanity_testbed_dict['vgw'].append(env.vgw)
+
+    # Read ToR config
+    sanity_tor_dict = {}
+    if env.has_key('tor_agent'):
+        for (k,v) in env.tor_agent.iteritems():
+            tor_agent_ip = k.split('@')[1]
+            for tor_dict in v:
+                tor_ip = tor_dict['tor_ip']
+                sanity_tor_dict[tor_ip] = tor_dict
+                sanity_tor_dict[tor_ip]['tor_agent_ip'] = tor_agent_ip
+    sanity_testbed_dict['tor'] = sanity_tor_dict
+
+    # Read any tor-host config
+    if env.has_key('tor_hosts'):
+        sanity_testbed_dict['tor_hosts'] = env.tor_hosts
+            
 
     # Adding vip VIP dict for HA test setup
     if CONTROLLER_TYPE == 'Openstack':
