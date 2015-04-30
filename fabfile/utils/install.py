@@ -1,10 +1,17 @@
 from fabric.api import env, settings, sudo
 
 from fabos import detect_ostype, get_release, get_build, get_openstack_sku
-from fabfile.utils.host import get_hypervisor
+from fabfile.utils.host import get_hypervisor, get_openstack_internal_vip
 from fabfile.utils.cluster import is_lbaas_enabled
 from fabfile.config import *
 
+
+def get_openstack_pkgs():
+    pkgs = ['contrail-openstack']
+    if len(env.roledefs['openstack']) > 1 and get_openstack_internal_vip():
+        pkgs.append('contrail-openstack-ha')
+
+    return pkgs
 
 def get_vrouter_kmod_pkg():
     """Return the contrail-vrouter-dkms | contrail-vrouter-generic

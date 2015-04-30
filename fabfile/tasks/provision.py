@@ -1165,6 +1165,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
     #    print "contrail-agent package not installed. Install it and then run setup_vrouter"
     #    return
 
+    metadata_secret = None
     orch = get_orchestrator()
     if orch == 'openstack':
         # reset openstack connections to create new connections
