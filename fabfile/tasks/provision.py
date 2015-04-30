@@ -1984,6 +1984,7 @@ def setup_vcenter():
     (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
     provision_vcenter(vcenter_info, hosts, clusters, vms, 'False')
 
+@task
 @roles('build')
 def add_static_route():
     '''
