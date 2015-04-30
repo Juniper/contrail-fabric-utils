@@ -76,7 +76,14 @@ def listen_at_supervisor_support_port():
 @EXECUTE_TASK
 @roles('rabbit')
 def remove_mnesia_database():
-    sudo("rm -rf /var/lib/rabbitmq/mnesia")
+    with settings(warn_only=True):
+         sudo("service rabbitmq-server stop")
+         if 'Killed' not in sudo("epmd -kill"):
+             sudo("pkill -9  beam")
+             sudo("pkill -9 epmd")
+         if 'beam' in sudo("netstat -anp | grep beam"):
+             sudo("pkill -9  beam")
+         sudo("rm -rf /var/lib/rabbitmq/mnesia")
 
 @task
 @parallel
