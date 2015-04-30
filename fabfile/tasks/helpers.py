@@ -414,17 +414,8 @@ def config_demo():
 #end config_demo
 
 
-@hosts(*env.roledefs['openstack'][0:1])
 @task
 def add_images(image=None):
-    mount=None
-    if '10.84' in env.host:
-        mount= '10.84.5.120/cs-shared'
-    elif '10.204' in env.host:
-        mount= '10.204.216.51'
-    if not mount :
-        return 
-
     images = [ ("turnkey-redmine-12.0-squeeze-x86.vmdk", "redmine-web"),
                ("turnkey-redmine-12.0-squeeze-x86-mysql.vmdk", "redmine-db"),
                ("ubuntu.img", "ubuntu"),
@@ -449,18 +440,47 @@ def add_images(image=None):
         local = "/images/"+loc+".gz"
         remote = loc.split("/")[-1]
         remote_gz = remote+".gz"
-        sudo("wget http://%s/%s" % (mount, local)) 
-        sudo("gunzip " + remote_gz)
+        glance_host = env.roledefs['openstack'][0]
+        if 'docker' in loc:
+            # First docker compute
+            glance_host = env.hypervisor.keys()[0]
+        with settings(host_string=glance_host):
+            mount = None
+            if '10.84' in env.host_string:
+                mount = '10.84.5.120/cs-shared'
+            elif '10.204' in env.host_string:
+                mount = '10.204.216.51'
+            if not mount:
+                return
+            sudo("wget http://%s/%s" % (mount, local))
+            sudo("gunzip " + remote_gz)
 
-        if ".vmdk" in loc:
-            sudo("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format ovf --disk-format vmdk --file "+remote+")")
-        elif "docker" in loc:
-            image_name = remote.split(".tar")[0]
-            sudo("docker load -i %s" % remote)
-            sudo("(source /etc/contrail/openstackrc; docker save '"+image_name+"'| glance image-create --name '"+name+"' --is-public True --container-format docker --disk-format raw)")
-        else:
-            sudo("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format ovf --disk-format qcow2 --file "+remote+")")
-        sudo("rm "+remote)
+            cmd = "source /etc/contrail/openstackrc; {PRECMD}"\
+                  " glance image-create --name {IMGNAME}"\
+                  " --is-public True --container-format {IMGFORMAT}"\
+                  " --disk-format {DISKFORMAT} {IMGFILE_OPT}"
+            if ".vmdk" in loc:
+                glance_kwargs = {'PRECMD': '',
+                                 'IMGNAME' : name,
+                                 'IMGFORMAT' : 'ovf',
+                                 'DISKFORMAT' : 'vmdk',
+                                 'IMGFILE_OPT' : '--file %s' % remote}
+            elif "docker" in loc:
+                image_name = remote.split(".tar")[0]
+                sudo("docker load -i %s" % remote)
+                glance_kwargs = {'PRECMD': 'docker save %s |' % image_name,
+                                 'IMGNAME' : name,
+                                 'IMGFORMAT' : 'docker',
+                                 'DISKFORMAT' : 'raw',
+                                 'IMGFILE_OPT' : ''}
+            else:
+                glance_kwargs = {'PRECMD': '',
+                                 'IMGNAME' : name,
+                                 'IMGFORMAT' : 'ovf',
+                                 'DISKFORMAT' : 'qcow2',
+                                 'IMGFILE_OPT' : '--file %s' % remote}
+            sudo(cmd.format(**glance_kwargs))
+            sudo("rm %s" % remote)
 #end add_images
 
 def preload_image_to_esx(url, glance_id, sizes, version):
