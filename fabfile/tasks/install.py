@@ -11,8 +11,8 @@ from fabfile.utils.fabos import *
 from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator,\
      reboot_nodes
 from fabfile.utils.install import get_compute_ceilometer_pkgs,\
-     get_compute_pkgs, get_ceilometer_plugin_pkgs,\
-     get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz, \
+     get_compute_pkgs, get_ceilometer_plugin_pkgs, get_openstack_pkgs,\
+     get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz,\
      create_apt_repo_from_tgz
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor, get_env_passwords
@@ -395,13 +395,11 @@ def install_openstack_node(*args):
     """Installs openstack pkgs in one or list of nodes. USAGE:fab install_openstack_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            pkg = ['contrail-openstack']
-            if len(env.roledefs['openstack']) > 1 and get_openstack_internal_vip():
-                pkg.append('contrail-openstack-ha')
+            pkgs = get_openstack_pkgs()
             if detect_ostype() == 'ubuntu':
-                apt_install(pkg)
+                apt_install(pkgs)
             else:
-                yum_install(pkg)
+                yum_install(pkgs)
             install_ceilometer_node(host_string)
 
 @task

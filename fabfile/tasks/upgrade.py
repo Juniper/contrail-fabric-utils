@@ -3,8 +3,8 @@ from fabfile.config import *
 from fabfile.tasks.install import pkg_install
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 from fabfile.utils.commandline import *
-from fabfile.utils.fabos import get_release
-from fabfile.utils.install import get_compute_pkgs
+from fabfile.utils.fabos import get_release, detect_ostype
+from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs
 
 @task
 @EXECUTE_TASK
@@ -22,7 +22,7 @@ def upgrade_openstack_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             pkg_install(['contrail-setup'])
             cmd = frame_vnc_openstack_cmd(host_string, 'upgrade-vnc-openstack')
-            cmd += ' -P contrail-openstack'
+            cmd += ' -P %s' % ' '.join(get_openstack_pkgs())
             cmd += ' -F %s' % from_rel
             cmd += ' -T %s' % get_release()
             sudo(cmd)
@@ -153,6 +153,9 @@ def upgrade_compute_node(from_rel, pkg, *args):
                 get_orchestrator() == 'vcenter'):
                 manage_nova_compute='no'
             pkgs = get_compute_pkgs(manage_nova_compute=manage_nova_compute)
+            if (getattr(env, 'interface_rename', True) and
+                detect_ostype() not in ['ubuntu', 'redhat']):
+               pkgs.append('contrail-interface-name')
             cmd += ' -P %s' % ' '.join(pkgs)
             cmd += ' -F %s' % from_rel
             cmd += ' -T %s' % get_release()
