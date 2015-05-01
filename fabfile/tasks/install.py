@@ -8,12 +8,13 @@ import tempfile
 
 from fabfile.config import *
 from fabfile.utils.fabos import *
+from fabric.contrib.files import exists
 from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator,\
      reboot_nodes
 from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_compute_pkgs, get_ceilometer_plugin_pkgs,\
-     get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz, \
-     create_apt_repo_from_tgz
+     get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz_node, \
+     create_apt_repo_from_tgz_node
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
@@ -527,6 +528,23 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
 @task
 @EXECUTE_TASK
 @roles('all')
+def create_installer_repo():
+    """Execute setup.sh corresponding to contrail-installer-packages in
+       all nodes
+    """
+    execute("create_installer_repo_node", env.host_string)
+
+@task
+def create_installer_repo_node(*args):
+    """Execute setup.sh corresponding to contrail-installer-packages"""
+    for host_string in args:
+        with settings(host_string=host_string):
+            if exists('/opt/contrail/contrail_installer_packages/setup.sh', use_sudo=True):
+                sudo('/opt/contrail/contrail_installer_packages/setup.sh')
+
+@task
+@EXECUTE_TASK
+@roles('all')
 def create_install_repo(*tgzs):
     """Creates contrail install repo in all nodes."""
     if len(tgzs) == 0:
@@ -576,10 +594,10 @@ def create_install_repo_from_tgz_node(host_string, *tgzs):
     for tgz in usable_tgz_files:
         with settings(host_string=host_string, warn_only=True):
             os_type = detect_ostype()
-            if os_type in ['centos', 'fedora', 'redhat']:
-                create_yum_repo_from_tgz(tgz)
-            elif os_type in ['ubuntu']:
-                create_apt_repo_from_tgz(tgz)
+        if os_type in ['centos', 'fedora', 'redhat']:
+            execute(create_yum_repo_from_tgz_node, tgz, host_string)
+        elif os_type in ['ubuntu']:
+            execute(create_apt_repo_from_tgz_node, tgz, host_string)
 
 @task
 def create_install_repo_node(*args):
@@ -705,6 +723,7 @@ def install_contrail(*tgzs, **kwargs):
     """
     reboot = kwargs.get('reboot', 'True')
     execute('pre_check')
+    execute('create_installer_repo')
     execute(create_install_repo, *tgzs)
     execute(create_install_repo_dpdk)
     execute(install_database)
@@ -731,6 +750,7 @@ def install_without_openstack(*tgzs, **kwargs):
     """
     manage_nova_compute = kwargs.get('manage_nova_compute', 'yes')
     reboot = kwargs.get('reboot', 'True')
+    execute('create_installer_repo')
     execute(create_install_repo_without_openstack, *tgzs)
     execute(create_install_repo_dpdk)
     execute(install_database)
