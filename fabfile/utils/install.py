@@ -145,64 +145,87 @@ def get_compute_ceilometer_pkgs():
 
     return pkgs
 
-def create_yum_repo_from_tgz(tgz):
-    tgz_file_name = os.path.basename(tgz)
-    tgz_name = os.path.splitext(tgz_file_name)
-    repo_dir_name = os.path.join(os.path.sep, 'opt', 'contrail', tgz_name[0])
-    sudo('mkdir -p %s' % repo_dir_name)
-    if env.host_string not in env.roledefs['build']:
-        tempdir = sudo('mktemp -d')
-        remote_path = os.path.join(tempdir, tgz_file_name)
-        put(tgz, tempdir, use_sudo=True)
-    else:
-        remote_path = tgz
+@task
+def create_yum_repo_from_tgz_node(tgz, *args):
+    for host_string in args:
+        with settings(host_string=host_string):
+            tgz_file_name = os.path.basename(tgz)
+            tgz_name = os.path.splitext(tgz_file_name)
+            repo_dir_name = os.path.join(os.path.sep, 'opt', 'contrail', tgz_name[0])
+            sudo('mkdir -p %s' % repo_dir_name)
 
-    sudo('tar xfz %s -C %s' % (remote_path, repo_dir_name))
-    with cd(repo_dir_name):
-        sudo('createrepo .')
-    repo_def = "[%s]\n" \
-               "name=%s\n" \
-               "baseurl=file://%s/\n" \
-               "enabled=1\n" \
-               "priority=1\n" \
-               "gpgcheck=0" % (tgz_name[0], tgz_name[0], repo_dir_name)
+            # Check if tgz is available locally. If current node is the build
+            # node, no need to copy the tgz
+            if host_string not in env.roledefs['build']:
+                tempdir = sudo('mktemp -d')
+                remote_path = os.path.join(tempdir, tgz_file_name)
+                put(tgz, tempdir, use_sudo=True)
+            else:
+                remote_path = tgz
 
-    if not exists('/etc/yum.repos.d/%s.repo' % tgz_name[0]):
-        sudo('echo \"%s\" > /etc/yum.repos.d/%s.repo' % (repo_def, tgz_name[0]))
-    else:
-        print 'WARNING: A repo entry (/etc/yum.repos.d/%s.repo) already exists' % tgz_name[0]
-        print 'WARNING: Backup and recreate new one'
-        node_date = sudo("date +%Y_%m_%d__%H_%M_%S")
-        sudo('cp /etc/yum.repos.d/%s.repo /etc/yum.repos.d/%s.repo.%s.contrailbackup' % (
-             tgz_name[0], tgz_name[0], node_date))
-        sudo('echo \"%s\" > /etc/yum.repos.d/%s.repo' % (repo_def, tgz_name[0]))
-    sudo('yum clean all')
+            # Untar the given tgz file and create repo
+            sudo('tar xfz %s -C %s' % (remote_path, repo_dir_name))
+            with cd(repo_dir_name):
+                sudo('createrepo .')
+            repo_def = "[%s]\n" \
+                       "name=%s\n" \
+                       "baseurl=file://%s/\n" \
+                       "enabled=1\n" \
+                       "priority=1\n" \
+                       "gpgcheck=0" % (tgz_name[0], tgz_name[0], repo_dir_name)
 
-def create_apt_repo_from_tgz(tgz):
-    tempdir = ''
-    tgz_file_name = os.path.basename(tgz)
-    tgz_name = os.path.splitext(tgz_file_name)
-    repo_dir_name = os.path.join(os.path.sep, 'opt', 'contrail', tgz_name[0])
-    sudo('mkdir -p %s' % repo_dir_name)
-    if env.host_string not in env.roledefs['build']:
-        tempdir = sudo('mktemp -d')
-        remote_path = os.path.join(tempdir, tgz_file_name)
-        put(tgz, tempdir, use_sudo=True)
-    else:
-        remote_path = tgz
-    sudo('tar xfz %s -C %s' % (remote_path, repo_dir_name))
-    with cd(repo_dir_name):
-        sudo('dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz')
-    if tempdir:
-        sudo('rm -rf %s' % tempdir)
-    with settings(warn_only=True):
-        is_repo_entry_exists = sudo('grep "deb file:%s ./" /etc/apt/sources.list' % repo_dir_name)
-    if is_repo_entry_exists.failed:
-        node_date = sudo("date +%Y_%m_%d__%H_%M_%S")
-        sudo('cp /etc/apt/sources.list /etc/apt/sources.list.%s.contrailbackup' % node_date)
-        sudo('echo >> /etc/apt/sources.list')
-        sudo("sed -i '1 i\deb file:%s ./' /etc/apt/sources.list" % repo_dir_name)
-        with settings(warn_only=True):
-            sudo("apt-get update")
-    else:
-        print "Warning: A repo entry to (%s) already exists in /etc/apt/sources.list"
+            # Add the repo entry
+            if not exists('/etc/yum.repos.d/%s.repo' % tgz_name[0], use_sudo=True):
+                sudo('echo \"%s\" > /etc/yum.repos.d/%s.repo' % (repo_def, tgz_name[0]))
+            else:
+                print 'WARNING: A repo entry (/etc/yum.repos.d/%s.repo) already exists' % tgz_name[0]
+                print 'WARNING: Backup and recreate new one'
+                node_date = sudo("date +%Y_%m_%d__%H_%M_%S")
+                sudo('cp /etc/yum.repos.d/%s.repo /etc/yum.repos.d/%s.repo.%s.contrailbackup' % (
+                     tgz_name[0], tgz_name[0], node_date))
+                sudo('echo \"%s\" > /etc/yum.repos.d/%s.repo' % (repo_def, tgz_name[0]))
+
+            # Update all repos
+            with settings(warn_only=True):
+                sudo('yum clean all')
+
+def create_apt_repo_from_tgz_node(tgz, *args):
+    for host_string in args:
+        with settings(host_string=host_string):
+            tempdir = ''
+            tgz_file_name = os.path.basename(tgz)
+            tgz_name = os.path.splitext(tgz_file_name)
+            repo_dir_name = os.path.join(os.path.sep, 'opt', 'contrail', tgz_name[0])
+            sudo('mkdir -p %s' % repo_dir_name)
+
+            # Check if tgz is available locally. If current node is the build
+            # node, no need to copy the tgz
+            if host_string not in env.roledefs['build']:
+                tempdir = sudo('mktemp -d')
+                remote_path = os.path.join(tempdir, tgz_file_name)
+                put(tgz, tempdir, use_sudo=True)
+            else:
+                remote_path = tgz
+
+            # Untar the given tgz file and create repo
+            sudo('tar xfz %s -C %s' % (remote_path, repo_dir_name))
+            with cd(repo_dir_name):
+                sudo('dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz')
+
+            if tempdir:
+                sudo('rm -rf %s' % tempdir)
+
+            # Add the repo entry
+            with settings(warn_only=True):
+                is_repo_entry_exists = sudo('grep "deb file:%s ./" /etc/apt/sources.list' % repo_dir_name)
+            if is_repo_entry_exists.failed:
+                node_date = sudo("date +%Y_%m_%d__%H_%M_%S")
+                sudo('cp /etc/apt/sources.list /etc/apt/sources.list.%s.contrailbackup' % node_date)
+                sudo('echo >> /etc/apt/sources.list')
+                sudo("sed -i '1 i\deb file:%s ./' /etc/apt/sources.list" % repo_dir_name)
+            else:
+                print "Warning: A repo entry to (%s) already exists in /etc/apt/sources.list"
+
+            # Update all repos
+            with settings(warn_only=True):
+                sudo("apt-get update")
