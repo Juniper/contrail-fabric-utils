@@ -351,7 +351,12 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
         cmd += " --vmware_username %s" % esxi_data['username']
         cmd += " --vmware_passwd %s" % esxi_data['password']
         cmd += " --vmware_vmpg_vswitch %s" % esxi_data['vm_vswitch']
-        cmd += " --vmware_vmpg_vswitch_mtu %s" % esxi_data['vm_vswitch_mtu']
+        if orch is 'vcenter':
+            # Setting mtu when vmware is orchestrator
+            mtu = "1500"
+            cmd += " --vmware_vmpg_vswitch_mtu %s" % mtu
+        else:
+            cmd += " --vmware_vmpg_vswitch_mtu %s" % esxi_data['vm_vswitch_mtu']
 
     dpdk = getattr(env, 'dpdk', None)
     if dpdk:
