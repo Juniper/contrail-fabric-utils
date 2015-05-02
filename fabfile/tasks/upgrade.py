@@ -2,6 +2,7 @@ from fabfile.config import *
 
 from fabfile.tasks.install import pkg_install
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
+from fabfile.utils.cluster import get_toragent_nodes, get_tsn_nodes
 from fabfile.utils.commandline import *
 from fabfile.utils.fabos import get_release, detect_ostype
 from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs
@@ -148,17 +149,29 @@ def upgrade_compute_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             pkg_install(['contrail-setup'])
             cmd = frame_vnc_compute_cmd(host_string, 'upgrade-vnc-compute')
+
             manage_nova_compute='yes'
             if (env.host_string in get_tsn_nodes() or
                 get_orchestrator() == 'vcenter'):
                 manage_nova_compute='no'
+
+            # Identify packages to upgrade
             pkgs = get_compute_pkgs(manage_nova_compute=manage_nova_compute)
             if (getattr(env, 'interface_rename', True) and
                 detect_ostype() not in ['ubuntu', 'redhat']):
                pkgs.append('contrail-interface-name')
+
+            # Identify roles of this node.
+            roles = ['compute']
+            if env.host_string in get_tsn_nodes():
+                roles.append('tsn')
+            if env.host_string in get_toragent_nodes():
+                roles.append('toragent')
+
             cmd += ' -P %s' % ' '.join(pkgs)
             cmd += ' -F %s' % from_rel
             cmd += ' -T %s' % get_release()
+            cmd += ' -R %s' % ' '.join(roles)
             sudo(cmd)
 
 @roles('build')
