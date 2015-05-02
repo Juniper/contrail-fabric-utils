@@ -23,7 +23,7 @@ from fabfile.utils.vcenter import *
 from fabfile.utils.commandline import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
-from fabfile.tasks.vmware import provision_vcenter,\
+from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
         configure_esxi_network, create_esxi_compute_vm
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
@@ -1936,17 +1936,39 @@ def prov_esxi(*args):
     else:
         host_list = esxi_info.keys()
 
+    std_switch = False
+    dv_switch_fab = False
+    power_on = False
+
     for host in host_list:
          with settings(host=host):
                if host in esxi_info.keys():
-                   apply_esxi_defaults(esxi_info[host])
-                   configure_esxi_network(esxi_info[host])
+                   if 'dv_switch_fab' in vcenter_info.keys():
+                       if not 'fabric_vswitch' in esxi_info[host].keys():
+                           dv_switch_fab = True
+                           std_switch = False
+                       else:
+                           std_switch = True
+                   else:
+                       std_switch = True
+                   if (std_switch == True):
+                       apply_esxi_defaults(esxi_info[host])
+                       configure_esxi_network(esxi_info[host])
+                       power_on = True
+                   else:
+                       apply_esxi_defaults(esxi_info[host])
+                       esxi_info[host]['fabric_vswitch'] = None
+                       power_on = False
                    if orch == 'openstack':
                        create_esxi_compute_vm(esxi_info[host], None)
                    if orch == 'vcenter':
-                       create_esxi_compute_vm(esxi_info[host], vcenter_info)
+                       create_esxi_compute_vm(esxi_info[host], vcenter_info, power_on)
                else:
                    print 'Info: esxi_hosts block does not have the esxi host.Exiting'
+
+    if (dv_switch_fab == True):
+         sleep(30)
+         provision_dvs_fab(vcenter_info, esxi_info, host_list)
 #end prov_compute_vm
 
 @roles('build')

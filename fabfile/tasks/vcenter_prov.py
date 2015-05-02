@@ -5,6 +5,132 @@ Python program for provisioning vcenter
 import atexit
 import time
 
+class dvs_fab(object):
+    def __init__(self, dvs_params):
+        self.pyVmomi =  __import__("pyVmomi")
+
+        self.name = dvs_params['name']
+        self.dvportgroup_name = dvs_params['dvportgroup_name']
+        self.dvportgroup_num_ports = dvs_params['dvportgroup_num_ports']
+        self.dvportgroup_uplink = dvs_params['dvportgroup_uplink']
+
+        self.cluster_name = dvs_params['cluster_name']
+        self.datacenter_name = dvs_params['datacenter_name']
+
+        self.vcenter_server = dvs_params['vcenter_server']
+        self.vcenter_username = dvs_params['vcenter_username']
+        self.vcenter_password = dvs_params['vcenter_password']
+
+        self.esxi_info = dvs_params['esxi_info']
+        self.host_list = dvs_params['host_list']
+
+        try:
+            self.connect_to_vcenter()
+            dvs = self.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], self.name)
+            self.add_dvPort_group(self.service_instance, dvs, self.dvportgroup_name, self.dvportgroup_uplink)
+            for host in self.host_list:
+                vswitch = self.esxi_info[host]['fabric_vswitch']
+                if vswitch == None:
+                    vm_name = "ContrailVM" + "-" + self.datacenter_name + "-" + self.esxi_info[host]['ip']
+                    self.add_vm_to_dvpg(self.service_instance, vm_name, dvs, self.dvportgroup_name)
+        except self.pyVmomi.vmodl.MethodFault as error:
+            print "Caught vmodl fault : " + error.msg
+            return
+
+    def get_obj(self, vimtype, name):
+        """
+        Get the vsphere object associated with a given text name
+        """
+        obj = None
+        container = self.content.viewManager.CreateContainerView(self.content.rootFolder, vimtype, True)
+        for c in container.view:
+            if c.name == name:
+                obj = c
+                break
+        return
+
+    def get_dvs_portgroup(self, vimtype, portgroup_name, dvs_name):
+        """
+        Get the vsphere object associated with a given text name
+        """
+        obj = None
+        container = self.content.viewManager.CreateContainerView(self.content.rootFolder, vimtype, True)
+        for c in container.view:
+            if c.name == portgroup_name:
+                if c.config.distributedVirtualSwitch.name == dvs_name:
+                    obj = c
+                    break
+        return
+
+    def connect_to_vcenter(self):
+        from pyVim import connect
+        self.service_instance = connect.SmartConnect(host=self.vcenter_server,
+                                        user=self.vcenter_username,
+                                        pwd=self.vcenter_password,
+                                        port=443)
+        self.content = self.service_instance.RetrieveContent()
+        atexit.register(connect.Disconnect, self.service_instance)
+
+    def wait_for_task(self, task, actionName='job', hideResult=False):
+         while task.info.state == (self.pyVmomi.vim.TaskInfo.State.running or self.pyVmomi.vim.TaskInfo.State.queued):
+             time.sleep(2)
+         if task.info.state == self.pyVmomi.vim.TaskInfo.State.success:
+             if task.info.result is not None and not hideResult:
+                 out = '%s completed successfully, result: %s' % (actionName, task.info.result)
+                 print out
+             else:
+                 out = '%s completed successfully.' % actionName
+                 print out
+         elif task.info.state == self.pyVmomi.vim.TaskInfo.State.error:
+             out = 'Error - %s did not complete successfully: %s' % (actionName, task.info.error)
+             raise ValueError(out)
+         return task.info.result
+
+    def add_dvPort_group(self, si, dv_switch, dv_port_name, dv_port_uplink):
+        dv_pg = self.get_dvs_portgroup([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name, dv_switch.name)
+        if dv_pg is not None:
+            print("dv port group already exists")
+            return dv_pg
+        else:
+            dv_pg_spec = self.pyVmomi.vim.dvs.DistributedVirtualPortgroup.ConfigSpec()
+            dv_pg_spec.name = dv_port_name
+            dv_pg_spec.numPorts = int(self.dvportgroup_num_ports)
+            dv_pg_spec.type = self.pyVmomi.vim.dvs.DistributedVirtualPortgroup.PortgroupType.earlyBinding
+            dv_pg_spec.defaultPortConfig = self.pyVmomi.vim.dvs.VmwareDistributedVirtualSwitch.VmwarePortConfigPolicy()
+            dv_pg_spec.defaultPortConfig.securityPolicy = self.pyVmomi.vim.dvs.VmwareDistributedVirtualSwitch.SecurityPolicy()
+            dv_pg_spec.defaultPortConfig.uplinkTeamingPolicy = self.pyVmomi.vim.VmwareUplinkPortTeamingPolicy()
+            dv_pg_spec.defaultPortConfig.uplinkTeamingPolicy.uplinkPortOrder = self.pyVmomi.vim.VMwareUplinkPortOrderPolicy()
+            dv_pg_spec.defaultPortConfig.uplinkTeamingPolicy.uplinkPortOrder.activeUplinkPort = dv_port_uplink
+            task = dv_switch.AddDVPortgroup_Task([dv_pg_spec])
+            self.wait_for_task(task, si)
+            print "Successfully created DV Port Group ", dv_port_name
+
+    def add_vm_to_dvpg(self, si, vm_name, dv_switch, dv_port_name):
+        devices = []
+        print "Adding Contrail VM: %s to the DV port group" %(vm_name)
+        vm = self.get_obj([self.pyVmomi.vim.VirtualMachine], vm_name)
+        for device in vm.config.hardware.device:
+            if isinstance(device, self.pyVmomi.vim.vm.device.VirtualEthernetCard):
+                nicspec = self.pyVmomi.vim.vm.device.VirtualDeviceSpec()
+                nicspec.operation = self.pyVmomi.vim.vm.device.VirtualDeviceSpec.Operation.edit
+                nicspec.device = device
+                nicspec.device.wakeOnLanEnabled = True
+                pg_obj = self.get_dvs_portgroup([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name, dv_switch.name)
+                dvs_port_connection = self.pyVmomi.vim.dvs.PortConnection()
+                dvs_port_connection.portgroupKey= pg_obj.key
+                dvs_port_connection.switchUuid= pg_obj.config.distributedVirtualSwitch.uuid
+                nicspec.device.backing = self.pyVmomi.vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo()
+                nicspec.device.backing.port = dvs_port_connection
+                devices.append(nicspec)
+                break
+        vmconf = self.pyVmomi.vim.vm.ConfigSpec(deviceChange=devices)
+        task = vm.ReconfigVM_Task(vmconf)
+        self.wait_for_task(task, si)
+        print "Turning VM: %s On" %(vm_name)
+        task = vm.PowerOn()
+        self.wait_for_task(task, si)
+        print "Succesfully added  ContrailVM:%s to the DV port group" %(vm_name)
+
 class Vcenter(object):
     def __init__(self, vcenter_params):
 	self.pyVmomi =  __import__("pyVmomi")
