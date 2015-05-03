@@ -102,12 +102,16 @@ def get_openstack_ceilometer_pkgs():
         'mongodb-clients',
         'python-pymongo']
     pkg_juno_ubuntu.remove('mongodb')
+    pkg_kilo_ubuntu = pkg_juno_ubuntu
+    pkg_kilo_ubuntu.remove('ceilometer-plugin-contrail')
+    
     pkg_icehouse_redhat = ['ceilometer-plugin-contrail']
 
     ceilometer_pkgs = {
         'ubuntu' : {'havana' : pkg_havana_ubuntu,
                     'icehouse' : pkg_icehouse_ubuntu,
-                    'juno' : pkg_juno_ubuntu
+                    'juno' : pkg_juno_ubuntu,
+                    'kilo' : pkg_kilo_ubuntu
                    },
         'redhat' : {'icehouse' : pkg_icehouse_redhat},
     }
