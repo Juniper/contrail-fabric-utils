@@ -111,7 +111,7 @@ def get_package_installed_info(package, os_type, *nodes):
         with settings(host_string=host_string, warn_only=True):
             if os_type.lower() in ['ubuntu']:
                cmd = 'dpkg -l %s' % package
-            elif os_type.lower() in ['centos', 'redhat', 'fedora']:
+            elif os_type.lower() in ['centos', 'redhat', 'fedora', 'centoslinux']:
                 cmd = 'rpm -q %s' % package
             else:
                 raise RuntimeError('[%s]: Unsupported OS Type (%s)' % (host_string, os_type))
