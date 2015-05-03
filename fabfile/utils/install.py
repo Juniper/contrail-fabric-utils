@@ -1,4 +1,5 @@
 import os
+import copy
 import glob
 
 from fabric.api import env, settings, sudo
@@ -102,9 +103,9 @@ def get_openstack_ceilometer_pkgs():
         'mongodb-clients',
         'python-pymongo']
     pkg_juno_ubuntu.remove('mongodb')
-    pkg_kilo_ubuntu = pkg_juno_ubuntu
+    pkg_kilo_ubuntu = copy.deepcopy(pkg_juno_ubuntu)
     pkg_kilo_ubuntu.remove('ceilometer-plugin-contrail')
-    
+
     pkg_icehouse_redhat = ['ceilometer-plugin-contrail']
 
     ceilometer_pkgs = {
