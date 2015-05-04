@@ -179,6 +179,8 @@ def upgrade_compute_node(from_rel, pkg, *args):
 def upgrade_orchestrator(from_rel, pkg):
     if get_orchestrator() is 'openstack':
         execute('upgrade_openstack', from_rel, pkg)
+        execute('setup_cmon_schema')
+        execute('setup_cluster_monitors')
     if get_orchestrator() is 'vcenter':
         execute('upgrade_vcenter')
 
