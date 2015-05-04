@@ -1,7 +1,7 @@
 """Private contrail task for setting up RDO in the openstack node."""
 
 from fabfile.config import *
-from fabfile.utils.host import get_keystone_ip
+from fabfile.utils.host import get_authserver_ip
 from fabfile.utils.cluster import reboot_nodes
 
 @task
@@ -70,7 +70,7 @@ def setup_rhosp_node():
             sudo('mkdir -p /etc/contrail/')
             sudo("ln -s /root/keystonerc_admin /etc/contrail/openstackrc")
     cfgm_0_ip = testbed.env['roledefs']['cfgm'][0].split('@')[1]
-    keystone_ip = get_keystone_ip()
+    keystone_ip = get_authserver_ip()
     sudo("source /etc/contrail/openstackrc; nova service-disable $(hostname) nova-compute")
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT network_api_class nova.network.neutronv2.api.API")
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_url http://%s:9696" % cfgm_0_ip)
@@ -132,7 +132,7 @@ def setup_rdo(rdo_url='https://repos.fedorapeople.org/repos/openstack/openstack-
             sudo('mkdir -p /etc/contrail/')
             sudo("ln -s ~/keystonerc_admin /etc/contrail/openstackrc")
     cfgm_0_ip = testbed.env['roledefs']['cfgm'][0].split('@')[1]
-    keystone_ip = get_keystone_ip()
+    keystone_ip = get_authserver_ip()
     sudo("source /etc/contrail/openstackrc; nova service-disable $(hostname) nova-compute")
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT network_api_class nova.network.neutronv2.api.API")
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_url http://%s:9696" % cfgm_0_ip)

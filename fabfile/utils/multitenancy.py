@@ -9,8 +9,7 @@ def get_mt_enable():
 def get_mt_opts():
     mt_opts = ''
     if get_mt_enable():
-        u = get_keystone_admin_user()
-        p = get_keystone_admin_password()
+        u, p = get_authserver_credentials()
         t = get_keystone_admin_tenant_name()
         if not u or not p or not t:
             raise Exception('Admin user, password and tenant must be defined if multi tenancy is enabled')

@@ -159,9 +159,9 @@ def setup_test_env():
             if internal_vip:
                 host_dict = {}
     # We may have to change it when we have HA support in Cloudstack
-                host_dict['data-ip']= get_keystone_ip()
-                host_dict['control-ip']= get_keystone_ip()
-                host_dict['ip']= get_keystone_ip()
+                host_dict['data-ip']= get_authserver_ip()
+                host_dict['control-ip']= get_authserver_ip()
+                host_dict['ip']= get_authserver_ip()
                 host_dict['name'] = 'contrail-vip'     
                 with settings(host_string = env.roledefs['cfgm'][0]):
                     host_dict['username'] = host_string.split('@')[0]
@@ -190,8 +190,7 @@ def setup_test_env():
             stack_tenant= 'default-project'
             stack_user= 'admin'
         else:
-            stack_user= get_keystone_admin_user()
-            stack_password = get_keystone_admin_password()
+            stack_user, stack_password = get_authserver_credentials()
             stack_tenant = get_keystone_admin_tenant_name()
         # Few hardcoded variables for sanity environment 
         # can be removed once we move to python3 and configparser
@@ -212,6 +211,7 @@ def setup_test_env():
         key = 'key1'
         mailSender = 'contrailbuild@juniper.net'
 
+        orch = getattr(env, 'orchestrator', 'openstack')
         router_asn = getattr(testbed, 'router_asn', '')
         public_vn_rtgt = getattr(testbed, 'public_vn_rtgt', '')
         public_vn_subnet = getattr(testbed, 'public_vn_subnet', '')
@@ -226,14 +226,18 @@ def setup_test_env():
             mail_server = env.mail_server
             mail_port = env.mail_port
 
+        vcenter_dc = ''
+        if orch == 'vcenter':
+            vcenter_dc = env.vcenter['datacenter']
+
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__testbed_json_file__'   : 'sanity_testbed.json',
              '__nova_keypair_name__'   : key,
-             '__stack_user__'          : stack_user,
-             '__stack_password__'      : stack_password,
-             '__stack_tenant__'        : stack_tenant,
-             '__stack_domain__'        : stack_domain,
-             '__keystone_ip__'         : get_keystone_ip(),
+             '__orch__'                : orch,
+             '__auth_user__'           : stack_user,
+             '__auth_password__'       : stack_password,
+             '__auth_ip__'             : get_authserver_ip(),
+             '__auth_port__'           : get_authserver_port(),
              '__multi_tenancy__'       : get_mt_enable(),
              '__address_family__'      : get_address_family(),
              '__log_scenario__'        : log_scenario,
@@ -268,7 +272,10 @@ def setup_test_env():
              '__stop_on_fail__'        : stop_on_fail,
              '__ha_setup__'            : getattr(testbed, 'ha_setup', ''),
              '__ipmi_username__'       : getattr(testbed, 'ipmi_username', ''),
-             '__ipmi_password__'       : getattr(testbed, 'ipmi_password', '')
+             '__ipmi_password__'       : getattr(testbed, 'ipmi_password', ''),
+             '__stack_tenant__'        : stack_tenant,
+             '__stack_domain__'        : stack_domain,
+             '__vcenter_dc__'          : vcenter_dc,
             })
 
         fd, fname = tempfile.mkstemp()
@@ -446,9 +453,7 @@ def export_testbed_details(filename='testbed_vars'):
     '''
     # TODO 
     # Need to be able to export entire testbed details if need be
-    keystone_ip = get_keystone_ip()
-    keystone_admin_user = get_keystone_admin_user()
-    keystone_admin_password = get_keystone_admin_password()
+    keystone_ip = get_authserver_ip()
     admin_tenant = get_keystone_admin_tenant_name()
     api_server_host_string = testbed.env.roledefs['cfgm'][0]
     api_server_host_ip = testbed.env.roledefs['cfgm'][0].split('@')[1]
