@@ -149,7 +149,11 @@ def bootstrap_galera_cluster():
 @EXECUTE_TASK
 @roles('openstack')
 def setup_cluster_monitors():
-    """Task to start manage the contrail cluster manitor."""
+    """Task to start manage the contrail cluster monitor."""
+    if len(env.roledefs['openstack']) <= 1:
+        print "Single Openstack cluster, skipping starting cluster monitor."
+        return
+    
     sudo("service contrail-hamon restart")
     sudo("chkconfig contrail-hamon on")
 
