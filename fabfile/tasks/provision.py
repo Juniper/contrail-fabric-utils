@@ -19,7 +19,6 @@ from fabfile.utils.config import get_value
 from fabfile.tasks.install import *
 from fabfile.tasks.verify import *
 from fabfile.tasks.helpers import *
-from fabfile.utils.vcenter import *
 from fabfile.utils.commandline import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
@@ -1331,11 +1330,10 @@ def prov_metadata_services():
         openstack_host = get_control_host_string(env.roledefs['openstack'][0])
         ipfabric_service_ip = get_openstack_internal_vip() or hstr_to_ip(openstack_host)
         ipfabric_service_port = '8775'
-        admin_user, admin_password = get_openstack_credentials()
     elif orch is 'vcenter':
-        ipfabric_service_ip = get_vcenter_ip()
-        ipfabric_service_port = get_vcenter_port()
-        admin_user, admin_password = get_vcenter_credentials()
+        ipfabric_service_ip = get_authserver_ip()
+        ipfabric_service_port = get_authserver_port()
+    admin_user, admin_password = get_authserver_credentials()
     metadata_args = "--admin_user %s" % admin_user
     metadata_args += " --admin_password %s" % admin_password
     metadata_args += " --ipfabric_service_ip %s" % ipfabric_service_ip
@@ -1352,11 +1350,7 @@ def prov_metadata_services():
 @task
 def prov_encap_type():
     cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
-    orch = get_orchestrator()
-    if orch is 'openstack':
-        admin_user, admin_password = get_openstack_credentials()
-    elif orch is 'vcenter':
-        admin_user, admin_password = get_vcenter_credentials()
+    admin_user, admin_password = get_authserver_credentials()
     if 'encap_priority' not in env.keys():
         env.encap_priority="MPLSoUDP,MPLSoGRE,VXLAN"
     encap_args = "--admin_user %s" % admin_user
@@ -1502,12 +1496,8 @@ def add_tsn_node(restart=True,*args):
                 openstack_host = get_control_host_string(env.roledefs['openstack'][0])
                 with settings(host_string=openstack_host, warn_only=True):
                     sudo("nova-manage service disable --host=%s --service=nova-compute" %(compute_hostname))
-        orch = get_orchestrator()
-        if orch is 'openstack':
-            admin_user, admin_password = get_openstack_credentials()
-        elif orch is 'vcenter':
-            admin_user, admin_password = get_vcenter_credentials()
-        keystone_ip = get_keystone_ip()
+        admin_user, admin_password = get_authserver_credentials()
+        keystone_ip = get_authserver_ip()
         with settings(host_string = '%s@%s' %(cfgm_user, cfgm_ip), password=cfgm_passwd):
             prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                         "--admin_user %s --admin_password %s --admin_tenant_name %s --openstack_ip %s --router_type tor-service-node" \
@@ -1607,12 +1597,8 @@ def add_tor_agent_node(restart=True, *args):
                 compute_mgmt_ip= host_string.split('@')[1]
                 compute_control_ip= hstr_to_ip(compute_host)
                 admin_tenant_name = get_keystone_admin_tenant_name()
-                orch = get_orchestrator()
-                if orch is 'openstack':
-                    admin_user, admin_password = get_openstack_credentials()
-                elif orch is 'vcenter':
-                    admin_user, admin_password = get_vcenter_credentials()
-                keystone_ip = get_keystone_ip()
+                admin_user, admin_password = get_authserver_credentials()
+                keystone_ip = get_authserver_ip()
                 prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                             "--admin_user %s --admin_password %s --admin_tenant_name %s\
                              --openstack_ip %s --router_type tor-agent" \
