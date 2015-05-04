@@ -588,9 +588,8 @@ def net_list():
     cfgm_ip = hstr_to_ip(env.roledefs['cfgm'][0])
 
     os_opts = ''
-    os_opts = os_opts + ' --os-username %s --os-password %s '\
-                          %(get_keystone_admin_user(), get_keystone_admin_password())
-    os_opts = os_opts + ' --os-tenant-name %s ' %(get_keystone_admin_tenant_name())
+    os_opts = os_opts + ' --os-username %s --os-password %s ' % get_authserver_credentials()
+    os_opts = os_opts + ' --os-tenant-name %s ' %(get_admin_tenant_name())
     os_opts = os_opts + ' --os-auth-url http://%s:5000/v2.0 ' %(cfgm_ip)
 
     sudo('quantum %s net-list' %(os_opts))

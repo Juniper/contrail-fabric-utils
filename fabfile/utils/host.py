@@ -47,7 +47,7 @@ def get_service_token():
 def copy_openstackrc(role='compute'):
     openstackrc = "/etc/contrail/openstackrc"
     temprc = "/tmp/openstackrc"
-    with settings(host_string=env.roledefs['openstack'][0]):
+    with settings(host_string=env.roledefs['openstack'][0], warn_only=True):
         get(openstackrc, temprc)
     for host_string in env.roledefs[role]:
         with settings(host_string=host_string):
@@ -81,7 +81,11 @@ def get_region_name_opt():
     return '--region_name %s' %(region_name)
 
 
-def get_keystone_ip(ignore_vip=False, openstack_node=None):
+def get_authserver_ip(ignore_vip=False, openstack_node=None):
+    orch = getattr(env, 'orchestrator', 'openstack')
+    if orch == 'vcenter':
+       return get_from_testbed_dict('vcenter', 'server', None)
+    # openstack
     if openstack_node:
         openstack_host = get_control_host_string(openstack_node)
     else:
@@ -105,10 +109,6 @@ def get_keystone_ip(ignore_vip=False, openstack_node=None):
             return internal_vip
         return openstack_ip
 
-def get_keystone_ip_opt():
-    keystone_ip = get_keystone_ip()
-    return '--keystone_ip %s' % (keystone_ip)
-
 def get_from_testbed_dict( dictionary, key,default_value):
     try:
         val = env[dictionary][key]
@@ -116,20 +116,28 @@ def get_from_testbed_dict( dictionary, key,default_value):
         val = default_value
     return val
 
-def get_keystone_auth_protocol():
+def get_authserver_protocol():
+    orch = getattr(env, 'orchestrator', 'openstack')
+    if orch == 'vcenter':
+       return get_from_testbed_dict('vcenter', 'auth', 'https')
+    # openstack
     return get_from_testbed_dict('keystone', 'auth_protocol','http')
 
 def get_keystone_insecure_flag():
     return get_from_testbed_dict('keystone', 'insecure', 'False')
 
-def get_keystone_auth_port():
+def get_authserver_port():
+    orch = getattr(env, 'orchestrator', 'openstack')
+    if orch == 'vcenter':
+       return get_from_testbed_dict('vcenter', 'port', 9443)
+    # openstack
     return get_from_testbed_dict('keystone', 'auth_port','35357')
 
 def get_keystone_admin_token():
     token = get_from_testbed_dict('keystone', 'admin_token', None)
     if token:
         return token
-    keystone_ip = get_keystone_ip(ignore_vip=True)
+    keystone_ip = get_authserver_ip(ignore_vip=True)
     openstack_node = testbed.env.roledefs['openstack'][0]
     if keystone_ip == hstr_to_ip(get_control_host_string(openstack_node)):
         # Use Management interface IP to ssh
@@ -139,27 +147,35 @@ def get_keystone_admin_token():
         token = sudo(cmd)
     return token
 
-def get_keystone_admin_user():
+def get_authserver_admin_user():
+    orch = getattr(env, 'orchestrator', 'openstack')
+    if orch == 'vcenter':
+       return get_from_testbed_dict('vcenter', 'username', None)
+    # openstack
     ks_admin_user = getattr(testbed, 'keystone_admin_user','admin')
     return get_from_testbed_dict('keystone', 'admin_user', ks_admin_user) 
 
-def get_keystone_admin_password():
+def get_authserver_admin_password():
+    orch = getattr(env, 'orchestrator', 'openstack')
+    if orch == 'vcenter':
+       return get_from_testbed_dict('vcenter', 'password', None)
+    # openstack
     os_admin_password = getattr(env,'openstack_admin_password', 'contrail123')
     ks_admin_password = getattr(testbed, 
                           'keystone_admin_password', os_admin_password)
     return get_from_testbed_dict('keystone', 
             'admin_password', ks_admin_password) 
 
-def get_openstack_credentials():
-    ks_admin_user = get_keystone_admin_user()
-    ks_admin_password = get_keystone_admin_password()
-    return ks_admin_user, ks_admin_password
-# end get_openstack_credentials
+def get_authserver_credentials():
+    return get_authserver_admin_user(), get_authserver_admin_password()
 
 def get_keystone_service_tenant_name():
     return get_from_testbed_dict('keystone', 'service_tenant', 'service')
 
-def get_keystone_admin_tenant_name():
+def get_admin_tenant_name():
+    orch = getattr(env, 'orchestrator', 'openstack')
+    if orch == 'vcenter':
+       return 'vCenter'
     admin_tenant_name = getattr(testbed, 'os_tenant_name', 'admin')
     return get_from_testbed_dict('keystone', 'admin_tenant', 'admin')
 
