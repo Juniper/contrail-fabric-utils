@@ -13,26 +13,27 @@ from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_openstack_ceilometer_pkgs
 
 def get_pkg_list():
-    dont_remove_list = [
-                        'contrail-install-packages',
-                        'contrail-fabric-utils',
-                        'contrail-interface-name',
-                        'glib2',
-                        'glibc',
-                        'glibc-common',
-                        'libgcc',
-                        'make',
-                        'pkgconfig',
-                        'python',
-                        'python-libs',
-                       ]
-    output = sudo('yum list installed | grep @contrail_install_repo | cut -d" " -f1 | cut -d"." -f1')
+    output = sudo('yum list installed | grep @contrail_install_repo | cut -d" " -f1')
     pkgs = output.split("\r\n")
-    for pkg in dont_remove_list:
-        try:
-            pkgs.remove(pkg)
-        except ValueError:
-            pass
+
+    def filter_condition(pkg):
+        dont_remove_list = [
+                            'contrail-install-packages',
+                            'contrail-fabric-utils',
+                            'contrail-interface-name',
+                            'glib2',
+                            'glibc',
+                            'glibc-common',
+                            'libgcc',
+                            'make',
+                            'pkgconfig',
+                            'python',
+                            'python-libs',
+                           ]
+        if any(dont_rm_pkg in pkg for dont_rm_pkg in dont_remove_list):
+            return False
+        return True
+    pkgs = filter(filter_condition, pkgs)
     return pkgs
 
 @task
@@ -81,7 +82,7 @@ def uninstall_pkg_node(pkg, *args):
 
 
 def yum_uninstall(rpms):
-    cmd = "rpm -e "
+    cmd = "rpm -e --nodeps "
     if detect_ostype() in ['centos', 'fedora', 'redhat']:
         with settings(warn_only=True):
             sudo(cmd + ' '.join(rpms))
