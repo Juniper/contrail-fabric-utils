@@ -674,6 +674,51 @@ def get_package_installation_time(os_type, package):
 
 @task
 @roles('build')
+def reboot_on_kernel_update_without_openstack(reboot='True'):
+    '''When kernel package is upgraded as a part of any depends,
+       system needs to be rebooted so new kernel is effective
+    '''
+    all_nodes = env.roledefs['all']
+    # remove openstack node
+    for nodename in env.roledefs['openstack']:
+        all_nodes.remove(nodename)
+
+    # moving current node to last to reboot current node at last
+    if env.roledefs['build'] in all_nodes:
+        all_nodes.remove(env.roledefs['build']).append(env.roledefs['build'])
+    with settings(host_string=env.roledefs['cfgm'][0]):
+        os_type = detect_ostype()
+    if os_type in ['ubuntu']:
+        nodes_version_info_act = execute('get_package_installation_time', os_type,
+                                         '*linux-image-[0-9]*-generic')
+        # replace minor version with '-generic'
+        nodes_version_info = {}
+        for key, values in nodes_version_info_act.items():
+            nodes_version_info[key] = [(index0, ".".join(index1.split('.')[:-1]) + '-generic') \
+                                       for index0, index1 in values]
+    elif os_type in ['centos', 'redhat', 'fedora']:
+        nodes_version_info = execute('get_package_installation_time', os_type, 'kernel')
+    else:
+        print '[%s]: WARNING: Unsupported OS type (%s)' % (env.host_string, os_type)
+
+    for node in all_nodes:
+        with settings(host_string=node):
+            uname_out = sudo('uname -r')
+            if node in nodes_version_info.keys():
+                versions_info = nodes_version_info[node]
+                # skip reboot if latest kernel version is same as
+                # current kernel version in the node
+                if uname_out != versions_info[-1][1]:
+                    print '[%s]: Node is booted with old kernel, Reboot required' % node
+                    if reboot == 'True':
+                        execute(reboot_nodes, node)
+                    else:
+                        print '[%s]: WARNING:: Reboot is skipped as Reboot=False is set. ' \
+                              'Reboot manually before setup to avoid misconfiguration!' % node
+                else:
+                    print '[%s]: Node is already booted with new kernel' % node
+@task
+@roles('build')
 def reboot_on_kernel_update(reboot='True'):
     '''When kernel package is upgraded as a part of any depends,
        system needs to be rebooted so new kernel is effective
@@ -761,7 +806,7 @@ def install_without_openstack(*tgzs, **kwargs):
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
-    execute('reboot_on_kernel_update', reboot)
+    execute('reboot_on_kernel_update_without_openstack', reboot)
 
 @roles('openstack')
 @task
