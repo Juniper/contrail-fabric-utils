@@ -42,7 +42,8 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     minimum_diskGB = get_minimum_diskGB()
     if minimum_diskGB is not None:
         cmd += " --minimum_diskGB %s" % minimum_diskGB
-    cmd += " --kafka_broker_id %d" % broker_id
+    if get_kafka_enabled() is not None:
+        cmd += " --kafka_broker_id %d" % broker_id
 
     return cmd
 
