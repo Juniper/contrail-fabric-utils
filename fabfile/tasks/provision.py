@@ -493,9 +493,9 @@ def setup_cfgm_node(*args):
                 zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
                 cmd += " --zookeeper_serverlist %s" % zk_servers_ports
 
-            # Execute the provision vcenter-plugin script
-            with cd(INSTALLER_DIR):
-                sudo(cmd)
+                # Execute the provision vcenter-plugin script
+                with cd(INSTALLER_DIR):
+                    sudo(cmd)
 
     # HAPROXY fixups
     haproxy = get_haproxy_opt()
@@ -1333,6 +1333,9 @@ def prov_external_bgp():
 def prov_metadata_services():
     cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
     orch = get_orchestrator()
+    if orch is 'none':
+        return
+
     if orch is 'openstack':
         openstack_host = get_control_host_string(env.roledefs['openstack'][0])
         ipfabric_service_ip = get_openstack_internal_vip() or hstr_to_ip(openstack_host)
@@ -1359,6 +1362,9 @@ def prov_metadata_services():
 def prov_encap_type():
     cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
     orch = get_orchestrator()
+    if orch is 'none':
+        return
+
     if orch is 'openstack':
         admin_user, admin_password = get_openstack_credentials()
     elif orch is 'vcenter':
@@ -1763,6 +1769,30 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
         # Clear the connections cache
         connections.clear()
         execute('verify_compute')
+
+@roles('build')
+@task
+def setup_contrail_wo_openstack_and_networking(manage_nova_compute='no', reboot='False'):
+    """Provisions required contrail packages in all nodes as per the role definition.
+       this task is used to provision non-networking contrail components, viz. database,
+       config, analytics and webui
+    """
+    execute('setup_common')
+    execute('setup_ha')
+    execute('setup_rabbitmq_cluster')
+    execute('increase_limits_no_control')
+    execute('setup_database')
+    execute('verify_database')
+    execute('setup_cfgm')
+    execute('verify_cfgm')
+    execute('setup_collector')
+    execute('verify_collector')
+    execute('setup_webui')
+    execute('verify_webui')
+    execute('prov_config_node')
+    execute('prov_database_node')
+    execute('prov_analytics_node')
+    execute('setup_remote_syslog')
 
 @roles('build')
 @task

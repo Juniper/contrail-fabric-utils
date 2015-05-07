@@ -763,6 +763,22 @@ def install_without_openstack(*tgzs, **kwargs):
         execute(install_interface_name, reboot)
     execute('reboot_on_kernel_update', reboot)
 
+@roles('build')
+@task
+def install_contrail_wo_openstack_and_networking(*tgzs, **kwargs):
+    """Installs required contrail packages in all nodes as per the role definition.
+       this task is used to install non-networking contrail components - config,
+       analytics, database and webui
+    """
+    manage_nova_compute = kwargs.get('manage_nova_compute', 'no')
+    reboot = kwargs.get('reboot', 'False')
+    execute('create_installer_repo')
+    execute(create_install_repo_without_openstack, *tgzs)
+    execute(install_database)
+    execute(install_cfgm)
+    execute(install_collector)
+    execute(install_webui)
+
 @roles('openstack')
 @task
 def update_keystone_log():
