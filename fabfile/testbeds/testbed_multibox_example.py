@@ -87,7 +87,7 @@ env.ostypes = {
     host9: 'centos',
     host10: 'centos',
 }
-env.orchestrator = 'openstack' #other values are 'vcenter' default:openstack
+#env.orchestrator = 'openstack' #other values are 'vcenter', 'none' default:openstack
 
 #ntp server the servers should point to
 #env.ntp_server = 'ntp.juniper.net'
