@@ -208,8 +208,8 @@ def all_sm_reimage(build_param=None):
                 # CentOS
                 with settings(warn_only=True):
                     local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
-            sleep(1)
-        sleep(10)
+            sleep(2)
+        sleep(20)
     if esxi_hosts:
        for esxi in esxi_hosts:
             with settings(warn_only=True):
