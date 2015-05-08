@@ -1514,7 +1514,7 @@ def add_tsn_node(restart=True,*args):
         elif orch is 'vcenter':
             admin_user, admin_password = get_vcenter_credentials()
         keystone_ip = get_keystone_ip()
-        with settings(host_string = '%s@%s' %(cfgm_user, cfgm_ip), password=cfgm_passwd):
+        with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
             prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                         "--admin_user %s --admin_password %s --admin_tenant_name %s --openstack_ip %s --router_type tor-service-node" \
                         %(compute_hostname, compute_control_ip, cfgm_ip,
@@ -1633,7 +1633,7 @@ def add_tor_agent_node(restart=True, *args):
                     %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
                       agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
                       admin_tenant_name, keystone_ip)
-                with settings(host_string = '%s@%s' %(cfgm_user, cfgm_ip), password=cfgm_passwd):
+                with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
                     sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
                     sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
             if restart:
