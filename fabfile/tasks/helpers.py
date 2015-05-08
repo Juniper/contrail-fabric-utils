@@ -178,6 +178,11 @@ def all_sm_reimage(build_param=None):
     if esxi_hosts:
         for esxi in esxi_hosts:
             hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+    svl_hostname = env.hostnames['all']
+    # Temp fix to handle SVL server-manager reimage issue, until we upgrade the server manager. This change only for two weeks. 
+    if 'a6s32' in svl_hostname:
+        local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --cluster_id %s %s" % ('Sanity_a6s32_tb',build_param))
+        return
     for host in hosts:
         hostname = None
         for i in range(5):
