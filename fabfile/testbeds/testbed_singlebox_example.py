@@ -61,6 +61,7 @@ env.passwords = {
 env.ostypes = {
     host1:'centos',
 }
+#env.orchestrator = 'openstack' #other values are 'vcenter', 'none' default:openstack
 
 #ntp server the servers should point to
 #env.ntp_server = 'ntp.juniper.net'
