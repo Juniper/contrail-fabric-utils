@@ -59,6 +59,7 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
     cfgm_ip = hstr_to_ip(cfgm_host)
     internal_vip = get_openstack_internal_vip()
+    external_vip = get_openstack_external_vip()
 
     cmd += " --self_ip %s" % self_ip
     cmd += " --keystone_ip %s" % keystone_ip
@@ -79,6 +80,7 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
         openstack_ip_list = ' '.join([hstr_to_ip(openstack_host)
                             for openstack_host in env.roledefs['openstack']])
         cmd += ' --internal_vip %s' % (internal_vip)
+        cmd += ' --external_vip %s' % (external_vip)
         cmd += ' --mgmt_self_ip %s' % mgmt_self_ip
     contrail_internal_vip = get_contrail_internal_vip()
     if contrail_internal_vip:
