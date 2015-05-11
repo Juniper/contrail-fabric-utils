@@ -1,0 +1,41 @@
+Description:
+-------------
+Virtual TestBed(vtb) module can be used to create Virtual Machines to build a mutinode 
+contrail Virtual Networking System(VNS) cluster.
+
+
+
+Additional Settings:
+---------------------
+To build a multinode cluster, In testbed.py following section need to be added.
+
+host1 = 'root@10.84.14.44' # Physical machine on which the VM's to be launched.
+host2 = 'root@host2' # host2 or any name to be used as hostname of the VM
+host3 = 'root@host4' # host3 or any name to be used as hostname of the VM
+host4 = 'root@host4' # host4 or any name to be used as hostname of the VM
+
+env.vms = {
+    host2 : {'compute' : host1, 'private_ip' : '192.168.122.2'},
+    host3 : {'compute' : host1, 'private_ip' : '192.168.122.3'},
+    host4 : {'compute' : host1, 'private_ip' : '192.168.122.4'},
+}
+
+Definition for the Key used
+-------------------------------------
+# compute: host_string of the host on which the VM to be launched
+# private_ip: Private network(192.168.122.0/24) ip address for the VM
+
+
+
+How to:
+-------
+# Builds Virual Testbed with the infromation provided in testbed.py 
+	fab setup_vtb
+
+# Creates one Virtual machine with the provided vm template
+	fab create_vm:<compute_host_string>,<vm_template.ini>
+
+    Example:
+	fab create_vm:root@1.1.1.1,example_centos65_vm.ini
+        	>>>Launches a centos VM as per the example template,
+	  	   fabfile/contraillabs/vtb/example_centos65_vm.ini
