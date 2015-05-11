@@ -39,6 +39,7 @@ try:
     from contraillabs.setup import *
     from contraillabs.rdo import *
     from contraillabs.utils import *
+    from contraillabs.vtb.vm import *
 except ImportError:
     pass
 
