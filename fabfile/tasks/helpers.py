@@ -16,6 +16,7 @@ from fabric.contrib.files import exists
 import datetime
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.utils.cluster import get_ntp_server
+from subprocess import Popen, PIPE
 
 @task
 @parallel
@@ -1244,3 +1245,71 @@ def ssh_copy_id(id_file=None):
         os.rename(contrail_ssh_config, ssh_config)
     # Remove temporary password file.
     os.remove(fname)
+
+@roles('build')
+@task
+def check_server_reimage_status(attempts=180, interval=10, node=None, contrail_role='all'):
+    failed_host = []
+    hosts = env.hostnames['all'][:]
+    esxi_hosts = getattr(testbed, 'esxi_hosts', None)
+    if esxi_hosts:
+        for esxi in esxi_hosts:
+            if env['host_string'] == esxi_hosts[esxi]['contrail_vm']['host']:
+                print "skipping contrail vm, continue..."
+                return
+    if node:
+        nodes = node
+    else:
+        nodes = env.roledefs[contrail_role][:]
+    count = 0
+    node_status = {}
+    node_status_save = {}
+    for node in nodes:
+        node_status_save[node]="initial_state"
+    while count < attempts:
+        sleep(int(interval))
+        count+=1
+        for node in nodes:
+            user, hostip = node.split('@')
+            cmd = "/cs-shared/server-manager/client/server-manager status server"
+            cmd = cmd + " | grep %s -A3 | grep status" %(hostip)
+            fd = Popen([cmd], stdout=PIPE, stderr=PIPE, shell=True)
+            op_string, err_string = fd.communicate()
+            if '\"reimage_failed\"' in op_string:
+                node_status[node]="reimage_failed"
+                sys.stdout.write('Reimage command FAILED\n')
+                sys.stdout.write('%s :: %s\n' % (node, node_status[node]))
+                sys.exit(1)
+            elif '\"reimage_completed\"' in op_string:
+                node_status[node]="reimage_completed"
+            elif '\"reimage_started\"' in op_string:
+                node_status[node]="reimage_started"
+            elif '\"restart_issued\"' in op_string:
+                node_status[node]="restart_issued"
+            else:
+                node_status[node]=err_string
+
+        task_complete = 1
+        for node in nodes:
+            if node_status[node] != "reimage_completed":
+                task_complete = 0
+        if task_complete == 1:
+            sys.stdout.write('Reimage Completed\n')
+            for node in nodes:
+                sys.stdout.write('%s :: %s\n' % (node, node_status[node]))
+            return 0 #sys.exit(0)
+        else:
+            for node in nodes:
+                if node_status[node] != "":
+                    if node_status_save[node] != node_status[node]:
+                        sys.stdout.write('%s :: %s -> %s\n' % (node, node_status_save[node], node_status[node]))
+                        node_status_save[node]=node_status[node]
+                #sys.stdout.write('%s\n' % (node, node_status[node]))
+
+    if count >= attempts:
+        sys.stdout.write('Reimage FAILED\n')
+        sys.stdout.write('%s\n' % node_status)
+        sys.exit(1)
+
+#end check_server_reimage_status
+
