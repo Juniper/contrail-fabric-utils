@@ -48,7 +48,7 @@ ethernet2.networkName = "$__data_pg__"
 ethernet2.addressType = "generated"
 ''')
 
-vcenter_ext_template = '''pciBridge0.present = "TRUE"
+esxi_computevm_ext_template = '''pciBridge0.present = "TRUE"
 svga.present = "TRUE"
 pciBridge4.present = "TRUE"
 pciBridge4.virtualDev = "pcieRootPort"
