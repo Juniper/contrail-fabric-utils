@@ -1928,14 +1928,17 @@ def prov_esxi(*args):
     for host in host_list:
          with settings(host=host):
                if host in esxi_info.keys():
-                   if 'dv_switch_fab' in vcenter_info.keys():
-                       if not 'fabric_vswitch' in esxi_info[host].keys():
-                           dv_switch_fab = True
-                           std_switch = False
+                   if orch == 'openstack':
+                       std_switch = True
+                   if orch == 'vcenter':
+                       if 'dv_switch_fab' in vcenter_info.keys():
+                           if not 'fabric_vswitch' in esxi_info[host].keys():
+                               dv_switch_fab = True
+                               std_switch = False
+                           else:
+                               std_switch = True
                        else:
                            std_switch = True
-                   else:
-                       std_switch = True
                    if (std_switch == True):
                        apply_esxi_defaults(esxi_info[host])
                        configure_esxi_network(esxi_info[host])
@@ -1945,7 +1948,7 @@ def prov_esxi(*args):
                        esxi_info[host]['fabric_vswitch'] = None
                        power_on = False
                    if orch == 'openstack':
-                       create_esxi_compute_vm(esxi_info[host], None)
+                       create_esxi_compute_vm(esxi_info[host], None, power_on)
                    if orch == 'vcenter':
                        create_esxi_compute_vm(esxi_info[host], vcenter_info, power_on)
                else:
