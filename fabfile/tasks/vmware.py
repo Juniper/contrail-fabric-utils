@@ -60,12 +60,17 @@ def create_vmx (esxi_host, vm_name):
     vm_mac = esxi_host['contrail_vm']['mac']
     assert vm_mac, "MAC address for contrail-compute-vm must be specified"
 
-    if orch is 'vcenter':
-        eth0_type = "vmxnet3"
-        ext_params = compute_vmx_template.vcenter_ext_template
-    else:
-        eth0_type = "e1000"
-        ext_params = compute_vmx_template.esxi_eth1_template.safe_substitute({'__vm_pg__' : vm_pg})
+    eth0_type = "vmxnet3"
+
+    ext_params = compute_vmx_template.esxi_computevm_ext_template
+
+    if orch is 'openstack':
+        eth1_intf = compute_vmx_template.esxi_eth1_template.safe_substitute({'__vm_pg__' : vm_pg})
+        ext_params += eth1_intf
+
+    if data_pg:
+        data_intf = compute_vmx_template.esxi_eth2_template.safe_substitute({'__data_pg__' : data_pg})
+        ext_params += data_intf
 
     if data_pg:
         data_intf = compute_vmx_template.esxi_eth2_template.safe_substitute({'__data_pg__' : data_pg})
