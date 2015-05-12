@@ -4,7 +4,7 @@ from fabfile.tasks.install import pkg_install
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 from fabfile.utils.cluster import get_toragent_nodes, get_tsn_nodes
 from fabfile.utils.commandline import *
-from fabfile.utils.fabos import get_release, detect_ostype
+from fabfile.utils.fabos import get_release, detect_ostype, get_linux_distro
 from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs
 
 @task
@@ -160,7 +160,11 @@ def upgrade_compute_node(from_rel, pkg, *args):
             if (getattr(env, 'interface_rename', True) and
                 detect_ostype() not in ['ubuntu', 'redhat']):
                pkgs.append('contrail-interface-name')
-
+            if float(from_rel) < 2.1:
+                dist, version, extra = get_linux_distro()
+                if version == '14.04' and 'contrail-vrouter-3.13.0-35-generic' in pkgs:
+                    pkgs.remove('contrail-vrouter-3.13.0-35-generic')
+                    pkgs.append('contrail-vrouter-3.13.0-40-generic')
             # Identify roles of this node.
             roles = ['compute']
             if env.host_string in get_tsn_nodes():
