@@ -30,17 +30,17 @@ def set_tcp_keepalive():
         if sudo("grep '^net.ipv4.tcp_keepalive_time' /etc/sysctl.conf").failed:
             sudo("echo 'net.ipv4.tcp_keepalive_time = 5' >> /etc/sysctl.conf")
         else:
-            sudo("sed -i 's/net.ipv4.tcp_keepalive_time\s\s*/net.ipv4.tcp_keepalive_time = 5/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_time\s*=\s*[0-9]*/net.ipv4.tcp_keepalive_time = 5/' /etc/sysctl.conf")
 
         if sudo("grep '^net.ipv4.tcp_keepalive_probes' /etc/sysctl.conf").failed:
             sudo("echo 'net.ipv4.tcp_keepalive_probes = 5' >> /etc/sysctl.conf")
         else:
-            sudo("sed -i 's/net.ipv4.tcp_keepalive_probes\s\s*/net.ipv4.tcp_keepalive_probes = 5/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_probes\s*=\s*[0-9]*/net.ipv4.tcp_keepalive_probes = 5/' /etc/sysctl.conf")
 
         if sudo("grep '^net.ipv4.tcp_keepalive_intvl' /etc/sysctl.conf").failed:
             sudo("echo 'net.ipv4.tcp_keepalive_intvl = 1' >> /etc/sysctl.conf")
         else:
-            sudo("sed -i 's/net.ipv4.tcp_keepalive_intvl\s\s*/net.ipv4.tcp_keepalive_intvl = 1/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_intvl\s*=\s*[0-9]*/net.ipv4.tcp_keepalive_intvl = 1/' /etc/sysctl.conf")
 
 
 @task
@@ -51,17 +51,17 @@ def set_tcp_keepalive_on_compute():
         if sudo("grep '^net.ipv4.tcp_keepalive_time' /etc/sysctl.conf").failed:
             sudo("echo 'net.ipv4.tcp_keepalive_time = 10' >> /etc/sysctl.conf")
         else:
-            sudo("sed -i 's/net.ipv4.tcp_keepalive_time\s\s*/net.ipv4.tcp_keepalive_time = 5/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_time\s*=\s*[0-9]*/net.ipv4.tcp_keepalive_time = 5/' /etc/sysctl.conf")
 
         if sudo("grep '^net.ipv4.tcp_keepalive_probes' /etc/sysctl.conf").failed:
             sudo("echo 'net.ipv4.tcp_keepalive_probes = 5' >> /etc/sysctl.conf")
         else:
-            sudo("sed -i 's/net.ipv4.tcp_keepalive_probes\s\s*/net.ipv4.tcp_keepalive_probes = 5/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_probes\s*=\s*[0-9]*/net.ipv4.tcp_keepalive_probes = 5/' /etc/sysctl.conf")
 
         if sudo("grep '^net.ipv4.tcp_keepalive_intvl' /etc/sysctl.conf").failed:
             sudo("echo 'net.ipv4.tcp_keepalive_intvl = 1' >> /etc/sysctl.conf")
         else:
-            sudo("sed -i 's/net.ipv4.tcp_keepalive_intvl\s\s*/net.ipv4.tcp_keepalive_intvl = 1/' /etc/sysctl.conf")
+            sudo("sed -i 's/net.ipv4.tcp_keepalive_intvl\s*=\s*[0-9]*/net.ipv4.tcp_keepalive_intvl = 1/' /etc/sysctl.conf")
 
 @task
 @EXECUTE_TASK
