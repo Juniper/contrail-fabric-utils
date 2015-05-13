@@ -1162,6 +1162,8 @@ def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
            manage_nova_compute='no'
            configure_nova='no'
        execute("setup_only_vrouter_node", manage_nova_compute, configure_nova,  env.host_string)
+       if is_ceilometer_compute_provision_supported():
+           execute("setup_ceilometer_compute_node", env.host_string)
 
 @task
 def setup_vrouter_node(*args):
