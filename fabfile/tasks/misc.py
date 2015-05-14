@@ -7,11 +7,10 @@ from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.utils.fabos import detect_ostype, get_linux_distro
 from fabfile.utils.host import get_control_host_string, hstr_to_ip,\
-    get_env_passwords
+    get_env_passwords, get_authserver_credentials
 from fabfile.utils.cluster import get_nodes_to_upgrade_pkg, reboot_nodes
 from fabfile.tasks.helpers import reboot_node
-from fabfile.tasks.provision import setup_vrouter_node,\
-         get_openstack_credentials
+from fabfile.tasks.provision import setup_vrouter_node
 from fabfile.tasks.install import create_install_repo_node,\
          install_interface_name_node, install_vrouter_node, apt_install
 from fabfile.utils.multitenancy import get_mt_opts
@@ -121,7 +120,7 @@ def create_default_secgrp_rules():
         return
     vnc_api_ip = env.roledefs['cfgm'][0]
     vnc_api_port = 8082
-    auth_user, auth_passwd =  get_openstack_credentials()
+    auth_user, auth_passwd =  get_authserver_credentials()
     auth_tenant = 'admin'
     try:
         vnc_lib = vnc_api.VncApi(

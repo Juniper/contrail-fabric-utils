@@ -4,7 +4,7 @@ from fabfile.config import *
 from fabfile.templates import openstack_haproxy, collector_haproxy
 from fabfile.tasks.helpers import enable_haproxy
 from fabfile.utils.fabos import detect_ostype, get_as_sudo
-from fabfile.utils.host import get_keystone_ip, get_control_host_string,\
+from fabfile.utils.host import get_authserver_ip, get_control_host_string,\
     hstr_to_ip, get_from_testbed_dict, get_service_token, get_env_passwords,\
     get_openstack_internal_vip, get_openstack_external_vip,\
     get_contrail_internal_vip, get_contrail_external_vip
@@ -174,7 +174,7 @@ def setup_galera_cluster():
                            for openstack_host in env.roledefs['openstack']]
     galera_ip_list = [hstr_to_ip(galera_host)\
                       for galera_host in openstack_host_list]
-    keystone_ip = get_keystone_ip()
+    keystone_ip = get_authserver_ip()
     internal_vip = get_openstack_internal_vip()
 
     with cd(INSTALLER_DIR):
