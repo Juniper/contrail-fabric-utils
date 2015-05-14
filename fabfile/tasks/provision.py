@@ -743,8 +743,9 @@ def setup_ceilometer_node(*args):
             with settings(warn_only=True):
                 output = sudo(cmd)
             count = 1
-            while not output.succeeded and \
-                    "Unable to establish connection" in output:
+            while not output.succeeded and (
+                    "Unable to establish connection" in output or
+                    "Service Unavailable (HTTP 503)" in output):
                 count += 1
                 if count > 10:
                     raise RuntimeError("Unable to connect to keystone")
