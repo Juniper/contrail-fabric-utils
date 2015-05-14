@@ -153,15 +153,28 @@ def setup_test_env():
         sanity_testbed_dict['hosts'].append(host_dict)
         if env.has_key('vgw'): sanity_testbed_dict['vgw'].append(env.vgw)
 
+    esxi_hosts = getattr(testbed, 'esxi_hosts', None)
+    if esxi_hosts:
+        for esxi in esxi_hosts:
+            host_dict = {}
+            host_dict['ip'] = esxi_hosts[esxi]['ip']
+            host_dict['data-ip'] = host_dict['ip']
+            host_dict['control-ip'] = host_dict['ip']
+            host_dict['name'] = esxi
+            host_dict['username'] = esxi_hosts[esxi]['username']
+            host_dict['password'] = esxi_hosts[esxi]['password']
+            host_dict['roles'] = []
+            sanity_testbed_dict['hosts'].append(host_dict)
+
     # Adding vip VIP dict for HA test setup
     if CONTROLLER_TYPE == 'Openstack':
         with settings(host_string = env.roledefs['openstack'][0]):
             if internal_vip:
                 host_dict = {}
     # We may have to change it when we have HA support in Cloudstack
-                host_dict['data-ip']= get_keystone_ip()
-                host_dict['control-ip']= get_keystone_ip()
-                host_dict['ip']= get_keystone_ip()
+                host_dict['data-ip']= get_authserver_ip()
+                host_dict['control-ip']= get_authserver_ip()
+                host_dict['ip']= get_authserver_ip()
                 host_dict['name'] = 'contrail-vip'     
                 with settings(host_string = env.roledefs['cfgm'][0]):
                     host_dict['username'] = host_string.split('@')[0]
@@ -190,9 +203,8 @@ def setup_test_env():
             stack_tenant= 'default-project'
             stack_user= 'admin'
         else:
-            stack_user= get_keystone_admin_user()
-            stack_password = get_keystone_admin_password()
-            stack_tenant = get_keystone_admin_tenant_name()
+            stack_user, stack_password = get_authserver_credentials()
+            stack_tenant = get_admin_tenant_name()
         # Few hardcoded variables for sanity environment 
         # can be removed once we move to python3 and configparser
         stack_domain = 'default-domain'
@@ -212,6 +224,7 @@ def setup_test_env():
         key = 'key1'
         mailSender = 'contrailbuild@juniper.net'
 
+        orch = getattr(env, 'orchestrator', 'openstack')
         router_asn = getattr(testbed, 'router_asn', '')
         public_vn_rtgt = getattr(testbed, 'public_vn_rtgt', '')
         public_vn_subnet = getattr(testbed, 'public_vn_subnet', '')
@@ -226,14 +239,20 @@ def setup_test_env():
             mail_server = env.mail_server
             mail_port = env.mail_port
 
+        vcenter_dc = ''
+        if orch == 'vcenter':
+            vcenter_dc = env.vcenter['datacenter']
+
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__testbed_json_file__'   : 'sanity_testbed.json',
              '__nova_keypair_name__'   : key,
+             '__orch__'                : orch,
              '__stack_user__'          : stack_user,
              '__stack_password__'      : stack_password,
+             '__auth_ip__'             : get_authserver_ip(),
+             '__auth_port__'           : get_authserver_port(),
              '__stack_tenant__'        : stack_tenant,
              '__stack_domain__'        : stack_domain,
-             '__keystone_ip__'         : get_keystone_ip(),
              '__multi_tenancy__'       : get_mt_enable(),
              '__address_family__'      : get_address_family(),
              '__log_scenario__'        : log_scenario,
@@ -268,7 +287,8 @@ def setup_test_env():
              '__stop_on_fail__'        : stop_on_fail,
              '__ha_setup__'            : getattr(testbed, 'ha_setup', ''),
              '__ipmi_username__'       : getattr(testbed, 'ipmi_username', ''),
-             '__ipmi_password__'       : getattr(testbed, 'ipmi_password', '')
+             '__ipmi_password__'       : getattr(testbed, 'ipmi_password', ''),
+             '__vcenter_dc__'          : vcenter_dc,
             })
 
         fd, fname = tempfile.mkstemp()
@@ -295,10 +315,10 @@ def setup_test_env():
                 run('rm -rf /tmp/pip-build-root')
                 if detect_ostype() in ['centos', 'redhat']:
                     pkg = 'fixtures testtools testresources discover \
-                        testrepository junitxml pytun'
+                        testrepository junitxml pytun pyvmomi'
                 elif 'ubuntu' == detect_ostype():
                     pkg = 'fixtures testtools testresources \
-                           testrepository junitxml pytun'
+                           testrepository junitxml pytun pyvmomi'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
                 if ui_browser:
@@ -446,10 +466,9 @@ def export_testbed_details(filename='testbed_vars'):
     '''
     # TODO 
     # Need to be able to export entire testbed details if need be
-    keystone_ip = get_keystone_ip()
-    keystone_admin_user = get_keystone_admin_user()
-    keystone_admin_password = get_keystone_admin_password()
-    admin_tenant = get_keystone_admin_tenant_name()
+    authserver_ip = get_authserver_ip()
+    keystone_admin_user, keystone_admin_password = get_authserver_credentials()
+    admin_tenant = get_admin_tenant()
     api_server_host_string = testbed.env.roledefs['cfgm'][0]
     api_server_host_ip = testbed.env.roledefs['cfgm'][0].split('@')[1]
     api_server_host_user = testbed.env.roledefs['cfgm'][0].split('@')[0]
@@ -465,7 +484,7 @@ def export_testbed_details(filename='testbed_vars'):
     testbed_location = getattr(env, 'testbed_location', None)
     image_web_server = getattr(env, 'image_web_server', None)
     fh = open(filename,'w')
-    fh.write('export KEYSTONE_SERVICE_HOST=%s\n' % (keystone_ip))
+    fh.write('export KEYSTONE_SERVICE_HOST=%s\n' % (authserver_ip))
     fh.write('export API_SERVER_IP=%s\n' % (api_server_host_ip))
     fh.write('export API_SERVER_HOST_STRING=%s\n' % (api_server_host_string))
     fh.write('export API_SERVER_HOST_PASSWORD=%s\n' % (api_server_host_password))
