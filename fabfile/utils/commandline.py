@@ -1,7 +1,6 @@
 from fabric.api import env, sudo
 
 from host import *
-from vcenter import*
 from cluster import *
 from analytics import *
 from interface import *
@@ -57,18 +56,18 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     self_ip = hstr_to_ip(self_host)
     mgmt_self_ip = hstr_to_ip(host_string)
     openstack_host_password = get_env_passwords(host_string)
-    keystone_ip = get_keystone_ip(ignore_vip=True,
+    authserver_ip = get_authserver_ip(ignore_vip=True,
                                   openstack_node=env.host_string)
-    openstack_admin_password = get_keystone_admin_password()
+    (_, openstack_admin_password) = get_authserver_credentials()
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
     cfgm_ip = hstr_to_ip(cfgm_host)
     internal_vip = get_openstack_internal_vip()
 
     cmd += " --self_ip %s" % self_ip
-    cmd += " --keystone_ip %s" % keystone_ip
+    cmd += " --keystone_ip %s" % authserver_ip
     cmd += " --keystone_admin_passwd %s" % openstack_admin_password
     cmd += " --cfgm_ip %s " % cfgm_ip
-    cmd += " --keystone_auth_protocol %s" % get_keystone_auth_protocol()
+    cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
     cmd += " --amqp_server_ip %s" % amqp_server_ip
     cmd += " --quantum_service_protocol %s" % get_quantum_service_protocol()
     cmd += " --service_token %s" % get_service_token()
@@ -140,15 +139,15 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     if haproxy:
         cmd += " --haproxy %s" % haproxy
     if orch == 'openstack':
-        openstack_admin_password = get_keystone_admin_password()
-        keystone_ip = get_keystone_ip()
+        (_, openstack_admin_password) = get_authserver_credentials()
+        authserver_ip = get_authserver_ip()
         # Pass keystone arguments in case for openstack orchestrator
-        cmd += " --keystone_ip %s" % keystone_ip
+        cmd += " --keystone_ip %s" % authserver_ip
         cmd += " --keystone_admin_passwd %s" % openstack_admin_password
         cmd += " --keystone_service_tenant_name %s" % get_keystone_service_tenant_name()
         cmd += ' --neutron_password %s' % get_neutron_password()
-        cmd += " --keystone_auth_protocol %s" % get_keystone_auth_protocol()
-        cmd += " --keystone_auth_port %s" % get_keystone_auth_port()
+        cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
+        cmd += " --keystone_auth_port %s" % get_authserver_port()
         cmd += " --keystone_admin_token %s" % get_keystone_admin_token()
         cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
         cmd += " --region_name %s" % get_region_name()
@@ -212,14 +211,14 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
     if orch == 'openstack':
         openstack_host = get_control_host_string(env.roledefs['openstack'][0])
         openstack_ip = hstr_to_ip(openstack_host)
-        keystone_ip = get_keystone_ip()
-        ks_admin_user, ks_admin_password = get_openstack_credentials()
-        cmd += " --keystone_ip %s" % keystone_ip
+        authserver_ip = get_authserver_ip()
+        ks_admin_user, ks_admin_password = get_authserver_credentials()
+        cmd += " --keystone_ip %s" % authserver_ip
         cmd += " --openstack_ip %s" % openstack_ip
         cmd += " --admin_user %s" % ks_admin_user
         cmd += " --admin_password %s" % ks_admin_password
         cmd += " --admin_token %s" % get_keystone_admin_token()
-        cmd += " --admin_tenant_name %s" % get_keystone_admin_tenant_name()
+        cmd += " --admin_tenant_name %s" % get_admin_tenant_name()
     elif orch == 'vcenter':
         vcenter_info = getattr(env, 'vcenter', None)
         if not vcenter_info:
@@ -303,12 +302,11 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
 
     if orch == 'openstack':
         openstack_mgmt_ip = hstr_to_ip(env.roledefs['openstack'][0])
-        keystone_ip = get_keystone_ip()
-        ks_auth_protocol = get_keystone_auth_protocol()
-        ks_auth_port = get_keystone_auth_port()
-        ks_admin_user, ks_admin_password = get_openstack_credentials()
-        openstack_admin_password = get_keystone_admin_password()
-        cmd += " --keystone_ip %s" % keystone_ip
+        authserver_ip = get_authserver_ip()
+        ks_auth_protocol = get_authserver_protocol()
+        ks_auth_port = get_authserver_port()
+        ks_admin_user, ks_admin_password = get_authserver_credentials()
+        cmd += " --keystone_ip %s" % authserver_ip
         cmd += " --openstack_mgmt_ip %s" % openstack_mgmt_ip
         cmd += " --keystone_auth_protocol %s" % ks_auth_protocol
         cmd += " --keystone_auth_port %s" % ks_auth_port
@@ -436,15 +434,15 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     cmd += "--kafka_enabled %s" % get_kafka_enabled()
     if get_orchestrator() == 'openstack':
         # Pass keystone arguments in case for openstack orchestrator
-        ks_admin_user, ks_admin_password = get_openstack_credentials()
-        cmd += " --keystone_ip %s" % get_keystone_ip()
+        ks_admin_user, ks_admin_password = get_authserver_credentials()
+        cmd += " --keystone_ip %s" % get_authserver_ip()
         cmd += " --keystone_admin_user %s" % ks_admin_user
         cmd += " --keystone_admin_passwd %s" % ks_admin_password
         cmd += " --keystone_admin_tenant_name %s" % \
                 get_keystone_service_tenant_name()
         cmd += " --keystone_auth_protocol %s" % \
-                get_keystone_auth_protocol()
-        cmd += " --keystone_auth_port %s" % get_keystone_auth_port()
+                get_authserver_protocol()
+        cmd += " --keystone_auth_port %s" % get_authserver_port()
         cmd += " --keystone_admin_token %s" % get_keystone_admin_token()
         cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
 
