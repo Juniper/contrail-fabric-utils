@@ -488,6 +488,11 @@ def setup_cfgm_node(*args):
                 cmd += " --vcenter_password %s" % vcenter_info['password']
                 cmd += " --vcenter_datacenter %s" % vcenter_info['datacenter']
                 cmd += " --vcenter_dvswitch %s" % vcenter_info['dv_switch']['dv_switch_name']
+                if 'ipfabricpg' in vcenter_info.keys():
+                    cmd += " --vcenter_ipfabricpg %s" % vcenter_info['ipfabricpg']
+                else:
+                    # If unspecified, set it to default value
+                    cmd += " --vcenter_ipfabricpg contrail-fab-pg"
                 cmd += " --api_hostname %s" % cfgm_ip
                 cmd += " --api_port 8082"
                 zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
