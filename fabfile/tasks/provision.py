@@ -1257,8 +1257,8 @@ def prov_config_node():
 @EXECUTE_TASK
 @roles('database')
 def prov_database_node():
-    cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-    cfgm_ip = hstr_to_ip(cfgm_host)
+    cfgm_host = env.roledefs['cfgm'][0]
+    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
     tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
     tgt_hostname = sudo("hostname")
@@ -1278,8 +1278,8 @@ def prov_database_node():
 @EXECUTE_TASK
 @roles('collector')
 def prov_analytics_node():
-    cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-    cfgm_ip = hstr_to_ip(cfgm_host)
+    cfgm_host = env.roledefs['cfgm'][0]
+    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
     tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
     tgt_hostname = sudo("hostname")
@@ -1299,8 +1299,8 @@ def prov_analytics_node():
 @EXECUTE_TASK
 @roles('control')
 def prov_control_bgp():
-    cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-    cfgm_ip = hstr_to_ip(cfgm_host)
+    cfgm_host = env.roledefs['cfgm'][0]
+    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
     tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
     tgt_hostname = sudo("hostname")
