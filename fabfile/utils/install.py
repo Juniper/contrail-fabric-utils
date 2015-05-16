@@ -67,7 +67,8 @@ def get_compute_pkgs(manage_nova_compute='yes'):
               ]
     elif (manage_nova_compute== 'no' and ostype in ['ubuntu']):
         pkgs = [contrail_vrouter_pkg,
-               'contrail-vrouter-common'
+               'contrail-vrouter-common',
+               'contrail-nova-vif',
               ]
     # Append lbaas dependent packages if haproxy is enabled..
     if getattr(testbed, 'haproxy', False):
