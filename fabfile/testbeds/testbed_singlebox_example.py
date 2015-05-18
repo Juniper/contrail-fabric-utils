@@ -311,3 +311,8 @@ env.ostypes = {
 # coremask   - Specify CPU affinity mask to run vRouter with. Supported formats:
 #              hexadecimal, comma-sepparated list of CPUs, dash-separated range
 #              of CPUs.
+# OPTIONAL vrouter limit parameter
+# ==================================
+#env.vrouter_module_params = {
+#     host1:{'mpls_labels':'131072', 'nexthops':'131072','vrfs':'65536','macs':'262144'},
+#}
