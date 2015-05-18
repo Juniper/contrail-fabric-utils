@@ -6,10 +6,11 @@ from fabfile.tasks.install import apt_install, pkg_install
 
 @task
 @roles('build')
-def upgrade_kernel_all(reboot='yes'):
+def upgrade_kernel_all(*tgzs, **kwargs):
     """creates repo and upgrades kernel in Ubuntu"""
+    reboot = kwargs.get('reboot', 'True')
     execute('pre_check')
-    execute('create_install_repo')
+    execute('create_install_repo', *tgzs)
     nodes = []
     with settings(host_string=env.roledefs['all'][0], warn_only=True):
         dist, version, extra = get_linux_distro()
@@ -36,10 +37,11 @@ def upgrade_kernel_all(reboot='yes'):
 
 @task
 @roles('build')
-def upgrade_kernel_without_openstack(reboot='yes'):
+def upgrade_kernel_without_openstack(*tgzs, **kwargs):
     """creates repo and upgrades kernel"""
+    reboot = kwargs.get('reboot', 'True')
     non_openstack_nodes = [node for node in env.roledefs['all'] if node not in env.roledefs['openstack']]
-    execute('create_install_repo_without_openstack')
+    execute('create_install_repo_without_openstack', *tgzs)
     nodes = []
     with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
         dist, version, extra = get_linux_distro()
