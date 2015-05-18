@@ -255,17 +255,20 @@ def install_interface_name_node(*args, **kwargs):
 @task
 @EXECUTE_TASK
 @roles('database')
-def install_database():
+def install_database(install_mongodb=True):
     """Installs database pkgs in all nodes defined in database."""
     if env.roledefs['database']:
-        execute("install_database_node", env.host_string)
+        execute("install_database_node", install_mongodb, env.host_string)
 
 @task
-def install_database_node(*args):
+def install_database_node(install_mongodb, *args):
     """Installs database pkgs in one or list of nodes. USAGE:fab install_database_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-database']
+            if install_mongodb and is_ceilometer_install_supported(use_install_repo=True):
+                pkgs_ceilometer_database = ['mongodb-clients', 'mongodb-server']
+                pkg.extend(pkgs_ceilometer_database)
             if detect_ostype() == 'ubuntu':
                 sudo('echo "manual" >> /etc/init/supervisor-database.override')
                 apt_install(pkg)
@@ -310,7 +313,7 @@ def install_contrail_ceilometer_plugin_node(*args):
                 host_string != env.roledefs['openstack'][0]:
             continue
         with settings(host_string=host_string):
-            if not is_ceilometer_install_supported():
+            if not is_ceilometer_contrail_plugin_install_supported():
                 continue
             pkg_contrail_ceilometer = get_ceilometer_plugin_pkgs()
             act_os_type = detect_ostype()
@@ -796,7 +799,7 @@ def install_without_openstack(*tgzs, **kwargs):
     execute('create_installer_repo')
     execute(create_install_repo_without_openstack, *tgzs)
     execute(create_install_repo_dpdk)
-    execute(install_database)
+    execute(install_database, False)
     execute(install_cfgm)
     execute(install_control)
     execute(install_collector)
@@ -819,7 +822,7 @@ def install_contrail_analytics_components(*tgzs, **kwargs):
     reboot = kwargs.get('reboot', 'False')
     execute('create_installer_repo')
     execute(create_install_repo_without_openstack, *tgzs)
-    execute(install_database)
+    execute(install_database, False)
     execute(install_cfgm)
     execute(install_collector)
     execute(install_webui)
