@@ -199,6 +199,9 @@ env.ostypes = {
 #    host6 : { 'disks' : ['/dev/sdc', '/dev/sdd'], 'local-disks' : ['/dev/sde'], 'local-ssd-disks' : ['/dev/sdf'] },
 #    host7 : { 'nfs' : ['10.10.10.10:/nfs', '11.11.11.11:/nfs']},
 #}
+#
+#Set Storage replica
+#storage_replica_size = 3
 
 #Base Openstack live migration configuration.
 #live_migration = True
