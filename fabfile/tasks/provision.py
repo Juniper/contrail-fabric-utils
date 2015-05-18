@@ -629,8 +629,7 @@ def setup_ceilometer_compute():
 @task
 def setup_ceilometer_compute_node(*args):
     """Provisions ceilometer compute services in one or list of nodes. USAGE: fab setup_ceilometer_compute_node:user@1.1.1.1,user@2.2.2.2"""
-    openstack_host = get_control_host_string(env.roledefs['openstack'][0])
-    openstack_ip = hstr_to_ip(openstack_host)
+    openstack_host = env.roledefs['openstack'][0]
     for host_string in args:
         with settings(host_string=host_string):
             os_type = detect_ostype()
