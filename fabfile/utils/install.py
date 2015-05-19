@@ -90,32 +90,26 @@ def get_openstack_ceilometer_pkgs():
     """ Returns the list of ceilometer packages used in a
         openstack node.
     """
-    pkg_havana_ubuntu = ['mongodb', 'ceilometer-api',
+    pkg_juno_ubuntu = ['ceilometer-api',
         'ceilometer-collector',
         'ceilometer-agent-central',
-        'python-ceilometerclient']
-    pkg_icehouse_ubuntu = pkg_havana_ubuntu + [
         'ceilometer-agent-notification',
         'ceilometer-alarm-evaluator',
         'ceilometer-alarm-notifier',
-        'ceilometer-plugin-contrail']
-    pkg_juno_ubuntu = pkg_icehouse_ubuntu + [
-        'mongodb-server',
+        'ceilometer-plugin-contrail',
         'mongodb-clients',
         'python-pymongo']
-    pkg_juno_ubuntu.remove('mongodb')
     pkg_kilo_ubuntu = copy.deepcopy(pkg_juno_ubuntu)
     pkg_kilo_ubuntu.remove('ceilometer-plugin-contrail')
 
-    pkg_icehouse_redhat = ['ceilometer-plugin-contrail']
+    pkg_redhat = ['ceilometer-plugin-contrail']
 
     ceilometer_pkgs = {
-        'ubuntu' : {'havana' : pkg_havana_ubuntu,
-                    'icehouse' : pkg_icehouse_ubuntu,
+        'ubuntu' : {
                     'juno' : pkg_juno_ubuntu,
                     'kilo' : pkg_kilo_ubuntu
                    },
-        'redhat' : {'icehouse' : pkg_icehouse_redhat},
+        'redhat' : {'juno' : pkg_redhat},
     }
 
     act_os_type = detect_ostype()
@@ -128,10 +122,8 @@ def get_ceilometer_plugin_pkgs():
     """
     pkg_contrail_ceilometer = ['ceilometer-plugin-contrail']
     ceilometer_plugin_pkgs = {
-        'ubuntu' : {'icehouse' : pkg_contrail_ceilometer,
-                    'juno' : pkg_contrail_ceilometer
-                   },
-        'redhat' : {'icehouse' : pkg_contrail_ceilometer},
+        'ubuntu' : {'juno' : pkg_contrail_ceilometer},
+        'redhat' : {'juno' : pkg_contrail_ceilometer},
     }
         
     act_os_type = detect_ostype()
