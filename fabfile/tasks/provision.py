@@ -587,33 +587,94 @@ def fixup_ceilometer_pipeline_conf(analytics_ip):
     sudo('rm -rf %s' % (rtemp_dir))
 #end fixup_ceilometer_pipeline_conf
 
-def setup_ceilometer_mongodb(ip):
+def fixup_mongodb_conf_file():
+    sudo("service mongodb stop")
+    sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/mongodb.conf")
     with settings(warn_only=True):
-        sudo("service mongodb stop")
-        sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/mongodb.conf")
-        sudo("service mongodb start")
-        # check if the mongodb is running, if not, issue start again
-        count = 1
-        while sudo("service mongodb status | grep not").succeeded:
-            count += 1
-            if count > 10:
-                break
-            sleep(1)
-            run("service mongodb restart")
-        # check if ceilometer user has already been added
-        count = 1
-        cmd = "mongo --host " + ip + " --quiet --eval \"db.system.users.find({'user':'ceilometer'}).count()\" ceilometer"
+        output = sudo("grep replSet=rs-ceilometer /etc/mongodb.conf")
+    if not output.succeeded:
+        sudo("echo \"replSet=rs-ceilometer\" >> /etc/mongodb.conf")
+    sudo("service mongodb start")
+    # check if the mongodb is running, if not, issue start again
+    count = 1
+    cmd = "service mongodb status | grep not"
+    with settings(warn_only=True):
         output = sudo(cmd)
-        while not output.succeeded:
-            count += 1
-            if count > 10:
-                raise RuntimeError("Not able to connect to mongodb")
-            sleep(1)
+    while output.succeeded:
+        count += 1
+        if count > 10:
+            break
+        sleep(1)
+        sudo("service mongodb restart")
+        with settings(warn_only=True):
             output = sudo(cmd)
+#end fixup_mongodb_conf_file
+
+def setup_ceilometer_mongodb(ip, mongodb_ip_list):
+    # Configure replicaSet only on the first mongodb node
+    if ip == mongodb_ip_list[0]:
+        # Verify that we are able to connect
+        cmd = "mongo --host " + ip + " --quiet --eval " + \
+            "'db = db.getSiblingDB(\"ceilometer\")'"
+        verify_command_succeeded(cmd = cmd, expected_output = "ceilometer",
+                                 error_str = "Not able to connect to mongodb",
+                                 max_count = 10, sleep_interval = 1,
+                                 warn_only = True)
+        # Verify if replicaSet is already configured
+        cmd = "mongo --host " + ip + " --quiet --eval 'rs.conf()._id'"
+        with settings(warn_only=True):
+            output = sudo(cmd)
+        if output.succeeded and output == 'rs-ceilometer':
+            return
+        cmd = "mongo --host " + ip + " --quiet --eval " + \
+            "'rs.initiate({_id:\"rs-ceilometer\", " + \
+            "members:[{_id:0, host:\"" + ip + ":27017\"}]}).ok'"
+        verify_command_succeeded(cmd = cmd, expected_output = "1",
+                                 error_str = "Not able to initiate replicaSet",
+                                 max_count = 1, sleep_interval = 1,
+                                 warn_only = False)
+        # Verify that we are adding on primary
+        cmd = "mongo --host " + ip + " --quiet --eval 'db.isMaster().ismaster'"
+        verify_command_succeeded(cmd = cmd, expected_output = "true",
+                                 error_str = "Not primary",
+                                 max_count = 30, sleep_interval = 2,
+                                 warn_only = False)
+        # Add replicaSet members
+        for other_ip in mongodb_ip_list:
+            if ip == other_ip:
+                continue
+            cmd = "mongo --host " + ip + \
+                " --quiet --eval 'rs.add(\"" + other_ip + ":27017\").ok'"
+            verify_command_succeeded(cmd = cmd, expected_output = "1",
+                                     error_str = "Not able to add " + \
+                                         other_ip + " to replicaSet",
+                                     max_count = 1, sleep_interval = 1,
+                                     warn_only = False)
+        # Verify replicaSet status and members
+        cmd = "mongo --host " + ip + " --quiet --eval 'rs.status().ok'"
+        verify_command_succeeded(cmd = cmd, expected_output = "1",
+                                 error_str = "replicaSet status NOT OK",
+                                 max_count = 10, sleep_interval = 1,
+                                 warn_only = False)
+        cmd = "mongo --host " + ip + " --quiet --eval " + \
+            "'rs.status().members.length'"
+        verify_command_succeeded(cmd = cmd,
+                                 expected_output = str(len(mongodb_ip_list)),
+                                 error_str = "replicaSet does not contain "
+                                     "all database nodes",
+                                 max_count = 1, sleep_interval = 1,
+                                 warn_only = False)
+        # check if ceilometer user has already been added
+        cmd = "mongo --host " + ip + " --quiet --eval " + \
+            "\"db.system.users.find({'user':'ceilometer'}).count()\" ceilometer"
+        output = sudo(cmd)
         # Does user ceilometer exist
         if output == "1":
             return
-        cmd = "mongo --host " + ip + " --eval 'db = db.getSiblingDB(\"ceilometer\"); db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", roles: [ \"readWrite\", \"dbAdmin\" ]})'"
+        cmd = "mongo --host " + ip + " --eval " + \
+            "'db = db.getSiblingDB(\"ceilometer\"); " + \
+            "db.addUser({user: \"ceilometer\", pwd: \"CEILOMETER_DBPASS\", " + \
+            "roles: [ \"readWrite\", \"dbAdmin\" ]})'"
         if not sudo(cmd).succeeded:
             raise RuntimeError("Not able to add ceilometer mongodb user")
 #end setup_ceilometer_mongodb
@@ -728,9 +789,14 @@ def setup_ceilometer_node(*args):
                                        'ceilometer-collector',
                                        'ceilometer-alarm-evaluator',
                                        'ceilometer-alarm-notifier']
-            setup_ceilometer_mongodb(self_ip)
             conf_file = "/etc/ceilometer/ceilometer.conf"
-            value = "mongodb://ceilometer:CEILOMETER_DBPASS@" + self_ip + ":27017/ceilometer"
+            database_host_list = [get_control_host_string(entry)\
+                                     for entry in env.roledefs['database']]
+            database_ip_list = ["%s:27017" % (hstr_to_ip(db_host))\
+                                   for db_host in database_host_list]
+            database_ip_str = ','.join(database_ip_list)
+            value = "mongodb://ceilometer:CEILOMETER_DBPASS@" + database_ip_str + \
+                        "/ceilometer?replicaSet=rs-ceilometer"
             if openstack_sku == 'havana':
                 sudo("openstack-config --set %s DEFAULT connection %s" % (conf_file, value))
             else:
@@ -974,6 +1040,42 @@ def setup_collector_node(*args):
                 print cmd
                 sudo(cmd)
 #end setup_collector
+
+@task
+@roles('database')
+def fixup_mongodb_conf():
+    """Fixup configuration file for mongodb in all nodes defined in database
+       role if ceilometer provisioning is supported.
+    """
+    if (env.roledefs['database'] and
+        is_ceilometer_provision_supported(use_install_repo=True)):
+        execute("fixup_mongodb_conf_node", env.host_string)
+
+@task
+def fixup_mongodb_conf_node(*args):
+    """Fixup configuration file for mongodb in one or list of nodes.
+       USAGE: fab fixup_mongodb_conf_node:user@1.1.1.1,user@2.2.2.2
+    """
+    for host_string in args:
+        with settings(host_string=host_string):
+            fixup_mongodb_conf_file()
+
+@task
+@roles('database')
+def setup_mongodb_ceilometer_cluster():
+    """Provisions mongodb ceilometer cluster consisting of all nodes defined
+       in database role if ceilometer provisioning is supported.
+    """
+    # Configure only on the first mongodb node
+    if (env.roledefs['database'] and
+            is_ceilometer_provision_supported(use_install_repo=True) and
+            env.host_string == env.roledefs['database'][0]):
+        database_ip = hstr_to_ip(get_control_host_string(env.host_string))
+        database_host_list = [get_control_host_string(entry)\
+                                  for entry in env.roledefs['database']]
+        database_ip_list = [hstr_to_ip(db_host) for db_host in database_host_list]
+        with settings(host_string=env.host_string):
+            setup_ceilometer_mongodb(database_ip, database_ip_list)
 
 @task
 @roles('database')
@@ -1684,6 +1786,8 @@ def setup_all(reboot='True'):
     execute('increase_limits')
     execute('setup_database')
     execute('verify_database')
+    execute('fixup_mongodb_conf')
+    execute('setup_mongodb_ceilometer_cluster')
     execute('setup_orchestrator')
     execute('setup_cfgm')
     execute('verify_cfgm')
@@ -1898,6 +2002,8 @@ def reset_config():
         execute(increase_ulimits)
         execute(setup_database)
         execute(verify_database)
+        execute(fixup_mongodb_conf)
+        execute(setup_mongodb_ceilometer_cluster)
         execute(setup_orchestrator)
         execute(setup_cfgm)
         execute(verify_cfgm)

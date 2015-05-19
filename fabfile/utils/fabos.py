@@ -31,7 +31,7 @@ def detect_ostype():
     return dist.lower()
 #end detect_ostype
 
-def get_openstack_sku():
+def get_openstack_sku(use_install_repo=False):
     dist = detect_ostype()
     if dist in ['ubuntu']:
         pkg = 'nova-common'
@@ -40,7 +40,7 @@ def get_openstack_sku():
     else:
         print "Unsupported OS type"
         return None
-    pkg_ver = get_release(pkg=pkg)
+    pkg_ver = get_release(pkg=pkg, use_install_repo=use_install_repo)
     if pkg_ver is None:
         return None
     if pkg_ver.find('2013.2') != -1:
@@ -55,16 +55,19 @@ def get_openstack_sku():
     return openstack_sku
 #end get_openstack_sku
 
-def get_release(pkg='contrail-install-packages'):
+def get_release(pkg='contrail-install-packages', use_install_repo=False):
     pkg_ver = None
     dist = detect_ostype() 
     print "Dist is %s" % dist
     if dist in ['centos', 'fedora', 'redhat', 'centoslinux']:
         cmd = "rpm -q --queryformat '%%{VERSION}' %s" %pkg
     elif dist in ['ubuntu']:
-        cmd = "dpkg -s %s | grep Version: | cut -d' ' -f2 | cut -d'-' -f1" %pkg
+        if use_install_repo:
+            cmd = "dpkg --info /opt/contrail/contrail_install_repo/%s*.deb | grep Version: | cut -d' ' -f3 | cut -d'-' -f1" %pkg
+        else:
+            cmd = "dpkg -s %s | grep Version: | cut -d' ' -f2 | cut -d'-' -f1" %pkg
     pkg_ver = sudo(cmd)
-    if 'is not installed' in pkg_ver or 'is not available' in pkg_ver:
+    if 'is not installed' in pkg_ver or 'is not available' in pkg_ver or 'No such file or directory' in pkg_ver:
         print "Package %s not installed." % pkg
         return None
     return pkg_ver
@@ -125,3 +128,26 @@ def get_as_sudo(src_file, dst_file):
         sudo('rm -rf %s' % tempdir)
         raise
     sudo('rm -rf %s' % tempdir)
+#end get_as_sudo
+
+def verify_command_succeeded(cmd, expected_output, error_str, max_count,
+                             sleep_interval, warn_only):
+    count = 1
+    cmd_str = cmd
+    if warn_only:
+        with settings(warn_only=True):
+            output = sudo(cmd)
+    else:
+        output = sudo(cmd)
+    while not output.succeeded or output != expected_output:
+        count += 1
+        if count > max_count:
+            raise RuntimeError("%s: %s %s" % (error_str, output.succeeded,\
+                 output))
+        sleep(sleep_interval)
+        if warn_only:
+            with settings(warn_only=True):
+                output = sudo(cmd)
+        else:
+            output = sudo(cmd)
+#end verify_command_succeeded
