@@ -449,6 +449,8 @@ env.ostypes = {
 #    data_store: the datastore on esxi where the vmdk is copied to
 #    cluster: name of the cluster to which this esxi is added
 #    contrail_vm information:
+#        uplink: The SRIOV or Passthrough PCI Id(04:10.1). If not provided
+#                will default to vmxnet3 based fabric uplink
 #        mac: the virtual mac address for the contrail vm
 #        host: the contrail_vm ip in the form of 'user@contrailvm_ip'
 #        vmdk: the absolute path of the contrail-vmdk used to spawn vm

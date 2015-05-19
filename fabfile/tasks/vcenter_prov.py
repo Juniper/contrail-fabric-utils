@@ -162,9 +162,14 @@ class Vcenter(object):
                 dvs=self.create_dvSwitch(self.service_instance, network_folder, self.clusters, self.dvswitch_name)
                 self.configure_hosts_on_dvSwitch(self.service_instance, network_folder, self.clusters, self.dvswitch_name)
             self.add_dvPort_group(self.service_instance,dvs, self.dvportgroup_name)
-            for vm_name in self.vms:
-                self.add_vm_to_dvpg(self.service_instance,vm_name,dvs, self.dvportgroup_name)
-            
+            for vm_list in self.vms:
+                if vm_list[1] is not None:
+                    ret = self.add_pci_to_vm(self.service_instance, vm_list[0], vm_list[1])
+                    if (ret == 1):
+                        print "Fatal Error. Cannot proceed further!"
+                        return
+                self.add_vm_to_dvpg(self.service_instance,vm_list[0],dvs, self.dvportgroup_name)
+ 
         except self.pyVmomi.vmodl.MethodFault as error:
             print "Caught vmodl fault : " + error.msg
             return 
@@ -270,14 +275,59 @@ class Vcenter(object):
             self.wait_for_task(task, si)
             print "Successfully created DV Port Group ", dv_port_name
 
+    def add_pci_to_vm(self, si, vm_name, pci_id):
+        devices = []
+        vm = self.get_obj([self.pyVmomi.vim.VirtualMachine], vm_name)
+        uplink_found = False
+        device_config_list = []
+        for device_list in vm.config.hardware.device:
+            if (isinstance(device_list,self.pyVmomi.vim.vm.device.VirtualPCIPassthrough)) == True and device_list.backing.id == pci_id:
+                print "Uplink already present! Not adding the pci device."
+                return 0
+        pci_passthroughs = vm.environmentBrowser.QueryConfigTarget(host=None).pciPassthrough
+        for pci_entry in pci_passthroughs:
+            if pci_entry.pciDevice.id == pci_id:
+                uplink_found = True
+                print "Found the pci device %s in the host" %(pci_id)
+        if uplink_found == False:
+            print "Did not find the pci passthrough device %s on the host" %(pci_id)
+            return 1
+        print "Adding PCI device to Contrail VM: %s" %(vm_name)
+        if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOn:
+                print "VM:%s is powered ON. Cannot do hot pci add now. Shutting it down" %(vm_name)
+                task = vm.PowerOff()
+                self.wait_for_task(task, si)
+        deviceId = hex(pci_entry.pciDevice.deviceId % 2**16).lstrip('0x')
+        backing = self.pyVmomi.vim.VirtualPCIPassthroughDeviceBackingInfo(deviceId=deviceId,
+            id=pci_entry.pciDevice.id,
+            systemId=pci_entry.systemId,
+            vendorId=pci_entry.pciDevice.vendorId,
+            deviceName=pci_entry.pciDevice.deviceName)
+
+        hba_object = self.pyVmomi.vim.VirtualPCIPassthrough(key=-100, backing=backing)
+
+        new_device_config = self.pyVmomi.vim.VirtualDeviceConfigSpec(device=hba_object)
+        new_device_config.operation = "add"
+        new_device_config.device.connectable = self.pyVmomi.vim.vm.device.VirtualDevice.ConnectInfo()
+        new_device_config.device.connectable.startConnected = True
+        device_config_list.append(new_device_config)
+        vm_spec=self.pyVmomi.vim.vm.ConfigSpec()
+        vm_spec.deviceChange=device_config_list
+        task=vm.ReconfigVM_Task(spec=vm_spec)
+        self.wait_for_task(task, si)
+        return 0
+
     def add_vm_to_dvpg(self, si, vm_name, dv_switch, dv_port_name):
         devices = []
-        vm_was_on = False
-        print "Adding Contrail VM: %s to the DV port group" %(vm_name)
         vm = self.get_obj([self.pyVmomi.vim.VirtualMachine], vm_name)
+        pg_obj = self.get_obj([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name)
+        for device_list in vm.config.hardware.device:
+            if (isinstance(device_list,self.pyVmomi.vim.vm.device.VirtualVmxnet3)) == True and hasattr(device_list.backing,'port') and device_list.backing.port.portgroupKey == pg_obj.key:
+                print "Contrail VM interface already present in dvpg!!"
+                return 0
+        print "Adding Contrail VM: %s to the DV port group" %(vm_name)
         if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOn:
                 print "VM:%s is powered ON. Cannot do hot add now. Shutting it down" %(vm_name)
-                vm_was_on= True
                 task = vm.PowerOff()
                 self.wait_for_task(task, si)
         nicspec = self.pyVmomi.vim.vm.device.VirtualDeviceSpec()
@@ -295,11 +345,12 @@ class Vcenter(object):
         vmconf = self.pyVmomi.vim.vm.ConfigSpec(deviceChange=devices)
         task = vm.ReconfigVM_Task(vmconf)
         self.wait_for_task(task, si)
-        if vm_was_on:
+        if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOff:
             print "Turning VM: %s On" %(vm_name)
             task = vm.PowerOn()
             self.wait_for_task(task, si)
         print "Succesfully added  ContrailVM:%s to the DV port group" %(vm_name)
+
 
     def create_dvSwitch(self, si, network_folder, clusters, dvs_name):
         dvs = self.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], dvs_name)

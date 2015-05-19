@@ -57,6 +57,7 @@ def create_vmx (esxi_host, vm_name):
     data_pg = esxi_host.get('data_port_group', None)
     orch = get_orchestrator()
     vm_name = vm_name
+    eth0_present = "TRUE"
     vm_mac = esxi_host['contrail_vm']['mac']
     assert vm_mac, "MAC address for contrail-compute-vm must be specified"
 
@@ -70,11 +71,13 @@ def create_vmx (esxi_host, vm_name):
     if data_pg:
         data_intf = compute_vmx_template.esxi_eth2_template.safe_substitute({'__data_pg__' : data_pg})
         ext_params += data_intf
-
+    if 'uplink' in esxi_host['contrail_vm'].keys():
+        eth0_present = "FALSE"
     template_vals = { '__vm_name__' : vm_name,
                       '__vm_mac__' : vm_mac,
                       '__fab_pg__' : fab_pg,
                       '__eth0_type__' : eth0_type,
+                      '__eth0_present__' : eth0_present,
                       '__extension_params__' : ext_params,
                     }
     _, vmx_file = tempfile.mkstemp(prefix=vm_name)
