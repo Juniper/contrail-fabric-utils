@@ -98,11 +98,10 @@ def create_esxi_compute_vm (esxi_host, vcenter_info, power_on):
             assert vmdk, "Contrail VM vmdk image or download path should be specified in testbed file"
     if orch is 'openstack':
         vm_name = esxi_host['contrail_vm']['name']
-        vm_store = datastore + vm_name + '/'
     if orch is 'vcenter':
         name = "ContrailVM"
         vm_name = name+"-"+vcenter_info['datacenter']+"-"+esxi_host['ip']
-        vm_store = datastore + '/' + vm_name + '/'
+    vm_store = datastore + '/' + vm_name + '/'
 
     vmx_file = create_vmx(esxi_host, vm_name)
     with settings(host_string = esxi_host['username'] + '@' + esxi_host['ip'],
