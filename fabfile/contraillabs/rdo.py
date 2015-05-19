@@ -1,8 +1,54 @@
 """Private contrail task for setting up RDO in the openstack node."""
 
+import os
+
 from fabfile.config import *
 from fabfile.utils.host import get_authserver_ip
 from fabfile.utils.cluster import reboot_nodes
+from fabfile.utils.fabos import get_as_sudo
+
+@task
+@roles('build')
+def get_packages_from_node(host_string, *pkgnames):
+    available_pkgs = []
+    downloaded = []
+    missing = []
+    # verify given packages are available
+    for pkgname in pkgnames:
+        with settings(host_string=host_string):
+            is_pkg_available = sudo('find /opt/contrail/ -name %s*.rpm' % pkgname)
+        if is_pkg_available.succeeded:
+            available_pkgs.append(is_pkg_available)
+        else:
+            missing.append(pkgname)
+            print 'WARNING: Package file for package (%s) is missing in Node (%s)' % (pkgname, host_string)
+    if len(missing) != 0:
+        raise RuntimeError('Package file for below packages are missing'
+                           ' in CFGM (%s): \n%s' % (host_string, '\n'.join(missing)))
+
+    # download available packages to tempdir
+    tempdir = local('mktemp -d', capture=True)
+    with settings(host_string=host_string):
+        for available_pkg in available_pkgs:
+            get_as_sudo(available_pkg, tempdir)
+            pkg_file_name = os.path.basename(available_pkg)
+            downloaded.append(os.path.join(tempdir, pkg_file_name))
+    return downloaded
+
+@task
+@roles('openstack')
+def install_pkg_from_node(host_string, *pkgnames):
+    available_pkgs = execute(get_packages_from_node, host_string, *pkgnames)
+    available_pkg_files = available_pkgs[env.roledefs['build'][0]]
+    # copy/install in openstack
+    tempdir = sudo('mktemp -d')
+    for pkg_file in available_pkg_files:
+        put(pkg_file, tempdir)
+        pkg_file_name = os.path.basename(pkg_file)
+        with cd(tempdir):
+            sudo('yum -y localinstall %s' % pkg_file_name)
+            sudo('rm -f %s' % pkg_file_name)
+    sudo('rm -r %s' % tempdir)
 
 @task
 @roles('openstack')
@@ -93,7 +139,7 @@ def setup_rhosp_node():
     sudo("sudo service iptables save; echo pass")
     sudo("sudo service ip6tables save; echo pass")
     sudo("mkdir -p /var/crashes")
-
+    execute(install_pkg_from_node, cfgm_0_ip, 'contrail-nova-networkapi')
     steps = "\n\n\n"
     steps += "="*160
     steps += "\nSteps to bring up contrail with the RHOSP:\n\
