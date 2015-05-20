@@ -318,6 +318,10 @@ env.ostypes = {
 # Default Value: False
 #env.enable_lbaas = True
 
+# Ceilometer enable/disable installation and provisioning
+# Default Value: False
+#enable_ceilometer = True
+
 #OPTIONAL REMOTE SYSLOG CONFIGURATION
 #===================================
 #For R1.10 this needs to be specified to enable rsyslog.
