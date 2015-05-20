@@ -1118,17 +1118,18 @@ def pre_check():
         print "\nERROR: \n\tkeystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
         exit(1)
     if (len(env.roledefs['openstack']) > 1 and
-        env.roledefs['openstack'].sort() == env.roledefs['cfgm'].sort() and
+        set(env.roledefs['openstack']) == set(env.roledefs['cfgm']) and
         get_openstack_internal_vip() != get_openstack_internal_vip()):
         print "\nERROR: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
         exit(1)
     if (len(env.roledefs['openstack']) > 1 and
-        env.roledefs['openstack'].sort() != env.roledefs['cfgm'].sort() and
+        set(env.roledefs['openstack']) != set(env.roledefs['cfgm']) and
         get_openstack_internal_vip() == get_openstack_internal_vip()):
         print "\nERROR: \n\tOpenstack and cfgm nodes are different, Need to specify  contrail_internal_vip testbed.py."
         exit(1)
-        print "\nERROR: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
-        execute('add_openstack_reserverd_ports')
+    else:
+        print "\nINFO: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
+    execute('add_openstack_reserverd_ports')
 
 def role_to_ip_dict(role=None):
     role_to_ip_dict = {}
