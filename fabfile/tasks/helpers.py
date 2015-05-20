@@ -977,8 +977,8 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
         count+=1
         for node in nodes:
             user, hostip = node.split('@')
-            cmd = smgr_client + " status server"
-            cmd = cmd + " | grep %s -A3 | grep status" %(hostip)
+            cmd = smgr_client + " status server --ip %s" %(hostip)
+            cmd = cmd + " | grep status"
             try:
                 op_string=local(cmd,capture=True)
             except:
