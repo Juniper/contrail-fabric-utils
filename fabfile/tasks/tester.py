@@ -468,7 +468,7 @@ def export_testbed_details(filename='testbed_vars'):
     # Need to be able to export entire testbed details if need be
     authserver_ip = get_authserver_ip()
     keystone_admin_user, keystone_admin_password = get_authserver_credentials()
-    admin_tenant = get_admin_tenant()
+    admin_tenant = get_admin_tenant_name()
     api_server_host_string = testbed.env.roledefs['cfgm'][0]
     api_server_host_ip = testbed.env.roledefs['cfgm'][0].split('@')[1]
     api_server_host_user = testbed.env.roledefs['cfgm'][0].split('@')[0]
