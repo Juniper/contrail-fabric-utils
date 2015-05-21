@@ -140,6 +140,7 @@ UBUNTU_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.
                                                         '/etc/contrail/dns/contrail-named.pid'))
 UBUNTU_R1_20_TO_R2_01 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R2_0_TO_R2_01 = copy.deepcopy(UBUNTU_R2_0_TO_R2_0)
+UBUNTU_R2_01_TO_R2_01 = copy.deepcopy(UBUNTU_R2_0_TO_R2_0)
 
 CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
 # Add contrail-interface-name to upgrade list if interface rename enabled.
@@ -197,6 +198,7 @@ CENTOS_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.
                                                         '/etc/contrail/dns/contrail-named.pid'))
 CENTOS_R1_20_TO_R2_01 = copy.deepcopy(CENTOS_R1_10_TO_R2_0)
 CENTOS_R2_0_TO_R2_01 = copy.deepcopy(CENTOS_R2_0_TO_R2_0)
+CENTOS_R2_01_TO_R2_01 = copy.deepcopy(CENTOS_R2_0_TO_R2_0)
 
 def format_upgrade_schema(data, **formater):
     if type(data) is dict:
