@@ -53,7 +53,7 @@ def get_kafka_enabled():
     return getattr(testbed, 'kafka_enabled', None)
 
 def get_enable_ceilometer():
-    return getattr(testbed, 'enable_ceilometer', True)
+    return getattr(testbed, 'enable_ceilometer', False)
 #end get_enable_ceilometer
 
 def is_ceilometer_supported(use_install_repo=False):
