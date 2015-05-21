@@ -1813,6 +1813,7 @@ def setup_all(reboot='True'):
     execute('setup_remote_syslog')
     execute('add_tsn', restart=False)
     execute('add_tor_agent', restart=False)
+    execute('increase_vrouter_limit')
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute('compute_reboot')
@@ -1854,6 +1855,7 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     execute('setup_remote_syslog')
     execute('add_tsn', restart=False)
     execute('add_tor_agent', restart=False)
+    execute('increase_vrouter_limit')
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute(compute_reboot)
@@ -2028,6 +2030,7 @@ def reset_config():
         execute(restart_collector)
         execute(add_tsn)
         execute(add_tor_agent)
+        execute('increase_vrouter_limit')
         sleep(120)
     except SystemExit:
         execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
@@ -2222,3 +2225,18 @@ def setup_zones():
     setup_esx_zone()
 #end setup_zones
 
+@task
+def increase_vrouter_limit():
+    """Increase the maximum number of mpls label and nexthop on tsn node"""
+    vrouter_module_params_dict = getattr(env, 'vrouter_module_params', None)
+    if vrouter_module_params_dict:
+        for host_string in vrouter_module_params_dict:
+             cmd = "options vrouter"
+             cmd += " vr_mpls_labels=%s" % vrouter_module_params_dict[host_string].setdefault('mpls_labels', '5120')
+             cmd += " vr_nexthops=%s" % vrouter_module_params_dict[host_string].setdefault('nexthops', '65536')
+             cmd += " vr_vrfs=%s" % vrouter_module_params_dict[host_string].setdefault('vrfs', '5120')
+             cmd += " vr_bridge_entries=%s" % vrouter_module_params_dict[host_string].setdefault('macs', '262144')
+             with settings(host_string=host_string, warn_only=True):
+                 sudo("echo %s > %s" %(cmd, '/etc/modprobe.d/vrouter.conf'))
+
+# end increase_vrouter_limit
