@@ -7,7 +7,7 @@ from fabric.contrib.files import exists
 
 from fabos import detect_ostype, get_release, get_build, get_openstack_sku
 from fabfile.utils.host import get_hypervisor, get_openstack_internal_vip
-from fabfile.utils.cluster import is_lbaas_enabled
+from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator
 from fabfile.config import *
 
 
@@ -42,7 +42,10 @@ def get_compute_pkgs(manage_nova_compute='yes'):
        compute node.
     """
     ostype = detect_ostype()
-    pkgs = ['contrail-openstack-vrouter']
+    if get_orchestrator() is 'openstack':
+        pkgs = ['contrail-openstack-vrouter']
+    if get_orchestrator() is 'vcenter':
+        pkgs = ['contrail-vmware-vrouter']
 
     if ostype in ['ubuntu']:
         # For Ubuntu, Install contrail-vrouter-generic package if one available for
@@ -55,7 +58,10 @@ def get_compute_pkgs(manage_nova_compute='yes'):
         # This order of installation matters, because in a node with
         # non recommended kernel installed, contrail-vrouter-dkms pkg
         # needs to get installed first before contrail-openstack-vrouter.
-        pkgs = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
+        if get_orchestrator() is 'openstack':
+            pkgs = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
+        if get_orchestrator() is 'vcenter':
+            pkgs = [contrail_vrouter_pkg, 'contrail-vmware-vrouter']
 
     # Append only vrouter and contrail vrouter dependent packages
     # no need to append the contrail-openstack-vrouter, which when
@@ -67,9 +73,9 @@ def get_compute_pkgs(manage_nova_compute='yes'):
               ]
     elif (manage_nova_compute== 'no' and ostype in ['ubuntu']):
         pkgs = [contrail_vrouter_pkg,
-               'contrail-vrouter-common',
-               'contrail-nova-vif',
-              ]
+               'contrail-vrouter-common']
+	if get_orchestrator() is 'openstack':
+            pkgs.append('contrail-nova-vif')
     # Append lbaas dependent packages if haproxy is enabled..
     if getattr(testbed, 'haproxy', False):
         pkgs.append('haproxy')
