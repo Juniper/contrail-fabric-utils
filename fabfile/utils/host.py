@@ -15,13 +15,12 @@ def hstr_to_user(host_string):
 
 def get_control_host_string(mgmt_host):
     ctrl_ip_info= getattr(testbed, 'control_data', None)
+    host_details= mgmt_host
     if ctrl_ip_info:
         if mgmt_host in ctrl_ip_info.keys():
             ip = str(IPNetwork(ctrl_ip_info[mgmt_host]['ip']).ip)
             user= mgmt_host.split('@')[0]
             host_details= user+'@'+ip
-    else :
-        host_details= mgmt_host
     return host_details
 
 def get_manage_neutron():
