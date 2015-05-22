@@ -961,18 +961,16 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
         sys.stdout.write('Please provide Server Manager Client absolute path as argument smgr_client\n')
         sys.exit(1)
 
-    failed_host = []
-    hosts = env.hostnames['all'][:]
-    esxi_hosts = getattr(testbed, 'esxi_hosts', None)
-    if esxi_hosts:
-        for esxi in esxi_hosts:
-            if env['host_string'] == esxi_hosts[esxi]['contrail_vm']['host']:
-                print "skipping contrail vm, continue..."
-                return
     if node:
         nodes = node
     else:
         nodes = env.roledefs[contrail_role][:]
+        esxi_hosts = getattr(testbed, 'esxi_hosts', None)
+        if esxi_hosts:
+            for esxi in esxi_hosts:
+                nodes.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+                nodes.append(esxi_hosts[esxi]['username']+'@'+esxi_hosts[esxi]['ip'])
+
     count = 0
     node_status = {}
     node_status_save = {}
@@ -986,8 +984,10 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
             cmd = smgr_client + " status server --ip %s" %(hostip)
             cmd = cmd + " | grep status"
             try:
-                op_string=local(cmd,capture=True)
+                with settings(hide('running'), warn_only=True):
+                    op_string=local(cmd,capture=True)
             except:
+                node_status[node]=''
                 continue
             if '\"reimage_failed\"' in op_string:
                 node_status[node]="reimage_failed"
@@ -1012,7 +1012,14 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
                         sys.stdout.write('%s :: %s -> %s\n' % (node, node_status_save[node], node_status[node]))
                         node_status_save[node]=node_status[node]
             else:
-                sys.stdout.write('%s :: %s\n' % (node, node_status[node]))
+                if (node_status_save[node] != node_status[node] and 
+                    node_status_save[node] != "initial_state"):
+                    sys.stdout.write('%s :: %s -> %s\n' % (node, node_status_save[node], node_status[node]))
+                    node_status_save[node]=node_status[node]
+                elif node_status_save[node] != "reimage_completed":
+                    sys.stdout.write('%s :: If reimage comand was run for this node it\n' % (node))
+                    sys.stdout.write('%s :: did not take effect. This needs debug!\n' % (node))
+                    sys.exit(1)
 
         if task_complete == 1:
             sys.stdout.write('Reimage Completed\n')
