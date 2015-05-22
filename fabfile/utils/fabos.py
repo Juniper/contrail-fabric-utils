@@ -62,7 +62,10 @@ def get_release(pkg='contrail-install-packages', use_install_repo=False):
     dist = detect_ostype() 
     print "Dist is %s" % dist
     if dist in ['centos', 'fedora', 'redhat', 'centoslinux']:
-        cmd = "rpm -q --queryformat '%%{VERSION}' %s" %pkg
+        if use_install_repo:
+            cmd = "rpm -qp --queryformat '%%{VERSION}' /opt/contrail/contrail_install_repo/%s*.rpm 2> /dev/null" %pkg
+        else:
+            cmd = "rpm -q --queryformat '%%{VERSION}' %s" %pkg
     elif dist in ['ubuntu']:
         if use_install_repo:
             cmd = "dpkg --info /opt/contrail/contrail_install_repo/%s*.deb | grep Version: | cut -d' ' -f3 | cut -d'-' -f1" %pkg
