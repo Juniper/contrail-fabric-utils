@@ -190,6 +190,11 @@ def setup_nfs_live_migration(mode):
         for entry in env.roledefs['compute']:
             for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
                 if entry == sthostentry:
+                    #Add only for qemu-kvm hypervisor
+                    hypervisor = get_hypervisor(entry)
+                    if hypervisor != 'libvirt' and hypervisor != 'qemu' and \
+                            hypervisor != 'kvm' and hypervisor != 'qemu-kvm':
+                        continue
                     storage_hostnames.append(sthostname)
                     storage_host_password=get_env_passwords(entry)
                     storage_pass_list.append(storage_host_password)
