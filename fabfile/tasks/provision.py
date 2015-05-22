@@ -2199,7 +2199,7 @@ def add_static_route_node(*args):
         dest = ' --network'; gw = ' --gw'; netmask = ' --netmask'
         device = route_info[tgt_host][0]['intf']
         intf = ' --device %s' %device
-        vlan = get_vlan_tag(device)
+        vlan = get_vlan_tag(device, tgt_host)
         for index in range(len(route_info[tgt_host])):
             dest += ' %s' %route_info[tgt_host][index]['ip']
             gw += ' %s' %route_info[tgt_host][index]['gw']
