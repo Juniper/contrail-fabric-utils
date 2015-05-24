@@ -772,6 +772,7 @@ def setup_ceilometer():
         execute("setup_ceilometer_node", env.host_string)
 
     execute("setup_image_service_node", env.host_string)
+    execute("setup_network_service_node", env.host_string)
 
 @task
 def setup_ceilometer_node(*args):
@@ -839,6 +840,19 @@ def setup_ceilometer_node(*args):
             for svc in ceilometer_services:
                 sudo("service %s restart" %(svc))
 #end setup_ceilometer_node
+
+@task
+def setup_network_service_node(*args):
+    """Provisions network services in one or list of nodes.
+       USAGE: fab setup_network_service_node:user@1.1.1.1,user@2.2.2.2"""
+    conf_file = '/etc/neutron/neutron.conf'
+    neutron_config = {'DEFAULT' : {'notification_driver' : 'neutron.openstack.common.notifier.rpc_notifier'}
+                     }
+    for section, key_values in neutron_config.iteritems():
+        for key, value in key_values.iteritems():
+            sudo("openstack-config --set %s %s %s %s" % (conf_file, section, key, value))
+    sudo("service neutron-server restart")
+#end setup_network_service_node
 
 @task
 def setup_image_service_node(*args):
