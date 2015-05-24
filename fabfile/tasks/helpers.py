@@ -710,6 +710,22 @@ def start_traffic():
 
 @roles('build')
 @task
+def ping_hostip(hostip='127.0.0.0'):
+    cmd = 'ping -c 3 -q %s' %hostip
+    output = 0
+    with settings(hide('running'), warn_only=True):
+        try:
+            output=local(cmd,capture=True)
+        except:
+            pass
+    if " 100% packet loss" in output:
+        output=0
+    else:
+        output=1
+    return output
+
+@roles('build')
+@task
 def wait_till_all_up(attempts=90, interval=10, node=None, waitdown=True, contrail_role='all', reimaged=False):
     ''' Waits for given nodes to go down and then comeup within the given attempts.
         Defaults: attempts = 90 retries
@@ -741,6 +757,18 @@ def wait_till_all_up(attempts=90, interval=10, node=None, waitdown=True, contrai
     for node in nodes:
         user, hostip = node.split('@')
         count = 0
+
+        print 'Trying to ping node - %s' %hostip
+        while not ping_hostip(hostip):
+            sys.stdout.write('.')
+            sleep(int(interval))
+            count+=1
+            if count <= int(attempts):
+                continue
+            else:
+                print 'Ping failed to host - %s' %hostip
+                sys.exit(1)
+
         while not verify_sshd(hostip,
                 user,
                 get_env_passwords(node)):
