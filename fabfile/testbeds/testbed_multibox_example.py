@@ -14,7 +14,7 @@ host10 = 'root@1.1.1.10'
 
 
 #External routers if any
-#for eg. 
+#for eg.
 #ext_routers = [('mx1', '10.204.216.253')]
 ext_routers = []
 
@@ -39,10 +39,9 @@ env.roledefs = {
     'storage-master': [host1],
     'storage-compute': [host4, host5, host6, host7, host8, host9, host10],
     # 'vgw': [host4, host5], # Optional, Only to enable VGW. Only compute can support vgw
-    # 'tsn': [host1], # Optional, Only to enable TSN. Only compute can support TSN
-    # 'toragent': [host1], Optional, Only to enable Tor Agent. Only compute can
-    # support Tor Agent
-    #   'backup':[backup_node],  # only if the backup_node is defined
+    # 'tsn': [host1], # Optional
+    # 'toragent': [host1], # Optional
+    # 'backup':[backup_node],  # only if the backup_node is defined
 }
 
 env.hostnames = {
@@ -131,7 +130,7 @@ env.ostypes = {
 #
 # analytics_data_dir is the directory where cassandra data for analytics
 # is stored. This is used to seperate cassandra's main data storage [internal
-# use and config data] with analytics data. That way critical cassandra's 
+# use and config data] with analytics data. That way critical cassandra's
 # system data and config data are not overrun by analytis data
 #
 # If it is not passed, we will use cassandra's default
@@ -220,9 +219,9 @@ env.ostypes = {
 #env.interface_rename = False
 
 #In environments where keystone is deployed outside of Contrail provisioning
-#scripts , you can use the below options 
+#scripts , you can use the below options
 #
-# Note : 
+# Note :
 # "insecure" is applicable only when protocol is https
 # The entries in env.keystone overrides the below options which used
 # to be supported earlier :
@@ -274,8 +273,8 @@ env.ostypes = {
 #    'nfs_glance_path' : '/var/tmp/images/',       #NFS Server path to save images, Defaults to /var/tmp/glance-images/
 #}
 
-# In environments where openstack services are deployed independently 
-# from contrail, you can use the below options 
+# In environments where openstack services are deployed independently
+# from contrail, you can use the below options
 # service_token : Common service token for for all services like nova,
 #                 neutron, glance, cinder etc
 # amqp_host     : IP of AMQP Server to be used in openstack
@@ -289,6 +288,8 @@ env.ostypes = {
 #    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
 #    'osapi_compute_workers' : 40,             #Default 40, For low memory system reduce the osapi compute workers thread.
 #    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
+#    'manage_nova_compute' : 'no',             # Default yes, Set to 'no' to skip provisioning nova-compute in compute nodes.
+#    'configure_nova' : 'no',                  # Default yes, Set to 'no' to configuration of nova.conf file
 #}
 
 # Link-Local Metadata Service
@@ -305,7 +306,7 @@ env.ostypes = {
 #To Enable prallel execution of task in multiple nodes
 #do_parallel = True
 
-# To configure the encapsulation priority. Default: MPLSoGRE 
+# To configure the encapsulation priority. Default: MPLSoGRE
 #env.encap_priority =  "'MPLSoUDP','MPLSoGRE','VXLAN'"
 
 # Optional proxy settings.
@@ -338,7 +339,7 @@ env.ostypes = {
 #OPTIONAL Virtual gateway CONFIGURATION
 #=======================================
 
-#Section vgw is only relevant when you want to use virtual gateway feature. 
+#Section vgw is only relevant when you want to use virtual gateway feature.
 #You can use one of your compute node as  gateway .
 
 #Definition for the Key used
@@ -356,7 +357,7 @@ env.ostypes = {
 
 #OPTIONAL optional tor agent and tsn CONFIGURATION
 #==================================================
-#Section tor agent is only relevant when you want to use Tor Agent feature. 
+#Section tor agent is only relevant when you want to use Tor Agent feature.
 #You can use one of your compute node as  Tor Agent . Same or diffrent compute
 #node should be enable as tsn
 
@@ -367,9 +368,9 @@ env.ostypes = {
 # tor_type: Always ovs
 # tor_ovs_port: Port number to be used by ovs
 # tor_ovs_protocol: Connection protocol between TOR Agent and TOR (tcp / pssl)
-# tor_tsn_ip: TSN node ip 
+# tor_tsn_ip: TSN node ip
 # tor_tsn_name: Name of the TSN node
-# tor_name: Name of the tor switch 
+# tor_name: Name of the tor switch
 # tor_tunnel_ip: Data plane IP for the tor switch
 # tor_vendor_name: Vendor type for TOR switch
 # tor_http_server_port: HTTP server port. Same will be used by tor agent for introspect
