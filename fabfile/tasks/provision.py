@@ -1203,7 +1203,7 @@ def setup_control_node(*args):
                     sudo('rm /etc/init/supervisor-dns.override')
             with cd(INSTALLER_DIR):
                 sudo(cmd)
-                if detect_ostype() == 'centos':
+                if detect_ostype() in ['centos', 'redhat', 'fedora', 'centoslinux']:
                     sudo("service contrail-control restart")
 #end setup_control
 

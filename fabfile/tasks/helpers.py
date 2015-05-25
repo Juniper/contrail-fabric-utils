@@ -150,6 +150,8 @@ def all_reimage(build_param="@LATEST"):
                     base_img = 'ubuntu-12.04.3'
                 elif 'centos70' == env.ostypes[host]:
                     base_img = 'centos-7.0'
+                elif 'centos71' == env.ostypes[host]:
+                    base_img = 'centos-7.1'
                 elif 'centos65' == env.ostypes[host]:
                     base_img = 'centos-6.5'
                 elif 'centos' in env.ostypes[host]:
@@ -1172,7 +1174,7 @@ def round_robin_collector_ip_assignment(all_node_ips, collector_ips):
 def disable_iptables():
     with settings(warn_only=True):
         os_type = detect_ostype().lower()
-        if os_type in ['centos']:
+        if os_type in ['centos', 'centoslinux']:
             sudo("iptables --flush")
             sudo("service iptables save")
         if os_type in ['redhat']:
