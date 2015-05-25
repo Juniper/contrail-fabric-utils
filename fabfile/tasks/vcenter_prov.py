@@ -514,6 +514,83 @@ class Vcenter(object):
         self.content = self.service_instance.RetrieveContent()
         atexit.register(connect.Disconnect, self.service_instance)
 
+
+def _wait_for_task (task):
+    from pyVmomi import vim
+    while (task.info.state == vim.TaskInfo.State.running or
+           task.info.state == vim.TaskInfo.State.queued):
+        time.sleep(2)
+    return task.info.state == vim.TaskInfo.State.success
+
+def cleanup_vcenter(vcenter_info):
+    from pyVim import connect
+    from pyVmomi import vim
+    port = vcenter_info.get('port', 443)
+    service_instance = connect.SmartConnect(host=vcenter_info['server'],
+                                            user=vcenter_info['username'],
+                                            pwd=vcenter_info['password'],
+                                            port=port)
+    content = service_instance.RetrieveContent()
+    atexit.register(connect.Disconnect, service_instance)
+
+    items = content.viewManager.CreateContainerView(content.rootFolder, [vim.Datacenter], True).view
+    for obj in items:
+        if obj.name == vcenter_info['datacenter']:
+            dc = obj
+            break
+    else:
+        print 'Datacenter %s does not exists' % vcenter_info['datacenter']
+        return
+
+    clusters = content.viewManager.CreateContainerView(dc,
+                                       [vim.ClusterComputeResource],
+                                       True).view
+    hosts = []
+    for cluster in clusters:
+        items = content.viewManager.CreateContainerView(cluster,
+                                       [vim.HostSystem], True).view
+        hosts += items
+    vms = []
+    for host in hosts:
+        vms += host.vm
+
+    # clear the VMs
+    for vm in vms:
+        if vm.runtime.powerState != 'poweredOff':
+            if not _wait_for_task(vm.PowerOff()):
+                print 'Error while powering off vm %s' % vm.name
+        if not _wait_for_task(vm.Destroy()):
+            print 'Error while deleting vm %s' % vm.name
+
+    # DV Switch & PortGroup
+    items = content.viewManager.CreateContainerView(dc,
+                                       [vim.dvs.DistributedVirtualPortgroup],
+                                       True).view
+    for obj in items:
+        if not _wait_for_task(obj.Destroy()):
+            print 'Error while deleting portgroup %s' % obj.name
+    items = content.viewManager.CreateContainerView(dc,
+                                       [vim.dvs.VmwareDistributedVirtualSwitch],
+                                       True).view
+    for obj in items:
+        if not _wait_for_task(obj.Destroy()):
+            print 'Error while deleting switch %s' % obj.name
+
+    # clear the hosts & cluster
+    for host in hosts:
+        if not _wait_for_task(host.EnterMaintenanceMode(30)):
+            print 'Error in host.EnterMaintenanceMode for %s' % host.name
+        if not _wait_for_task(host.Destroy()):
+            print 'Error while deleting host %s' % host.name
+    for cluster in clusters:
+        if not _wait_for_task(cluster.Destroy()):
+            print 'Error while deleting cluster %s' % cluster.name
+
+    # delete datacenter
+    if not _wait_for_task(dc.Destroy()):
+        print 'Error while deleting datacenter %s' % dc.name
+
+
 def main():
     
     vcenter_params={}

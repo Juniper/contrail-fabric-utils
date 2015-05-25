@@ -47,6 +47,12 @@ def install_pkg_all(pkg):
 @roles('cfgm')
 def install_contrail_vcenter_plugin(pkg):
     """Installs any rpm/deb package in all nodes."""
+    if not hasattr(env, 'vcenter'):
+        print "No vcenter block in testbed file, nothing to do"
+        return
+    if not pkg:
+        print "Error:No vcenter plugin pkg, aborting"
+        exit(1)
     execute('install_pkg_node', pkg, env.host_string)
     execute('install_contrail_vcenter_plugin_node', env.host_string)
 

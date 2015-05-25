@@ -6,6 +6,7 @@ from fabfile.config import *
 from fabfile.templates import compute_vmx_template
 from fabfile.tasks.install import yum_install, apt_install
 from vcenter_prov import Vcenter as Vcenter
+from vcenter_prov import cleanup_vcenter
 from fabfile.utils.cluster import get_orchestrator
 
 def configure_esxi_network(esxi_info):
@@ -182,6 +183,10 @@ def provision_dvs_fab(vcenter_info, esxi_info, host_list):
 
     dvs_fab(dvs_params)
 #end provision_dvs_fab
+
+@task
+def deprovision_vcenter(vcenter_info):
+    cleanup_vcenter(vcenter_info)
 
 @task
 def provision_vcenter(vcenter_info, hosts, clusters, vms, update_dvs):
