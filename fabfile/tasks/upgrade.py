@@ -1,7 +1,6 @@
 from fabfile.config import *
 
 from fabfile.tasks.install import pkg_install
-from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 from fabfile.utils.cluster import get_toragent_nodes, get_tsn_nodes
 from fabfile.utils.commandline import *
 from fabfile.utils.fabos import get_release, detect_ostype, get_linux_distro
@@ -207,7 +206,6 @@ def upgrade_contrail(from_rel, pkg, orch='yes'):
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_config', from_rel, pkg)
     execute('setup_rabbitmq_cluster', True)
-    fixup_restart_haproxy_in_all_cfgm(1)
     execute('restart_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)

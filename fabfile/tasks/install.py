@@ -10,7 +10,7 @@ from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabric.contrib.files import exists
 from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator,\
-     reboot_nodes
+     reboot_nodes, get_tsn_nodes, get_toragent_nodes
 from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_compute_pkgs, get_ceilometer_plugin_pkgs, get_openstack_pkgs, \
      get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz_node, \
@@ -491,6 +491,33 @@ def install_webui_node(*args):
             else:
                 yum_install(pkg)
 
+@task
+@EXECUTE_TASK
+@hosts(get_tsn_nodes())
+def install_tsn():
+    if get_tsn_nodes():
+        execute('install_tsn_node', env.host_string)
+
+@task
+def install_tsn_node(*args):
+    manage_nova_compute = 'no'
+    for host_string in args:
+        execute('install_only_vrouter_node',
+                manage_nova_compute, host_string)
+
+@task
+@EXECUTE_TASK
+@hosts(get_toragent_nodes())
+def install_toragent(manage_nova_compute='yes'):
+    if get_toragent_nodes():
+        execute('install_toragent_node',
+                manage_nova_compute, env.host_string)
+
+@task
+def install_toragent_node(manage_nova_compute='yes', *args):
+    for host_string in args:
+        execute('install_only_vrouter_node',
+                 manage_nova_compute, host_string)
 
 @task
 @EXECUTE_TASK
@@ -498,9 +525,6 @@ def install_webui_node(*args):
 def install_vrouter(manage_nova_compute='yes'):
     """Installs vrouter pkgs in all nodes defined in vrouter role."""
     if env.roledefs['compute']:
-        # Nova compute need not required for TSN node
-        if 'tsn' in env.roledefs.keys():
-            if  env.host_string in env.roledefs['tsn']: manage_nova_compute='no'
         if get_orchestrator() is 'vcenter': manage_nova_compute='no'
         execute("install_only_vrouter_node", manage_nova_compute, env.host_string)
 
@@ -779,6 +803,8 @@ def install_contrail(*tgzs, **kwargs):
     execute(install_collector)
     execute(install_webui)
     execute(install_vrouter)
+    execute(install_tsn)
+    execute(install_toragent)
     execute(upgrade_pkgs)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
@@ -805,6 +831,8 @@ def install_without_openstack(*tgzs, **kwargs):
     execute(install_collector)
     execute(install_webui)
     execute('install_vrouter', manage_nova_compute)
+    execute(install_tsn)
+    execute('install_toragent', manage_nova_compute)
     execute(upgrade_pkgs_without_openstack)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."

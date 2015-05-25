@@ -140,14 +140,14 @@ def get_keystone_admin_token():
 
 def get_keystone_admin_user():
     ks_admin_user = getattr(testbed, 'keystone_admin_user','admin')
-    return get_from_testbed_dict('keystone', 'admin_user', ks_admin_user) 
+    return get_from_testbed_dict('keystone', 'admin_user', ks_admin_user)
 
 def get_keystone_admin_password():
     os_admin_password = getattr(env,'openstack_admin_password', 'contrail123')
-    ks_admin_password = getattr(testbed, 
+    ks_admin_password = getattr(testbed,
                           'keystone_admin_password', os_admin_password)
-    return get_from_testbed_dict('keystone', 
-            'admin_password', ks_admin_password) 
+    return get_from_testbed_dict('keystone',
+            'admin_password', ks_admin_password)
 
 def get_openstack_credentials():
     ks_admin_user = get_keystone_admin_user()
@@ -191,7 +191,7 @@ def get_contrail_amqp_server():
 
 def get_quantum_service_protocol():
     return get_from_testbed_dict('neutron', 'protocol', 'http')
-    
+
 def verify_sshd(host, user, password):
 
     import socket
@@ -202,7 +202,7 @@ def verify_sshd(host, user, password):
         s.connect((host, int(port)))
         s.shutdown(2)
         # Now check if paramiko connect passes
-        # This is needed since during reimage, connect to port 22 
+        # This is needed since during reimage, connect to port 22
         # may still work, but it would still be in the process of reimage
         try:
             client = paramiko.SSHClient()
@@ -234,3 +234,9 @@ def get_nova_workers():
     osapi_compute_workers = get_from_testbed_dict('openstack', 'osapi_compute_workers', 40)
     conductor_workers = get_from_testbed_dict('openstack', 'conductor_workers', 40)
     return (osapi_compute_workers, conductor_workers)
+
+def get_manage_nova_compute(default='yes'):
+    return get_from_testbed_dict('openstack','manage_nova_compute', default)
+
+def get_configure_nova(default='yes'):
+    return get_from_testbed_dict('openstack','configure_nova', default)
