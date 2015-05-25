@@ -1253,17 +1253,27 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
         sys.exit(1)
 
     failed_host = []
-    hosts = env.hostnames['all'][:]
-    esxi_hosts = getattr(testbed, 'esxi_hosts', None)
-    if esxi_hosts:
-        for esxi in esxi_hosts:
-            if env['host_string'] == esxi_hosts[esxi]['contrail_vm']['host']:
-                print "skipping contrail vm, continue..."
-                return
+
     if node:
-        nodes = node
+        nodes = [node]
     else:
         nodes = env.roledefs[contrail_role][:]
+
+    esxi_hosts = getattr(testbed, 'esxi_hosts', None)
+    if esxi_hosts:
+        upd_nodes = []
+        for node in nodes:
+            for esxi in esxi_hosts:
+                if node == esxi_hosts[esxi]['contrail_vm']['host']:
+                    print "skipping contrail vm, continue..."
+                    break
+            else:
+                upd_nodes.append(node)
+        for esxi in esxi_hosts:
+            node = esxi_hosts[esxi]['username'] + '@' + esxi_hosts[esxi]['ip']
+            upd_nodes.append(node)
+        nodes = upd_nodes
+
     count = 0
     node_status = {}
     node_status_save = {}
