@@ -2,6 +2,7 @@ from time import sleep
 
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype
+from fabfile.utils.cluster import get_compute_toragent_nodes
 
 class OpenStackSetupError(Exception):
     pass
@@ -14,7 +15,7 @@ def verify_service(service):
         else:
             sleep(20)
     raise SystemExit("Service %s not running." % service)
-    
+
 @task
 @roles('database')
 def verify_database():
@@ -28,19 +29,6 @@ def verify_database():
 def verify_webui():
     verify_service("supervisor-webui")
     #verify_service("contrail-webui-middleware")
-
-@task
-@roles('openstack')
-def verify_openstack():
-    verify_service("keystone")
-    for x in xrange(10):
-        with settings(warn_only=True):
-            output = sudo("source /etc/contrail/openstackrc; keystone tenant-list")
-        if output.failed:
-            sleep(10)
-        else:
-            return
-    raise OpenStackSetupError(output)
 
 @task
 @roles('cfgm')
@@ -69,7 +57,7 @@ def verify_collector():
     verify_service("contrail-query-engine")
 
 @task
-@roles('compute')
+@hosts(get_compute_toragent_nodes())
 def verify_compute():
     verify_service("supervisor-vrouter")
     #verify_service("contrail-vrouter")
@@ -93,7 +81,7 @@ def remove_startup_files():
         sudo("rm /etc/contrail/supervisord_config.conf")
     if compute not in env.roledefs['control']:
         sudo("rm /etc/init/supervisor-dns.conf")
-        sudo("rm /etc/init/supervisor-control.conf") 
+        sudo("rm /etc/init/supervisor-control.conf")
         sudo("rm /etc/contrail/supervisord_dns.conf")
         sudo("rm /etc/contrail/supervisord_control.conf")
     if compute not in env.roledefs['compute']:

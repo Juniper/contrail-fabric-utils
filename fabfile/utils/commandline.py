@@ -6,6 +6,7 @@ from cluster import *
 from analytics import *
 from interface import *
 from multitenancy import *
+from config import get_value
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
 def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
@@ -72,6 +73,9 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     haproxy = get_haproxy()
     if haproxy:
         cmd += " --haproxy %s" % haproxy
+        cfgm_ip_list = ' '.join([hstr_to_ip(cfgm_host)
+                            for cfgm_host in env.roledefs['cfgm']])
+        cmd += " --config_ip_list %s" % cfgm_ip_list
     openstack_ip_list = []
     if internal_vip:
         # Highly available setup
@@ -92,6 +96,10 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     if conductor_workers:
         cmd += ' --conductor_workers %s' % conductor_workers
 
+    if is_ceilometer_provision_supported():
+        cmd += ' --manage_ceilometer'
+        analytics_ip = hstr_to_ip(get_control_host_string(env.roledefs['collector'][0]))
+        cmd += ' --collector_ip %s' % analytics_ip
     return cmd
 
 def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
@@ -105,23 +113,29 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
                      for entry in env.roledefs['cfgm']]
     collector_host_list = [get_control_host_string(entry)\
                           for entry in env.roledefs['collector']]
+    index = cfgm_host_list.index(cfgm_host)
     if cfgm_host in collector_host_list:
         collector_ip = tgt_ip
     else:
         # Select based on index
-        hindex = cfgm_host_list.index(cfgm_host)
-        hindex = hindex % len(env.roledefs['collector'])
+        hindex = index % len(env.roledefs['collector'])
         collector_host = get_control_host_string(
                              env.roledefs['collector'][hindex])
         collector_ip = hstr_to_ip(collector_host)
     mt_opt = '--multi_tenancy' if get_mt_enable() else ''
+    config_ip_list = [hstr_to_ip(get_control_host_string(config_host))\
+                         for config_host in env.roledefs['cfgm']]
     cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host))\
                          for cassandra_host in env.roledefs['database']]
+    control_ip_list = [hstr_to_ip(get_control_host_string(control_host))\
+                         for control_host in env.roledefs['control']]
     amqp_server_ip = get_contrail_amqp_server()
     orch = get_orchestrator()
 
     cmd += " --self_ip %s" % tgt_ip
     cmd += " --collector_ip %s %s" % (collector_ip, mt_opt)
+    cmd += " --control_ip_list %s" % ' '.join(control_ip_list)
+    cmd += " --config_ip_list %s" % ' '.join(config_ip_list)
     cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
     cmd += " --zookeeper_ip_list %s" % ' '.join(cassandra_ip_list)
     cmd += " --quantum_port %s" % quantum_port
@@ -149,12 +163,19 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
         if manage_neutron == 'no':
             # Skip creating neutron service tenant/user/role etc in keystone.
             cmd += ' --manage_neutron %s' % manage_neutron
+        elif index > 0:
+            # Skip creating neutron service tenant/user/role muliple times from
+            # Create only when provisioning first cfgm
+            cmd += ' --manage_neutron no'
     else:
         cmd += ' --manage_neutron no'
     internal_vip = get_contrail_internal_vip()
     if internal_vip:
         # Highly available setup
         cmd += ' --internal_vip %s' % (internal_vip)
+
+    if is_ceilometer_provision_supported():
+        cmd += ' --manage_ceilometer'
 
     return cmd
 
@@ -174,8 +195,8 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
         collector_ip = hstr_to_ip(webui_host)
     else:
         # Select based on index
-        hindex = webui_host_list.index(webui_host)
-        hindex = hindex % ncollectors
+        index = webui_host_list.index(webui_host)
+        hindex = index % ncollectors
         collector_host = get_control_host_string(env.roledefs['collector'][hindex])
         collector_ip = hstr_to_ip(collector_host)
     cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in database_host_list]
@@ -254,6 +275,18 @@ def frame_vnc_control_cmd(host_string, cmd='setup-vnc-control'):
 def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
                           manage_nova_compute='yes', configure_nova='yes'):
     orch = get_orchestrator()
+    metadata_secret = None
+    if orch == 'openstack':
+        metadata_secret = getattr(testbed,
+                                  'neutron_metadata_proxy_shared_secret',
+                                  None)
+        if not metadata_secret:
+            with settings(host_string=env.roledefs['openstack'][0]):
+                status, secret = get_value('/etc/nova/nova.conf',
+                                     'DEFAULT',
+                                     'service_neutron_metadata_proxy',
+                                     'neutron_metadata_proxy_shared_secret')
+            metadata_secret = secret if status == 'True' else None
     ncontrols = len(env.roledefs['control'])
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
     cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
@@ -284,9 +317,16 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
     cmd += " --service_token %s" % get_service_token()
     cmd += " --orchestrator %s" % get_orchestrator()
     cmd += " --hypervisor %s" % get_hypervisor(host_string)
+    cmd += ' --roles %s' % ' '.join(get_roles(host_string))
     haproxy = get_haproxy()
     if haproxy:
         cmd += " --haproxy %s" % haproxy
+        openstack_ip_list = ' '.join([hstr_to_ip(openstack_host)
+                            for openstack_host in env.roledefs['openstack']])
+        cmd += " --openstack_ip_list %s" % openstack_ip_list
+        cfgm_ip_list = ' '.join([hstr_to_ip(cfgm_host)
+                            for cfgm_host in env.roledefs['cfgm']])
+        cmd += " --config_ip_list %s" % cfgm_ip_list
 
     if tgt_ip != compute_mgmt_ip:
         cmd += " --non_mgmt_ip %s" % tgt_ip
@@ -315,6 +355,8 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
                 if cpu_model is None:
                     raise Exception('cpu model is required for custom cpu mode')
                 cmd += " --cpu_model %s" % cpu_model
+    if is_ceilometer_provision_supported():
+        cmd += ' --manage_ceilometer'
 
     # Add metadata_secret if available
     if metadata_secret:
@@ -444,3 +486,100 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
 
     return cmd
 
+def frame_vnc_vcenter_plugin_cmd(host_string, cmd='setup-vcenter-plugin'):
+    vcenter_info = getattr(env, 'vcenter', None)
+    if not vcenter_info:
+        print 'Error: vcenter block is not defined in testbed file.Exiting'
+        return
+    cassandra_ip_list = [hstr_to_ip(get_control_host_string(\
+        cassandra_host)) for cassandra_host in env.roledefs['database']]
+    cfgm_ip = get_contrail_internal_vip() or\
+        hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+    cmd += " --vcenter_url %s" % vcenter_info['server']
+    cmd += " --vcenter_username %s" % vcenter_info['username']
+    cmd += " --vcenter_password %s" % vcenter_info['password']
+    cmd += " --vcenter_datacenter %s" % vcenter_info['datacenter']
+    cmd += " --vcenter_dvswitch %s" % vcenter_info['dv_switch']['dv_switch_name']
+    cmd += " --api_hostname %s" % cfgm_ip
+    cmd += " --api_port 8082"
+    zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
+    cmd += " --zookeeper_serverlist %s" % zk_servers_ports
+
+    return cmd
+
+def frame_vnc_toragent_cmd(host_string, index_range=None,
+                           restart='no', cmd='setup-vnc-tor-agent'):
+    all_toragent_dict = getattr(env,'tor_agent', None)
+    toragent_dict = all_toragent_dict[host_string]
+    tor_ids = []
+    tor_agent_names = []
+    tor_names = []
+    tor_tunnel_ips = []
+    tor_vendor_names = []
+    tsn_names = []
+    tor_mgmt_ips = []
+    http_server_ports = []
+    tor_ips = []
+    tor_ovs_ports = []
+    tor_tsn_ips = []
+    tor_ovs_protocols = []
+    active_tors = []
+    start, end = 0, len(toragent_dict)
+    if index_range:
+        start, end = index_range.split('-')
+        end += 1
+    for index in range(start, end):
+        toragent = toragent_dict[index]
+        tor_ids.append(int(toragent['tor_id']))
+        tor_agent_names.append(toragent.get('tor_agent_name', 'NULL'))
+        tor_names.append(toragent['tor_name'])
+        tor_tunnel_ips.append(toragent['tor_tunnel_ip'])
+        tor_vendor_names.append(toragent['tor_vendor_name'])
+        tsn_names.append(toragent['tor_tsn_name'])
+        tor_mgmt_ips.append(toragent['tor_ip'])
+        http_server_ports.append(get_tor_agent_http_server_port(host_string, index))
+        tor_ips.append(toragent['tor_ip'])
+        tor_ovs_ports.append(toragent['tor_ovs_port'])
+        tor_tsn_ips.append(toragent['tor_tsn_ip'])
+        tor_ovs_protocols.append(toragent['tor_ovs_protocol'])
+        active_tors.append(get_active_tor(toragent['tor_name'], host_string))
+
+    # Populate the argument to pass for setup-vnc-tor-agent
+    cmd += " --tor_names %s" % ' '.join(tor_names)
+    cmd += " --tor_vendor_names %s" % ' '.join(tor_vendor_names)
+    cmd += " --tor_tunnel_ips %s" % ' '.join(tor_tunnel_ips)
+    cmd += " --tsn_names %s" % ' '.join(tsn_names)
+    cmd += " --tor_mgmt_ips %s" % ' '.join(tor_mgmt_ips)
+    cmd += " --http_server_ports %s" % ' '.join(http_server_ports)
+    cmd += " --tor_ids %s" % ' '.join(tor_ids)
+    cmd += " --tor_ips %s" % ' '.join(tor_ips)
+    cmd += " --tor_ovs_ports %s" % ' '.join(tor_ovs_ports)
+    cmd += " --tsn_ips %s" % ' '.join(tor_tsn_ips)
+    cmd += " --tor_ovs_protocols %s" % ' '.join(tor_ovs_protocols)
+    # Pass tor_agent_names argument only if any of the toragent has 
+    # a toragent name set in testbed.py.
+    if any(elem != 'NULL' for elem in tor_agent_names):
+        cmd += " --tor_agent_names %s" % ' '.join(tor_agent_names)
+    cmd += " --active_tors %s" %  ' '.join(active_tors)
+    if restart == 'yes':
+        cmd += " --restart"
+
+    tor_agent_host = get_control_host_string(host_string)
+    tor_agent_control_ip= hstr_to_ip(tor_agent_host)
+    cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+    cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
+    admin_tenant_name = get_keystone_admin_tenant_name()
+    orch = get_orchestrator()
+    if orch is 'openstack':
+        admin_user, admin_password = get_openstack_credentials()
+        cmd += " --authserver_ip %s" % get_keystone_ip()
+    elif orch is 'vcenter':
+        admin_user, admin_password = get_vcenter_credentials()
+    cmd += " --self_ip %s" % tor_agent_control_ip
+    cmd += " --cfgm_ip %s" % cfgm_ip
+    cmd += " --admin_tenant %s" % admin_tenant_name
+    cmd += " --admin_user %s" % admin_user
+    cmd += " --admin_password %s" % admin_password
+    cmd += " --discovery_server_ip %s"\
+        % hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+    return cmd

@@ -17,10 +17,13 @@ import datetime
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.utils.cluster import get_ntp_server
 from fabfile.utils.analytics import get_analytics_data_dir, get_minimum_diskGB
+from fabfile.utils.cluster import get_ntp_server, get_tsn_nodes,\
+    get_toragent_nodes, get_tor_agent_http_server_port, get_compute_toragent_nodes
+
 
 @task
 @parallel
-@roles('compute')
+@hosts(get_compute_toragent_nodes())
 def compute_reboot(waitup='yes'):
     if env.roledefs['compute']:
         reboot_node(waitup, env.host_string)
@@ -170,7 +173,14 @@ def all_reimage(build_param="@LATEST"):
                     local(
                         "/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.5" %
                         (hostname))
-            sleep(5)
+            # Wait till reimage started for this node.
+            while True:
+                cmd = "/cs-shared/server-manager/client/server-manager status"
+                cmd += " server --server_id %s | grep status | awk '{ print $2 }'" % hostname
+                if 'restart_issued' in local(cmd, capture=True):
+                    # Reimage the next node
+                    break
+                sleep(1)
 # end all_reimage
 
 @roles('build')
@@ -251,11 +261,11 @@ def check_ssh():
         if not verify_sshd(hostip, user, password):
             sshd_down_hosts += "%s : %s\n" % (host_string, password)
 
-    if sshd_down_hosts: 
+    if sshd_down_hosts:
         raise Exception("Following list of hosts are down: \n %s" % sshd_down_hosts)
     else:
         print "\n\tAll nodes are Up."
-    
+
 @roles('all')
 @task
 def all_command(command):
@@ -320,7 +330,7 @@ def compute_provision():
     tgt_ip = env.host_string.split('@')[1]
     tgt_hostname = sudo("hostname")
     prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
-                                %(tgt_hostname, tgt_ip, cfgm_ip) 
+                                %(tgt_hostname, tgt_ip, cfgm_ip)
     sudo("/opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
 
 
@@ -580,8 +590,8 @@ def virsh_cleanup():
                 sudo('virsh destroy %s' %(inst_name))
                 sudo('virsh undefine %s' %(inst_name))
                 sudo('rm -rf /var/lib/nova/instances/%s' %(inst_name))
-         
-#end virsh_cleanup 
+
+#end virsh_cleanup
 @task
 def virsh_cmd(cmd):
     result = sudo('virsh %s' %(cmd))
@@ -631,7 +641,7 @@ def cleanup_os_config():
         for db in dbs:
             sudo('mysql -u root --password=%s -e \'drop database %s;\''  %(token, db))
 
-        
+
         if detect_ostype() == 'ubuntu':
             services = ubuntu_services
         for service in services :
@@ -640,14 +650,14 @@ def cleanup_os_config():
         sudo('sudo rm -f /etc/contrail/mysql.token')
         sudo('sudo rm -f /etc/contrail/service.token')
         sudo('sudo rm -f /etc/contrail/keystonerc')
-        
-        #TODO 
+
+        #TODO
         # In Ubuntu, by default glance uses sqlite
         # Until we have a clean way of clearing glance image-data in sqlite,
         # just skip removing the images on Ubuntu
         if not detect_ostype() in ['ubuntu']:
             sudo('sudo rm -f /var/lib/glance/images/*')
-        
+
         sudo('sudo rm -rf /var/lib/nova/tmp/nova-iptables')
         sudo('sudo rm -rf /var/lib/libvirt/qemu/instance*')
         sudo('sudo rm -rf /var/log/libvirt/qemu/instance*')
@@ -656,7 +666,7 @@ def cleanup_os_config():
         sudo('sudo rm -rf /var/log/libvirt/qemu/inst*')
         sudo('sudo rm -rf /etc/libvirt/qemu/inst*')
         sudo('sudo rm -rf /var/lib/nova/instances/_base/*')
-        
+
         if detect_ostype() in ['ubuntu'] and env.host_string in env.roledefs['openstack']:
             sudo('mysql_install_db --user=mysql --ldata=/var/lib/mysql/')
 #end cleanup_os_config
@@ -664,13 +674,13 @@ def cleanup_os_config():
 @roles('build')
 @task
 def config_server_reset(option=None, hosts=[]):
-    
+
     for host_string in hosts:
         api_config_file = '/etc/contrail/supervisord_config_files/contrail-api.ini'
         disc_config_file = '/etc/contrail/supervisord_config_files/contrail-discovery.ini'
         schema_config_file = '/etc/contrail/supervisord_config_files/contrail-schema.ini'
         svc_m_config_file = '/etc/contrail/supervisord_config_files/contrail-svc-monitor.ini'
-        
+
         with settings(host_string=host_string):
             try :
                 if option == "add" :
@@ -799,7 +809,7 @@ def enable_haproxy():
     if detect_ostype() == 'ubuntu':
         with settings(warn_only=True):
             sudo("sudo sed -i 's/ENABLED=.*/ENABLED=1/g' /etc/default/haproxy")
-#end enable_haproxy    
+#end enable_haproxy
 
 def qpidd_changes_for_ubuntu():
     '''Qpidd.conf changes for Ubuntu
@@ -827,7 +837,7 @@ def is_pingable(host_string, negate=False, maxwait=900):
                 res = sudo('ping -q -w 2 -c 1 %s' %hostip)
             except:
                 res = runouput(return_code=1)
-                
+
             if res.return_code == 0 and negate == 'False':
                 print 'Host (%s) is Pingable'
                 break
@@ -940,104 +950,6 @@ def setup_coremask_node(*args):
                 raise RuntimeError("Error: Core mask %s for host %s is invalid." \
                     %(coremask, host_string))
 
-@roles('openstack')
-@task
-def increase_ulimits():
-    '''
-    Increase ulimit in /etc/init.d/mysqld /etc/init/mysql.conf /etc/init.d/rabbitmq-server files
-    '''
-    with settings(warn_only = True):
-        if detect_ostype() == 'ubuntu':
-            sudo("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql") 
-            sudo("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
-            sudo("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
-            sudo("sed -i '/\[mysqld\]/a\max_connections = 10000' /etc/mysql/my.cnf")
-            sudo("echo 'ulimit -n 10240' >> /etc/default/rabbitmq-server")
-        else:
-            sudo("sed -i '/start(){/ a\    ulimit -n 10240' /etc/init.d/mysqld")
-            sudo("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
-            sudo("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/my.cnf")
-
-@roles('cfgm','database','control','collector')
-@task
-def increase_limits():
-    '''
-    Increase limits in /etc/security/limits.conf, sysctl.conf and /etc/contrail/supervisor*.conf files
-    '''
-    limits_conf = '/etc/security/limits.conf'
-    with settings(warn_only = True):
-        pattern='^root\s*soft\s*nproc\s*.*'
-        if detect_ostype() in ['ubuntu']:
-            line = 'root soft nofile 65535\nroot hard nofile 65535'
-        else:
-            line = 'root soft nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nofile\s*.*'
-        line = '* hard nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nofile\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nproc\s*.*'
-        line = '* hard nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nproc\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        sysctl_conf = '/etc/sysctl.conf'
-        insert_line_to_file(pattern = '^fs.file-max.*',
-                line = 'fs.file-max = 65535',file_name = sysctl_conf)
-        sudo('sysctl -p')
-
-        sudo('sed -i \'s/^minfds.*/minfds=10240/\' /etc/contrail/supervisor*.conf')
-
-#end increase_limits
-
-@roles('cfgm','database','collector')
-@task
-def increase_limits_no_control():
-    '''
-    Increase limits in /etc/security/limits.conf, sysctl.conf and /etc/contrail/supervisor*.conf files
-    '''
-    limits_conf = '/etc/security/limits.conf'
-    with settings(warn_only = True):
-        pattern='^root\s*soft\s*nproc\s*.*'
-        if detect_ostype() in ['ubuntu']:
-            line = 'root soft nofile 65535\nroot hard nofile 65535'
-        else:
-            line = 'root soft nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nofile\s*.*'
-        line = '* hard nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nofile\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nproc\s*.*'
-        line = '* hard nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nproc\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        sysctl_conf = '/etc/sysctl.conf'
-        insert_line_to_file(pattern = '^fs.file-max.*',
-                line = 'fs.file-max = 65535',file_name = sysctl_conf)
-        sudo('sysctl -p')
-
-        sudo('sed -i \'s/^minfds.*/minfds=10240/\' /etc/contrail/supervisor*.conf')
-
-#end increase_limits_no_control
-
 def insert_line_to_file(line,file_name,pattern=None):
     with settings(warn_only = True):
         if pattern:
@@ -1064,7 +976,7 @@ def validate_hosts():
     all_hostnames = env.hostnames['all']
     current_hostlist = {}
     current_hosttimes = {}
-    
+
     # Check if the hostnames on the nodes are as mentioned in testbed file
     for host in env.roledefs['all']:
         with settings(host_string = host):
@@ -1080,15 +992,15 @@ def validate_hosts():
                 print "They are %s and %s" %(hstr_to_ip(host), hstr_to_ip(current_hostlist[curr_hostname]))
                 print "Please fix them before continuing!! "
                 exit(1)
-    
+
     #Check if env.hostnames['all'] has any spurious entries
     if set(current_hostlist.keys()) != set(env.hostnames['all']):
         print "hostnames['all'] in testbed file does not seem to be correct"
         print "Expected : %s" %(current_hostlist)
-        print "Seen : %s" %(env.hostnames['all']) 
+        print "Seen : %s" %(env.hostnames['all'])
         exit(1)
     print "All hostnames are unique and defined in testbed correctly..OK"
-    
+
     #Check if date/time on the hosts are almost the same (diff < 5min)
     for host in env.roledefs['all']:
         with settings(host_string = host):
@@ -1099,16 +1011,16 @@ def validate_hosts():
             host,
             datetime.datetime.fromtimestamp(avg_time),
             datetime.datetime.fromtimestamp(float(current_hosttimes[host])))
-        if abs(avg_time - int(current_hosttimes[host])) > 300 : 
+        if abs(avg_time - int(current_hosttimes[host])) > 300 :
             print "Time of Host % seems to be not in sync with rest of the hosts" %(host)
             print "Please make sure that the date and time on all hosts are in sync before continuning!!"
             exit(1)
 
     print "Date and time on all hosts are in sync..OK"
-    
+
     # Check if all hosts are reachable by each other using their hostnames
     execute(full_mesh_ping_by_name)
-        
+
 
 @task
 @roles('openstack')
@@ -1158,8 +1070,25 @@ def check_disk_space():
     return True
 
 @task
+@EXECUTE_TASK
+@hosts(get_toragent_nodes())
+def toragent_pre_check():
+    if not get_toragent_nodes():
+        return
+    all_toragent_dict = getattr(env, 'tor_agent', None)
+    toragent_dict = all_toragent_dict[env.host_string]
+    for toragent in toragent_dict:
+        index = toragent_dict.index(toragent)
+        if not get_tor_agent_http_server_port(env.host_string, index):
+            err_msg += "\t tor_agent_http_server_port for host:%s"\
+                       " with tor_id: %s is not specified in testbed.py\n"\
+                        % (env.host_string, index)
+    return err_msg
+
+@task
 @roles('build')
 def pre_check():
+    # Disk space check
     result = execute('check_disk_space')
     nodes_without_minimum_space = filter(lambda node: node != None,
         map(lambda (node, met): node if not met else None, result.items()))
@@ -1170,6 +1099,23 @@ def pre_check():
         print "\tSpecifiy the avalilable disk space of database node in GB"
         print "\tHowever minimum disk space for database node is 256GB."
         exit(1)
+
+    # Tsn node check
+    tsn_as_compute = filter(lambda tsn: tsn in env.roledefs['compute'],
+                            get_tsn_nodes())
+    if tsn_as_compute:
+        print "\nERROR: \n\t TSN nodes(%s) cannot play compute role" % tsn_as_compute
+        print "\tPlease correct the testbed.py"
+        exit(1)
+
+    # Toragent check
+    result = execute('toragent_pre_check')
+    if any(result.values()):
+        for key, err_msg in result.items():
+            if err_msg:
+                print err_msg
+        exit(1)
+
     database_nodes = deepcopy(env.roledefs['database'])
     if (len(database_nodes) % 2) != 1:
         print "\nERROR: \n\tRecommended to deploy odd number of zookeeper(database) nodes."
@@ -1191,7 +1137,6 @@ def pre_check():
         exit(1)
     else:
         print "\nINFO: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
-    execute('add_openstack_reserverd_ports')
 
 def role_to_ip_dict(role=None):
     role_to_ip_dict = {}
@@ -1257,19 +1202,6 @@ def set_allow_unsupported_sfp():
         sudo("sed -i '/options ixgbe allow_unsupported_sfp/d' /etc/modprobe.d/ixgbe.conf")
         sudo('echo "options ixgbe allow_unsupported_sfp=1" >> /etc/modprobe.d/ixgbe.conf')
         sudo('rmmod ixgbe; modprobe ixgbe')
-
-@task
-@roles('all')
-def setup_common():
-    with settings(warn_only=True):
-        ntp_server = get_ntp_server()
-        if ntp_server is not None and\
-            exists('/etc/ntp.conf'):
-                ntp_chk_cmd = 'grep "server ' + ntp_server + '" /etc/ntp.conf'
-                ntp_chk_cmd_out = sudo(ntp_chk_cmd)
-                if ntp_chk_cmd_out == "":
-                    ntp_cmd = 'echo "server ' + ntp_server + '" >> /etc/ntp.conf'
-                    sudo(ntp_cmd)
 
 @task
 @roles('build')

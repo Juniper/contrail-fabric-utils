@@ -1,7 +1,6 @@
 from fabfile.config import *
 
 from fabfile.tasks.install import pkg_install
-from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 from fabfile.utils.cluster import get_toragent_nodes, get_tsn_nodes
 from fabfile.utils.commandline import *
 from fabfile.utils.fabos import get_release, detect_ostype, get_linux_distro
@@ -165,17 +164,10 @@ def upgrade_compute_node(from_rel, pkg, *args):
                 if version == '14.04' and 'contrail-vrouter-3.13.0-35-generic' in pkgs:
                     pkgs.remove('contrail-vrouter-3.13.0-35-generic')
                     pkgs.append('contrail-vrouter-3.13.0-40-generic')
-            # Identify roles of this node.
-            roles = ['compute']
-            if env.host_string in get_tsn_nodes():
-                roles.append('tsn')
-            if env.host_string in get_toragent_nodes():
-                roles.append('toragent')
 
             cmd += ' -P %s' % ' '.join(pkgs)
             cmd += ' -F %s' % from_rel
             cmd += ' -T %s' % get_release()
-            cmd += ' -R %s' % ' '.join(roles)
             sudo(cmd)
 
 @roles('build')
@@ -208,7 +200,6 @@ def upgrade_contrail(from_rel, pkg, orch='yes'):
     execute('upgrade_database', from_rel, pkg)
     execute('upgrade_config', from_rel, pkg)
     execute('setup_rabbitmq_cluster', True)
-    fixup_restart_haproxy_in_all_cfgm(1)
     execute('restart_cfgm')
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)

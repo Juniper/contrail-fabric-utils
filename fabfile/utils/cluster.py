@@ -205,3 +205,23 @@ def get_metadata_secret():
     else:
         print "WARNING get_metadata_secret: Orchestrator(%s) is not supported" % orch
     return metadata_secret
+
+def get_roles(host_string):
+    """Identifies the the list of roles a node plays"""
+    roles = []
+    for roledef, nodes in env.roledefs.items():
+        nodes_in_roledef = filter(lambda node: node == host_string,  nodes)
+        if nodes_in_roledef:
+            roles.append(roledef)
+
+    return roles
+
+def get_tor_agent_http_server_port(host_string, index):
+    toragent = toragent_dict[host_string][i]
+    http_server_port = toragent.get('tor_http_server_port', None)
+    return toragent.get('tor_agent_http_server_port', http_server_port)
+
+def get_compute_toragent_nodes():
+    nodes = get_toragent_nodes()
+    nodes += env.roledefs['compute']
+    return list(set(nodes))
