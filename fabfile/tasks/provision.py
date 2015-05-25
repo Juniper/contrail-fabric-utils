@@ -33,565 +33,55 @@ from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
 
 @task
-@EXECUTE_TASK
 @roles('all')
-def bash_autocomplete_systemd():
-    host = env.host_string
-    output = sudo('uname -a')
-    if 'xen' in output or 'el6' in output or 'ubuntu' in output:
-        pass
-    else:
-        #Assume Fedora
-        sudo("echo 'source /etc/bash_completion.d/systemd-bash-completion.sh' >> ~/.bashrc")
+def setup_common():
+    self_ip = hstr_to_ip(get_control_host_string(env.host_string))
+    ntp_server = get_ntp_server()
+    cmd = 'setup-vnc-common'
+    cmd += ' --self_ip %s' % self_ip
+    if ntp_server:
+        cmd += ' --ntp_server %s' % ntp_server
 
-@roles('cfgm')
+    sudo(cmd)
+
 @task
+@EXECUTE_TASK
+@roles('cfgm')
 def setup_cfgm():
     """Provisions config services in all nodes defined in cfgm role."""
     if env.roledefs['cfgm']:
         execute("setup_cfgm_node", env.host_string)
-
-def fixup_restart_haproxy_in_all_cfgm(nworkers):
-    template = string.Template("""
-#contrail-config-marker-start
-
-global
-        tune.maxrewrite 1024
-
-listen contrail-config-stats :5937
-   mode http
-   stats enable
-   stats uri /
-   stats auth $__contrail_hap_user__:$__contrail_hap_passwd__
-
-frontend quantum-server *:9696
-    default_backend    quantum-server-backend
-
-frontend  contrail-api *:8082
-    default_backend    contrail-api-backend
-    timeout client 3m
-
-frontend  contrail-discovery *:5998
-    default_backend    contrail-discovery-backend
-
-backend quantum-server-backend
-    option nolinger
-    balance     roundrobin
-$__contrail_quantum_servers__
-    #server  10.84.14.2 10.84.14.2:9697 check
-
-backend contrail-api-backend
-    option nolinger
-    timeout server 3m
-    balance     roundrobin
-$__contrail_api_backend_servers__
-    #server  10.84.14.2 10.84.14.2:9100 check
-    #server  10.84.14.2 10.84.14.2:9101 check
-
-backend contrail-discovery-backend
-    option nolinger
-    balance     roundrobin
-$__contrail_disc_backend_servers__
-    #server  10.84.14.2 10.84.14.2:9110 check
-    #server  10.84.14.2 10.84.14.2:9111 check
-
-$__tor_agent_ha_config__
-
-$__rabbitmq_config__
-#contrail-config-marker-end
-""")
-
-    q_listen_port = 9697
-    q_server_lines = ''
-    api_listen_port = 9100
-    api_server_lines = ''
-    disc_listen_port = 9110
-    disc_server_lines = ''
-    tor_agent_ha_config = ''
-    rabbitmq_config = """
-listen  rabbitmq 0.0.0.0:5673
-    mode tcp
-    maxconn 10000
-    balance roundrobin
-    option tcpka
-    option redispatch
-    timeout client 48h
-    timeout server 48h\n"""
-    space = ' ' * 3
-    for host_string in env.roledefs['cfgm']:
-        server_index = env.roledefs['cfgm'].index(host_string) + 1
-        host_ip = hstr_to_ip(get_control_host_string(host_string))
-        q_server_lines = q_server_lines + \
-        '    server %s %s:%s check inter 2000 rise 2 fall 3\n' \
-                    %(host_ip, host_ip, str(q_listen_port))
-        for i in range(nworkers):
-            api_server_lines = api_server_lines + \
-            '    server %s %s:%s check inter 2000 rise 2 fall 3\n' \
-                        %(host_ip, host_ip, str(api_listen_port + i))
-            disc_server_lines = disc_server_lines + \
-            '    server %s %s:%s check inter 2000 rise 2 fall 3\n' \
-                        %(host_ip, host_ip, str(disc_listen_port + i))
-        rabbitmq_config +=\
-            '%s server rabbit%s %s:5672 check inter 2000 rise 2 fall 3 weight 1 maxconn 500\n'\
-             % (space, server_index, host_ip)
-
-    if get_contrail_internal_vip() == get_openstack_internal_vip():
-        # Openstack and cfgm are same nodes.
-        # Dont add rabbitmq confing twice in haproxy, as setup_ha has added already.
-        rabbitmq_config = ''
-
-    # create TOR agent configuration for the HA proxy
-    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():
-        tor_agent_ha_config = get_all_tor_agent_haproxy_config(env.roledefs['toragent'])
-
-    for host_string in env.roledefs['cfgm']:
-        haproxy_config = template.safe_substitute({
-            '__contrail_quantum_servers__': q_server_lines,
-            '__contrail_api_backend_servers__': api_server_lines,
-            '__contrail_disc_backend_servers__': disc_server_lines,
-            '__contrail_hap_user__': 'haproxy',
-            '__contrail_hap_passwd__': 'contrail123',
-            '__rabbitmq_config__': rabbitmq_config,
-            '__tor_agent_ha_config__': tor_agent_ha_config,
-            })
-
-        with settings(host_string=host_string):
-            # chop old settings including pesky default from pkg...
-            tmp_fname = "/tmp/haproxy-%s-config" %(host_string)
-            get_as_sudo("/etc/haproxy/haproxy.cfg", tmp_fname)
-            with settings(warn_only=True):
-                local("sed -i -e '/^#contrail-config-marker-start/,/^#contrail-config-marker-end/d' %s" %(tmp_fname))
-                local("sed -i -e 's/frontend\s*main\s*\*:5000/frontend  main *:5001/' %s" %(tmp_fname))
-                local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" %(tmp_fname))
-            # ...generate new ones
-            cfg_file = open(tmp_fname, 'a')
-            cfg_file.write(haproxy_config)
-            cfg_file.close()
-            put(tmp_fname, "/etc/haproxy/haproxy.cfg", use_sudo=True)
-            local("rm %s" %(tmp_fname))
-
-        # haproxy enable
-        with settings(host_string=host_string, warn_only=True):
-            sudo("chkconfig haproxy on")
-            sudo("service haproxy restart")
-
-# end fixup_restart_haproxy_in_all_cfgm
-
-# Get HA proxy configuration for a TOR agent
-def get_tor_agent_haproxy_config(proxy_name, proxy_port, ip1, port1, ip2, port2):
-    tor_agent_ha_config = '\n'
-    tor_agent_ha_config = tor_agent_ha_config + 'listen %s :%s\n' %(proxy_name, str(proxy_port))
-    tor_agent_ha_config = tor_agent_ha_config + '    mode tcp\n'
-    tor_agent_ha_config = tor_agent_ha_config + '    server %s %s:%s\n' %(ip1, ip1, str(port1))
-    tor_agent_ha_config = tor_agent_ha_config + '    server %s %s:%s\n' %(ip2, ip2, str(port2))
-    tor_agent_ha_config = tor_agent_ha_config + '\n'
-    return tor_agent_ha_config
-#end get_tor_agent_haproxy_config
-
-# Get HA proxy configuration for all TOR agents
-def get_all_tor_agent_haproxy_config(*args):
-    tor_agent_ha_config = ''
-    for host_list in args:
-        for host_string in host_list:
-            with settings(host_string=host_string):
-                toragent_dict = getattr(env, 'tor_agent', None)
-                for i in range(len(toragent_dict[host_string])):
-                    if 'standby_tor_agent_ip' in toragent_dict[host_string][i] and \
-                        'standby_tor_agent_tor_ovs_port' in toragent_dict[host_string][i]:
-                        proxy_name = 'contrail-tor-agent-' + toragent_dict[host_string][i]['tor_id']
-                        ip1=hstr_to_ip(get_control_host_string(host_string))
-                        port1 = int(toragent_dict[host_string][i]['tor_ovs_port'])
-                        ip2 = toragent_dict[host_string][i]['standby_tor_agent_ip']
-                        port2 = int(toragent_dict[host_string][i]['standby_tor_agent_tor_ovs_port'])
-                        tor_agent_ha_config = tor_agent_ha_config + get_tor_agent_haproxy_config(proxy_name, port1, ip1, port1, ip2, port2)
-    return tor_agent_ha_config
-#end get_all_tor_agent_haproxy_config
-
-@roles('cfgm')
-@task
-def setup_haproxy_config():
-    """Provisions HA proxy service in all nodes defined in cfgm role."""
-    if env.roledefs['cfgm']:
-        execute("setup_haproxy_config_node", env.host_string)
-
-@task
-def setup_haproxy_config_node(*args):
-    """Provisions HA proxy service in one or list of nodes."""
-
-    nworkers = 1
-    fixup_restart_haproxy_in_all_cfgm(nworkers)
-#end setup_haproxy_node
-
-def fixup_restart_haproxy_in_one_compute(compute_host_string):
-    compute_haproxy_template = string.Template("""
-#contrail-compute-marker-start
-listen contrail-compute-stats :5938
-   mode http
-   stats enable
-   stats uri /
-   stats auth $__contrail_hap_user__:$__contrail_hap_passwd__
-
-$__contrail_disc_stanza__
-
-$__contrail_quantum_stanza__
-
-$__contrail_qpid_stanza__
-
-$__contrail_glance_api_stanza__
-
-#contrail-compute-marker-end
-""")
-
-
-    ds_stanza_template = string.Template("""
-$__contrail_disc_frontend__
-
-backend discovery-server-backend
-    balance     roundrobin
-$__contrail_disc_servers__
-    #server  10.84.14.2 10.84.14.2:5998 check
-""")
-
-    q_stanza_template = string.Template("""
-$__contrail_quantum_frontend__
-
-backend quantum-server-backend
-    balance     roundrobin
-$__contrail_quantum_servers__
-    #server  10.84.14.2 10.84.14.2:9696 check
-""")
-
-    g_api_stanza_template = string.Template("""
-$__contrail_glance_api_frontend__
-
-backend glance-api-backend
-    balance     roundrobin
-$__contrail_glance_apis__
-    #server  10.84.14.2 10.84.14.2:9292 check
-""")
-
-    ds_frontend = textwrap.dedent("""\
-        frontend discovery-server 127.0.0.1:5998
-            default_backend discovery-server-backend
-        """)
-
-    q_frontend = textwrap.dedent("""\
-        frontend quantum-server 127.0.0.1:9696
-            default_backend quantum-server-backend
-        """)
-
-    g_api_frontend = textwrap.dedent("""\
-        frontend glance-api 127.0.0.1:9292
-            default_backend glance-api-backend
-        """)
-
-    haproxy_config = ''
-
-    # if this compute is also config, skip quantum and discovery
-    # stanza as they would have been generated in config context
-    ds_stanza = ''
-    q_stanza = ''
-    if compute_host_string not in env.roledefs['cfgm']:
-        # generate discovery service stanza
-        ds_server_lines = ''
-        for config_host_string in env.roledefs['cfgm']:
-            host_ip = hstr_to_ip(config_host_string)
-            ds_server_lines = ds_server_lines + \
-            '    server %s %s:5998 check\n' %(host_ip, host_ip)
-
-            ds_stanza = ds_stanza_template.safe_substitute({
-                '__contrail_disc_frontend__': ds_frontend,
-                '__contrail_disc_servers__': ds_server_lines,
-                })
-
-        # generate  quantum stanza
-        q_server_lines = ''
-        for config_host_string in env.roledefs['cfgm']:
-            host_ip = hstr_to_ip(config_host_string)
-            q_server_lines = q_server_lines + \
-            '    server %s %s:9696 check\n' %(host_ip, host_ip)
-
-            q_stanza = q_stanza_template.safe_substitute({
-                '__contrail_quantum_frontend__': q_frontend,
-                '__contrail_quantum_servers__': q_server_lines,
-                })
-
-    # if this compute is also openstack, skip glance-api stanza
-    # as that would have been generated in openstack context
-    g_api_stanza = ''
-    if compute_host_string not in env.roledefs['openstack']:
-        # generate a glance-api stanza
-        g_api_server_lines = ''
-        for openstack_host_string in env.roledefs['openstack']:
-            host_ip = hstr_to_ip(openstack_host_string)
-            g_api_server_lines = g_api_server_lines + \
-            '    server %s %s:9292 check\n' %(host_ip, host_ip)
-
-            g_api_stanza = g_api_stanza_template.safe_substitute({
-                '__contrail_glance_api_frontend__': g_api_frontend,
-                '__contrail_glance_apis__': g_api_server_lines,
-                })
-            # HACK: for now only one openstack
-            break
-
-    with settings(host_string=compute_host_string):
-        # chop old settings including pesky default from pkg...
-        tmp_fname = "/tmp/haproxy-%s-compute" %(compute_host_string)
-        get_as_sudo("/etc/haproxy/haproxy.cfg", tmp_fname)
-        with settings(warn_only=True):
-            local("sed -i -e '/^#contrail-compute-marker-start/,/^#contrail-compute-marker-end/d' %s"\
-                   %(tmp_fname))
-            local("sed -i -e 's/*:5000/*:5001/' %s" %(tmp_fname))
-            local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" %(tmp_fname))
-        # ...generate new ones
-        compute_haproxy = compute_haproxy_template.safe_substitute({
-            '__contrail_hap_user__': 'haproxy',
-            '__contrail_hap_passwd__': 'contrail123',
-            '__contrail_disc_stanza__': ds_stanza,
-            '__contrail_quantum_stanza__': q_stanza,
-            '__contrail_glance_api_stanza__': g_api_stanza,
-            '__contrail_qpid_stanza__': '',
-            })
-        cfg_file = open(tmp_fname, 'a')
-        cfg_file.write(compute_haproxy)
-        cfg_file.close()
-        put(tmp_fname, "/etc/haproxy/haproxy.cfg", use_sudo=True)
-        local("rm %s" %(tmp_fname))
-
-        # enable
-        with settings(host_string=compute_host_string, warn_only=True):
-            sudo("chkconfig haproxy on")
-            sudo("service haproxy restart")
-
-# end fixup_restart_haproxy_in_one_compute
-
-def fixup_restart_haproxy_in_all_compute():
-    for compute_host_string in env.roledefs['compute']:
-        fixup_restart_haproxy_in_one_compute(compute_host_string)
-
-# end fixup_restart_haproxy_in_all_compute
-
-def  fixup_restart_haproxy_in_all_openstack():
-    openstack_haproxy_template = string.Template("""
-#contrail-openstack-marker-start
-listen contrail-openstack-stats :5936
-   mode http
-   stats enable
-   stats uri /
-   stats auth $__contrail_hap_user__:$__contrail_hap_passwd__
-
-$__contrail_quantum_stanza__
-
-#contrail-openstack-marker-end
-""")
-
-    q_stanza_template = string.Template("""
-$__contrail_quantum_frontend__
-
-backend quantum-server-backend
-    balance     roundrobin
-$__contrail_quantum_servers__
-    #server  10.84.14.2 10.84.14.2:9696 check
-""")
-
-    q_frontend = textwrap.dedent("""\
-        frontend quantum-server 127.0.0.1:9696
-            default_backend quantum-server-backend
-        """)
-
-    # for all openstack, set appropriate haproxy stanzas
-    for openstack_host_string in env.roledefs['openstack']:
-        haproxy_config = ''
-
-        # if this openstack is also config, skip quantum stanza
-        # as that would have been generated in config context
-        q_stanza = ''
-        if openstack_host_string not in env.roledefs['cfgm']:
-            # generate a quantum stanza
-            q_server_lines = ''
-            for config_host_string in env.roledefs['cfgm']:
-                host_ip = hstr_to_ip(config_host_string)
-                q_server_lines = q_server_lines + \
-                '    server %s %s:9696 check\n' %(host_ip, host_ip)
-
-                q_stanza = q_stanza_template.safe_substitute({
-                    '__contrail_quantum_frontend__': q_frontend,
-                    '__contrail_quantum_servers__': q_server_lines,
-                    })
-
-        with settings(host_string=openstack_host_string):
-            # chop old settings including pesky default from pkg...
-            tmp_fname = "/tmp/haproxy-%s-openstack" %(openstack_host_string)
-            get_as_sudo("/etc/haproxy/haproxy.cfg", tmp_fname)
-            with settings(warn_only=True):
-                local("sed -i -e '/^#contrail-openstack-marker-start/,/^#contrail-openstack-marker-end/d' %s"\
-                       %(tmp_fname))
-                local("sed -i -e 's/*:5000/*:5001/' %s" %(tmp_fname))
-                local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" %(tmp_fname))
-            # ...generate new ones
-            openstack_haproxy = openstack_haproxy_template.safe_substitute({
-                '__contrail_hap_user__': 'haproxy',
-                '__contrail_hap_passwd__': 'contrail123',
-                '__contrail_quantum_stanza__': q_stanza,
-                })
-            cfg_file = open(tmp_fname, 'a')
-            cfg_file.write(openstack_haproxy)
-            cfg_file.close()
-            put(tmp_fname, "/etc/haproxy/haproxy.cfg", use_sudo=True)
-            local("rm %s" %(tmp_fname))
-
-            # enable
-            with settings(host_string=openstack_host_string, warn_only=True):
-                sudo("chkconfig haproxy on")
-                sudo("service haproxy restart")
-
-# end fixup_restart_haproxy_in_all_openstack
 
 @task
 def setup_cfgm_node(*args):
     """Provisions config services in one or list of nodes. USAGE: fab setup_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
 
     for host_string in args:
-        # Enable settings for Ubuntu
         with  settings(host_string=host_string):
-            enable_haproxy()
-    nworkers = 1
-    fixup_restart_haproxy_in_all_cfgm(nworkers)
-
-    for host_string in args:
-        with  settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
-                with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-config.override')
-                    sudo('rm /etc/init/neutron-server.override')
-
             # Frame the command line to provision config node
             cmd = frame_vnc_config_cmd(host_string)
             # Execute the provision config script
-            with cd(INSTALLER_DIR):
-                sudo(cmd)
-
-            orch = get_orchestrator()
-            if orch == 'vcenter':
-                # Frame the command  to provision vcenter-plugin
-                vcenter_info = getattr(env, 'vcenter', None)
-                if not vcenter_info:
-                    print 'Error: vcenter block is not defined in testbed file.Exiting'
-                    return
-                cassandra_ip_list = [hstr_to_ip(get_control_host_string(\
-                    cassandra_host)) for cassandra_host in env.roledefs['database']]
-                cfgm_ip = get_contrail_internal_vip() or\
-                    hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
-                cmd = "setup-vcenter-plugin"
-                cmd += " --vcenter_url %s" % vcenter_info['server']
-                cmd += " --vcenter_username %s" % vcenter_info['username']
-                cmd += " --vcenter_password %s" % vcenter_info['password']
-                cmd += " --vcenter_datacenter %s" % vcenter_info['datacenter']
-                cmd += " --vcenter_dvswitch %s" % vcenter_info['dv_switch']['dv_switch_name']
-                if 'ipfabricpg' in vcenter_info.keys():
-                    cmd += " --vcenter_ipfabricpg %s" % vcenter_info['ipfabricpg']
-                else:
-                    # If unspecified, set it to default value
-                    cmd += " --vcenter_ipfabricpg contrail-fab-pg"
-                cmd += " --api_hostname %s" % cfgm_ip
-                cmd += " --api_port 8082"
-                zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
-                cmd += " --zookeeper_serverlist %s" % zk_servers_ports
-
-                # Execute the provision vcenter-plugin script
-                with cd(INSTALLER_DIR):
-                    sudo(cmd)
-
-    # HAPROXY fixups
-    haproxy = get_haproxy_opt()
-    if haproxy:
-        fixup_restart_haproxy_in_all_compute()
-        fixup_restart_haproxy_in_all_openstack()
+            sudo(cmd)
 #end setup_cfgm_node
 
-
-def fixup_ceilometer_conf_common():
-    conf_file = '/etc/ceilometer/ceilometer.conf'
-    amqp_server_ip = get_openstack_amqp_server()
-    sudo("openstack-config --set %s DEFAULT rabbit_host %s" % (conf_file, amqp_server_ip))
-    value = "/var/log/ceilometer"
-    sudo("openstack-config --set %s DEFAULT log_dir %s" % (conf_file, value))
-    value = "a74ca26452848001921c"
-    openstack_sku = get_openstack_sku()
-    if openstack_sku == 'havana':
-        sudo("openstack-config --set %s DEFAULT metering_secret %s" % (conf_file, value))
-    else:
-        sudo("openstack-config --set %s publisher metering_secret %s" % (conf_file, value))
-    sudo("openstack-config --set %s DEFAULT auth_strategy keystone" % conf_file)
-#end fixup_ceilometer_conf_common
-
-def fixup_ceilometer_conf_keystone(openstack_ip):
-    conf_file = '/etc/ceilometer/ceilometer.conf'
-    with settings(warn_only=True):
-        authtoken_config = sudo("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
-    if not authtoken_config:
-        config_cmd = "openstack-config --set %s keystone_authtoken" % conf_file
-        sudo("%s admin_password CEILOMETER_PASS" % config_cmd)
-        sudo("%s admin_user ceilometer" % config_cmd)
-        sudo("%s admin_tenant_name service" % config_cmd)
-        sudo("%s auth_uri http://%s:5000" % (config_cmd, openstack_ip))
-        sudo("%s auth_protocol http" % config_cmd)
-        sudo("%s auth_port 35357" % config_cmd)
-        sudo("%s auth_host %s" % (config_cmd, openstack_ip))
-        config_cmd = "openstack-config --set %s service_credentials" % conf_file
-        sudo("%s os_password CEILOMETER_PASS" % config_cmd)
-        sudo("%s os_tenant_name service" % config_cmd)
-        sudo("%s os_username ceilometer" % config_cmd)
-        sudo("%s os_auth_url http://%s:5000/v2.0" % (config_cmd, openstack_ip))
-#end fixup_ceilometer_conf_keystone
-
-def fixup_ceilometer_pipeline_conf(analytics_ip):
-    import yaml
-    rconf_file = '/etc/ceilometer/pipeline.yaml'
-    conf_file = 'pipeline.yaml'
-    ltemp_dir = tempfile.mkdtemp()
-    get(rconf_file, ltemp_dir)
-    with open('%s/%s' % (ltemp_dir, conf_file)) as fap:
-        data = fap.read()
-    pipeline_dict = yaml.safe_load(data)
-    # If already configured with 'contrail_source' and/or 'contrail_sink' exit
-    for source in pipeline_dict['sources']:
-        if source['name'] == 'contrail_source':
-            return
-    for sink in pipeline_dict['sinks']:
-        if sink['name'] == 'contrail_sink':
-            return
-    # Edit meters in sources to exclude floating IP meters if '*' is
-    # configured
-    for source in pipeline_dict['sources']:
-        for mname in source['meters']:
-            if mname == '*':
-                source['meters'].append('!ip.floating.*')
-                print('Excluding floating IP meters from source %s' % (source['name']))
-                break
-    # Add contrail source and sinks to the pipeline
-    contrail_source = {'interval': 600,
-                       'meters': ['ip.floating.receive.bytes',
-                                  'ip.floating.receive.packets',
-                                  'ip.floating.transmit.bytes',
-                                  'ip.floating.transmit.packets'],
-                       'name': 'contrail_source',
-                       'sinks': ['contrail_sink']}
-    contrail_source['resources'] = ['contrail://%s:8081/' % (analytics_ip)]
-    contrail_sink = {'publishers': ['rpc://'],
-                     'transformers': None,
-                     'name': 'contrail_sink'}
-    pipeline_dict['sources'].append(contrail_source)
-    pipeline_dict['sinks'].append(contrail_sink)
-    with open('%s/%s' % (ltemp_dir, conf_file), 'w') as fap:
-        yaml.safe_dump(pipeline_dict, fap, explicit_start=True,
-                   default_flow_style=False, indent=4)
-    rtemp_dir = sudo('(tempdir=$(mktemp -d); echo $tempdir)')
-    put('%s/%s' % (ltemp_dir, conf_file), rtemp_dir, use_sudo=True)
-    sudo('mv %s/%s %s' % (rtemp_dir, conf_file, rconf_file))
-    local('rm -rf %s' % (ltemp_dir))
-    sudo('rm -rf %s' % (rtemp_dir))
-#end fixup_ceilometer_pipeline_conf
+@task
+@EXECUTE_TASK
+@roles('cfgm')
+def setup_vcenter_plugin():
+    """Provisions vcenter plugin services in all nodes defined in cfgm role."""
+    orch = get_orchestrator()
+    if orch == 'vcenter':
+        if env.roledefs['cfgm']:
+            execute("setup_vcenter_plugin_node", env.host_string)
+@task
+def setup_vcenter_plugin_node(*args):
+    """Provisions vcenter plugin services in one or list of nodes. USAGE: fab setup_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        with  settings(host_string=host_string):
+            # Frame the command  to provision vcenter-plugin
+            cmd = frame_vnc_vcenter_plugin_cmd(host_string)
+            # Execute the provision vcenter-plugin script
+            sudo(cmd)
 
 def fixup_mongodb_conf_file():
     sudo("service mongodb stop")
@@ -686,59 +176,6 @@ def setup_ceilometer_mongodb(ip, mongodb_ip_list):
 #end setup_ceilometer_mongodb
 
 @task
-@roles('compute')
-def setup_ceilometer_compute():
-    """Provisions ceilometer compute services in all nodes defined in compute role."""
-    if env.roledefs['compute']:
-        execute("setup_ceilometer_compute_node", env.host_string)
-
-@task
-def setup_ceilometer_compute_node(*args):
-    """Provisions ceilometer compute services in one or list of nodes. USAGE: fab setup_ceilometer_compute_node:user@1.1.1.1,user@2.2.2.2"""
-    openstack_host = env.roledefs['openstack'][0]
-    for host_string in args:
-        with settings(host_string=host_string):
-            os_type = detect_ostype()
-            with settings(warn_only=True):
-                compute_ceilometer_present = sudo("grep '^instance_usage_audit =' /etc/nova/nova.conf").succeeded
-            if not compute_ceilometer_present:
-                config_cmd = "openstack-config --set /etc/nova/nova.conf DEFAULT"
-                sudo("%s notification_driver ceilometer.compute.nova_notifier" % config_cmd)
-                sudo("%s notification_driver nova.openstack.common.notifier.rpc_notifier" % config_cmd)
-                sudo("%s notify_on_state_change vm_and_task_state" % config_cmd)
-                sudo("%s instance_usage_audit_period hour" % config_cmd)
-                sudo("%s instance_usage_audit True" % config_cmd)
-                if os_type == 'ubuntu':
-                    nova_services = ['nova-compute']
-                elif os_type in ['redhat']:
-                    nova_services = ['openstack-nova-compute']
-                else:
-                    raise RuntimeError("Unsupported OS Type (%s)", os_type)
-                for svc in nova_services:
-                    sudo("service %s restart" % (svc))
-
-            if host_string != openstack_host:
-                # copy over ceilometer.conf from the first openstack node
-                conf_file = '/etc/ceilometer/ceilometer.conf'
-                local_tempdir = tempfile.mkdtemp()
-                with lcd(local_tempdir):
-                    with settings(host_string = openstack_host):
-                        get(conf_file, local_tempdir)
-                tempdir = sudo('(tempdir=$(mktemp -d); echo $tempdir)')
-                put('%s/ceilometer.conf' % (local_tempdir), tempdir, use_sudo=True)
-                sudo('mv %s/ceilometer.conf %s' % (tempdir, conf_file))
-                local('rm -rf %s' % (local_tempdir))
-                sudo('rm -rf %s' % (tempdir))
-                if os_type == 'ubuntu':
-                    ceilometer_services = ['ceilometer-agent-compute']
-                elif os_type in ['redhat']:
-                    ceilometer_services = ['openstack-ceilometer-compute']
-                else:
-                    raise RuntimeError("Unsupported OS Type (%s)", os_type)
-                for svc in ceilometer_services:
-                    sudo("service %s restart" % (svc))
-
-@task
 @roles('openstack')
 def setup_contrail_ceilometer_plugin():
     """Provisions contrail ceilometer plugin in the first node defined in openstack role."""
@@ -766,132 +203,10 @@ def setup_contrail_ceilometer_plugin_node(*args):
 
 @task
 @roles('openstack')
-def setup_ceilometer():
-    """Provisions ceilometer services in all nodes defined in openstack role."""
-    if env.roledefs['openstack'] and env.host_string == env.roledefs['openstack'][0]:
-        execute("setup_ceilometer_node", env.host_string)
-
-    execute("setup_image_service_node", env.host_string)
-    execute("setup_network_service_node", env.host_string)
-
-@task
-def setup_ceilometer_node(*args):
-    """Provisions ceilometer services in one or list of nodes. USAGE: fab setup_ceilometer_node:user@1.1.1.1,user@2.2.2.2"""
-    analytics_ip = hstr_to_ip(env.roledefs['collector'][0])
-    for host_string in args:
-        self_host = get_control_host_string(host_string)
-        self_ip = hstr_to_ip(self_host)
-
-        with settings(host_string=host_string):
-            openstack_sku = get_openstack_sku()
-
-            if openstack_sku == 'havana':
-                ceilometer_services = ['ceilometer-agent-central',
-                                       'ceilometer-api',
-                                       'ceilometer-collector']
-            else:
-                ceilometer_services = ['ceilometer-agent-central',
-                                       'ceilometer-agent-notification',
-                                       'ceilometer-api',
-                                       'ceilometer-collector',
-                                       'ceilometer-alarm-evaluator',
-                                       'ceilometer-alarm-notifier']
-            conf_file = "/etc/ceilometer/ceilometer.conf"
-            database_host_list = [get_control_host_string(entry)\
-                                     for entry in env.roledefs['database']]
-            database_ip_list = ["%s:27017" % (hstr_to_ip(db_host))\
-                                   for db_host in database_host_list]
-            database_ip_str = ','.join(database_ip_list)
-            value = "mongodb://ceilometer:CEILOMETER_DBPASS@" + database_ip_str + \
-                        "/ceilometer?replicaSet=rs-ceilometer"
-            if openstack_sku == 'havana':
-                sudo("openstack-config --set %s DEFAULT connection %s" % (conf_file, value))
-            else:
-                sudo("openstack-config --set %s database connection %s" % (conf_file, value))
-            fixup_ceilometer_conf_common()
-            #keystone auth params
-            cmd = "source /etc/contrail/openstackrc;keystone user-get ceilometer"
-            with settings(warn_only=True):
-                output = sudo(cmd)
-            count = 1
-            while not output.succeeded and (
-                    "Unable to establish connection" in output or
-                    "Service Unavailable (HTTP 503)" in output):
-                count += 1
-                if count > 10:
-                    raise RuntimeError("Unable to connect to keystone")
-                sleep(1)
-                with settings(warn_only=True):
-                    output = sudo(cmd)
-            if not output.succeeded:
-                sudo("source /etc/contrail/openstackrc;keystone user-create --name=ceilometer --pass=CEILOMETER_PASS --tenant=service --email=ceilometer@example.com")
-                sudo("source /etc/contrail/openstackrc;keystone user-role-add --user=ceilometer --tenant=service --role=admin")
-
-            fixup_ceilometer_conf_keystone(self_ip)
-
-            #create keystone service and endpoint
-            with settings(warn_only=True):
-                ceilometer_service_exists = sudo("source /etc/contrail/openstackrc;keystone service-list | grep ceilometer").succeeded
-            if not ceilometer_service_exists:
-                sudo("source /etc/contrail/openstackrc;keystone service-create --name=ceilometer --type=metering --description=\"Telemetry\"")
-                sudo("source /etc/contrail/openstackrc;keystone endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777 --region=RegionOne" %(self_ip, self_ip, self_ip))
-            # Fixup ceilometer pipeline cfg
-            fixup_ceilometer_pipeline_conf(analytics_ip)
-            for svc in ceilometer_services:
-                sudo("service %s restart" %(svc))
-#end setup_ceilometer_node
-
-@task
-def setup_network_service_node(*args):
-    """Provisions network services in one or list of nodes.
-       USAGE: fab setup_network_service_node:user@1.1.1.1,user@2.2.2.2"""
-    conf_file = '/etc/neutron/neutron.conf'
-    neutron_config = {'DEFAULT' : {'notification_driver' : 'neutron.openstack.common.notifier.rpc_notifier'}
-                     }
-    for section, key_values in neutron_config.iteritems():
-        for key, value in key_values.iteritems():
-            sudo("openstack-config --set %s %s %s %s" % (conf_file, section, key, value))
-    sudo("service neutron-server restart")
-#end setup_network_service_node
-
-@task
-def setup_image_service_node(*args):
-    """Provisions image services in one or list of nodes. USAGE: fab setup_image_service_node:user@1.1.1.1,user@2.2.2.2"""
-    amqp_server_ip = get_openstack_amqp_server()
-    for host_string in args:
-        openstack_sku = get_openstack_sku()
-
-        glance_configs = {'DEFAULT' : {'notification_driver' : 'messaging',
-                                       'rpc_backend' : 'rabbit',
-                                       'rabbit_host' : '%s' % amqp_server_ip,
-                                       'rabbit_password' : 'guest'}
-                        }
-        if openstack_sku == 'havana':
-            glance_configs['DEFAULT']['notifier_strategy'] = 'rabbit'
-            glance_configs['DEFAULT']['rabbit_userid'] = 'guest'
-
-        conf_file = "/etc/glance/glance-api.conf"
-        for section, key_values in glance_configs.iteritems():
-            for key, value in key_values.iteritems():
-                sudo("openstack-config --set %s %s %s %s" % (conf_file, section, key, value))
-        sudo("service glance-registry restart")
-        sudo("service glance-api restart")
-
-@task
-@roles('openstack')
 def setup_openstack():
     """Provisions openstack services in all nodes defined in openstack role."""
-    execute('add_openstack_reserverd_ports')
     if env.roledefs['openstack']:
         execute("setup_openstack_node", env.host_string)
-        # Blindly run setup_openstack twice for Ubuntu
-        #TODO Need to remove this finally
-        if detect_ostype() == 'ubuntu':
-            execute("setup_openstack_node", env.host_string)
-        if is_package_installed('contrail-openstack-dashboard'):
-            execute('setup_contrail_horizon_node', env.host_string)
-        if is_ceilometer_provision_supported():
-            setup_ceilometer()
 
 @task
 @roles('openstack')
@@ -947,84 +262,19 @@ def setup_nova_aggregate_node(*args):
                             continue # Services might be starting up after reboot
                     break # Stop retrying as the aggregate is created and compute is added.
 
-@roles('openstack')
-@task
-def setup_contrail_horizon():
-    if env.roledefs['openstack']:
-        if is_package_installed('contrail-openstack-dashboard'):
-            execute('setup_contrail_horizon_node', env.host_string)
-
 @task
 def setup_openstack_node(*args):
     """Provisions openstack services in one or list of nodes. USAGE: fab setup_openstack_node:user@1.1.1.1,user@2.2.2.2"""
-    #qpidd_changes_for_ubuntu()
-
     for host_string in args:
         # Frame the command line to provision openstack
         cmd = frame_vnc_openstack_cmd(host_string)
         # Execute the provision openstack script
         with  settings(host_string=host_string):
-            with cd(INSTALLER_DIR):
-                sudo(cmd)
+            sudo(cmd)
 #end setup_openstack_node
 
 @task
-def setup_contrail_horizon_node(*args):
-    '''
-    Configure horizon to pick up contrail customization
-    Based on OS and SKU type pick conf file in following order:
-    1. /etc/openstack-dashboard/local_settings.py
-    2. /etc/openstack-dashboard/local_settings
-    3. /usr/lib/python2.6/site-packages/openstack_dashboard/local/local_settings.py
-    '''
-    file_name = '/etc/openstack-dashboard/local_settings.py'
-    if not exists(file_name):
-        file_name = '/etc/openstack-dashboard/local_settings'
-    if not exists(file_name):
-        file_name = '/usr/lib/python2.6/site-packages/openstack_dashboard/local/local_settings.py'
-    if not exists(file_name):
-        return
-
-    pattern='^HORIZON_CONFIG.*customization_module.*'
-    line = '''HORIZON_CONFIG[\'customization_module\'] = \'contrail_openstack_dashboard.overrides\' '''
-    insert_line_to_file(pattern = pattern, line = line, file_name = file_name)
-
-    pattern = 'LOGOUT_URL.*'
-    if detect_ostype() == 'ubuntu':
-        line = '''LOGOUT_URL='/horizon/auth/logout/' '''
-        web_restart = 'service apache2 restart'
-    else:
-        line = '''LOGOUT_URL='/dashboard/auth/logout/' '''
-        web_restart = 'service httpd restart'
-
-    insert_line_to_file(pattern = pattern, line = line, file_name = file_name)
-
-    #HA settings
-    internal_vip = get_openstack_internal_vip()
-    if internal_vip:
-        with settings(warn_only=True):
-            hash_key = sudo("grep 'def hash_key' %s" % file_name).succeeded
-        if not hash_key:
-            # Add a hash generating function
-            sudo('sed -i "/^SECRET_KEY.*/a\    return new_key" %s' % file_name)
-            sudo('sed -i "/^SECRET_KEY.*/a\        new_key = m.hexdigest()" %s' % file_name)
-            sudo('sed -i "/^SECRET_KEY.*/a\        m.update(new_key)" %s' % file_name)
-            sudo('sed -i "/^SECRET_KEY.*/a\        m = hashlib.md5()" %s' % file_name)
-            sudo('sed -i "/^SECRET_KEY.*/a\    if len(new_key) > 250:" %s' % file_name)
-            sudo('sed -i "/^SECRET_KEY.*/a\    new_key = \':\'.join([key_prefix, str(version), key])" %s' % file_name)
-            sudo('sed -i "/^SECRET_KEY.*/a\def hash_key(key, key_prefix, version):" %s' % file_name)
-            sudo('sed -i "/^SECRET_KEY.*/a\import hashlib" %s' % file_name)
-            sudo('sed -i "/^SECRET_KEY.*/a\# To ensure key size of 250" %s' % file_name)
-        sudo("sed  -i \"s/'LOCATION' : '127.0.0.1:11211',/'LOCATION' : '%s:11211',/\" %s" % (hstr_to_ip(env.host_string), file_name))
-        with settings(warn_only=True):
-            if sudo("grep '\'KEY_FUNCTION\': hash_key,' %s" % file_name).failed:
-                sudo('sed -i "/\'LOCATION\'.*/a\       \'KEY_FUNCTION\': hash_key," %s' % file_name)
-        sudo("sed -i -e 's/OPENSTACK_HOST = \"127.0.0.1\"/OPENSTACK_HOST = \"%s\"/' %s" % (internal_vip,file_name))
-
-    sudo(web_restart)
-#end setup_contrail_horizon_node
-
-@task
+@EXECUTE_TASK
 @roles('collector')
 def setup_collector():
     """Provisions collector services in all nodes defined in collector role."""
@@ -1035,47 +285,15 @@ def setup_collector():
 def setup_collector_node(*args):
     """Provisions collector services in one or list of nodes. USAGE: fab setup_collector_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        #we need the redis to be listening on *, comment bind line
-        with  settings(host_string=host_string):
-            with settings(warn_only=True):
-                if detect_ostype() == 'ubuntu':
-                    sudo("service redis-server stop")
-                    sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
-                    #If redis passwd sepcified add that to the conf file
-                    if get_redis_password():
-                        sudo("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis/redis.conf")
-                    sudo("service redis-server start")
-                    #check if the redis-server is running, if not, issue start again
-                    count = 1
-                    while sudo("service redis-server status | grep not").succeeded:
-                        count += 1
-                        if count > 10:
-                            break
-                        sleep(1)
-                        sudo("service redis-server restart")
-                else:
-                    sudo("service redis stop")
-                    sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis.conf")
-                    #If redis passwd sepcified add that to the conf file
-                    if get_redis_password():
-                        sudo("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis.conf")
-                    sudo("chkconfig redis on")
-                    sudo("service redis start")
-
         # Frame the command line to provision collector
         cmd = frame_vnc_collector_cmd(host_string)
-
         # Execute the provision collector script
         with  settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
-                with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-analytics.override')
-            with cd(INSTALLER_DIR):
-                print cmd
-                sudo(cmd)
+            sudo(cmd)
 #end setup_collector
 
 @task
+@EXECUTE_TASK
 @roles('database')
 def fixup_mongodb_conf():
     """Fixup configuration file for mongodb in all nodes defined in database
@@ -1126,14 +344,11 @@ def setup_database_node(*args):
         cmd = frame_vnc_database_cmd(host_string)
         # Execute the provision database script
         with  settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
-                with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-database.override')
-            with cd(INSTALLER_DIR):
-                sudo(cmd)
+            sudo(cmd)
 #end setup_database
 
 @task
+@EXECUTE_TASK
 @roles('webui')
 def setup_webui():
     """Provisions webui services in all nodes defined in webui role."""
@@ -1144,77 +359,28 @@ def setup_webui():
 def setup_webui_node(*args):
     """Provisions webui services in one or list of nodes. USAGE: fab setup_webui_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        # If redis password is specified in testbed file, then add that to the
-        # redis config file
-        redis_password = get_redis_password()
-        if redis_password is not None:
-            if detect_ostype() == 'ubuntu':
-                redis_conf_path = '/etc/redis/redis.conf'
-                sudo("service redis-server stop")
-            else:
-                redis_conf_path = '/etc/redis.conf'
-                sudo("service redis stop")
-            sudo("sed -i '/^# requirepass/ c\ requirepass " +
-                redis_password + "' " + redis_conf_path)
         # Frame the command line to provision webui
         cmd = frame_vnc_webui_cmd(host_string)
         # Execute the provision webui script
         with  settings(host_string=host_string):
-            with settings(warn_only=True):
-                if detect_ostype() == 'ubuntu':
-                    sudo('rm /etc/init/supervisor-webui.override')
-                    sudo("service redis-server start")
-                    #check if the redis-server is running, if not, issue start again
-                    count = 1
-                    while sudo("service redis-server status | grep not").succeeded:
-                        count += 1
-                        if count > 10:
-                            break
-                        sleep(1)
-                        sudo("service redis-server start")
-                else:
-                    sudo("chkconfig redis on")
-                    sudo("service redis start")
-            with cd(INSTALLER_DIR):
-                sudo(cmd)
+            sudo(cmd)
 #end setup_webui
 
 @task
+@EXECUTE_TASK
 @roles('control')
 def setup_control():
     """Provisions control services in all nodes defined in control role."""
     if env.roledefs['control']:
         execute("setup_control_node", env.host_string)
 
-def fixup_irond_config(control_host_string):
-    control_ip = hstr_to_ip(get_control_host_string(control_host_string))
-    for config_host_string in env.roledefs['cfgm']:
-        with settings(host_string=config_host_string):
-            pfl = "/etc/ifmap-server/basicauthusers.properties"
-            # replace control-node and dns proc creds
-            sudo("sed -i -e '/%s:/d' -e '/%s.dns:/d' %s" \
-                      %(control_ip, control_ip, pfl))
-            sudo("echo '%s:%s' >> %s" \
-                         %(control_ip, control_ip, pfl))
-            sudo("echo '%s.dns:%s.dns' >> %s" \
-                         %(control_ip, control_ip, pfl))
-# end fixup_irond_config
-
 @task
 def setup_control_node(*args):
     """Provisions control services in one or list of nodes. USAGE: fab setup_control_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        fixup_irond_config(host_string)
         cmd = frame_vnc_control_cmd(host_string)
         with  settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
-                with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-control.override')
-                    sudo('rm /etc/init/supervisor-dns.override')
-            with cd(INSTALLER_DIR):
-                sudo(cmd)
-                if detect_ostype() in ['centos', 'redhat', 'fedora', 'centoslinux']:
-                    sudo("service contrail-control restart")
+            sudo(cmd)
 #end setup_control
 
 @task
@@ -1272,72 +438,53 @@ def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
        Even when we are no managing nova-compute (manage_nova_compute = no) still we execute few required config on
        nova.conf. If configure_nova = no; No nova config related configuration will executed on nova.conf file.
     """
+    manage_nova_compute = get_manage_nova_compute(manage_nova_compute)
+    configure_nova = get_configure_nova(configure_nova)
     if env.roledefs['compute']:
-       # Launching of VM is not surrently supported in TSN node.
-       # Not proviosning nova_compute incase the compute node is TSN.
-       if env.host_string in get_tsn_nodes():
-           manage_nova_compute='no'
-           configure_nova='no'
        if get_orchestrator() == 'vcenter':
            manage_nova_compute='no'
            configure_nova='no'
-       execute("setup_only_vrouter_node", manage_nova_compute, configure_nova,  env.host_string)
-       if is_ceilometer_compute_provision_supported():
-           execute("setup_ceilometer_compute_node", env.host_string)
+       execute("setup_only_vrouter_node",
+               manage_nova_compute,
+               configure_nova,
+               env.host_string)
 
 @task
 def setup_vrouter_node(*args):
     """Provisions nova-compute and vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
     execute("setup_only_vrouter_node", 'yes', 'yes', *args)
-    if is_ceilometer_compute_provision_supported():
-        execute("setup_ceilometer_compute_node", *args)
 
 @task
 def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *args):
     """Provisions only vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2
        If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute provisioning will be skipped.
     """
-    # make sure an agent pkg has been installed
-    #try:
-    #    sudo("yum list installed | grep contrail-agent")
-    #except SystemExit as e:
-    #    print "contrail-agent package not installed. Install it and then run setup_vrouter"
-    #    return
+    #metadata_secret = None
+    #orch = get_orchestrator()
+    #if orch == 'openstack':
+    #    ## reset openstack connections to create new connections
+    #    ## when running in parallel mode
+    #    #openstack_host = env.roledefs['openstack'][0]
+    #    #openstack_host_connection = openstack_host + ':22'
+    #    #if connections and openstack_host_connection in connections.keys():
+    #    #    connections.pop(openstack_host_connection)
 
-    metadata_secret = None
-    orch = get_orchestrator()
-    if orch == 'openstack':
-        # reset openstack connections to create new connections
-        # when running in parallel mode
-        openstack_host = env.roledefs['openstack'][0]
-        openstack_host_connection = openstack_host + ':22'
-        if connections and openstack_host_connection in connections.keys():
-            connections.pop(openstack_host_connection)
-
-        # Use metadata_secret provided in testbed. If not available
-        # retrieve neutron_metadata_proxy_shared_secret from openstack
-        metadata_secret = getattr(testbed,
-                                  'neutron_metadata_proxy_shared_secret',
-                                  None)
-        if not metadata_secret:
-            with settings(host_string=openstack_host):
-                status, secret = get_value('/etc/nova/nova.conf',
-                                     'DEFAULT',
-                                     'service_neutron_metadata_proxy',
-                                     'neutron_metadata_proxy_shared_secret')
-            metadata_secret = secret if status == 'True' else None
+    #    # Use metadata_secret provided in testbed. If not available
+    #    # retrieve neutron_metadata_proxy_shared_secret from openstack
+    #    metadata_secret = getattr(testbed,
+    #                              'neutron_metadata_proxy_shared_secret',
+    #                              None)
+    #    if not metadata_secret:
+    #        with settings(host_string=openstack_host):
+    #            status, secret = get_value('/etc/nova/nova.conf',
+    #                                 'DEFAULT',
+    #                                 'service_neutron_metadata_proxy',
+    #                                 'neutron_metadata_proxy_shared_secret')
+    #        metadata_secret = secret if status == 'True' else None
 
     for host_string in args:
-        # Enable haproxy for Ubuntu
-        with  settings(host_string=host_string):
-            enable_haproxy()
-        haproxy = get_haproxy_opt()
-        if haproxy:
-            # setup haproxy and enable
-            fixup_restart_haproxy_in_one_compute(host_string)
-
         # Frame the command line to provision compute node.
-        cmd = frame_vnc_compute_cmd(host_string, metadata_secret=metadata_secret,
+        cmd = frame_vnc_compute_cmd(host_string,
                                     manage_nova_compute=manage_nova_compute,
                                     configure_nova=configure_nova)
 
@@ -1349,12 +496,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
 
         # Execute the script to provision compute node.
         with  settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
-                with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-vrouter.override')
-            with cd(INSTALLER_DIR):
-                print cmd
-                sudo(cmd)
+            sudo(cmd)
 #end setup_vrouter
 
 @task
@@ -1608,195 +750,128 @@ def setup_remote_syslog_node(*args):
     return True
 # end setup_remote_syslog
 
+@task
+@EXECUTE_TASK
 @hosts(get_tsn_nodes())
-@task
-def add_tsn(restart= True):
-    """Add the TSN nodes. Enable the compute nodes (mentioned with role TSN in testbed file) with TSN functionality . USAGE: fab add_tsn."""
-    if 'tsn' in env.roledefs.keys():
-        execute("add_tsn_node", restart, env.host_string)
+def setup_tsn():
+    if get_tsn_nodes():
+        execute('setup_tsn_node', env.host_string)
 
 @task
-def add_tsn_node(restart=True,*args):
-    """Enable TSN functionality in particular node. USAGE: fab add_tsn_node."""
-
-    restart = (str(restart).lower() == 'true')
+def setup_tsn_node(*args):
     for host_string in args:
-        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
-        cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
-        cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
-        compute_host = get_control_host_string(host_string)
-        (tgt_ip, tgt_gw) = get_data_ip(host_string)
-        compute_mgmt_ip= host_string.split('@')[1]
-        compute_control_ip= hstr_to_ip(compute_host)
-        admin_tenant_name = get_keystone_admin_tenant_name()
+        # Frame the command line to provision tsn node.
+        cmd = frame_vnc_compute_cmd(host_string,
+                                    manage_nova_compute='no',
+                                    configure_nova='no',
+                                    cmd = 'setup-vnc-tsn')
+        sudo(cmd)
 
-        # Check if nova-compute is allready running
-        # Stop if running on TSN node
-        with settings(host_string=host_string, warn_only=True):
-            compute_hostname = sudo("hostname")
-            if sudo("service nova-compute status | grep running").succeeded:
-                # Stop the service
-                sudo("service nova-compute stop")
-                if detect_ostype() in ['ubuntu']:
-                    sudo('echo "manual" >> /etc/init/nova-compute.override')
-                else:
-                    sudo('chkconfig nova-compute off')
-                # Remove TSN node from nova manage service list
-                # Mostly require when converting an exiting compute to TSN
-                openstack_host = get_control_host_string(env.roledefs['openstack'][0])
-                with settings(host_string=openstack_host, warn_only=True):
-                    sudo("nova-manage service disable --host=%s --service=nova-compute" %(compute_hostname))
-        orch = get_orchestrator()
-        if orch is 'openstack':
-            admin_user, admin_password = get_openstack_credentials()
-        elif orch is 'vcenter':
-            admin_user, admin_password = get_vcenter_credentials()
-        keystone_ip = get_keystone_ip()
-        with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
-            prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
-                        "--admin_user %s --admin_password %s --admin_tenant_name %s --openstack_ip %s --router_type tor-service-node" \
-                        %(compute_hostname, compute_control_ip, cfgm_ip,
-                          admin_user, admin_password,
-                          admin_tenant_name, keystone_ip)
-            sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
-        with settings(host_string=host_string, warn_only=True):
-            nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
-            sudo("openstack-config --set %s DEFAULT agent_mode tsn" % nova_conf_file)
-            if restart:
-                sudo("service supervisor-vrouter restart")
+@task
+@EXECUTE_TASK
+@roles('cfgm')
+def create_toragent_haproxy():
+    execute('create_toragent_haproxy_node', env.host_string)
 
+def create_toragent_haproxy_node(*args):
+    for host_string in args:
+        for toragent_host in env.roledefs['toragent']:
+            toragent_dict = getattr(env, 'tor_agent', None)
+            if toragent_dict:
+                for i in range(len(toragent_dict[toragent_host])):
+                    cmd = 'setup-vnc-toragent-haproxy'
+                    cmd += ' --self_ip %s' % hstr_to_ip(get_control_host_string(toragent_host))
+                    cmd += ' --torid %s' % toragent_dict[toragent_host][i]['tor_id']
+                    cmd += ' --port %s' % toragent_dict[toragent_host][i]['tor_ovs_port']
+                    cmd += ' --standby_ip %s' % toragent_dict[toragent_host][i]['standby_tor_agent_ip']
+                    cmd += ' --standby_port %s' % toragent_dict[toragent_host][i]['standby_tor_agent_tor_ovs_port']
+                    sudo(cmd)
+
+@task
+@EXECUTE_TASK
 @hosts(get_toragent_nodes())
-@task
-def add_tor_agent(restart= True):
-    """Add the tor agent nodes. Enable the compute nodes (mentioned with role toragent in testbed file) with tor agent functionality . USAGE: fab add_tor."""
-    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():
-        execute("add_tor_agent_node", restart, env.host_string)
+def setup_toragent(manage_nova_compute='yes', configure_nova='yes', restart='yes'):
+    """Provisions vrouter/toragent services in all nodes defined in toragent role.
+       If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute provisioning will be skipped.
+       Even when we are no managing nova-compute (manage_nova_compute = no) still we execute few required config on
+       nova.conf. If configure_nova = no; No nova config related configuration will executed on nova.conf file.
+    """
+    if get_toragent_nodes():
+        execute('create_toragent_haproxy')
+        manage_nova_compute = get_manage_nova_compute(manage_nova_compute)
+        configure_nova = get_configure_nova(configure_nova)
+        if get_orchestrator() == 'vcenter':
+            manage_nova_compute='no'
+            configure_nova='no'
+        execute("setup_tor_agent_node",
+                manage_nova_compute,
+                configure_nova,
+                restart,
+                env.host_string)
 
 @task
-def add_tor_agent_node(restart=True, *args):
+def setup_tor_agent_node(restart='no', *args):
     """Enable tor agent functionality in particular node. USAGE: fab add_tor_agent_node."""
-    restart = (str(restart).lower() == 'true')
     for host_string in args:
         with settings(host_string=host_string):
+            # Frame the command line to provision compute node.
+            cmd = frame_vnc_compute_cmd(host_string,
+                                        manage_nova_compute='no',
+                                        configure_nova='no')
+            # Execute the provision compute script
+            sudo(cmd)
+
+            # Frame the command line to provision tsn node.
             toragent_dict = getattr(env,'tor_agent', None)
             for i in range(len(toragent_dict[host_string])):
-                # Populate the argument to pass for setup-vnc-tor-agent
-                tor_id= int(toragent_dict[host_string][i]['tor_id'])
-                tor_name= toragent_dict[host_string][i]['tor_name']
-                tor_tunnel_ip= toragent_dict[host_string][i]['tor_tunnel_ip']
-                tor_vendor_name= toragent_dict[host_string][i]['tor_vendor_name']
-                tsn_name=toragent_dict[host_string][i]['tor_tsn_name']
-                tor_mgmt_ip=toragent_dict[host_string][i]['tor_ip']
-                http_server_port = toragent_dict[host_string][i]['tor_http_server_port']
-                tgt_hostname = sudo("hostname")
-                tor_agent_host = get_control_host_string(host_string)
-                tor_agent_control_ip= hstr_to_ip(tor_agent_host)
-                # Default agent name
-                agent_name = tgt_hostname + '-' + str(tor_id)
-                # If tor_agent_name is not specified or if its value is not
-                # specified use default agent name
-                tor_agent_name = ''
-                if 'tor_agent_name' in toragent_dict[host_string][i]:
-                    tor_agent_name = toragent_dict[host_string][i]['tor_agent_name']
-                if tor_agent_name != None:
-                    tor_agent_name = tor_agent_name.strip()
-                if tor_agent_name == None or not tor_agent_name:
-                    tor_agent_name = agent_name
-
-                cmd = "setup-vnc-tor-agent"
-                cmd += " --self_ip %s" % tor_agent_control_ip
-                cmd += " --agent_name %s" % tor_agent_name
-                cmd += " --http_server_port %s" % http_server_port
-                cmd += " --discovery_server_ip %s" % hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
-                cmd += " --tor_id %s" % tor_id
-                cmd += " --tor_ip %s" % toragent_dict[host_string][i]['tor_ip']
-                cmd += " --tor_ovs_port %s" % toragent_dict[host_string][i]['tor_ovs_port']
-                cmd += " --tsn_ip %s" % toragent_dict[host_string][i]['tor_tsn_ip']
-                cmd += " --tor_ovs_protocol %s" % toragent_dict[host_string][i]['tor_ovs_protocol']
+                cmd = frame_vnc_toragent_cmd(host_string, torindex=i)
                 # Execute the provision toragent script
-                with cd(INSTALLER_DIR):
-                    sudo(cmd)
-                # In SSL mode, create the SSL cert and private key files
-                if toragent_dict[host_string][i]['tor_ovs_protocol'].lower() == 'pssl':
-                    domain_name = sudo("domainname -f")
-                    cert_file = "/etc/contrail/ssl/certs/tor." + str(tor_id) + ".cert.pem"
-                    privkey_file = "/etc/contrail/ssl/private/tor." + str(tor_id) + ".privkey.pem"
-                    ssl_files_copied_from_standby = False
+                sudo(cmd)
+            # In SSL mode, create the SSL cert and private key files
+            if toragent_dict[host_string][i]['tor_ovs_protocol'].lower() == 'pssl':
+                domain_name = sudo("domainname -f")
+                cert_file = "/etc/contrail/ssl/certs/tor." + str(tor_id) + ".cert.pem"
+                privkey_file = "/etc/contrail/ssl/private/tor." + str(tor_id) + ".privkey.pem"
+                # when we have HA configured for the agent, ensure that both
+                # TOR agents use same SSL certificates. Copy the created
+                # files to the corresponding HA node as well.
+                if ('standby_tor_agent_ip' in toragent_dict[host_string][i] and
+                    'standby_tor_agent_tor_id' in toragent_dict[host_string][i]):
+                    host_string = [host for host in env.roledefs['all']\
+                                   if toragent_dict[host_string][i]['standby_tor_agent_ip'] ==\
+                                   hstr_to_ip(get_control_host_string(host))]
+                    if host_string:
+                        ha_tor_id = str(toragent_dict[host_string][i]['standby_tor_agent_tor_id'])
+                        cert_ha_file = '/etc/contrail/ssl/certs/tor.' + ha_tor_id + '.cert.pem'
+                        priv_ha_file = '/etc/contrail/ssl/private/tor.' + ha_tor_id + '.privkey.pem'
+                        temp_cert_file = tempfile.mktemp()
+                        temp_priv_file = tempfile.mktemp()
+                        with settings(host_string=host_string[0]):
+                            if exists(cert_ha_file) and exists(priv_ha_file):
+                                get_as_sudo(cert_ha_file, temp_cert_file)
+                                get_as_sudo(priv_ha_file, temp_priv_file)
+                        if os.path.exists(temp_cert_file) and os.path.exists(temp_priv_file):
+                            put(temp_cert_file, cert_file, use_sudo=True)
+                            put(temp_priv_file, privkey_file, use_sudo=True)
+                            os.remove(temp_cert_file)
+                            os.remove(temp_priv_file)
+                            ssl_files_copied_from_standby = True
 
-                    # when we have HA configured for the agent, ensure that both
-                    # TOR agents use same SSL certificates. Copy the files
-                    # created on standby, if they are already created. Otherwise
-                    # generate the files.
-                    if 'standby_tor_agent_ip' in toragent_dict[host_string][i] and \
-                       'standby_tor_agent_tor_id' in toragent_dict[host_string][i]:
-                        for node in env.roledefs['all']:
-                            if hstr_to_ip(get_control_host_string(node)) == toragent_dict[host_string][i]['standby_tor_agent_ip']:
-                                ha_tor_id = str(toragent_dict[host_string][i]['standby_tor_agent_tor_id'])
-                                cert_ha_file = '/etc/contrail/ssl/certs/tor.' + ha_tor_id + '.cert.pem'
-                                priv_ha_file = '/etc/contrail/ssl/private/tor.' + ha_tor_id + '.privkey.pem'
-                                temp_cert_file = tempfile.mktemp()
-                                temp_priv_file = tempfile.mktemp()
-                                with settings(host_string=node):
-                                    if exists(cert_ha_file) and exists(priv_ha_file):
-                                        get(cert_ha_file, temp_cert_file)
-                                        get(priv_ha_file, temp_priv_file)
-                                if os.path.exists(temp_cert_file) and os.path.exists(temp_priv_file):
-                                    put(temp_cert_file, cert_file)
-                                    put(temp_priv_file, privkey_file)
-                                    os.remove(temp_cert_file)
-                                    os.remove(temp_priv_file)
-                                    ssl_files_copied_from_standby = True
-                                break
+                # Generate files if we didn't copy from standby
+                if not ssl_files_copied_from_standby:
+                    ssl_cmd = "openssl req -new -x509 -sha256 -newkey rsa:4096 -nodes -subj \"/C=US/ST=Global/L="
+                    ssl_cmd += tor_name + "/O=" + tor_vendor_name + "/CN=" + domain_name + "\""
+                    ssl_cmd += " -keyout " + privkey_file + " -out " + cert_file
+                    sudo(ssl_cmd)
 
-                    # Generate files if we didn't copy from standby
-                    if not ssl_files_copied_from_standby:
-                        ssl_cmd = "openssl req -new -x509 -sha256 -newkey rsa:4096 -nodes -subj \"/C=US/ST=Global/L="
-                        ssl_cmd += tor_name + "/O=" + tor_vendor_name + "/CN=" + domain_name + "\""
-                        ssl_cmd += " -keyout " + privkey_file + " -out " + cert_file
-                        sudo(ssl_cmd)
+                # if CA cert file is specified, copy it to the target
+                if ('ca_cert_file' in toragent_dict[host_string][i] and
+                    os.path.isfile(toragent_dict[host_string][i]['ca_cert_file'])):
+                    put(toragent_dict[host_string][i]['ca_cert_file'],
+                        '/etc/contrail/ssl/certs/cacert.pem', use_sudo=True)
 
-                    # if CA cert file is specified, copy it to the target
-                    if 'ca_cert_file' in toragent_dict[host_string][i] and \
-                        os.path.isfile(toragent_dict[host_string][i]['ca_cert_file']):
-                        put(toragent_dict[host_string][i]['ca_cert_file'], '/etc/contrail/ssl/certs/cacert.pem')
-
-                cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-                cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-                cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
-                cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
-                cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
-                compute_host = get_control_host_string(host_string)
-                (tgt_ip, tgt_gw) = get_data_ip(host_string)
-                compute_mgmt_ip= host_string.split('@')[1]
-                compute_control_ip= hstr_to_ip(compute_host)
-                admin_tenant_name = get_keystone_admin_tenant_name()
-                orch = get_orchestrator()
-                if orch is 'openstack':
-                    admin_user, admin_password = get_openstack_credentials()
-                elif orch is 'vcenter':
-                    admin_user, admin_password = get_vcenter_credentials()
-                keystone_ip = get_keystone_ip()
-                prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
-                            "--admin_user %s --admin_password %s --admin_tenant_name %s\
-                             --openstack_ip %s --router_type tor-agent" \
-                             %(tor_agent_name, compute_control_ip, cfgm_ip,
-                               admin_user, admin_password,
-                               admin_tenant_name, keystone_ip)
-                pr_args = "--device_name %s --vendor_name %s --device_mgmt_ip %s\
-                           --device_tunnel_ip %s --device_tor_agent %s\
-                           --device_tsn %s --api_server_ip %s --oper add\
-                           --admin_user %s --admin_password %s\
-                           --admin_tenant_name %s --openstack_ip %s"\
-                    %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
-                      tor_agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
-                      admin_tenant_name, keystone_ip)
-                with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
-                    sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
-                    sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
-            if restart:
-                sudo("supervisorctl -c /etc/contrail/supervisord_vrouter.conf update")
+    if restart == 'yes':
+	sudo("supervisorctl -c /etc/contrail/supervisord_vrouter.conf update")
 
 @task
 @hosts(env.roledefs['all'])
@@ -1834,12 +909,11 @@ def cleanup_remote_syslog_node():
 def setup_orchestrator():
     orch = get_orchestrator()
     if orch == 'openstack':
-        execute('increase_ulimits')
         execute('setup_openstack')
         if get_openstack_internal_vip():
             execute('sync_keystone_ssl_certs')
             execute('setup_cluster_monitors')
-        execute('verify_openstack')
+        #execute('verify_openstack')
     #setup_vcenter can be called outside of setup_all and need not be below. So commenting.
     #elif orch == 'vcenter':
         #execute('setup_vcenter')
@@ -1852,21 +926,18 @@ def setup_all(reboot='True'):
     execute('setup_common')
     execute('setup_ha')
     execute('setup_rabbitmq_cluster')
-    execute('increase_limits')
     execute('setup_database')
-    execute('verify_database')
     execute('fixup_mongodb_conf')
     execute('setup_mongodb_ceilometer_cluster')
-    execute('setup_orchestrator')
+    execute('setup_orchestrator') # openstack | vcenter
     execute('setup_cfgm')
-    execute('verify_cfgm')
+    execute('setup_vcenter_plugin') # Will be executed only in case of vcenter orch
     execute('setup_control')
-    execute('verify_control')
     execute('setup_collector')
-    execute('verify_collector')
     execute('setup_webui')
-    execute('verify_webui')
     execute('setup_vrouter')
+    execute('setup_tsn')
+    execute('setup_toragent')
     execute('prov_config_node')
     execute('prov_database_node')
     execute('prov_analytics_node')
@@ -1875,8 +946,6 @@ def setup_all(reboot='True'):
     execute('prov_metadata_services')
     execute('prov_encap_type')
     execute('setup_remote_syslog')
-    execute('add_tsn', restart=False)
-    execute('add_tor_agent', restart=False)
     execute('increase_vrouter_limit')
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
@@ -1897,18 +966,15 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     execute('setup_common')
     execute('setup_ha')
     execute('setup_rabbitmq_cluster')
-    execute('increase_limits')
     execute('setup_database')
-    execute('verify_database')
     execute('setup_cfgm')
-    execute('verify_cfgm')
+    execute('setup_vcenter_plugin') # Will be executed only in case of vcenter orch
     execute('setup_control')
-    execute('verify_control')
     execute('setup_collector')
-    execute('verify_collector')
     execute('setup_webui')
-    execute('verify_webui')
     execute('setup_vrouter', manage_nova_compute)
+    execute('setup_tsn')
+    execute('setup_toragent', manage_nova_compute)
     execute('prov_config_node')
     execute('prov_database_node')
     execute('prov_analytics_node')
@@ -1917,8 +983,6 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     execute('prov_metadata_services')
     execute('prov_encap_type')
     execute('setup_remote_syslog')
-    execute('add_tsn', restart=False)
-    execute('add_tor_agent', restart=False)
     execute('increase_vrouter_limit')
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
@@ -1942,15 +1006,10 @@ def setup_contrail_analytics_components(manage_nova_compute='no', reboot='False'
     execute('setup_common')
     execute('setup_ha')
     execute('setup_rabbitmq_cluster')
-    execute('increase_limits_no_control')
     execute('setup_database')
-    execute('verify_database')
     execute('setup_cfgm')
-    execute('verify_cfgm')
     execute('setup_collector')
-    execute('verify_collector')
     execute('setup_webui')
-    execute('verify_webui')
     execute('prov_config_node')
     execute('prov_database_node')
     execute('prov_analytics_node')
@@ -2069,21 +1128,15 @@ def reset_config():
         execute(stop_contrail_control_services)
         execute(cleanup_os_config)
         execute(setup_rabbitmq_cluster)
-        execute(increase_limits)
-        execute(increase_ulimits)
         execute(setup_database)
-        execute(verify_database)
         execute(fixup_mongodb_conf)
         execute(setup_mongodb_ceilometer_cluster)
         execute(setup_orchestrator)
         execute(setup_cfgm)
-        execute(verify_cfgm)
+        execute('setup_vcenter_plugin') # Will be executed only in case of vcenter orch
         execute(setup_control)
-        execute(verify_control)
         execute(setup_collector)
-        execute(verify_collector)
         execute(setup_webui)
-        execute(verify_webui)
         execute(stop_database)
         execute(delete_cassandra_db_files)
         execute(start_database)
@@ -2092,9 +1145,6 @@ def reset_config():
         execute(run_cmd, env.roledefs['cfgm'][0], "service supervisor-config restart")
         execute(start_cfgm)
         execute(restart_collector)
-        execute(add_tsn)
-        execute(add_tor_agent)
-        execute('increase_vrouter_limit')
         sleep(120)
     except SystemExit:
         execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
@@ -2110,6 +1160,9 @@ def reset_config():
     execute(prov_encap_type)
     execute(setup_remote_syslog)
     execute(setup_vrouter)
+    execute('setup_tsn')
+    execute('setup_toragent', manage_nova_compute)
+    execute('increase_vrouter_limit')
     execute(compute_reboot)
 #end reset_config
 
