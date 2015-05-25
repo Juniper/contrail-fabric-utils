@@ -248,7 +248,7 @@ class VMLauncher(object):
     def launch(self):
         if self.distro in ['ubuntu1204', 'ubuntu1404']:
             vm = DebianVM(self.vm_template)
-        elif self.distro in ['centos65', 'redhat']:
+        elif self.distro in ['centos65', 'redhat', 'centoslinux']:
             vm =RhelVM(self.vm_template)
         vm.create()
         return vm.vmi

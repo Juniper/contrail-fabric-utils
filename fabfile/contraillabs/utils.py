@@ -59,7 +59,7 @@ def cleanup_repo_node(*args):
                 sudo('echo >> /etc/apt/sources.list')
                 sudo('chmod 644 /etc/apt/sources.list')
                 sudo('apt-get update')
-            elif os_type in ['centos', 'redhat']:
+            elif os_type in ['centos', 'redhat', 'centoslinux']:
                 with cd('/etc/yum.repos.d/'):
                     with settings(warn_only=True):
                         with hide('everything'):

@@ -293,7 +293,7 @@ def setup_test_env():
         else:
             with settings(warn_only = True):
                 run('rm -rf /tmp/pip-build-root')
-                if detect_ostype() in ['centos', 'redhat']:
+                if detect_ostype() in ['centos', 'redhat', 'centoslinux']:
                     pkg = 'fixtures testtools testresources discover \
                         testrepository junitxml pytun'
                 elif 'ubuntu' == detect_ostype():
@@ -326,7 +326,7 @@ def setup_test_env():
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
-                if 'centos' == detect_ostype():
+                if detect_ostype() in ['centos', 'fedora', 'centoslinux']:
                     sudo("yum -y --disablerepo=* --enablerepo=contrail* install tcpdump")
                 if 'redhat' == detect_ostype():
                     sudo("yum -y install tcpdump")

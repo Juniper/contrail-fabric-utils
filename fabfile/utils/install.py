@@ -60,7 +60,7 @@ def get_compute_pkgs(manage_nova_compute='yes'):
     # Append only vrouter and contrail vrouter dependent packages
     # no need to append the contrail-openstack-vrouter, which when
     # installed will bring in nova-compute and its dependents.
-    if (manage_nova_compute == 'no' and ostype in ['centos', 'redhat']):
+    if (manage_nova_compute == 'no' and ostype in ['centos', 'redhat', 'fedora', 'centoslinux']):
         pkgs = ['contrail-vrouter-common',
                'openstack-utils',
                'contrail-nova-vif',
