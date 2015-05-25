@@ -39,10 +39,9 @@ env.roledefs = {
     'storage-master': [host1],
     'storage-compute': [host4, host5, host6, host7, host8, host9, host10],
     # 'vgw': [host4, host5], # Optional, Only to enable VGW. Only compute can support vgw
-    # 'tsn': [host1], # Optional, Only to enable TSN. Only compute can support TSN
-    # 'toragent': [host1], Optional, Only to enable Tor Agent. Only compute can
-    # support Tor Agent
-    #   'backup':[backup_node],  # only if the backup_node is defined
+    # 'tsn': [host1], # Optional
+    # 'toragent': [host1], # Optional
+    # 'backup':[backup_node],  # only if the backup_node is defined
 }
 
 env.hostnames = {
@@ -289,6 +288,8 @@ env.ostypes = {
 #    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
 #    'osapi_compute_workers' : 40,             #Default 40, For low memory system reduce the osapi compute workers thread.
 #    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
+#    'manage_nova_compute' : 'no',             # Default yes, Set to 'no' to skip provisioning nova-compute in compute nodes.
+#    'configure_nova' : 'no',                  # Default yes, Set to 'no' to configuration of nova.conf file
 #}
 
 # Link-Local Metadata Service

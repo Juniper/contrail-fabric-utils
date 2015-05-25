@@ -247,34 +247,6 @@ def setup_passwordless_ssh(*args):
 
 
 @task
-def add_reserved_ports_node(ports, *args):
-    for host_string in args:
-        with settings(host_string=host_string):
-            # Exclude ports from the available ephemeral port range
-            existing_ports = sudo("cat /proc/sys/net/ipv4/ip_local_reserved_ports")
-            sudo("sysctl -w net.ipv4.ip_local_reserved_ports=%s,%s" % (ports, existing_ports))
-            # Make the exclusion of port 35357 persistent
-            with settings(warn_only=True):
-                not_set = sudo("grep '^net.ipv4.ip_local_reserved_ports' /etc/sysctl.conf > /dev/null 2>&1").failed
-            if not_set:
-                sudo('echo "net.ipv4.ip_local_reserved_ports = %s" >> /etc/sysctl.conf' % ports)
-            else:
-                sudo("sed -i 's/net.ipv4.ip_local_reserved_ports\s*=\s*/net.ipv4.ip_local_reserved_ports=%s,/' /etc/sysctl.conf" % ports)
-
-            # Centos returns non zero return code for "sysctl -p".
-            # However the ports are reserved properly.
-            with settings(warn_only=True):
-                sudo("sysctl -p")
-
-@task
-@EXECUTE_TASK
-@roles('openstack')
-def add_openstack_reserverd_ports():
-    ports = '35357,35358,33306'
-    execute('add_reserved_ports_node', ports, env.host_string)
-
-
-@task
 @roles('build')
 def upgrade_biosdevname_all(reboot='yes'):
     """creates repo and upgrades biosdevname in Ubuntu"""

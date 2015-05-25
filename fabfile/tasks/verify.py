@@ -30,19 +30,6 @@ def verify_webui():
     #verify_service("contrail-webui-middleware")
 
 @task
-@roles('openstack')
-def verify_openstack():
-    verify_service("keystone")
-    for x in xrange(10):
-        with settings(warn_only=True):
-            output = sudo("source /etc/contrail/openstackrc; keystone tenant-list")
-        if output.failed:
-            sleep(10)
-        else:
-            return
-    raise OpenStackSetupError(output)
-
-@task
 @roles('cfgm')
 def verify_cfgm():
     verify_service("supervisor-config")

@@ -902,104 +902,6 @@ def setup_coremask_node(*args):
                 raise RuntimeError("Error: Core mask %s for host %s is invalid." \
                     %(coremask, host_string))
 
-@roles('openstack')
-@task
-def increase_ulimits():
-    '''
-    Increase ulimit in /etc/init.d/mysqld /etc/init/mysql.conf /etc/init.d/rabbitmq-server files
-    '''
-    with settings(warn_only = True):
-        if detect_ostype() == 'ubuntu':
-            sudo("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql") 
-            sudo("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
-            sudo("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
-            sudo("sed -i '/\[mysqld\]/a\max_connections = 10000' /etc/mysql/my.cnf")
-            sudo("echo 'ulimit -n 10240' >> /etc/default/rabbitmq-server")
-        else:
-            sudo("sed -i '/start(){/ a\    ulimit -n 10240' /etc/init.d/mysqld")
-            sudo("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
-            sudo("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/my.cnf")
-
-@roles('cfgm','database','control','collector')
-@task
-def increase_limits():
-    '''
-    Increase limits in /etc/security/limits.conf, sysctl.conf and /etc/contrail/supervisor*.conf files
-    '''
-    limits_conf = '/etc/security/limits.conf'
-    with settings(warn_only = True):
-        pattern='^root\s*soft\s*nproc\s*.*'
-        if detect_ostype() in ['ubuntu']:
-            line = 'root soft nofile 65535\nroot hard nofile 65535'
-        else:
-            line = 'root soft nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nofile\s*.*'
-        line = '* hard nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nofile\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nproc\s*.*'
-        line = '* hard nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nproc\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        sysctl_conf = '/etc/sysctl.conf'
-        insert_line_to_file(pattern = '^fs.file-max.*',
-                line = 'fs.file-max = 65535',file_name = sysctl_conf)
-        sudo('sysctl -p')
-
-        sudo('sed -i \'s/^minfds.*/minfds=10240/\' /etc/contrail/supervisor*.conf')
-
-#end increase_limits
-
-@roles('cfgm','database','collector')
-@task
-def increase_limits_no_control():
-    '''
-    Increase limits in /etc/security/limits.conf, sysctl.conf and /etc/contrail/supervisor*.conf files
-    '''
-    limits_conf = '/etc/security/limits.conf'
-    with settings(warn_only = True):
-        pattern='^root\s*soft\s*nproc\s*.*'
-        if detect_ostype() in ['ubuntu']:
-            line = 'root soft nofile 65535\nroot hard nofile 65535'
-        else:
-            line = 'root soft nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nofile\s*.*'
-        line = '* hard nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nofile\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nproc\s*.*'
-        line = '* hard nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nproc\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        sysctl_conf = '/etc/sysctl.conf'
-        insert_line_to_file(pattern = '^fs.file-max.*',
-                line = 'fs.file-max = 65535',file_name = sysctl_conf)
-        sudo('sysctl -p')
-
-        sudo('sed -i \'s/^minfds.*/minfds=10240/\' /etc/contrail/supervisor*.conf')
-
-#end increase_limits_no_control
-
 def insert_line_to_file(line,file_name,pattern=None):
     with settings(warn_only = True):
         if pattern:
@@ -1195,19 +1097,6 @@ def set_allow_unsupported_sfp():
         sudo("sed -i '/options ixgbe allow_unsupported_sfp/d' /etc/modprobe.d/ixgbe.conf")
         sudo('echo "options ixgbe allow_unsupported_sfp=1" >> /etc/modprobe.d/ixgbe.conf')
         sudo('rmmod ixgbe; modprobe ixgbe')
-
-@task
-@roles('all')
-def setup_common():
-    with settings(warn_only=True):
-        ntp_server = get_ntp_server()
-        if ntp_server is not None and\
-            exists('/etc/ntp.conf'):
-                ntp_chk_cmd = 'grep "server ' + ntp_server + '" /etc/ntp.conf'
-                ntp_chk_cmd_out = sudo(ntp_chk_cmd)
-                if ntp_chk_cmd_out == "":
-                    ntp_cmd = 'echo "server ' + ntp_server + '" >> /etc/ntp.conf'
-                    sudo(ntp_cmd)
 
 @task
 @roles('build')

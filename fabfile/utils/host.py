@@ -235,3 +235,9 @@ def get_nova_workers():
     osapi_compute_workers = get_from_testbed_dict('openstack', 'osapi_compute_workers', 40)
     conductor_workers = get_from_testbed_dict('openstack', 'conductor_workers', 40)
     return (osapi_compute_workers, conductor_workers)
+
+def get_manage_nova_compute(default='yes'):
+    return get_from_testbed_dict('openstack','manage_nova_compute', default)
+
+def get_configure_nova(default='yes'):
+    return get_from_testbed_dict('openstack','configure_nova', default)
