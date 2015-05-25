@@ -198,7 +198,7 @@ def upgrade_pkgs_node(*args):
                   /opt/contrail/python_packages/pycrypto-2.6.tar.gz;\
                   sudo easy_install \
                   /opt/contrail/python_packages/paramiko-1.11.0.tar.gz"
-            if detect_ostype() in ['centos', 'fedora', 'redhat']:
+            if detect_ostype() in ['centos', 'fedora', 'redhat', 'centoslinux']:
                 sudo(cmd)
 
 def yum_install(rpms, disablerepo = True):
@@ -595,7 +595,7 @@ def create_install_repo_from_tgz_node(host_string, *tgzs):
     for tgz in usable_tgz_files:
         with settings(host_string=host_string, warn_only=True):
             os_type = detect_ostype()
-        if os_type in ['centos', 'fedora', 'redhat']:
+        if os_type in ['centos', 'fedora', 'redhat', 'centoslinux']:
             execute(create_yum_repo_from_tgz_node, tgz, host_string)
         elif os_type in ['ubuntu']:
             execute(create_apt_repo_from_tgz_node, tgz, host_string)
@@ -660,7 +660,7 @@ def get_package_installation_time(os_type, package):
         cmd = "cd /var/lib/dpkg/info && find . -type f -name \"%s\.list\" " \
               "-exec sh -c \'pkg=$(echo \"$0\" | sed -e \"s|\./\(.*\)\.list|\\1|g\"); " \
               "echo $(stat -c \"%%Y\" \"$0\") $(dpkg-query -W -f=\"\\\${Version}\\n\" \"$pkg\")\' {} \;" % package
-    elif os_type in ['centos', 'redhat', 'fedora']:
+    elif os_type in ['centos', 'redhat', 'fedora', 'centoslinux']:
         cmd = "rpm -q --queryformat='%%{installtime} " \
               "%%{VERSION}-%%{RELEASE}.%%{ARCH}\\n' %s" % package
     else:
@@ -699,7 +699,7 @@ def reboot_on_kernel_update_without_openstack(reboot='True'):
         for key, values in nodes_version_info_act.items():
             nodes_version_info[key] = [(index0, ".".join(index1.split('.')[:-1]) + '-generic') \
                                        for index0, index1 in values]
-    elif os_type in ['centos', 'redhat', 'fedora']:
+    elif os_type in ['centos', 'redhat', 'fedora', 'centoslinux']:
         nodes_version_info = execute('get_package_installation_time', os_type, 'kernel')
     else:
         print '[%s]: WARNING: Unsupported OS type (%s)' % (env.host_string, os_type)
@@ -740,7 +740,7 @@ def reboot_on_kernel_update(reboot='True'):
         for key, values in nodes_version_info_act.items():
             nodes_version_info[key] = [(index0, ".".join(index1.split('.')[:-1]) + '-generic') \
                                        for index0, index1 in values]
-    elif os_type in ['centos', 'redhat', 'fedora']:
+    elif os_type in ['centos', 'redhat', 'fedora', 'centoslinux']:
         nodes_version_info = execute('get_package_installation_time', os_type, 'kernel')
     else:
         print '[%s]: WARNING: Unsupported OS type (%s)' % (env.host_string, os_type)
@@ -898,7 +898,7 @@ def install_webui_packages(source_dir):
             sudo('sudo chmod ugo+rx /usr/bin/chromedriver')
             sudo('sudo apt-get -y install libxpm4 libxrender1 libgtk2.0-0 libnss3 libgconf-2-4')
             sudo('sudo apt-get -y install google-chrome-stable')
-    elif detect_ostype() in ['centos', 'fedora', 'redhat']:
+    elif detect_ostype() in ['centos', 'fedora', 'redhat', 'centoslinux']:
         sudo('yum install -y xorg-x11-server-Xvfb')
         sudo('wget http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/33.0/linux-x86_64/en-US/firefox-33.0.tar.bz2')
         sudo('tar -xjvf firefox-33.0.tar.bz2')
