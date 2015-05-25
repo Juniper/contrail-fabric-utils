@@ -2142,7 +2142,46 @@ def add_esxi_to_vcenter(*args):
     (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
     provision_vcenter(vcenter_info, hosts, clusters, vms, 'True')
 
+@task
+def prov_vcenter_datastores():
+    vcenter_info = getattr(env, 'vcenter', None)
+    if not vcenter_info:
+        return
+    esxi_info = getattr(testbed, 'esxi_hosts', None)
+    if not esxi_info:
+        print 'Error: esxi_hosts block is not defined in testbed file.Exiting'
+        return
+    for esx in esxi_info:
+        host = esxi_info[esx]
+        host_string = host['username'] + '@' +  esx
+        ds = os.path.split(host['datastore'])
+        if not ds[1]:
+            ds = os.path.split(ds[0])
+        old_ds = 'datastore1'
+        if old_ds == ds[1]:
+            print 'Old and New names for datastore are same, skipping'
+            continue
+        new_ds = os.path.join(ds[0], ds[1])
+        ds = ds[0]
+        print 'renaming %s to %s' % (old_ds, new_ds)
+        with settings(host_string=host_string, password=host['password'],
+                      shell = '/bin/sh -l -c'):
+            run("ln -s `ls -l %s | grep %s | awk '{print $11}` %s" % (ds, old_ds, new_ds))
+
 @roles('build')
+@task
+def setup_vcenter_remote():
+    vcenter_info = getattr(env, 'vcenter', None)
+    if not vcenter_info:
+        print 'No vcenter, nothing to do'
+        return
+    host_string = env.roledefs['cfgm'][0]
+    passwd = env.passwords[host_string]
+    with settings(host_string=host_string, password=passwd):
+        put('fabfile/testbeds/testbed.py', '/opt/contrail/utils/fabfile/testbeds/testbed.py')
+        run('(cd /opt/contrail/utils/; fab setup_vcenter)')
+
+@hosts(env.roledefs['cfgm'][0])
 @task
 def setup_vcenter():
     vcenter_info = getattr(env, 'vcenter', None)
