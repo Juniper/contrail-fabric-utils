@@ -83,7 +83,7 @@ def uninstall_pkg_node(pkg, *args):
 
 def yum_uninstall(rpms):
     cmd = "rpm -e --nodeps "
-    if detect_ostype() in ['centos', 'fedora', 'redhat']:
+    if detect_ostype() in ['centos', 'fedora', 'redhat', 'centoslinux']:
         with settings(warn_only=True):
             sudo(cmd + ' '.join(rpms))
 

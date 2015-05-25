@@ -35,7 +35,7 @@ def get_openstack_sku(use_install_repo=False):
     dist = detect_ostype()
     if dist in ['ubuntu']:
         pkg = 'nova-common'
-    elif dist in ['centos', 'fedora', 'redhat']:
+    elif dist in ['centos', 'fedora', 'redhat', 'centoslinux']:
         pkg = 'openstack-nova-common'
     else:
         print "Unsupported OS type"
@@ -90,7 +90,7 @@ def get_build(pkg='contrail-install-packages'):
 def get_pkg_version_release(pkg='contrail-install-packages'):
     pkg_rel = None
     dist = detect_ostype()
-    if dist in ['centos', 'fedora', 'redhat']:
+    if dist in ['centos', 'fedora', 'redhat', 'centoslinux']:
         cmd = "rpm -q --queryformat '%%{VERSION}-%%{RELEASE}\\n' %s" % pkg
     elif dist in ['ubuntu']:
         cmd = "dpkg-query -W -f='${VERSION}\\n' %s" % pkg

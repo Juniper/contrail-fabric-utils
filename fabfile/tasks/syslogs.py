@@ -52,7 +52,7 @@ def install_pkg(pkgs):
     ostype = detect_ostype()
     for pkg in pkgs:
         with settings(warn_only = True):
-            if ostype in ['fedora', 'centos', 'redhat']:
+            if ostype in ['fedora', 'centos', 'redhat', 'centoslinux']:
                 sudo("yum -y install %s" % (pkg))
             elif ostype in ['ubuntu']:
                 sudo("DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes install %s" %(pkg))
