@@ -198,6 +198,10 @@ def setup_keepalived():
 def setup_openstack_keepalived():
     """Task to provision VIP for openstack nodes with keepalived"""
     enable_haproxy()
+    # HAProxy is moved to upstart. Stop any haproxy process which
+    # was started using init.d script (if any)
+    with settings(warn_only=True):
+        sudo("/etc/init.d/haproxy stop")
     sudo("service haproxy restart")
     setup_keepalived_node('openstack')
 
