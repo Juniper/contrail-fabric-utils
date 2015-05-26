@@ -778,6 +778,8 @@ def upgrade_webui_node(from_rel, pkg, *args):
             upgrade(from_rel, 'webui')
             execute('upgrade_pkgs_node', host_string)
             execute('fix_config_global_js_node', host_string, from_rel=from_rel)
+            if detect_ostype() == 'centos':
+                execute('start_redis_webui_node', host_string)
             execute('restart_webui_node', host_string)
 
 
