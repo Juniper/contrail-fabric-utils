@@ -47,10 +47,9 @@ def get_data_ip(host_str):
     return (tgt_ip, tgt_gw)
 #end get_data_ip
 
-def get_vlan_tag(device):
+def get_vlan_tag(device, host):
     hosts = getattr(testbed, 'control_data', None)
-    if hosts:
-        for host in hosts.keys():
-            if hosts[host]['device'] == device and hosts[host].has_key('vlan'):
-                return hosts[host]['vlan']
+    if hosts and host in hosts:
+        if hosts[host]['device'] == device and hosts[host].has_key('vlan'):
+            return hosts[host]['vlan']
     return None
