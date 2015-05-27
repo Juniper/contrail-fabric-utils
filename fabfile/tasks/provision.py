@@ -1669,12 +1669,23 @@ def add_tor_agent_node(restart=True, *args):
                 tor_mgmt_ip=toragent_dict[host_string][i]['tor_ip']
                 http_server_port = toragent_dict[host_string][i]['tor_http_server_port']
                 tgt_hostname = sudo("hostname")
-                agent_name= tgt_hostname + '-' + str(tor_id)
                 tor_agent_host = get_control_host_string(host_string)
                 tor_agent_control_ip= hstr_to_ip(tor_agent_host)
+                # Default agent name
+                agent_name = tgt_hostname + '-' + str(tor_id)
+                # If tor_agent_name is not specified or if its value is not
+                # specified use default agent name
+                tor_agent_name = ''
+                if 'tor_agent_name' in toragent_dict[host_string][i]:
+                    tor_agent_name = toragent_dict[host_string][i]['tor_agent_name']
+                if tor_agent_name != None:
+                    tor_agent_name = tor_agent_name.strip()
+                if tor_agent_name == None or not tor_agent_name:
+                    tor_agent_name = agent_name
+
                 cmd = "setup-vnc-tor-agent"
                 cmd += " --self_ip %s" % tor_agent_control_ip
-                cmd += " --agent_name %s" % agent_name
+                cmd += " --agent_name %s" % tor_agent_name
                 cmd += " --http_server_port %s" % http_server_port
                 cmd += " --discovery_server_ip %s" % hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
                 cmd += " --tor_id %s" % tor_id
@@ -1690,14 +1701,12 @@ def add_tor_agent_node(restart=True, *args):
                     domain_name = sudo("domainname -f")
                     cert_file = "/etc/contrail/ssl/certs/tor." + str(tor_id) + ".cert.pem"
                     privkey_file = "/etc/contrail/ssl/private/tor." + str(tor_id) + ".privkey.pem"
-                    ssl_cmd = "openssl req -new -x509 -sha256 -newkey rsa:4096 -nodes -subj \"/C=US/ST=Global/L="
-                    ssl_cmd += tor_name + "/O=" + tor_vendor_name + "/CN=" + domain_name + "\""
-                    ssl_cmd += " -keyout " + privkey_file + " -out " + cert_file
-                    sudo(ssl_cmd)
+                    ssl_files_copied_from_standby = False
 
                     # when we have HA configured for the agent, ensure that both
-                    # TOR agents use same SSL certificates. Copy the created
-                    # files to the corresponding HA node as well.
+                    # TOR agents use same SSL certificates. Copy the files
+                    # created on standby, if they are already created. Otherwise
+                    # generate the files.
                     if 'standby_tor_agent_ip' in toragent_dict[host_string][i] and \
                        'standby_tor_agent_tor_id' in toragent_dict[host_string][i]:
                         for node in env.roledefs['all']:
@@ -1707,14 +1716,24 @@ def add_tor_agent_node(restart=True, *args):
                                 priv_ha_file = '/etc/contrail/ssl/private/tor.' + ha_tor_id + '.privkey.pem'
                                 temp_cert_file = tempfile.mktemp()
                                 temp_priv_file = tempfile.mktemp()
-                                get(cert_file, temp_cert_file)
-                                get(privkey_file, temp_priv_file)
                                 with settings(host_string=node):
-                                    put(temp_cert_file, cert_ha_file)
-                                    put(temp_priv_file, priv_ha_file)
-                                os.remove(temp_cert_file)
-                                os.remove(temp_priv_file)
+                                    if exists(cert_ha_file) and exists(priv_ha_file):
+                                        get(cert_ha_file, temp_cert_file)
+                                        get(priv_ha_file, temp_priv_file)
+                                if os.path.exists(temp_cert_file) and os.path.exists(temp_priv_file):
+                                    put(temp_cert_file, cert_file)
+                                    put(temp_priv_file, privkey_file)
+                                    os.remove(temp_cert_file)
+                                    os.remove(temp_priv_file)
+                                    ssl_files_copied_from_standby = True
                                 break
+
+                    # Generate files if we didn't copy from standby
+                    if not ssl_files_copied_from_standby:
+                        ssl_cmd = "openssl req -new -x509 -sha256 -newkey rsa:4096 -nodes -subj \"/C=US/ST=Global/L="
+                        ssl_cmd += tor_name + "/O=" + tor_vendor_name + "/CN=" + domain_name + "\""
+                        ssl_cmd += " -keyout " + privkey_file + " -out " + cert_file
+                        sudo(ssl_cmd)
 
                     # if CA cert file is specified, copy it to the target
                     if 'ca_cert_file' in toragent_dict[host_string][i] and \
@@ -1736,7 +1755,7 @@ def add_tor_agent_node(restart=True, *args):
                 prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                             "--admin_user %s --admin_password %s --admin_tenant_name %s\
                              --openstack_ip %s --router_type tor-agent" \
-                             %(agent_name, compute_control_ip, cfgm_ip,
+                             %(tor_agent_name, compute_control_ip, cfgm_ip,
                                admin_user, admin_password,
                                admin_tenant_name, authserver_ip)
                 pr_args = "--device_name %s --vendor_name %s --device_mgmt_ip %s\
@@ -1745,7 +1764,7 @@ def add_tor_agent_node(restart=True, *args):
                            --admin_user %s --admin_password %s\
                            --admin_tenant_name %s --openstack_ip %s"\
                     %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
-                      agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
+                      tor_agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
                       admin_tenant_name, authserver_ip)
                 with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
                     sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
