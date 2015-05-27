@@ -9,7 +9,6 @@ from fabfile.tasks.install import apt_install, pkg_install
 def upgrade_kernel_all(*tgzs, **kwargs):
     """creates repo and upgrades kernel in Ubuntu"""
     reboot = kwargs.get('reboot', 'yes')
-    execute('pre_check')
     execute('create_installer_repo')
     execute('create_install_repo', *tgzs)
     nodes = []
