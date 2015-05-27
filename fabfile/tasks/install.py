@@ -419,7 +419,10 @@ def install_cfgm_node(*args):
     """Installs config pkgs in one or list of nodes. USAGE:fab install_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            pkg = ['contrail-openstack-config']
+            if get_orchestrator() is 'vcenter':
+                pkg = ['contrail-vmware-config']
+            else:
+                pkg = ['contrail-openstack-config']
             if detect_ostype() == 'ubuntu':
                 sudo('echo "manual" >> /etc/init/supervisor-config.override')
                 sudo('echo "manual" >> /etc/init/neutron-server.override')
