@@ -176,13 +176,19 @@ def setup_galera_cluster():
                       for galera_host in openstack_host_list]
     authserver_ip = get_authserver_ip()
     internal_vip = get_openstack_internal_vip()
+    external_vip = get_openstack_external_vip()
 
     with cd(INSTALLER_DIR):
-        sudo("setup-vnc-galera\
+        cmd = "setup-vnc-galera\
             --self_ip %s --keystone_ip %s --galera_ip_list %s\
-            --internal_vip %s --openstack_index %d" % ( self_ip, authserver_ip,
+            --internal_vip %s --openstack_index %d" % (self_ip, authserver_ip,
                 ' '.join(galera_ip_list), internal_vip,
-                (openstack_host_list.index(self_host) + 1)))
+                (openstack_host_list.index(self_host) + 1))
+
+        if external_vip:
+             cmd += ' --external_vip %s' % external_vip
+        sudo(cmd)
+
 
 @task
 def setup_keepalived():
@@ -459,7 +465,6 @@ def fix_cmon_param_and_add_keys_to_compute():
     amqps = 'DIPHOSTS=("' + '" "'.join(amqp_host_list) + '")'
     sudo("echo '%s' >> %s" % (amqps, cmon_param))
     sudo("echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % cmon_param)
-    sudo("echo 'EVIP="'%s'"' >> %s" % (get_openstack_external_vip(),cmon_param))
     id_rsa_pubs = {}
     if files.exists('~/.ssh', use_sudo=True):
         sudo('chmod 700 ~/.ssh')
