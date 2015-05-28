@@ -772,6 +772,7 @@ def setup_ceilometer():
 
     execute("setup_image_service_node", env.host_string)
     execute("setup_network_service_node", env.host_string)
+    execute("setup_identity_service_node", env.host_string)
 
 @task
 def setup_ceilometer_node(*args):
@@ -847,11 +848,28 @@ def setup_network_service_node(*args):
     conf_file = '/etc/neutron/neutron.conf'
     neutron_config = {'DEFAULT' : {'notification_driver' : 'neutron.openstack.common.notifier.rpc_notifier'}
                      }
-    for section, key_values in neutron_config.iteritems():
-        for key, value in key_values.iteritems():
-            sudo("openstack-config --set %s %s %s %s" % (conf_file, section, key, value))
-    sudo("service neutron-server restart")
+    for host_string in args:
+        for section, key_values in neutron_config.iteritems():
+            for key, value in key_values.iteritems():
+                sudo("openstack-config --set %s %s %s %s" % (conf_file, section, key, value))
+        sudo("service neutron-server restart")
 #end setup_network_service_node
+
+@task
+def setup_identity_service_node(*args):
+    """Provisions identity services in one or list of nodes.
+       USAGE: fab setup_identity_service_node:user@1.1.1.1,user@2.2.2.2"""
+    amqp_server_ip = get_openstack_amqp_server()
+    conf_file = '/etc/keystone/keystone.conf'
+    keystone_configs = {'DEFAULT' : {'notification_driver' : 'messaging',
+                                     'rabbit_host' : '%s' % amqp_server_ip}
+                      }
+    for host_string in args:
+        for section, key_values in keystone_configs.iteritems():
+            for key, value in key_values.iteritems():
+                sudo("openstack-config --set %s %s %s %s" % (conf_file, section, key, value))
+        sudo("service keystone restart")
+#end setup_identity_service_node
 
 @task
 def setup_image_service_node(*args):
@@ -875,6 +893,7 @@ def setup_image_service_node(*args):
                 sudo("openstack-config --set %s %s %s %s" % (conf_file, section, key, value))
         sudo("service glance-registry restart")
         sudo("service glance-api restart")
+#end setup_image_service_node
 
 @task
 @roles('openstack')
