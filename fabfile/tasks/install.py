@@ -14,7 +14,7 @@ from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator,\
 from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_compute_pkgs, get_ceilometer_plugin_pkgs, get_openstack_pkgs, \
      get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz_node, \
-     create_apt_repo_from_tgz_node
+     create_apt_repo_from_tgz_node, get_config_pkgs
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
@@ -419,10 +419,8 @@ def install_cfgm_node(*args):
     """Installs config pkgs in one or list of nodes. USAGE:fab install_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            if get_orchestrator() is 'openstack':
-                pkg = ['contrail-openstack-config']
-            if get_orchestrator() is 'vcenter':
-                pkg = ['contrail-vmware-config']
+            pkg = get_config_pkgs()
+
             if detect_ostype() == 'ubuntu':
                 sudo('echo "manual" >> /etc/init/supervisor-config.override')
                 sudo('echo "manual" >> /etc/init/neutron-server.override')
