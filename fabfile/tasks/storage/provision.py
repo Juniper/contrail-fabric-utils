@@ -123,7 +123,7 @@ def create_storage_setup_cmd(mode):
     cfm_ip = get_data_ip(cfm)[0]
     storage_master_password=get_env_passwords(env.roledefs['storage-master'][0])
     # Argument details
-    # storage-setup-mode - setup/unconfigure/reconfigure - First time 
+    # storage-setup-mode - setup/unconfigure/reconfigure - First time
     #                      setup/Remove all configuration/Do a reconfigure
     # storage-master - Storage master IP
     # storage-hostnames - hostnames of all the nodes (storage master +
@@ -207,6 +207,16 @@ def setup_nfs_live_migration(mode):
         storage_master_password=get_env_passwords(env.roledefs['openstack'][0])
         cfm = env.roledefs['cfgm'][0]
         cfm_ip = get_data_ip(cfm)[0]
+
+        # if mode is 'setup_lm', just setup openstack nova live-migration
+        # configuration alone. Ignore all NFS live-migration settings from
+        # testbed.py.
+        if mode == 'setup_lm':
+            mode = 'setup'
+            no_nfs = 1
+        else:
+            no_nfs = 0
+
         for entry in env.roledefs['openstack']:
             for sthostname, sthostentry in zip(env.hostnames['all'],
                                                     env.roledefs['all']):
@@ -242,7 +252,7 @@ def setup_nfs_live_migration(mode):
                 # storage-os-hosts - storage openstack hosts (except storage-master)
                 # storage-os-host-tokens - storage openstack hosts passwd list
                 cmd= "PASSWORD=%s setup-vnc-livemigration --storage-setup-mode %s --storage-master %s --storage-master-token %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s --nfs-live-migration %s  --storage-os-hosts %s --storage-os-host-tokens %s --fix-nova-uid %s" \
-                    %(storage_master_password, mode, storage_master_ip, storage_master_password, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), get_nfs_live_migration_opts(), ' '.join(storage_os_host_list), ' '.join(storage_os_pass_list), get_nova_uid_fix_opt())
+                    %(storage_master_password, mode, storage_master_ip, storage_master_password, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), get_nfs_live_migration_opts(no_nfs), ' '.join(storage_os_host_list), ' '.join(storage_os_pass_list), get_nova_uid_fix_opt())
                 print cmd
                 sudo(cmd)
 #end setup_nfs_live_migration_services
@@ -310,6 +320,14 @@ def setup_upgrade_storage():
     execute("setup_webui_storage", "upgrade")
 #end setup_storage
 
+# base openstack nova live-migration configuration
+@task
+@roles('build')
+def setup_livemigration():
+    """Provisions required contrail services in all nodes as per the role definition.
+    """
+    execute("setup_nfs_live_migration", "setup_op_lm")
+#end setup_livemigration
 
 @task
 @roles('build')
