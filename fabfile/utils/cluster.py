@@ -73,7 +73,11 @@ def get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list):
                    esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint,esxi_data['cluster']
                    hosts.append(esx_list)
                    modified_vm_name = vm_name+"-"+vcenter_info['datacenter']+"-"+esxi_data['ip']
-                   vms.append(modified_vm_name)
+                   if 'uplink' in esxi_data['contrail_vm'].keys():
+                       vm_info_list = modified_vm_name, esxi_data['contrail_vm']['uplink']
+                   else:
+                       vm_info_list = modified_vm_name, None
+                   vms.append(vm_info_list)
                else:
                    print 'Info: esxi_hosts block does not have the esxi host.Exiting'
                    return
