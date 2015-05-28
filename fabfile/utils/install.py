@@ -42,10 +42,11 @@ def get_compute_pkgs(manage_nova_compute='yes'):
        compute node.
     """
     ostype = detect_ostype()
-    if get_orchestrator() is 'openstack':
-        pkgs = ['contrail-openstack-vrouter']
+
     if get_orchestrator() is 'vcenter':
         pkgs = ['contrail-vmware-vrouter']
+    else:
+        pkgs = ['contrail-openstack-vrouter']
 
     if ostype in ['ubuntu']:
         # For Ubuntu, Install contrail-vrouter-generic package if one available for
@@ -58,10 +59,10 @@ def get_compute_pkgs(manage_nova_compute='yes'):
         # This order of installation matters, because in a node with
         # non recommended kernel installed, contrail-vrouter-dkms pkg
         # needs to get installed first before contrail-openstack-vrouter.
-        if get_orchestrator() is 'openstack':
-            pkgs = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
         if get_orchestrator() is 'vcenter':
             pkgs = [contrail_vrouter_pkg, 'contrail-vmware-vrouter']
+        else:
+            pkgs = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
 
     # Append only vrouter and contrail vrouter dependent packages
     # no need to append the contrail-openstack-vrouter, which when
@@ -91,6 +92,14 @@ def get_compute_pkgs(manage_nova_compute='yes'):
             pkgs.append('nova-docker')
 
     return pkgs
+
+def get_config_pkgs():
+     if get_orchestrator() is 'vcenter':
+         pkgs = ['contrail-vmware-config']
+     else:
+         pkgs = ['contrail-openstack-config']
+
+     return pkgs
 
 def get_openstack_ceilometer_pkgs():
     """ Returns the list of ceilometer packages used in a
