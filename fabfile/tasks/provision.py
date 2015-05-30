@@ -163,6 +163,8 @@ listen  rabbitmq 0.0.0.0:5673
                 local("sed -i -e '/^#contrail-config-marker-start/,/^#contrail-config-marker-end/d' %s" %(tmp_fname))
                 local("sed -i -e 's/frontend\s*main\s*\*:5000/frontend  main *:5001/' %s" %(tmp_fname))
                 local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" %(tmp_fname))
+                local('sed -i "/^global/a\\        tune.bufsize 16384" %s' % tmp_fname)
+                local('sed -i "/^global/a\\        tune.maxrewrite 1024" %s' % tmp_fname)
             # ...generate new ones
             cfg_file = open(tmp_fname, 'a')
             cfg_file.write(haproxy_config)
@@ -343,6 +345,8 @@ $__contrail_glance_apis__
                    %(tmp_fname))
             local("sed -i -e 's/*:5000/*:5001/' %s" %(tmp_fname))
             local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" %(tmp_fname))
+            local('sed -i "/^global/a\\        tune.bufsize 16384" %s' % tmp_fname)
+            local('sed -i "/^global/a\\        tune.maxrewrite 1024" %s' % tmp_fname)
         # ...generate new ones
         compute_haproxy = compute_haproxy_template.safe_substitute({
             '__contrail_hap_user__': 'haproxy',
@@ -428,6 +432,8 @@ $__contrail_quantum_servers__
                        %(tmp_fname))
                 local("sed -i -e 's/*:5000/*:5001/' %s" %(tmp_fname))
                 local("sed -i -e 's/ssl-relay 0.0.0.0:8443/ssl-relay 0.0.0.0:5002/' %s" %(tmp_fname))
+                local('sed -i "/^global/a\\        tune.bufsize 16384" %s' % tmp_fname)
+                local('sed -i "/^global/a\\        tune.maxrewrite 1024" %s' % tmp_fname)
             # ...generate new ones
             openstack_haproxy = openstack_haproxy_template.safe_substitute({
                 '__contrail_hap_user__': 'haproxy',
