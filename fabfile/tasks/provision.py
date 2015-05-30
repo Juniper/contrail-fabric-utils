@@ -1304,29 +1304,6 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
     #    print "contrail-agent package not installed. Install it and then run setup_vrouter"
     #    return
 
-    metadata_secret = None
-    orch = get_orchestrator()
-    if orch == 'openstack':
-        # reset openstack connections to create new connections
-        # when running in parallel mode
-        openstack_host = env.roledefs['openstack'][0]
-        openstack_host_connection = openstack_host + ':22'
-        if connections and openstack_host_connection in connections.keys():
-            connections.pop(openstack_host_connection)
-
-        # Use metadata_secret provided in testbed. If not available
-        # retrieve neutron_metadata_proxy_shared_secret from openstack
-        metadata_secret = getattr(testbed,
-                                  'neutron_metadata_proxy_shared_secret',
-                                  None)
-        if not metadata_secret:
-            with settings(host_string=openstack_host):
-                status, secret = get_value('/etc/nova/nova.conf',
-                                     'DEFAULT',
-                                     'service_neutron_metadata_proxy',
-                                     'neutron_metadata_proxy_shared_secret')
-            metadata_secret = secret if status == 'True' else None
-
     for host_string in args:
         # Enable haproxy for Ubuntu
         with  settings(host_string=host_string):
@@ -1337,7 +1314,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
             fixup_restart_haproxy_in_one_compute(host_string)
 
         # Frame the command line to provision compute node.
-        cmd = frame_vnc_compute_cmd(host_string, metadata_secret=metadata_secret,
+        cmd = frame_vnc_compute_cmd(host_string,
                                     manage_nova_compute=manage_nova_compute,
                                     configure_nova=configure_nova)
 
