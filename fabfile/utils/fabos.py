@@ -97,7 +97,7 @@ def get_pkg_version_release(pkg='contrail-install-packages'):
         cmd = "dpkg-query -W -f='${VERSION}\\n' %s" % pkg
     else:
         raise Exception("ERROR: Unknown dist (%s)" % dist)
-    pkg_rel = sudo(cmd) or None
+    pkg_rel = sudo(cmd)
     if pkg_rel.failed or 'is not installed' in pkg_rel or 'is not available' in pkg_rel:
         print "Package %s not installed." % pkg
         return None
