@@ -251,8 +251,7 @@ def frame_vnc_control_cmd(host_string, cmd='setup-vnc-control'):
     return cmd
 
 def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
-                          manage_nova_compute='yes', configure_nova='yes',
-                          metadata_secret=None):
+                          manage_nova_compute='yes', configure_nova='yes'):
     orch = get_orchestrator()
     ncontrols = len(env.roledefs['control'])
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
@@ -261,6 +260,7 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
     cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
     compute_host = get_control_host_string(host_string)
     (tgt_ip, tgt_gw) = get_data_ip(host_string)
+    metadata_secret = get_metadata_secret()
 
     compute_mgmt_ip= host_string.split('@')[1]
     compute_control_ip= hstr_to_ip(compute_host)
@@ -305,14 +305,16 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
         cmd += " --quantum_service_protocol %s" % get_quantum_service_protocol()
         cmd += " --keystone_admin_user %s" % ks_admin_user
         cmd += " --keystone_admin_password %s" % ks_admin_password
-        if metadata_secret:
-            cmd += " --metadata_secret %s" % metadata_secret
         if cpu_mode is not None:
             cmd += " --cpu_mode %s" % cpu_mode
             if cpu_mode == 'custom':
                 if cpu_model is None:
                     raise Exception('cpu model is required for custom cpu mode')
                 cmd += " --cpu_model %s" % cpu_model
+
+    # Add metadata_secret if available
+    if metadata_secret:
+        cmd += " --metadata_secret %s" % metadata_secret
 
     # HA arguments
     internal_vip = get_openstack_internal_vip()

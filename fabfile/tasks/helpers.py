@@ -444,8 +444,15 @@ def add_images(image=None):
         remote_gz = remote+".gz"
         glance_host = env.roledefs['openstack'][0]
         if 'docker' in loc:
-            # First docker compute
-            glance_host = env.hypervisor.keys()[0]
+            if env.get('hypervisor', None):
+                docker_nodes = filter(lambda node, hypervisor: hypervisor == 'docker',
+                                      env.hypervisor.items())
+                if docker_nodes:
+                    # First docker compute
+                    glance_host = docker_nodes[0][0]
+                else:
+                    print "No compute is provisioned with docker as hypervisor. Skipping..."
+                    continue
         with settings(host_string=glance_host):
             mount = None
             if '10.84' in env.host_string:
