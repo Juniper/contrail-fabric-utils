@@ -1,5 +1,7 @@
 """Private contrail task for setting up RDO in the openstack node."""
 
+from distutils.version import LooseVersion
+
 from fabfile.config import *
 from fabfile.utils.host import get_authserver_ip
 from fabfile.utils.cluster import reboot_nodes
@@ -47,11 +49,17 @@ def update_rhosp_node(reboot='True'):
 @roles('openstack')
 def setup_rhosp_node():
     """Set up RHOSP Node"""
+    mysql_passwd = 'juniper123'
     sudo('sudo yum install -y openstack-packstack')
-    sudo('packstack --allinone --mariadb-pw=juniper123 --use-epel=n --nagios-install=n')
-    openstack_password = getattr(env, 'openstack_admin_password', 'contrail123')
+    sudo('packstack --allinone --mariadb-pw=%s --use-epel=n --nagios-install=n' % mysql_passwd)
+    openstack_password = getattr(env, 'openstack_admin_password', 'c0ntrail123')
     sudo('source keystonerc_admin && keystone user-password-update --pass %s admin' % openstack_password)
     sudo("sed -i -e 's/export OS_PASSWORD=.*/export OS_PASSWORD=%s/' keystonerc_admin " % openstack_password)
+
+    # create mysql token file for use by contrail sanity scripts
+    sudo("mkdir -p /etc/contrail/")
+    sudo("echo %s > /etc/contrail/mysql.token" % mysql_passwd)
+
     with settings(warn_only=True):
         sudo("service openstack-nova-compute status")
     sudo("service openstack-nova-compute stop")
@@ -69,11 +77,19 @@ def setup_rhosp_node():
         if openstackrc_file.return_code != 0:
             sudo('mkdir -p /etc/contrail/')
             sudo("ln -s /root/keystonerc_admin /etc/contrail/openstackrc")
+
     cfgm_0_ip = testbed.env['roledefs']['cfgm'][0].split('@')[1]
+    # For juno, neutron_url is deprecated instead use "url" in neutron section
+    api_version = sudo("rpm -q --queryformat='%{VERSION}' openstack-nova-api")
+    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
+    if is_juno_or_higher:
+        sudo("openstack-config --set /etc/nova/nova.conf neutron url http://%s:9696" % cfgm_0_ip)
+    else:
+        sudo("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_url http://%s:9696" % cfgm_0_ip)
+
     authserver_ip = get_authserver_ip()
     sudo("source /etc/contrail/openstackrc; nova service-disable $(hostname) nova-compute")
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT network_api_class nova.network.neutronv2.api.API")
-    sudo("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_url http://%s:9696" % cfgm_0_ip)
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_admin_auth_url http://%s:35357/v2.0" % authserver_ip)
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT  compute_driver nova.virt.libvirt.LibvirtDriver")
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT  novncproxy_port 5999")
