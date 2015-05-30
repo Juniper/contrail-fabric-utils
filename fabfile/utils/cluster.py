@@ -1,7 +1,10 @@
+from distutils.version import LooseVersion
+
 from fabric.api import env, settings, run
 
 from fabos import detect_ostype, get_release, get_build
 from fabfile.config import *
+from fabfile.utils.config import get_value
 
 
 def get_orchestrator():
@@ -155,3 +158,50 @@ def get_toragent_nodes():
 
 def get_ntp_server():
     return getattr(env, 'ntp_server', None)
+
+def get_metadata_secret():
+    """ Retrieves metadata secret
+        1. if metadata secret is supplied in testbed, retrieve its value from testbed
+        2. if not defined in testbed, depending on orchestrator, retrieve it from
+           the first orchestrator node
+    """
+
+    metadata_secret = None
+    orch = get_orchestrator()
+    if orch.lower() == 'openstack':
+        openstack_host = env.roledefs['openstack'][0]
+
+        # Use metadata_secret provided in testbed. If not available
+        # retrieve metadata secret from openstack node
+        metadata_secret = getattr(testbed,
+                                  'neutron_metadata_proxy_shared_secret',
+                                  None)
+
+        if not metadata_secret:
+            with settings(host_string=openstack_host):
+                ostype = detect_ostype()
+                # For Juno, use service_metadata_proxy metadata_proxy_shared_secret
+                # from neutron section in /etc/nova/nova.conf
+                if ostype.lower() in ['centos', 'redhat', 'centoslinux']:
+                    api_version = sudo("rpm -q --queryformat='%{VERSION}' openstack-nova-api")
+                    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
+                elif ostype.lower() in ['ubuntu']:
+                    api_version = sudo("dpkg-query -W -f='${VERSION}' nova-api")
+                    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
+                else:
+                    raise RuntimeError('Unknown ostype (%s)" % ostype)
+
+                if is_juno_or_higher:
+                    status, secret = get_value('/etc/nova/nova.conf',
+                                               'neutron',
+                                               'service_metadata_proxy',
+                                               'metadata_proxy_shared_secret')
+                else:
+                    status, secret = get_value('/etc/nova/nova.conf',
+                                               'DEFAULT',
+                                               'service_neutron_metadata_proxy',
+                                               'neutron_metadata_proxy_shared_secret')
+            metadata_secret = secret if status == 'True' else None
+    else:
+        print "WARNING get_metadata_secret: Orchestrator(%s) is not supported" % orch
+    return metadata_secret
