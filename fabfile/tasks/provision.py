@@ -1038,48 +1038,68 @@ def setup_collector():
         execute("setup_collector_node", env.host_string)
 
 @task
-def setup_collector_node(*args):
-    """Provisions collector services in one or list of nodes. USAGE: fab setup_collector_node:user@1.1.1.1,user@2.2.2.2"""
+def setup_redis_server_node(*args):
+    """Provisions redis server in one or list of nodes.
+       USAGE: fab setup_redis_server_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        #we need the redis to be listening on *, comment bind line
-        with  settings(host_string=host_string):
+        # We need the redis to be listening on *, comment bind line
+        with settings(host_string=host_string):
             with settings(warn_only=True):
                 if detect_ostype() == 'ubuntu':
-                    sudo("service redis-server stop")
-                    sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis/redis.conf")
-                    #If redis passwd sepcified add that to the conf file
-                    if get_redis_password():
-                        sudo("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis/redis.conf")
-                    sudo("service redis-server start")
-                    #check if the redis-server is running, if not, issue start again
+                    redis_svc_name = 'redis-server'
+                    redis_conf_file = '/etc/redis/redis.conf'
+                    do_chkconfig = False
+                    check_svc_started = True
+                else:
+                    redis_svc_name = 'redis'
+                    redis_conf_file = '/etc/redis.conf'
+                    do_chkconfig = True
+                    check_svc_started = False
+
+                sudo("service %s stop" % (redis_svc_name))
+                sudo("sed -i -e '/^[ ]*bind/s/^/#/' %s" % (redis_conf_file))
+                # If redis passwd sepcified add that to the conf file
+                if get_redis_password():
+                    sudo("sed -i '/^# requirepass/ c\ requirepass %s' %s" % (get_redis_password(), redis_conf_file))
+                # Disable persistence
+                dbfilename = sudo("grep '^dbfilename' %s | awk '{print $2}'" % (redis_conf_file))
+                if dbfilename:
+                    dbdir = sudo("grep '^dir' %s | awk '{print $2}'" % (redis_conf_file))
+                    if dbdir:
+                        sudo("rm -f %s/%s" % (dbdir, dbfilename))
+                sudo("sed -i -e '/^[ ]*save/s/^/#/' %s" % (redis_conf_file))
+                sudo("sed -i -e '/^[ ]*dbfilename/s/^/#/' %s" % (redis_conf_file))
+                if do_chkconfig:
+                    sudo("chkconfig %s on" % (redis_svc_name))
+                sudo("service %s start" % (redis_svc_name))
+                if check_svc_started:
+                    # Check if the redis-server is running, if not, issue start again
                     count = 1
-                    while sudo("service redis-server status | grep not").succeeded:
+                    while sudo("service %s status | grep not" % (redis_svc_name)).succeeded:
                         count += 1
                         if count > 10:
                             break
                         sleep(1)
-                        sudo("service redis-server restart")
-                else:
-                    sudo("service redis stop")
-                    sudo("sed -i -e '/^[ ]*bind/s/^/#/' /etc/redis.conf")
-                    #If redis passwd sepcified add that to the conf file
-                    if get_redis_password():
-                        sudo("sed -i '/^# requirepass/ c\ requirepass "+ get_redis_password()+"' /etc/redis.conf")
-                    sudo("chkconfig redis on")
-                    sudo("service redis start")
+                        sudo("service %s restart" % (redis_svc_name))
+#end setup_redis_server_node
 
+@task
+def setup_collector_node(*args):
+    """Provisions collector services in one or list of nodes. USAGE: fab setup_collector_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        # Setup redis server
+        execute("setup_redis_server_node", host_string)
         # Frame the command line to provision collector
         cmd = frame_vnc_collector_cmd(host_string)
-
         # Execute the provision collector script
-        with  settings(host_string=host_string):
+        with settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     sudo('rm /etc/init/supervisor-analytics.override')
             with cd(INSTALLER_DIR):
                 print cmd
                 sudo(cmd)
-#end setup_collector
+#end setup_collector_node
 
 @task
 @roles('database')
@@ -1150,37 +1170,15 @@ def setup_webui():
 def setup_webui_node(*args):
     """Provisions webui services in one or list of nodes. USAGE: fab setup_webui_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        # If redis password is specified in testbed file, then add that to the
-        # redis config file
-        redis_password = get_redis_password()
-        if redis_password is not None:
-            if detect_ostype() == 'ubuntu':
-                redis_conf_path = '/etc/redis/redis.conf'
-                sudo("service redis-server stop")
-            else:
-                redis_conf_path = '/etc/redis.conf'
-                sudo("service redis stop")
-            sudo("sed -i '/^# requirepass/ c\ requirepass " +
-                redis_password + "' " + redis_conf_path)
+        # Setup redis server node
+        execute("setup_redis_server_node", host_string)
         # Frame the command line to provision webui
         cmd = frame_vnc_webui_cmd(host_string)
         # Execute the provision webui script
-        with  settings(host_string=host_string):
+        with settings(host_string=host_string):
             with settings(warn_only=True):
                 if detect_ostype() == 'ubuntu':
                     sudo('rm /etc/init/supervisor-webui.override')
-                    sudo("service redis-server start")
-                    #check if the redis-server is running, if not, issue start again
-                    count = 1
-                    while sudo("service redis-server status | grep not").succeeded:
-                        count += 1
-                        if count > 10:
-                            break
-                        sleep(1)
-                        sudo("service redis-server start")
-                else:
-                    sudo("chkconfig redis on")
-                    sudo("service redis start")
             with cd(INSTALLER_DIR):
                 sudo(cmd)
 #end setup_webui
