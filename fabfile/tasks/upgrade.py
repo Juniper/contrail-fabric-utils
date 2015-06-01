@@ -198,6 +198,7 @@ def upgrade_vcenter():
 def upgrade_contrail(from_rel, pkg, orch='yes'):
     """Upgrades all the contrail pkgs in all nodes.
     """
+    execute('pre_check')
     execute('install_pkg_all', pkg)
     execute('stop_cfgm')
     execute('stop_rabbitmq')

@@ -1110,11 +1110,18 @@ def delete_cassandra_db_files():
 @task
 @roles('build')
 def pre_check():
+    db = getattr(testbed, 'minimum_diskGB', None)
+    if not db:
+        print "\nERROR: Minimum disk space for analytics db is not set in testbed.py"
+        print "\tPlease set 'minimum_diskGB' in testbed.py and continue."
+        print "\tSpecifiy the avalilable disk space of database node in GB"
+        print "\tRecommended to use a database node with 256GB disk."
+        exit(1)
     database_nodes = deepcopy(env.roledefs['database'])
     if (len(database_nodes) % 2) != 1:
         print "\nERROR: \n\tRecommended to deploy odd number of zookeeper(database) nodes."
         print "\tAdd/remove a node to/from the existing clusters testbed.py and continue."
-        exit(0)
+        exit(1)
     execute('verify_time_all')
     if len(env.roledefs['openstack']) > 1 and not get_openstack_internal_vip():
         print "\nERROR: \n\tkeystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
