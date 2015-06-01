@@ -1289,6 +1289,8 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
         nodes = env.roledefs[contrail_role][:]
         esxi_hosts = getattr(testbed, 'esxi_hosts', None)
         if esxi_hosts:
+            sys.stdout.write('Skip status check for esxi setup.\n')
+            return 0
             for esxi in esxi_hosts:
                 nodes.remove(esxi_hosts[esxi]['contrail_vm']['host'])
                 nodes.append(esxi_hosts[esxi]['username']+'@'+esxi_hosts[esxi]['ip'])
