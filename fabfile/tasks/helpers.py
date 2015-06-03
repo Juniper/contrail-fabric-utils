@@ -16,6 +16,7 @@ from fabric.contrib.files import exists
 import datetime
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.utils.cluster import get_ntp_server
+from fabfile.utils.analytics import get_analytics_data_dir, get_minimum_diskGB
 
 @task
 @parallel
@@ -1144,14 +1145,30 @@ def delete_cassandra_db_files():
 
 
 @task
+@EXECUTE_TASK
+@roles('database')
+def check_disk_space():
+    data_dir = get_analytics_data_dir()
+    if not exists(data_dir, use_sudo=True):
+        return True
+    disk_cmd = "df -Pk " + data_dir + " | grep % | awk '{print $2}'"
+    total_disk = sudo(disk_cmd)
+    if (int(total_disk)/(1024*1024) < int(get_minimum_diskGB())):
+        return False
+    return True
+
+@task
 @roles('build')
 def pre_check():
-    db = getattr(testbed, 'minimum_diskGB', None)
-    if not db:
-        print "\nERROR: Minimum disk space for analytics db is not set in testbed.py"
+    result = execute('check_disk_space')
+    nodes_without_minimum_space = filter(lambda node: node != None,
+        map(lambda (node, met): node if not met else None, result.items()))
+    if nodes_without_minimum_space:
+        print "\nERROR: Minimum disk space(256GB) for analytics db is not met in nodes: %s"\
+            % nodes_without_minimum_space
         print "\tPlease set 'minimum_diskGB' in testbed.py and continue."
         print "\tSpecifiy the avalilable disk space of database node in GB"
-        print "\tRecommended to use a database node with 256GB disk."
+        print "\tHowever minimum disk space for database node is 256GB."
         exit(1)
     database_nodes = deepcopy(env.roledefs['database'])
     if (len(database_nodes) % 2) != 1:
