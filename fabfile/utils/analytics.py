@@ -24,7 +24,8 @@ def get_database_dir():
     return getattr(testbed, 'database_dir', None)
 
 def get_analytics_data_dir():
-    return getattr(testbed, 'analytics_data_dir', None)
+    return getattr(testbed, 'analytics_data_dir',
+                   '/var/lib/cassandra/data')
 
 def get_ssd_data_dir():
     return getattr(testbed, 'ssd_data_dir', None)
@@ -46,7 +47,7 @@ def get_analytics_flow_ttl():
 #end get_analytics_flow_ttl
 
 def get_minimum_diskGB():
-    return getattr(testbed, 'minimum_diskGB', None)
+    return getattr(testbed, 'minimum_diskGB', '256')
 #end get_analytics_flow_ttl
 
 def get_kafka_enabled():
