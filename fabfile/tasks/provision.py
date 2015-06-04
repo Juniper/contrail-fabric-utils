@@ -2172,7 +2172,7 @@ def prov_vcenter_datastores():
         return
     for esx in esxi_info:
         host = esxi_info[esx]
-        host_string = host['username'] + '@' +  esx
+        host_string = host['username'] + '@' +  host['ip']
         ds = os.path.split(host['datastore'])
         if not ds[1]:
             ds = os.path.split(ds[0])
