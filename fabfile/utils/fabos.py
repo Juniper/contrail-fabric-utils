@@ -156,3 +156,9 @@ def verify_command_succeeded(cmd, expected_output, error_str, max_count,
         else:
             output = sudo(cmd)
 #end verify_command_succeeded
+
+# Delete file
+def remove_file(file_name):
+    cmd = 'rm -f ' + file_name
+    sudo(cmd)
+#end remove_file

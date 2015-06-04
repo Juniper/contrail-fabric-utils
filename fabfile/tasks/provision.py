@@ -1681,122 +1681,304 @@ def add_tor_agent_node(restart=True, *args):
     for host_string in args:
         with settings(host_string=host_string):
             toragent_dict = getattr(env,'tor_agent', None)
+            for host_string in args:
+                execute("add_tor_agent_by_index", i, host_string, restart)
+
+@task
+def add_tor_agent_by_id(tid, node_info, restart=True):
+    '''Enable tor agent functionality for a particular tor in particular node.
+        USAGE: fab add_tor_agent_by_id:1,root@1.1.1.2
+    '''
+    host_string = node_info
+    toragent_dict = getattr(env,'tor_agent', None)
+    if not host_string in toragent_dict:
+        print 'tor-agent entry for %s does not exist in testbed file' \
+            %(host_string)
+        return
+    for i in range(len(toragent_dict[host_string])):
+        tor_id= int(toragent_dict[host_string][i]['tor_id'])
+        if int(tid) == tor_id:
+            execute("add_tor_agent_by_index", i, host_string, restart)
+
+@task
+def add_tor_agent_by_index_range(range_str, host_string, restart=True):
+    '''Enable tor agent functionality for a particular tor in particular node.
+        USAGE: fab add_tor_agent_by_index_range:0-4,root@1.1.1.2
+    '''
+    if not is_tor_agent_index_range_valid(range_str, host_string):
+       return
+    range_array = range_str.split('-')
+    for i in range(int(range_array[0]), (int(range_array[1]) + 1)):
+        execute("add_tor_agent_by_index", i, host_string, restart)
+
+@task
+def add_tor_agent_by_index(index, node_info, restart=True):
+    '''Enable tor agent functionality for a particular tor in particular node.
+        USAGE: fab add_tor_agent_by_index:0,root@1.1.1.2
+    '''
+    i = int(index)
+    host_string = node_info
+    with settings(host_string=host_string):
+        toragent_dict = getattr(env,'tor_agent', None)
+        # Populate the argument to pass for setup-vnc-tor-agent
+        tor_id= int(toragent_dict[host_string][i]['tor_id'])
+        tor_name= toragent_dict[host_string][i]['tor_name']
+        tor_tunnel_ip= toragent_dict[host_string][i]['tor_tunnel_ip']
+        tor_vendor_name= toragent_dict[host_string][i]['tor_vendor_name']
+        tsn_name=toragent_dict[host_string][i]['tor_tsn_name']
+        tor_mgmt_ip=toragent_dict[host_string][i]['tor_ip']
+        http_server_port = toragent_dict[host_string][i]['tor_http_server_port']
+        tgt_hostname = sudo("hostname")
+        tor_agent_host = get_control_host_string(host_string)
+        tor_agent_control_ip= hstr_to_ip(tor_agent_host)
+        # Default agent name
+        agent_name = tgt_hostname + '-' + str(tor_id)
+        # If tor_agent_name is not specified or if its value is not
+        # specified use default agent name
+        tor_agent_name = ''
+        if 'tor_agent_name' in toragent_dict[host_string][i]:
+            tor_agent_name = toragent_dict[host_string][i]['tor_agent_name']
+        if tor_agent_name != None:
+            tor_agent_name = tor_agent_name.strip()
+        if tor_agent_name == None or not tor_agent_name:
+            tor_agent_name = agent_name
+
+        cmd = "setup-vnc-tor-agent"
+        cmd += " --self_ip %s" % tor_agent_control_ip
+        cmd += " --agent_name %s" % tor_agent_name
+        cmd += " --http_server_port %s" % http_server_port
+        cmd += " --discovery_server_ip %s" % hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+        cmd += " --tor_id %s" % tor_id
+        cmd += " --tor_ip %s" % toragent_dict[host_string][i]['tor_ip']
+        cmd += " --tor_ovs_port %s" % toragent_dict[host_string][i]['tor_ovs_port']
+        cmd += " --tsn_ip %s" % toragent_dict[host_string][i]['tor_tsn_ip']
+        cmd += " --tor_ovs_protocol %s" % toragent_dict[host_string][i]['tor_ovs_protocol']
+        # Execute the provision toragent script
+        with cd(INSTALLER_DIR):
+            sudo(cmd)
+        # In SSL mode, create the SSL cert and private key files
+        if toragent_dict[host_string][i]['tor_ovs_protocol'].lower() == 'pssl':
+            domain_name = sudo("domainname -f")
+            cert_file = "/etc/contrail/ssl/certs/tor." + str(tor_id) + ".cert.pem"
+            privkey_file = "/etc/contrail/ssl/private/tor." + str(tor_id) + ".privkey.pem"
+            ssl_files_copied_from_standby = False
+
+            # when we have HA configured for the agent, ensure that both
+            # TOR agents use same SSL certificates. Copy the files
+            # created on standby, if they are already created. Otherwise
+            # generate the files.
+            if 'standby_tor_agent_ip' in toragent_dict[host_string][i] and \
+               'standby_tor_agent_tor_id' in toragent_dict[host_string][i]:
+                for node in env.roledefs['all']:
+                    if hstr_to_ip(get_control_host_string(node)) == toragent_dict[host_string][i]['standby_tor_agent_ip']:
+                        ha_tor_id = str(toragent_dict[host_string][i]['standby_tor_agent_tor_id'])
+                        cert_ha_file = '/etc/contrail/ssl/certs/tor.' + ha_tor_id + '.cert.pem'
+                        priv_ha_file = '/etc/contrail/ssl/private/tor.' + ha_tor_id + '.privkey.pem'
+                        temp_cert_file = tempfile.mktemp()
+                        temp_priv_file = tempfile.mktemp()
+                        with settings(host_string=node):
+                            if exists(cert_ha_file, use_sudo=True) and exists(priv_ha_file, use_sudo=True):
+                                get_as_sudo(cert_ha_file, temp_cert_file)
+                                get_as_sudo(priv_ha_file, temp_priv_file)
+                        if os.path.exists(temp_cert_file) and os.path.exists(temp_priv_file):
+                            put(temp_cert_file, cert_file)
+                            put(temp_priv_file, privkey_file)
+                            os.remove(temp_cert_file)
+                            os.remove(temp_priv_file)
+                            ssl_files_copied_from_standby = True
+                        break
+
+            # Generate files if we didn't copy from standby
+            if not ssl_files_copied_from_standby:
+                ssl_cmd = "openssl req -new -x509 -sha256 -newkey rsa:4096 -nodes -subj \"/C=US/ST=Global/L="
+                ssl_cmd += tor_name + "/O=" + tor_vendor_name + "/CN=" + domain_name + "\""
+                ssl_cmd += " -keyout " + privkey_file + " -out " + cert_file
+                sudo(ssl_cmd)
+
+            # if CA cert file is specified, copy it to the target
+            if 'ca_cert_file' in toragent_dict[host_string][i] and \
+                os.path.isfile(toragent_dict[host_string][i]['ca_cert_file']):
+                put(toragent_dict[host_string][i]['ca_cert_file'], '/etc/contrail/ssl/certs/cacert.pem')
+
+        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+        cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
+        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
+        cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
+        cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
+        compute_host = get_control_host_string(host_string)
+        (tgt_ip, tgt_gw) = get_data_ip(host_string)
+        compute_mgmt_ip= host_string.split('@')[1]
+        compute_control_ip= hstr_to_ip(compute_host)
+        admin_tenant_name = get_keystone_admin_tenant_name()
+        orch = get_orchestrator()
+        if orch is 'openstack':
+            admin_user, admin_password = get_openstack_credentials()
+        elif orch is 'vcenter':
+            admin_user, admin_password = get_vcenter_credentials()
+        keystone_ip = get_keystone_ip()
+        prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
+                    "--admin_user %s --admin_password %s --admin_tenant_name %s\
+                     --openstack_ip %s --router_type tor-agent" \
+                     %(tor_agent_name, compute_control_ip, cfgm_ip,
+                       admin_user, admin_password,
+                       admin_tenant_name, keystone_ip)
+        pr_args = "--device_name %s --vendor_name %s --device_mgmt_ip %s\
+                   --device_tunnel_ip %s --device_tor_agent %s\
+                   --device_tsn %s --api_server_ip %s --oper add\
+                   --admin_user %s --admin_password %s\
+                   --admin_tenant_name %s --openstack_ip %s"\
+            %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
+              tor_agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
+              admin_tenant_name, keystone_ip)
+        with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
+            sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
+            sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
+        if restart:
+            sudo("supervisorctl -c /etc/contrail/supervisord_vrouter.conf update")
+
+@hosts(get_toragent_nodes())
+@task
+def delete_tor_agent(restart= True):
+    '''Delete the tor agent nodes. Disable the compute nodes (mentioned with role
+       toragent in testbed file) with tor agent functionality.
+       USAGE: fab delete_tor_agent
+    '''
+    if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():
+        execute("delete_tor_agent_node", restart, env.host_string)
+
+@task
+def delete_tor_agent_node(restart=True, *args):
+    '''Disable tor agent functionality in particular node.
+        USAGE: fab delete_tor_agent_node.
+    '''
+    restart = (str(restart).lower() == 'true')
+    for host_string in args:
+        with settings(host_string=host_string):
+            toragent_dict = getattr(env,'tor_agent', None)
             for i in range(len(toragent_dict[host_string])):
-                # Populate the argument to pass for setup-vnc-tor-agent
-                tor_id= int(toragent_dict[host_string][i]['tor_id'])
-                tor_name= toragent_dict[host_string][i]['tor_name']
-                tor_tunnel_ip= toragent_dict[host_string][i]['tor_tunnel_ip']
-                tor_vendor_name= toragent_dict[host_string][i]['tor_vendor_name']
-                tsn_name=toragent_dict[host_string][i]['tor_tsn_name']
-                tor_mgmt_ip=toragent_dict[host_string][i]['tor_ip']
-                http_server_port = toragent_dict[host_string][i]['tor_http_server_port']
-                tgt_hostname = sudo("hostname")
-                tor_agent_host = get_control_host_string(host_string)
-                tor_agent_control_ip= hstr_to_ip(tor_agent_host)
-                # Default agent name
-                agent_name = tgt_hostname + '-' + str(tor_id)
-                # If tor_agent_name is not specified or if its value is not
-                # specified use default agent name
-                tor_agent_name = ''
-                if 'tor_agent_name' in toragent_dict[host_string][i]:
-                    tor_agent_name = toragent_dict[host_string][i]['tor_agent_name']
-                if tor_agent_name != None:
-                    tor_agent_name = tor_agent_name.strip()
-                if tor_agent_name == None or not tor_agent_name:
-                    tor_agent_name = agent_name
+                execute("delete_tor_agent_by_index", i, host_string, restart)
 
-                cmd = "setup-vnc-tor-agent"
-                cmd += " --self_ip %s" % tor_agent_control_ip
-                cmd += " --agent_name %s" % tor_agent_name
-                cmd += " --http_server_port %s" % http_server_port
-                cmd += " --discovery_server_ip %s" % hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
-                cmd += " --tor_id %s" % tor_id
-                cmd += " --tor_ip %s" % toragent_dict[host_string][i]['tor_ip']
-                cmd += " --tor_ovs_port %s" % toragent_dict[host_string][i]['tor_ovs_port']
-                cmd += " --tsn_ip %s" % toragent_dict[host_string][i]['tor_tsn_ip']
-                cmd += " --tor_ovs_protocol %s" % toragent_dict[host_string][i]['tor_ovs_protocol']
-                # Execute the provision toragent script
-                with cd(INSTALLER_DIR):
-                    sudo(cmd)
-                # In SSL mode, create the SSL cert and private key files
-                if toragent_dict[host_string][i]['tor_ovs_protocol'].lower() == 'pssl':
-                    domain_name = sudo("domainname -f")
-                    cert_file = "/etc/contrail/ssl/certs/tor." + str(tor_id) + ".cert.pem"
-                    privkey_file = "/etc/contrail/ssl/private/tor." + str(tor_id) + ".privkey.pem"
-                    ssl_files_copied_from_standby = False
+@task
+def delete_tor_agent_by_id(tid, node_info, restart=True):
+    '''Disable tor agent functionality for a particular tor in particular node.
+        USAGE: fab delete_tor_agent_by_id:1,root@1.1.1.2
+    '''
+    host_string = node_info
+    toragent_dict = getattr(env,'tor_agent', None)
+    if not host_string in toragent_dict:
+        print 'tor-agent entry for %s does not exist in testbed file' \
+            %(host_string)
+        return
+    for i in range(len(toragent_dict[host_string])):
+        tor_id= int(toragent_dict[host_string][i]['tor_id'])
+        if int(tid) == tor_id:
+            execute("delete_tor_agent_by_index", i, host_string, restart)
 
-                    # when we have HA configured for the agent, ensure that both
-                    # TOR agents use same SSL certificates. Copy the files
-                    # created on standby, if they are already created. Otherwise
-                    # generate the files.
-                    if 'standby_tor_agent_ip' in toragent_dict[host_string][i] and \
-                       'standby_tor_agent_tor_id' in toragent_dict[host_string][i]:
-                        for node in env.roledefs['all']:
-                            if hstr_to_ip(get_control_host_string(node)) == toragent_dict[host_string][i]['standby_tor_agent_ip']:
-                                ha_tor_id = str(toragent_dict[host_string][i]['standby_tor_agent_tor_id'])
-                                cert_ha_file = '/etc/contrail/ssl/certs/tor.' + ha_tor_id + '.cert.pem'
-                                priv_ha_file = '/etc/contrail/ssl/private/tor.' + ha_tor_id + '.privkey.pem'
-                                temp_cert_file = tempfile.mktemp()
-                                temp_priv_file = tempfile.mktemp()
-                                with settings(host_string=node):
-                                    if exists(cert_ha_file) and exists(priv_ha_file):
-                                        get(cert_ha_file, temp_cert_file)
-                                        get(priv_ha_file, temp_priv_file)
-                                if os.path.exists(temp_cert_file) and os.path.exists(temp_priv_file):
-                                    put(temp_cert_file, cert_file)
-                                    put(temp_priv_file, privkey_file)
-                                    os.remove(temp_cert_file)
-                                    os.remove(temp_priv_file)
-                                    ssl_files_copied_from_standby = True
-                                break
+@task
+def delete_tor_agent_by_index_range(range_str, host_string, restart=True):
+    '''Disable tor agent functionality for a particular tor in particular node.
+        USAGE: fab delete_tor_agent_by_index_range:0-4,root@1.1.1.2
+    '''
+    if not is_tor_agent_index_range_valid(range_str, host_string):
+       return
+    range_array = range_str.split('-')
+    for i in range(int(range_array[0]), (int(range_array[1]) + 1)):
+        execute("delete_tor_agent_by_index", i, host_string, restart)
 
-                    # Generate files if we didn't copy from standby
-                    if not ssl_files_copied_from_standby:
-                        ssl_cmd = "openssl req -new -x509 -sha256 -newkey rsa:4096 -nodes -subj \"/C=US/ST=Global/L="
-                        ssl_cmd += tor_name + "/O=" + tor_vendor_name + "/CN=" + domain_name + "\""
-                        ssl_cmd += " -keyout " + privkey_file + " -out " + cert_file
-                        sudo(ssl_cmd)
+@task
+def delete_tor_agent_by_index(index, node_info, restart=True):
+    '''Disable tor agent functionality in particular node.
+        USAGE: fab delete_tor_agent_by_index:0,root@1.1.1.2
+    '''
+    i = int(index)
+    host_string = node_info
+    with settings(host_string=host_string):
+        toragent_dict = getattr(env,'tor_agent', None)
+        if not host_string in toragent_dict:
+            print 'tor-agent entry for %s does not exist in testbed file' \
+                %(host_string)
+            return
+        if not i < len(toragent_dict[host_string]):
+            print 'tor-agent entry for host %s and index %d does not exist in '\
+                'testbed file' %(host_string, i)
+            return
+        # Populate the argument to pass for setup-vnc-tor-agent
+        tor_id= int(toragent_dict[host_string][i]['tor_id'])
+        tor_name= toragent_dict[host_string][i]['tor_name']
+        tor_vendor_name= toragent_dict[host_string][i]['tor_vendor_name']
+        tgt_hostname = sudo("hostname")
+        # Default agent name
+        agent_name = tgt_hostname + '-' + str(tor_id)
+        # If tor_agent_name is not specified or if its value is not
+        # specified use default agent name
+        tor_agent_name = ''
+        if 'tor_agent_name' in toragent_dict[host_string][i]:
+            tor_agent_name = toragent_dict[host_string][i]['tor_agent_name']
+        if tor_agent_name != None:
+            tor_agent_name = tor_agent_name.strip()
+        if tor_agent_name == None or not tor_agent_name:
+            tor_agent_name = agent_name
 
-                    # if CA cert file is specified, copy it to the target
-                    if 'ca_cert_file' in toragent_dict[host_string][i] and \
-                        os.path.isfile(toragent_dict[host_string][i]['ca_cert_file']):
-                        put(toragent_dict[host_string][i]['ca_cert_file'], '/etc/contrail/ssl/certs/cacert.pem')
+        # Stop tor-agent process
+        tor_process_name = 'contrail-tor-agent-' + str(tor_id)
+        cmd = 'service ' + tor_process_name + ' stop'
+        sudo(cmd)
 
-                cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-                cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-                cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
-                cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
-                cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
-                compute_host = get_control_host_string(host_string)
-                (tgt_ip, tgt_gw) = get_data_ip(host_string)
-                compute_mgmt_ip= host_string.split('@')[1]
-                compute_control_ip= hstr_to_ip(compute_host)
-                admin_tenant_name = get_keystone_admin_tenant_name()
-                orch = get_orchestrator()
-                if orch is 'openstack':
-                    admin_user, admin_password = get_openstack_credentials()
-                elif orch is 'vcenter':
-                    admin_user, admin_password = get_vcenter_credentials()
-                keystone_ip = get_keystone_ip()
-                prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
-                            "--admin_user %s --admin_password %s --admin_tenant_name %s\
-                             --openstack_ip %s --router_type tor-agent" \
-                             %(tor_agent_name, compute_control_ip, cfgm_ip,
-                               admin_user, admin_password,
-                               admin_tenant_name, keystone_ip)
-                pr_args = "--device_name %s --vendor_name %s --device_mgmt_ip %s\
-                           --device_tunnel_ip %s --device_tor_agent %s\
-                           --device_tsn %s --api_server_ip %s --oper add\
-                           --admin_user %s --admin_password %s\
-                           --admin_tenant_name %s --openstack_ip %s"\
-                    %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
-                      tor_agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
-                      admin_tenant_name, keystone_ip)
-                with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
-                    sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
-                    sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
-            if restart:
-                sudo("supervisorctl -c /etc/contrail/supervisord_vrouter.conf update")
+        # Remove tor-agent config file
+        tor_file_name = '/etc/contrail/' + tor_process_name + '.conf'
+        if exists(tor_file_name, use_sudo=True):
+            remove_file(tor_file_name)
+        # Remove tor-agent INI file used by supervisord
+        tor_ini_file_name = '/etc/contrail/supervisord_vrouter_files/' + tor_process_name + '.ini'
+        if exists(tor_ini_file_name, use_sudo=True):
+            remove_file(tor_ini_file_name)
+
+        # Remove tor-agent init file
+        tor_init_file = '/etc/init.d/' + tor_process_name
+        if exists(tor_init_file, use_sudo=True):
+            remove_file(tor_init_file)
+
+        # If SSL files generated for tor-agent exists, remove them
+        cert_file = "/etc/contrail/ssl/certs/tor." + str(tor_id) + ".cert.pem"
+        privkey_file = "/etc/contrail/ssl/private/tor." + str(tor_id) + ".privkey.pem"
+        if exists(cert_file, use_sudo=True):
+            remove_file(cert_file)
+        if exists(privkey_file, use_sudo=True):
+            remove_file(privkey_file)
+        if exists('/etc/contrail/ssl/certs/cacert.pem', use_sudo=True):
+            remove_file('/etc/contrail/ssl/certs/cacert.pem')
+
+        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+        cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
+        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
+        cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
+        cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
+        compute_host = get_control_host_string(host_string)
+        (tgt_ip, tgt_gw) = get_data_ip(host_string)
+        compute_mgmt_ip= host_string.split('@')[1]
+        compute_control_ip= hstr_to_ip(compute_host)
+        admin_tenant_name = get_keystone_admin_tenant_name()
+        orch = get_orchestrator()
+        if orch is 'openstack':
+            admin_user, admin_password = get_openstack_credentials()
+        elif orch is 'vcenter':
+            admin_user, admin_password = get_vcenter_credentials()
+        keystone_ip = get_keystone_ip()
+        prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper del " \
+                    "--admin_user %s --admin_password %s --admin_tenant_name %s\
+                     --openstack_ip %s" \
+                     %(tor_agent_name, compute_control_ip, cfgm_ip, admin_user,
+                       admin_password, admin_tenant_name, keystone_ip)
+        pr_args = "--device_name %s --vendor_name %s --api_server_ip %s\
+                   --oper del --admin_user %s --admin_password %s\
+                   --admin_tenant_name %s --openstack_ip %s"\
+            %(tor_name, tor_vendor_name, cfgm_ip, admin_user, admin_password,
+              admin_tenant_name, keystone_ip)
+        with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
+            sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
+            sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
+        if restart:
+            sudo("supervisorctl -c /etc/contrail/supervisord_vrouter.conf update")
 
 @task
 @hosts(env.roledefs['all'])
