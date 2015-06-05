@@ -41,11 +41,6 @@ def get_compute_pkgs(manage_nova_compute='yes'):
        compute node.
     """
     ostype = detect_ostype()
-    #if get_orchestrator() is 'vcenter':
-    #    pkgs = ['contrail-vmware-vrouter']
-    #else:
-    #    pkgs = ['contrail-openstack-vrouter']
-    
     pkgs = ['contrail-openstack-vrouter']
 
     if ostype in ['ubuntu']:
@@ -56,15 +51,11 @@ def get_compute_pkgs(manage_nova_compute='yes'):
 
         if env.host_string in getattr(env, 'dpdk', []):
             contrail_vrouter_pkg = 'contrail-vrouter-dpdk-init'
+
         # This order of installation matters, because in a node with
         # non recommended kernel installed, contrail-vrouter-dkms pkg
         # needs to get installed first before contrail-openstack-vrouter.
-        #if get_orchestrator() is 'vcenter':
-        #    pkgs = [contrail_vrouter_pkg, 'contrail-vmware-vrouter']
-        #else:
-        #    pkgs = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
-             
-            pkgs = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
+        pkgs = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
 
     # Append only vrouter and contrail vrouter dependent packages
     # no need to append the contrail-openstack-vrouter, which when
@@ -97,12 +88,6 @@ def get_compute_pkgs(manage_nova_compute='yes'):
 
 def get_config_pkgs():
      pkgs = ['contrail-openstack-config']
-     
-     #if get_orchestrator() is 'vcenter':
-     #    pkgs = ['contrail-vmware-config']
-     #else:
-     #    pkgs = ['contrail-openstack-config']
- 
      return pkgs
 
 def get_openstack_ceilometer_pkgs():
