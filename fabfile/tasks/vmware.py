@@ -189,6 +189,7 @@ def provision_dvs_fab(vcenter_info, esxi_info, host_list):
 
 @task
 def deprovision_vcenter(vcenter_info):
+    apt_install(['contrail-vmware-utils'])
     cleanup_vcenter(vcenter_info)
 
 @task
