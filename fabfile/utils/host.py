@@ -250,3 +250,26 @@ def get_nova_workers():
     osapi_compute_workers = get_from_testbed_dict('openstack', 'osapi_compute_workers', 40)
     conductor_workers = get_from_testbed_dict('openstack', 'conductor_workers', 40)
     return (osapi_compute_workers, conductor_workers)
+
+def is_tor_agent_index_range_valid(range_str, host_string):
+    toragent_dict = getattr(env,'tor_agent', None)
+    if not host_string in toragent_dict:
+        print 'tor-agent entry for %s does not exist in testbed file' \
+            %(host_string)
+        return False
+    if not "-" in range_str:
+        print "Invalid range %s" %(range_str)
+        return False
+    if range_str.startswith("-") or range_str.endswith("-"):
+        print "Invalid range %s" %(range_str)
+        return False
+    range_array = range_str.split('-')
+    if len(range_array) != 2 or int(range_array[0]) > int(range_array[1]):
+        print "Invalid range %s" %(range_str)
+        return False
+    if not int(range_array[1]) < len(toragent_dict[host_string]):
+        print "Index %d is more than the max permitted index in testbed file" \
+            % int(range_array[1])
+        return False
+    return True
+#end is_tor_agent_index_range_valid
