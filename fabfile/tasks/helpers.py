@@ -570,6 +570,28 @@ def add_basic_images(image=None):
 
 #end add_basic_images
 
+@task
+def verify_mysql_status(mysql_node):
+    """ Check for MySQL sync status."""
+    with settings(host_string=mysql_node):
+        retries = 10
+        while retries is not 0:
+            mysql_token = sudo('cat /etc/contrail/mysql.token', quiet=True).strip()
+            mysql_state = sudo('mysql -h localhost -uroot -p%s -e "show status \
+                        like \'wsrep_local_state\'" | grep wsrep_local_state | \
+                        awk \'{print $2\'}' % (mysql_token))
+
+            if mysql_state == "4":
+                return True
+            # If MySQL state is Joining or in Donor state, then wait for it to
+            # move to Synced state. Do not decrease the retry count.
+            if mysql_state != "1" and mysql_state != "2":
+                retries = retries - 1
+
+            sleep(12)
+        print "Galera cluster is not in Sync state - Current state %s" % mysql_state
+        return False
+
 @roles('compute')
 @task
 def virsh_cleanup():
