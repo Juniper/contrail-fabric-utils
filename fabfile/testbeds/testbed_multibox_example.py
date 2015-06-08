@@ -366,26 +366,22 @@ env.ostypes = {
 #Definition for the Key used
 #-------------------------------------
 # tor_ip: IP of the tor switch
-# tor_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
+# tor_agent_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
 # tor_type: Always ovs
-# tor_ovs_port: Port number to be used by ovs
+# tor_ovs_port: Port number to be used by ovs. If any redundant TOR Agent is
+#               specified for this tor-agent, it should have the same 'tor_ovs_port'
 # tor_ovs_protocol: Connection protocol between TOR Agent and TOR (tcp / pssl)
 # tor_tsn_ip: TSN node ip 
 # tor_tsn_name: Name of the TSN node
-# tor_name: Name of the tor switch 
+# tor_name: Name of the tor switch. If any redundant TOR Agent is specified for
+#           this tor-agent, it should have the same 'tor_name'
 # tor_tunnel_ip: Data plane IP for the tor switch
 # tor_vendor_name: Vendor type for TOR switch
-# tor_http_server_port: HTTP server port. Same will be used by tor agent for introspect
+# tor_agent_http_server_port: HTTP server port. Same will be used by tor agent for introspect
 # ca_cert_file: Path where the CA certificate file is stored on the node where fab is run.
 #               Fab copies the file to node where TOR agent is run.
 #               This is optional and is required only when tor_ovs_protocol is pssl.
 #               The certificates on the TOR are based on this CA cert.
-# standby_tor_agent_ip: IP of the TOR agent where redundant TOR Agent will run.
-#           This is optional and is required only when tor_ovs_protocol is pssl.
-# standby_tor_agent_tor_id: tor_id of the same TOR on the redundant node.
-#           This is optional and is required only when tor_ovs_protocol is pssl.
-# standby_tor_agent_tor_ovs_port: Port number used for OVS by the redundant TOR agent.
-#           This is optional and is required only when tor_ovs_protocol is pssl.
 #
 #env.tor_agent = {host10:[{
 #                    'tor_ip':'10.204.217.39',
@@ -400,9 +396,6 @@ env.ostypes = {
 #                    'tor_vendor_name':'Juniper'
 #                    'tor_http_server_port': '9010',
 #                    'ca_cert_file':'/root/ca_cert.pem',
-#                    'standby_tor_agent_ip':'10.204.217.100',
-#                    'standby_tor_agent_tor_id':'1',
-#                    'standby_tor_agent_tor_ovs_port':'9888',
 #                       }]
 #                }
 #######################################

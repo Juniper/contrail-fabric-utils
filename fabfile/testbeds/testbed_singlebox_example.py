@@ -295,7 +295,7 @@ env.ostypes = {
 #Definition for the Key used
 #-------------------------------------
 # tor_ip: IP of the tor switch
-# tor_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
+# tor_agent_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
 # tor_ovs_port: Port number to be used by ovs
 # tor_ovs_protocol: Connection protocol to be used by ovs. Currently only TCP
 # tor_tsn_ip: TSN node ip
