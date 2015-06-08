@@ -295,12 +295,14 @@ env.ostypes = {
 #Definition for the Key used
 #-------------------------------------
 # tor_ip: IP of the tor switch
-# tor_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
+# tor_agent_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
+# tor_agent_name: Unique name for TOR Agent. This is optional field. If this is
+#                 not specified name used will be <hostname>-<tor_agent_id>
 # tor_ovs_port: Port number to be used by ovs
 # tor_ovs_protocol: Connection protocol to be used by ovs. Currently only TCP
 # tor_tsn_ip: TSN node ip
 #env.tor_agent =
-#{host3:[{'tor_ip':'10.204.217.39','tor_id':'1','tor_ovs_port':'9999','tor_ovs_protocol':'tcp','tor_tsn_ip':'10.204.221.35'}]}
+#{host3:[{'tor_ip':'10.204.217.39','tor_agent_id':'1','tor_ovs_port':'9999','tor_ovs_protocol':'tcp','tor_tsn_ip':'10.204.221.35'}]}
 
 # OPTIONAL DPDK CONFIGURATION
 # ===========================
