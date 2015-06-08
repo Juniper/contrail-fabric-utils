@@ -141,7 +141,7 @@ listen  rabbitmq 0.0.0.0:5673
 
     # create TOR agent configuration for the HA proxy
     if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():
-        tor_agent_ha_config = get_all_tor_agent_haproxy_config(env.roledefs['toragent'])
+        tor_agent_ha_config = get_all_tor_agent_haproxy_config()
 
     for host_string in env.roledefs['cfgm']:
         haproxy_config = template.safe_substitute({
@@ -179,34 +179,93 @@ listen  rabbitmq 0.0.0.0:5673
 # end fixup_restart_haproxy_in_all_cfgm
 
 # Get HA proxy configuration for a TOR agent
-def get_tor_agent_haproxy_config(proxy_name, proxy_port, ip1, port1, ip2, port2):
+def get_tor_agent_haproxy_config(proxy_name, key, ha_dict):
     tor_agent_ha_config = '\n'
-    tor_agent_ha_config = tor_agent_ha_config + 'listen %s :%s\n' %(proxy_name, str(proxy_port))
+    port_list = ha_dict[key]
+    ha_dict_len = len(port_list)
+    if ha_dict_len == 0:
+        return tor_agent_ha_config
+    ip2 = None
+    if "-" in key:
+        ip1 = key.split('-')[0]
+        ip2 = key.split('-')[1]
+    else:
+        ip1 = key
+    tor_agent_ha_config = tor_agent_ha_config + 'listen %s\n' %(proxy_name)
     tor_agent_ha_config = tor_agent_ha_config + '    mode tcp\n'
-    tor_agent_ha_config = tor_agent_ha_config + '    server %s %s:%s\n' %(ip1, ip1, str(port1))
-    tor_agent_ha_config = tor_agent_ha_config + '    server %s %s:%s\n' %(ip2, ip2, str(port2))
+    tor_agent_ha_config = tor_agent_ha_config + '    bind :%s' %(port_list[0])
+    for i in range(1, ha_dict_len):
+        tor_agent_ha_config = tor_agent_ha_config + ',:%s' %(port_list[i])
+    tor_agent_ha_config = tor_agent_ha_config + '\n'
+    tor_agent_ha_config = tor_agent_ha_config + '    server %s %s\n' %(ip1, ip1)
+    if ip2 != None:
+        tor_agent_ha_config = tor_agent_ha_config + '    server %s %s\n' %(ip2, ip2)
+        tor_agent_ha_config = tor_agent_ha_config + '    balance leastconn\n'
     tor_agent_ha_config = tor_agent_ha_config + '\n'
     return tor_agent_ha_config
 #end get_tor_agent_haproxy_config
 
+def get_tor_agent_id(entry):
+    tor_id = -1
+    if 'tor_id' in entry:
+        tor_id= int(entry['tor_id'])
+    elif 'tor_agent_id' in entry:
+        tor_id= int(entry['tor_agent_id'])
+    else:
+        print 'tor-agent-id configuration is missing in testbed file'
+    return tor_id
+#end get_tor_agent_id
+
+# Given a host_string and tor_name, return the standby tor-agent info identified
+# by index and host-string of tor-agent
+def get_standby_info(skip_host, match_tor_name):
+    toragent_dict = getattr(env,'tor_agent', None)
+    tor_agent_host_list = get_toragent_nodes()
+    for host in tor_agent_host_list:
+        if host == skip_host:
+            continue
+        for i in range(len(toragent_dict[host])):
+            tor_name= toragent_dict[host][i]['tor_name']
+            if tor_name == match_tor_name:
+                return (i, host)
+    return (-1, None)
+#end get_standby_info
+
+def make_key(tsn1, tsn2):
+    if tsn1 < tsn2:
+        return tsn1 + "-" + tsn2
+    return tsn2 + "-" + tsn1
+
 # Get HA proxy configuration for all TOR agents
-def get_all_tor_agent_haproxy_config(*args):
-    tor_agent_ha_config = ''
-    for host_list in args:
-        for host_string in host_list:
-            with settings(host_string=host_string):
-                toragent_dict = getattr(env, 'tor_agent', None)
-                for i in range(len(toragent_dict[host_string])):
-                    if 'standby_tor_agent_ip' in toragent_dict[host_string][i] and \
-                        'standby_tor_agent_tor_ovs_port' in toragent_dict[host_string][i]:
-                        proxy_name = 'contrail-tor-agent-' + toragent_dict[host_string][i]['tor_id']
-                        ip1=hstr_to_ip(get_control_host_string(host_string))
-                        port1 = int(toragent_dict[host_string][i]['tor_ovs_port'])
-                        ip2 = toragent_dict[host_string][i]['standby_tor_agent_ip']
-                        port2 = int(toragent_dict[host_string][i]['standby_tor_agent_tor_ovs_port'])
-                        tor_agent_ha_config = tor_agent_ha_config + get_tor_agent_haproxy_config(proxy_name, port1, ip1, port1, ip2, port2)
-    return tor_agent_ha_config
-#end get_all_tor_agent_haproxy_config
+def get_all_tor_agent_haproxy_config():
+    toragent_dict = getattr(env,'tor_agent', None)
+    master_standby_dict = {}
+    tor_agent_host_list = get_toragent_nodes()
+    for host in tor_agent_host_list:
+        for i in range(len(toragent_dict[host])):
+            tor_name= toragent_dict[host][i]['tor_name']
+            tsn1 = toragent_dict[host][i]['tor_tsn_ip']
+            port1 = toragent_dict[host][i]['tor_ovs_port']
+            standby_tor_idx, standby_host = get_standby_info(host, tor_name)
+            if (standby_tor_idx != -1 and standby_host != None):
+                tsn2 = toragent_dict[standby_host][standby_tor_idx]['tor_tsn_ip']
+                port2 = toragent_dict[standby_host][standby_tor_idx]['tor_ovs_port']
+                if port1 == port2:
+                    key = make_key(tsn1, tsn2)
+            else:
+                key = tsn1
+            if not key in master_standby_dict:
+                master_standby_dict[key] = []
+            if not port1 in master_standby_dict[key]:
+                master_standby_dict[key].append(port1)
+    i = 1
+    cfg_str = ""
+    for key in master_standby_dict.keys():
+        proxy_name = "contrail-tor-agent-" + str(i)
+        i = i +  1
+        cfg_str = cfg_str + get_tor_agent_haproxy_config(proxy_name, key, master_standby_dict)
+    return cfg_str
+#end test_task
 
 @roles('cfgm')
 @task
@@ -1707,13 +1766,22 @@ def add_tor_agent_by_index(index, node_info, restart=True):
                 'in testbed file' %(host_string, i)
             return
         # Populate the argument to pass for setup-vnc-tor-agent
-        tor_id= int(toragent_dict[host_string][i]['tor_id'])
+        tor_id = int(get_tor_agent_id(toragent_dict[host_string][i]))
+        if tor_id == -1:
+            return
         tor_name= toragent_dict[host_string][i]['tor_name']
         tor_tunnel_ip= toragent_dict[host_string][i]['tor_tunnel_ip']
         tor_vendor_name= toragent_dict[host_string][i]['tor_vendor_name']
         tsn_name=toragent_dict[host_string][i]['tor_tsn_name']
         tor_mgmt_ip=toragent_dict[host_string][i]['tor_ip']
-        http_server_port = toragent_dict[host_string][i]['tor_http_server_port']
+        http_server_port = -1
+        if 'tor_http_server_port' in toragent_dict[host_string][i]:
+            http_server_port = toragent_dict[host_string][i]['tor_http_server_port']
+        elif 'tor_agent_http_server_port' in toragent_dict[host_string][i]:
+            http_server_port = toragent_dict[host_string][i]['tor_agent_http_server_port']
+        if http_server_port == -1:
+            print 'tor_agent_http_server_port configuration is missing in testbed file'
+            return
         tgt_hostname = sudo("hostname")
         tor_agent_host = get_control_host_string(host_string)
         tor_agent_control_ip= hstr_to_ip(tor_agent_host)
@@ -1747,33 +1815,28 @@ def add_tor_agent_by_index(index, node_info, restart=True):
             domain_name = sudo("domainname -f")
             cert_file = "/etc/contrail/ssl/certs/tor." + str(tor_id) + ".cert.pem"
             privkey_file = "/etc/contrail/ssl/private/tor." + str(tor_id) + ".privkey.pem"
-            ssl_files_copied_from_standby = False
-
             # when we have HA configured for the agent, ensure that both
             # TOR agents use same SSL certificates. Copy the files
             # created on standby, if they are already created. Otherwise
             # generate the files.
-            if 'standby_tor_agent_ip' in toragent_dict[host_string][i] and \
-               'standby_tor_agent_tor_id' in toragent_dict[host_string][i]:
-                for node in env.roledefs['all']:
-                    if hstr_to_ip(get_control_host_string(node)) == toragent_dict[host_string][i]['standby_tor_agent_ip']:
-                        ha_tor_id = str(toragent_dict[host_string][i]['standby_tor_agent_tor_id'])
-                        cert_ha_file = '/etc/contrail/ssl/certs/tor.' + ha_tor_id + '.cert.pem'
-                        priv_ha_file = '/etc/contrail/ssl/private/tor.' + ha_tor_id + '.privkey.pem'
-                        temp_cert_file = tempfile.mktemp()
-                        temp_priv_file = tempfile.mktemp()
-                        with settings(host_string=node):
-                            if exists(cert_ha_file, use_sudo=True) and exists(priv_ha_file, use_sudo=True):
-                                get_as_sudo(cert_ha_file, temp_cert_file)
-                                get_as_sudo(priv_ha_file, temp_priv_file)
-                        if os.path.exists(temp_cert_file) and os.path.exists(temp_priv_file):
-                            put(temp_cert_file, cert_file)
-                            put(temp_priv_file, privkey_file)
-                            os.remove(temp_cert_file)
-                            os.remove(temp_priv_file)
-                            ssl_files_copied_from_standby = True
-                        break
-
+            ssl_files_copied_from_standby = False
+            standby_tor_idx, standby_host = get_standby_info(host_string, tor_name)
+            if (standby_tor_idx != -1 and standby_host != None):
+                ha_tor_id = str(get_tor_agent_id(toragent_dict[standby_host][standby_tor_idx]))
+                cert_ha_file = '/etc/contrail/ssl/certs/tor.' + ha_tor_id + '.cert.pem'
+                priv_ha_file = '/etc/contrail/ssl/private/tor.' + ha_tor_id + '.privkey.pem'
+                temp_cert_file = tempfile.mktemp()
+                temp_priv_file = tempfile.mktemp()
+                with settings(host_string=standby_host):
+                    if exists(cert_ha_file, use_sudo=True) and exists(priv_ha_file, use_sudo=True):
+                        get_as_sudo(cert_ha_file, temp_cert_file)
+                        get_as_sudo(priv_ha_file, temp_priv_file)
+                if os.path.exists(temp_cert_file) and os.path.exists(temp_priv_file):
+                    put(temp_cert_file, cert_file)
+                    put(temp_priv_file, privkey_file)
+                    os.remove(temp_cert_file)
+                    os.remove(temp_priv_file)
+                    ssl_files_copied_from_standby = True
             # Generate files if we didn't copy from standby
             if not ssl_files_copied_from_standby:
                 ssl_cmd = "openssl req -new -x509 -sha256 -newkey rsa:4096 -nodes -subj \"/C=US/ST=Global/L="
@@ -1885,7 +1948,9 @@ def delete_tor_agent_by_index(index, node_info, restart=True):
                 'testbed file' %(host_string, i)
             return
         # Populate the argument to pass for setup-vnc-tor-agent
-        tor_id= int(toragent_dict[host_string][i]['tor_id'])
+        tor_id = int(get_tor_agent_id(toragent_dict[host_string][i]))
+        if tor_id == -1:
+            return
         tor_name= toragent_dict[host_string][i]['tor_name']
         tor_vendor_name= toragent_dict[host_string][i]['tor_vendor_name']
         tgt_hostname = sudo("hostname")
