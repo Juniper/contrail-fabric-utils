@@ -237,8 +237,9 @@ def setup_nfs_live_migration(mode):
 
         if storage_master_ip != cfm_ip:
             with  settings(host_string = storage_master, password = storage_master_password):
-                sudo('mkdir -p %s' %(os.path.dirname(get_ceph_nfs_migration_image())))
-                put(get_ceph_nfs_migration_image(), os.path.dirname(get_ceph_nfs_migration_image()), use_sudo=True)
+                if no_nfs == 0 and get_ext_nfs_migration_enable() != True:
+                    sudo('mkdir -p %s' %(os.path.dirname(get_ceph_nfs_migration_image())))
+                    put(get_ceph_nfs_migration_image(), os.path.dirname(get_ceph_nfs_migration_image()), use_sudo=True)
 
         with  settings(host_string = storage_master, password = storage_master_password):
             with cd(INSTALLER_DIR):
@@ -326,7 +327,7 @@ def setup_upgrade_storage():
 def setup_livemigration():
     """Provisions required contrail services in all nodes as per the role definition.
     """
-    execute("setup_nfs_live_migration", "setup_op_lm")
+    execute("setup_nfs_live_migration", "setup_lm")
 #end setup_livemigration
 
 @task
