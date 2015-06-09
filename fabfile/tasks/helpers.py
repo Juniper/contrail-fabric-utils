@@ -175,52 +175,83 @@ def all_reimage(build_param="@LATEST"):
 
 @roles('build')
 @task
-def all_sm_reimage(build_param=None):
+def all_sm_reimage(build_param=None,smgr_client='/cs-shared/server-manager/client/server-manager'):
     hosts = env.roledefs['all'][:]
     esxi_hosts = getattr(testbed, 'esxi_hosts', None)
-    if esxi_hosts:
-        for esxi in esxi_hosts:
-            hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
-    for host in hosts:
-        hostname = None
-        for i in range(5):
-            try:
-                hostname = socket.gethostbyaddr( hstr_to_ip(host))[0].split('.')[0]
-            except socket.herror:
-                sleep(5)
-                continue
-            else:
-                break
-        if not hostname:
-            print "Unable to resolve %s" % (host)
-            sys.exit(1)
+    cluster_id=None
+    try:
+        cluster_id=env.cluster_id
+    except:
+        sys.stdout.write('No cluster_id specified in testbed file.\n')        
+        sys.stdout.write('Reimage will be done on per node basis.\n')
+
+    if ((cluster_id is not None) and (not esxi_hosts)):
+        reimage_cmd=smgr_client + ' reimage --no_confirm --cluster_id '
         if build_param is not None:
             with settings(warn_only=True):
-                local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (hostname,build_param))
+                reimage_cmd = reimage_cmd + '%s %s' % (cluster_id,build_param)
+                local(reimage_cmd)
         else:
-
             if 'ostypes' in env.keys():
-                if 'ubuntu' in env.ostypes[host]:
+                if 'ubuntu' in env.ostypes[env.ostypes.keys()[0]]:
                     with settings(warn_only=True):
-                        local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s ubuntu-12.04.3" % (hostname))
+                        reimage_cmd = reimage_cmd + '%s ubuntu-12.04.3' % cluster_id
+                        local(reimage_cmd)
+                else:
+                    # CentOS
+                    with settings(warn_only=True):
+                        reimage_cmd = reimage_cmd + '%s centos-6.4' % cluster_id
+                        local(reimage_cmd)
+            else:
+                # CentOS
+                with settings(warn_only=True):
+                    reimage_cmd = reimage_cmd + '%s centos-6.4' % cluster_id
+                    local(reimage_cmd)
+            sleep(1)
+        sleep(30)
+    else:
+        if esxi_hosts:
+            for esxi in esxi_hosts:
+                hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+        for host in hosts:
+            hostname = None
+            for i in range(5):
+                try:
+                    hostname = socket.gethostbyaddr( hstr_to_ip(host))[0].split('.')[0]
+                except socket.herror:
+                    sleep(5)
+                    continue
+                else:
+                    break
+            if not hostname:
+                print "Unable to resolve %s" % (host)
+                sys.exit(1)
+            if build_param is not None:
+                with settings(warn_only=True):
+                    local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (hostname,build_param))
+            else:
+                if 'ostypes' in env.keys():
+                    if 'ubuntu' in env.ostypes[host]:
+                        with settings(warn_only=True):
+                            local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s ubuntu-12.04.3" % (hostname))
+                    else:
+                        # CentOS
+                        with settings(warn_only=True):
+                            local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
                 else:
                     # CentOS
                     with settings(warn_only=True):
                         local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
-            else:
-                # CentOS
+                sleep(1)
+        if esxi_hosts:
+            count=0
+            image="esx5.5"
+            for esxi in esxi_hosts:
+                count=count+1
+                image_id=image + "-" + str(count)
                 with settings(warn_only=True):
-                    local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
-            sleep(1)
-    if esxi_hosts:
-        count=0
-        image="esx5.5"
-        for esxi in esxi_hosts:
-            count=count+1
-            image_id=image + "-" + str(count)
-            with settings(warn_only=True):
-                local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (esxi,image_id))
-                sleep(10)
+                    local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (esxi,image_id))
+                    sleep(10)
 #end all_sm_reimage
 
 @roles('compute')
