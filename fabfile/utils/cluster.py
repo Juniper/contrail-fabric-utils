@@ -103,8 +103,12 @@ def reboot_nodes(*args):
     """reboots the given nodes"""
     for host_string in args:
         with settings(host_string=host_string):
+            os_type =  detect_ostype()
             print "Rebooting (%s) to boot with new kernel version" % host_string
             try:
-                sudo('sync; reboot --force', timeout=3)
+                if os_type.lower() in ['ubuntu']:
+                    sudo('sync; reboot --force', timeout=3)
+                else:
+                    sudo('sleep 5; shutdown -r now', timeout=3)
             except CommandTimeout:
                 pass

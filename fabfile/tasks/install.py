@@ -8,6 +8,7 @@ from fabfile.utils.fabos import *
 from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator
 from fabfile.utils.host import get_from_testbed_dict, get_openstack_internal_vip
 from fabfile.tasks.helpers import reboot_node
+from fabfile.utils.cluster import reboot_nodes
 
 @task
 @parallel(pool_size=20)
