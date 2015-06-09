@@ -1,0 +1,9 @@
+Verified+2: Zuul <zuul@lists.opencontrail.org>
+Code-Review+2: Hari Prasad Killi <haripk@juniper.net>
+Code-Review+1: Vedamurthy Joshi <vjoshi@juniper.net>
+Approved+1: Ashish Ranjan <aranjan@juniper.net>
+Submitted-by: Zuul <zuul@lists.opencontrail.org>
+Submitted-at: Tue, 09 Jun 2015 01:45:19 -0700
+Reviewed-on: https://review.opencontrail.org/11357
+Project: Juniper/contrail-fabric-utils
+Branch: refs/heads/R2.20
