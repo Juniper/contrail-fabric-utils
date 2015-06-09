@@ -17,6 +17,7 @@ import datetime
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.utils.cluster import get_ntp_server
 from fabfile.utils.analytics import get_analytics_data_dir, get_minimum_diskGB
+import threading
 
 @task
 @parallel
@@ -26,18 +27,31 @@ def compute_reboot(waitup='yes'):
         reboot_node(waitup, env.host_string)
 
 @task
-def reboot_node(waitup, *args):
+def reboot_node(waitup, no_contrail=None, *args):
     for host_string in args:
         user, hostip = host_string.split('@')
         with settings(hide('running'), host_string=host_string, warn_only=True):
+            #Reboot a node which has not already been provisioned or
+            #may not have /etc/contrail/contrail_reboot on it.
+            if no_contrail :
+                print 'Trying plain reboot of node.'
+                for i in range(3):
+                    sys.stdout.write('Try Reboot %s -- %s.\n' %(host_string,i))
+                    try:
+                        sudo("reboot --force", timeout=5)
+                    except:
+                        pass
+                
             #Fabric hangs when reboot --force is issued, so adding timeout
             #as workaround.
-            try:
-                sudo("/etc/contrail/contrail_reboot", timeout=5)
-            except CommandTimeout:
-                pass
+            else:
+                try:
+                    sudo("/etc/contrail/contrail_reboot", timeout=5)
+                except CommandTimeout:
+                    pass
 
         print 'Reboot issued; Waiting for the node (%s) to go down...' % hostip
+        sys.stdout.write('Reboot issued; Waiting for the node (%s) to go down...' % hostip)
         common.wait_until_host_down(wait=300, host=hostip)
         if waitup == 'no':
             return
@@ -175,49 +189,95 @@ def all_reimage(build_param="@LATEST"):
 
 @roles('build')
 @task
-def all_sm_reimage(build_param=None):
+def all_sm_reimage(build_param=None,smgr_client='/cs-shared/server-manager/client/server-manager',check_status='false'):
     hosts = env.roledefs['all'][:]
     esxi_hosts = getattr(testbed, 'esxi_hosts', None)
-    if esxi_hosts:
-        for esxi in esxi_hosts:
-            hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
-    for host in hosts:
-        hostname = None
-        for i in range(5):
-            try:
-                hostname = socket.gethostbyaddr( hstr_to_ip(host))[0].split('.')[0]
-            except socket.herror:
-                sleep(5)
-                continue
-            else:
-                break
-        if not hostname:
-            print "Unable to resolve %s" % (host)
-            sys.exit(1)
+    cluster_id=None
+    try:
+        cluster_id=env.cluster_id
+    except:
+        sys.stdout.write('No cluster_id specified in testbed file.\n')        
+        sys.stdout.write('Reimage will be done on per node basis.\n')
+
+    if ((cluster_id is not None) and (not esxi_hosts)):
+        reimage_cmd=smgr_client + ' reimage --no_confirm --cluster_id '
         if build_param is not None:
             with settings(warn_only=True):
-                local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (hostname,build_param))
+                reimage_cmd = reimage_cmd + '%s %s' % (cluster_id,build_param)
+                local(reimage_cmd)
         else:
-
             if 'ostypes' in env.keys():
-                if 'ubuntu' in env.ostypes[host]:
+                if 'ubuntu' in env.ostypes[env.ostypes.keys()[0]]:
                     with settings(warn_only=True):
-                        local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s ubuntu-12.04.3" % (hostname))
+                        reimage_cmd = reimage_cmd + '%s ubuntu-12.04.3' % cluster_id
+                        local(reimage_cmd)
+                else:
+                    # CentOS
+                    with settings(warn_only=True):
+                        reimage_cmd = reimage_cmd + '%s centos-6.4' % cluster_id
+                        local(reimage_cmd)
+            else:
+                # CentOS
+                with settings(warn_only=True):
+                    reimage_cmd = reimage_cmd + '%s centos-6.4' % cluster_id
+                    local(reimage_cmd)
+            sleep(1)
+        sleep(30)
+    else:
+        if esxi_hosts:
+            for esxi in esxi_hosts:
+                hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+        for host in hosts:
+            hostname = None
+            for i in range(5):
+                try:
+                    hostname = socket.gethostbyaddr( hstr_to_ip(host))[0].split('.')[0]
+                except socket.herror:
+                    sleep(5)
+                    continue
+                else:
+                    break
+            if not hostname:
+                print "Unable to resolve %s" % (host)
+                sys.exit(1)
+            if build_param is not None:
+                with settings(warn_only=True):
+                    local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (hostname,build_param))
+            else:
+                if 'ostypes' in env.keys():
+                    if 'ubuntu' in env.ostypes[host]:
+                        with settings(warn_only=True):
+                            local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s ubuntu-12.04.3" % (hostname))
+                    else:
+                        # CentOS
+                        with settings(warn_only=True):
+                            local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
                 else:
                     # CentOS
                     with settings(warn_only=True):
                         local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
-            else:
-                # CentOS
+                sleep(1)
+        if esxi_hosts:
+            for esxi in esxi_hosts:
                 with settings(warn_only=True):
-                    local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
-            sleep(1)
-        sleep(10)
-    if esxi_hosts:
-       for esxi in esxi_hosts:
-            with settings(warn_only=True):
-                local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (esxi,'esx5.5'))
-                sleep(15*60)
+                    local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (esxi,'esx5.5'))
+                    sleep(30)
+    #check if ssh connectivity to the node is up after 30sec and try issuing reboot on the node.
+    sleep(30)
+    for host in hosts:
+        user, hostip = host.split('@')
+        password = get_env_passwords(host)
+        th_dict={}
+        if verify_sshd(hostip, user, password):
+            sys.stdout.write('Node %s is still up, starting 3 trials to reboot it...\n' % hostip)
+            th_dict[hostip]=threading.Thread(target=reboot_node, args=('no', 'true', host))
+            th_dict[hostip].start()
+
+    if check_status.lower() == 'true':
+        all_sm_reimage_status(attempts=270,smgr_client=smgr_client)
+    for thread in th_dict:
+        thread.join()
+
 #end all_sm_reimage
 
 @roles('compute')
