@@ -26,6 +26,14 @@ def get_control_host_string(mgmt_host):
 def get_manage_neutron():
     return get_from_testbed_dict('keystone','manage_neutron', 'yes')
 
+def get_neutron_password():
+    admin_passwd = get_authserver_admin_password()
+    return get_from_testbed_dict('keystone','neutron_password', admin_passwd)
+
+def get_nova_password():
+    admin_passwd = get_authserver_admin_password()
+    return get_from_testbed_dict('keystone','nova_password', admin_passwd)
+
 def get_service_token():
     if get_orchestrator() is not 'openstack':
         with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
