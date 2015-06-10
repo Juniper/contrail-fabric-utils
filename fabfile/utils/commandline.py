@@ -141,6 +141,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
         cmd += " --keystone_ip %s" % authserver_ip
         cmd += " --keystone_admin_passwd %s" % openstack_admin_password
         cmd += " --keystone_service_tenant_name %s" % get_keystone_service_tenant_name()
+        cmd += ' --neutron_password %s' % get_neutron_password()
         cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
         cmd += " --keystone_auth_port %s" % get_authserver_port()
         cmd += " --keystone_admin_token %s" % get_keystone_admin_token()
@@ -306,6 +307,9 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
         cmd += " --quantum_service_protocol %s" % get_quantum_service_protocol()
         cmd += " --keystone_admin_user %s" % ks_admin_user
         cmd += " --keystone_admin_password %s" % ks_admin_password
+        cmd += " --nova_password %s" % get_nova_password()
+        cmd += " --neutron_password %s" % get_neutron_password()
+        cmd += " --service_tenant_name %s" % get_keystone_service_tenant_name()
         if cpu_mode is not None:
             cmd += " --cpu_mode %s" % cpu_mode
             if cpu_mode == 'custom':
