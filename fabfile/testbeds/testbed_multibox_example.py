@@ -374,8 +374,8 @@ env.ostypes = {
 #-------------------------------------
 # tor_ip: IP of the tor switch
 # tor_agent_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
-# tor_agent_name: Unique name for TOR Agent. This is optional field. If this is
-#                 not specified name used will be <hostname>-<tor_agent_id>
+# tor_agent_name: Unique name for TOR Agent. This is an optional field. If this is
+#                 not specified, name used will be <hostname>-<tor_agent_id>
 # tor_type: Always ovs
 # tor_ovs_port: Port number to be used by ovs. If any redundant TOR Agent is
 #               specified for this tor-agent, it should have the same 'tor_ovs_port'
@@ -386,6 +386,7 @@ env.ostypes = {
 #           this tor-agent, it should have the same 'tor_name'
 # tor_tunnel_ip: Data plane IP for the tor switch
 # tor_vendor_name: Vendor type for TOR switch
+# tor_product_name: Product name of TOR switch. This is an optional field.
 # tor_agent_http_server_port: HTTP server port. Same will be used by tor agent for introspect
 #
 #env.tor_agent = {host10:[{
@@ -399,7 +400,8 @@ env.ostypes = {
 #                    'tor_tsn_name':'nodec45',
 #                    'tor_name':'bng-contrail-qfx51-2',
 #                    'tor_tunnel_ip':'34.34.34.34',
-#                    'tor_vendor_name':'Juniper'
+#                    'tor_vendor_name':'Juniper',
+#                    'tor_product_name':'QFX5100',
 #                    'tor_agent_http_server_port': '9010',
 #                       }]
 #                }
