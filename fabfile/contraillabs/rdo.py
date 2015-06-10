@@ -93,6 +93,21 @@ def setup_rhosp_node():
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_admin_auth_url http://%s:35357/v2.0" % keystone_ip)
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT  compute_driver nova.virt.libvirt.LibvirtDriver")
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT  novncproxy_port 5999")
+
+    # remove endpoint lists pointing to openstack and recreate point to first cfgm
+    os_ip = testbed.env['roledefs']['openstack'][0].split('@')[1]
+    endpoint_id_openstack = sudo('source /etc/contrail/openstackrc; keystone endpoint-list | grep %s:9696 | tr -d " " | cut -d "|" -f2' % os_ip)
+    # remove endpoint list
+    sudo('keystone endpoint-delete %s' % endpoint_id_openstack)
+    # recreate with cfgm
+    endpoint_cfgm = 'http://%s:9696' % cfgm_0_ip
+    sudo('keystone endpoint-create --region %s
+                                   --service neutron
+                                   --publicurl %s
+                                   --adminurl %s
+                                   --internalurl %s' % (testbed.env.keystone["region_name"], endpoint_cfgm, endpoint_cfgm, endpoint_cfgm))
+    # display endpoint-list
+    sudo('source /etc/contrail/openstackrc; keystone endpoint-list')
     sudo("service openstack-nova-api restart")
     sudo("service openstack-nova-conductor restart")
     sudo("service openstack-nova-scheduler restart")
@@ -113,9 +128,12 @@ def setup_rhosp_node():
     steps = "\n\n\n"
     steps += "="*160
     steps += "\nSteps to bring up contrail with the RHOSP:\n\
-                1. Get the admin_token from /etc/keystone/keystone.conf of the openstack node and populate it as service_token in the testbed.py.\n\
-                2. fab install_without_openstack (This step can be executed even before fab setup_rdo)\n\
-                3. fab setup_without_openstack\n"
+                1. Execute fab update_keystone_admin_token \n \
+                2. Execute fab update_service_tenant \n \
+                3. Execute fab update_neutron_password \n \
+                4. Execute fab update_nova_password \n \
+                5. Execute fab install_without_openstack \n\
+                6. Execute fab setup_without_openstack\n"
     steps += "="*160
     print steps
 
@@ -179,3 +197,43 @@ def setup_rdo(rdo_url='https://repos.fedorapeople.org/repos/openstack/openstack-
                 3. fab setup_without_openstack\n"
     steps += "="*160
     print steps
+
+
+@task
+def update_service_tenant():
+    '''Retrieve neutron service tenant name from RHOSP openstack node and
+       update service_tenant in env.keystone section
+    '''
+    openstack_node = testbed.env['roledefs']['openstack'][0]
+    with settings(host_string=openstack_node):
+        neutron_tenant_id = sudo('source /etc/contrail/openstackrc; keystone user-get neutron | grep tenantId | tr -d " " | cut -d "|" -f3')
+        if not neutron_tenant_id:
+            raise RuntimeError('Unable to retrieve neutron tenant ID from openstack node (%s)' % openstack_node)
+        neutron_service_name = sudo('source /etc/contrail/openstackrc; keystone tenant-list | grep %s | tr -d " " | cut -d "|" -f3' % neutron_tenant_id)
+        print 'Retrieved Neutron service tenant name: %s' % neutron_service_name
+        print 'Updating testbed.py with neutron service tenant name under env.keystone section'
+        local('sed -i "s/\'service_tenant\'.*/\'service_tenant\' : \'%s\',/g" fabfile/testbeds/testbed.py' % neutron_service_name)
+
+@task
+def update_neutron_password():
+    '''Retrieve neutron password from RHOSP openstack node packstack answers file and
+       update neutron_password in env.keystone section
+    '''
+    openstack_node = testbed.env['roledefs']['openstack'][0]
+    with settings(host_string=openstack_node):
+        neutron_passwd = sudo('grep CONFIG_NEUTRON_KS_PW ~/packstack-answers-*.txt | grep -Po 'CONFIG_NEUTRON_KS_PW=\K.*')
+    if not neutron_passwd:
+            raise RuntimeError('Unable to retrieve neutron password from openstack node (%s)' % openstack_node)
+    local('sed -i "s/\'neutron_password\'.*/\'neutron_password\' : \'%s\',/g" fabfile/testbeds/testbed.py' % neutron_passwd)
+
+@task
+def update_nova_password():
+    '''Retrieve nova password from RHOSP openstack node packstack answers file and
+       update nova_password in env.keystone section
+    '''
+    openstack_node = testbed.env['roledefs']['openstack'][0]
+    with settings(host_string=openstack_node):
+        nova_passwd = sudo('grep CONFIG_NOVA_KS_PW ~/packstack-answers-*.txt | grep -Po 'CONFIG_NOVA_KS_PW=\K.*')
+    if not nova_passwd:
+            raise RuntimeError('Unable to retrieve neutron password from openstack node (%s)' % openstack_node)
+    local('sed -i "s/\'nova_password\'.*/\'nova_password\' : \'%s\',/g" fabfile/testbeds/testbed.py' % nova_passwd)
