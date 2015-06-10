@@ -180,17 +180,19 @@ env.ostypes = {
 #  region_name
 #
 #env.keystone = {
-#    'keystone_ip'   : 'x.y.z.a',
-#    'auth_protocol' : 'http',                  #Default is http
-#    'auth_port'     : '35357',                 #Default is 35357
-#    'admin_token'   : '33c57636fbc2c5552fd2',  #admin_token in keystone.conf
-#    'admin_user'    : 'admin',                 #Default is admin
-#    'admin_password': 'contrail123',           #Default is contrail123
-#    'service_tenant': 'service',               #Default is service
-#    'admin_tenant'  : 'admin',                 #Default is admin
-#    'region_name'   : 'RegionOne',             #Default is RegionOne
-#    'insecure'      : 'True',                  #Default = False
-#    'manage_neutron': 'no',                    #Default = 'yes' , Does configure neutron user/role in keystone required.
+#    'keystone_ip'     : 'x.y.z.a',
+#    'auth_protocol'   : 'http',                  #Default is http
+#    'auth_port'       : '35357',                 #Default is 35357
+#    'admin_token'     : '33c57636fbc2c5552fd2',  #admin_token in keystone.conf
+#    'admin_user'      : 'admin',                 #Default is admin
+#    'admin_password'  : 'contrail123',           #Default is contrail123
+#    'nova_password'   : 'contrail123',           #Default is contrail123
+#    'neutron_password': 'contrail123',           #Default is contrail123
+#    'service_tenant'  : 'service',               #Default is service
+#    'admin_tenant'    : 'admin',                 #Default is admin
+#    'region_name'     : 'RegionOne',             #Default is RegionOne
+#    'insecure'        : 'True',                  #Default = False
+#    'manage_neutron'  : 'no',                    #Default = 'yes' , Does configure neutron user/role in keystone required.
 #}
 #
 
