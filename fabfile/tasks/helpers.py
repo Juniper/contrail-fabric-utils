@@ -1143,7 +1143,18 @@ def delete_cassandra_db_files():
 def check_disk_space():
     data_dir = get_analytics_data_dir()
     if not exists(data_dir, use_sudo=True):
-        return True
+        cmd = "sed -n '/data_file_directories/{n;p;}'"
+        # If Ubuntu
+        if exists('/etc/cassandra/cassandra.yaml', use_sudo=True):
+            yaml_file = '/etc/cassandra/cassandra.yaml'
+            out = local("%s %s" % (cmd, yaml_file), capture=True)
+        # If redhat distros
+        elif exists('/etc/cassandra/conf/cassandra.yaml', use_sudo=True):
+            yaml_file = '/etc/cassandra/conf/cassandra.yaml'
+            out = local("%s %s" % (cmd, yaml_file), capture=True)
+        data_dir = out[2:]
+
+    # Check space
     disk_cmd = "df -Pk " + data_dir + " | grep % | awk '{print $2}'"
     total_disk = sudo(disk_cmd)
     if (int(total_disk)/(1024*1024) < int(get_minimum_diskGB())):
