@@ -727,6 +727,7 @@ def reboot_on_kernel_update_without_openstack(reboot='True'):
                               'Reboot manually before setup to avoid misconfiguration!' % node
                 else:
                     print '[%s]: Node is already booted with new kernel' % node
+
 @task
 @roles('build')
 def reboot_on_kernel_update(reboot='True'):
@@ -771,9 +772,28 @@ def reboot_on_kernel_update(reboot='True'):
 
 @roles('build')
 @task
-def install_contrail(*tgzs, **kwargs):
+def install_new_contrail(**kwargs):
     """Installs required contrail packages in all nodes as per the role definition.
     """
+    new_host = kwargs.get('new_ctrl')
+    #execute('pre_check')
+    execute(create_install_repo_node, new_host)
+    execute(install_database_node, True, new_host)
+    if (get_orchestrator() is 'openstack'):
+        execute("install_openstack_node", new_host)
+    else:
+        print "ERROR: Only adding a new Openstack controller is supported"
+        return
+    execute(install_cfgm_node, new_host)
+    execute(install_control_node, new_host)
+    execute(install_collector_node, new_host)
+    execute(install_webui_node, new_host)
+    execute(upgrade_pkgs_node, new_host)
+
+@roles('build')
+@task
+def install_contrail(*tgzs, **kwargs):
+    """Installs required contrail packages in all nodes as per the role definition. """
     reboot = kwargs.get('reboot', 'True')
     execute('pre_check')
     execute('create_installer_repo')
