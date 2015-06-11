@@ -23,7 +23,7 @@ from fabfile.utils.commandline import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
-        configure_esxi_network, create_esxi_compute_vm, deprovision_vcenter
+        configure_esxi_network, create_esxi_compute_vm
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
         get_esxi_vms_and_hosts
@@ -49,6 +49,48 @@ def setup_cfgm():
     """Provisions config services in all nodes defined in cfgm role."""
     if env.roledefs['cfgm']:
         execute("setup_cfgm_node", env.host_string)
+
+@roles('cfgm')
+@task
+def fix_cfgm_config():
+    """Regenerate the config file in all the cfgm nodes"""
+    if env.roledefs['cfgm']:
+        execute("fix_cfgm_config_node", env.host_string)
+
+@task
+def fix_cfgm_config_node(*args):
+    for host_string in args:
+        with settings(host_string = host_string):
+            cmd = frame_vnc_config_cmd(host_string, "update-cfgm-config")
+            sudo(cmd)
+
+@roles('collector')
+@task
+def fix_collector_config():
+    """Regenerate the collector file in all the analytics nodes"""
+    if env.roledefs['collector']:
+        execute("fix_collector_config_node", env.host_string)
+
+@task
+def fix_collector_config_node(*args):
+    for host_string in args:
+        with settings(host_string = host_string):
+            cmd = frame_vnc_collector_cmd(host_string, "update-collector-config")
+            sudo(cmd)
+
+@roles('webui')
+@task
+def fix_webui_config():
+    """Regenerate the webui config file in all the webui nodes"""
+    if env.roledefs['webui']:
+        execute("fix_webui_config_node", env.host_string)
+
+@task
+def fix_webui_config_node(*args):
+    for host_string in args:
+        with settings(host_string = host_string):
+            cmd = frame_vnc_webui_cmd(host_string, "update-webui-config")
+            sudo(cmd)
 
 def fixup_restart_haproxy_in_all_cfgm(nworkers):
     template = string.Template("""
@@ -967,7 +1009,6 @@ def setup_image_service_node(*args):
 @roles('openstack')
 def setup_openstack():
     """Provisions openstack services in all nodes defined in openstack role."""
-    execute('add_openstack_reserverd_ports')
     if env.roledefs['openstack']:
         execute("setup_openstack_node", env.host_string)
         # Blindly run setup_openstack twice for Ubuntu
@@ -1022,7 +1063,8 @@ def setup_nova_aggregate_node(*args):
                                 continue
                         if sudo("(source /etc/contrail/openstackrc; nova aggregate-add-host %s %s)" % (hypervisor, host_name)).failed:
                             continue # Services might be starting up after reboot
-                    break # Stop retrying as the aggregate is created and compute is added.
+                    break # Stop retrying as the aggregate is created and compute is added
+
 
 @roles('openstack')
 @task
@@ -1035,7 +1077,7 @@ def setup_contrail_horizon():
 def setup_openstack_node(*args):
     """Provisions openstack services in one or list of nodes. USAGE: fab setup_openstack_node:user@1.1.1.1,user@2.2.2.2"""
     #qpidd_changes_for_ubuntu()
-
+    execute('add_openstack_reserverd_ports')
     for host_string in args:
         # Frame the command line to provision openstack
         cmd = frame_vnc_openstack_cmd(host_string)
@@ -1156,6 +1198,7 @@ def setup_redis_server_node(*args):
                         sudo("service %s restart" % (redis_svc_name))
 #end setup_redis_server_node
 
+
 @task
 def setup_collector_node(*args):
     """Provisions collector services in one or list of nodes. USAGE: fab setup_collector_node:user@1.1.1.1,user@2.2.2.2"""
@@ -1233,11 +1276,39 @@ def setup_database_node(*args):
 #end setup_database
 
 @task
+@roles('database')
+def fix_zookeeper_config():
+    """Update the zookeeper config based on the new configuration"""
+    if env.roledefs['database']:
+        execute("fix_zookeeper_config_node", env.host_string)
+
+@task
+def fix_zookeeper_config_node(*args):
+    for host_string in args:
+        cmd = frame_vnc_database_cmd(host_string, 'update-zoo-servers')
+        sudo(cmd)
+
+@task
+@roles('database')
+def restart_all_zookeeper_servers():
+    """Restarts all zookeeper server in all the database nodes"""
+    if env.roledefs['database']:
+        execute("restart_all_zookeeper_servers_node", env.host_string)
+
+@task
+def restart_all_zookeeper_servers_node(*args):
+    for host_string in args:
+        cmd = frame_vnc_database_cmd(host_string, 'restart-zoo-server')
+        sudo(cmd)
+
+
+@task
 @roles('webui')
 def setup_webui():
     """Provisions webui services in all nodes defined in webui role."""
     if env.roledefs['webui']:
         execute("setup_webui_node", env.host_string)
+
 
 @task
 def setup_webui_node(*args):
@@ -1414,106 +1485,136 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
 @task
 @EXECUTE_TASK
 @roles('cfgm')
-def prov_config_node():
-    cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
-    tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
-    tgt_hostname = sudo("hostname")
+def prov_config():
+    execute("prov_config_node", env.host_string)
 
-    with cd(UTILS_DIR):
-        cmd = "python provision_config_node.py"
-        cmd += " --api_server_ip %s" % cfgm_ip
-        cmd += " --host_name %s" % tgt_hostname
-        cmd += " --host_ip %s" % tgt_ip
-        cmd += " --oper add"
-        cmd += " %s" % get_mt_opts()
-        sudo(cmd)
-#end prov_config_node
+@task
+def prov_config_node(*args):
+    for host_string in args:
+        with settings(host_string = host_string):
+            cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+            tgt_ip = hstr_to_ip(get_control_host_string(host_string))
+            tgt_hostname = sudo("hostname")
+
+            with cd(UTILS_DIR):
+                cmd = "python provision_config_node.py"
+                cmd += " --api_server_ip %s" % cfgm_ip
+                cmd += " --host_name %s" % tgt_hostname
+                cmd += " --host_ip %s" % tgt_ip
+                cmd += " --oper add"
+                cmd += " %s" % get_mt_opts()
+                sudo(cmd)
+#end prov_config
 
 @task
 @EXECUTE_TASK
 @roles('database')
-def prov_database_node():
-    cfgm_host = env.roledefs['cfgm'][0]
-    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
-    cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-    tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
-    tgt_hostname = sudo("hostname")
+def prov_database():
+    execute("prov_database_node", env.host_string)
 
-    with settings(cd(UTILS_DIR), host_string=cfgm_host,
-                  password=cfgm_host_password):
-        cmd = "python provision_database_node.py"
-        cmd += " --api_server_ip %s" % cfgm_ip
-        cmd += " --host_name %s" % tgt_hostname
-        cmd += " --host_ip %s" % tgt_ip
-        cmd += " --oper add"
-        cmd += " %s" % get_mt_opts()
-        sudo(cmd)
+@task
+def prov_database_node(*args):
+    for host_string in args:
+        with settings(host_string = host_string):
+            cfgm_host = env.roledefs['cfgm'][0]
+            cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+            cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
+            tgt_ip = hstr_to_ip(get_control_host_string(host_string))
+            tgt_hostname = sudo("hostname")
+
+            with settings(cd(UTILS_DIR), host_string=cfgm_host,
+                          password=cfgm_host_password):
+                cmd = "python provision_database_node.py"
+                cmd += " --api_server_ip %s" % cfgm_ip
+                cmd += " --host_name %s" % tgt_hostname
+                cmd += " --host_ip %s" % tgt_ip
+                cmd += " --oper add"
+                cmd += " %s" % get_mt_opts()
+                sudo(cmd)
 #end prov_database_node
 
 @task
 @EXECUTE_TASK
 @roles('collector')
-def prov_analytics_node():
-    cfgm_host = env.roledefs['cfgm'][0]
-    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
-    cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-    tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
-    tgt_hostname = sudo("hostname")
+def prov_analytics():
+    execute("prov_analytics_node", env.host_string)
 
-    with settings(cd(UTILS_DIR), host_string=cfgm_host,
-                  password=cfgm_host_password):
-        cmd = "python provision_analytics_node.py"
-        cmd += " --api_server_ip %s" % cfgm_ip
-        cmd += " --host_name %s" % tgt_hostname
-        cmd += " --host_ip %s" % tgt_ip
-        cmd += " --oper add"
-        cmd += " %s" % get_mt_opts()
-        sudo(cmd)
+@task
+def prov_analytics_node(*args):
+    for host_string in args:
+        with settings(host_string = host_string):
+            cfgm_host = env.roledefs['cfgm'][0]
+            cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+            cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
+            tgt_ip = hstr_to_ip(get_control_host_string(host_string))
+            tgt_hostname = sudo("hostname")
+
+            with settings(cd(UTILS_DIR), host_string=cfgm_host,
+                          password=cfgm_host_password):
+                cmd = "python provision_analytics_node.py"
+                cmd += " --api_server_ip %s" % cfgm_ip
+                cmd += " --host_name %s" % tgt_hostname
+                cmd += " --host_ip %s" % tgt_ip
+                cmd += " --oper add"
+                cmd += " %s" % get_mt_opts()
+                sudo(cmd)
 #end prov_analytics_node
 
 @task
 @EXECUTE_TASK
 @roles('control')
 def prov_control_bgp():
-    cfgm_host = env.roledefs['cfgm'][0]
-    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
-    cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-    tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
-    tgt_hostname = sudo("hostname")
+    execute("prov_control_bgp_node", env.host_string)
 
-    with settings(cd(UTILS_DIR), host_string=cfgm_host,
-                  password=cfgm_host_password):
-        print "Configuring global system config with the ASN"
-        cmd = "python provision_control.py"
-        cmd += " --api_server_ip %s" % cfgm_ip
-        cmd += " --api_server_port 8082"
-        cmd += " --router_asn %s" % testbed.router_asn
-        cmd += " %s" % get_mt_opts()
-        sudo(cmd)
-        print "Adding control node as bgp router"
-        cmd += " --host_name %s" % tgt_hostname
-        cmd += " --host_ip %s" % tgt_ip
-        cmd += " --oper add"
-        sudo(cmd)
-#end prov_control_bgp
+@task
+def prov_control_bgp_node(*args):
+    for host_string in args:
+        with settings(host_string = host_string):
+            cfgm_host = env.roledefs['cfgm'][0]
+            cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+            cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
+            tgt_ip = hstr_to_ip(get_control_host_string(host_string))
+            tgt_hostname = sudo("hostname")
+
+            with settings(cd(UTILS_DIR), host_string=cfgm_host,
+                          password=cfgm_host_password):
+                print "Configuring global system config with the ASN"
+                cmd = "python provision_control.py"
+                cmd += " --api_server_ip %s" % cfgm_ip
+                cmd += " --api_server_port 8082"
+                cmd += " --router_asn %s" % testbed.router_asn
+                cmd += " %s" % get_mt_opts()
+                sudo(cmd)
+                print "Adding control node as bgp router"
+                cmd += " --host_name %s" % tgt_hostname
+                cmd += " --host_ip %s" % tgt_ip
+                cmd += " --oper add"
+                sudo(cmd)
+#end prov_control_bgp_node
 
 @roles('cfgm')
 @task
 def prov_external_bgp():
-    cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+    execute("prov_external_bgp_node", env.host_string)
 
-    for ext_bgp in testbed.ext_routers:
-        ext_bgp_name = ext_bgp[0]
-        ext_bgp_ip   = ext_bgp[1]
-        with cd(UTILS_DIR):
-            cmd = "python provision_mx.py"
-            cmd += " --api_server_ip %s" % cfgm_ip
-            cmd += " --api_server_port 8082"
-            cmd += " --router_name %s" % ext_bgp_name
-            cmd += " --router_ip %s" % ext_bgp_ip
-            cmd += " --router_asn %s" % testbed.router_asn
-            cmd += " %s" % get_mt_opts()
-            sudo(cmd)
+@task
+def prov_external_bgp_node(*args):
+    for host_string in args:
+        with settings(host_string = host_string):
+            cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+
+            for ext_bgp in testbed.ext_routers:
+                ext_bgp_name = ext_bgp[0]
+                ext_bgp_ip   = ext_bgp[1]
+                with cd(UTILS_DIR):
+                    cmd = "python provision_mx.py"
+                    cmd += " --api_server_ip %s" % cfgm_ip
+                    cmd += " --api_server_port 8082"
+                    cmd += " --router_name %s" % ext_bgp_name
+                    cmd += " --router_ip %s" % ext_bgp_ip
+                    cmd += " --router_asn %s" % testbed.router_asn
+                    cmd += " %s" % get_mt_opts()
+                    sudo(cmd)
 #end prov_control_bgp
 
 @roles('cfgm')
@@ -2078,6 +2179,16 @@ def setup_orchestrator():
     #elif orch == 'vcenter':
         #execute('setup_vcenter')
 
+
+@roles('build')
+@task
+def join_cluster(new_ctrl_ip):
+    """Provisions required contrail services in the node as per the role definition.
+    """
+    execute('setup_common_node', new_ctrl_ip)
+    execute('join_ha_cluster', new_ctrl_ip)
+    #execute('setup_nova_aggregate')
+
 @roles('build')
 @task
 def setup_all(reboot='True'):
@@ -2143,9 +2254,9 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     execute('setup_webui')
     execute('verify_webui')
     execute('setup_vrouter', manage_nova_compute)
-    execute('prov_config_node')
-    execute('prov_database_node')
-    execute('prov_analytics_node')
+    execute('prov_config')
+    execute('prov_database')
+    execute('prov_analytics')
     execute('prov_control_bgp')
     execute('prov_external_bgp')
     execute('prov_metadata_services')
@@ -2153,7 +2264,6 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     execute('setup_remote_syslog')
     execute('add_tsn', restart=False)
     execute('add_tor_agent', restart=False)
-    execute('increase_vrouter_limit')
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute(compute_reboot)
@@ -2185,9 +2295,9 @@ def setup_contrail_analytics_components(manage_nova_compute='no', reboot='False'
     execute('verify_collector')
     execute('setup_webui')
     execute('verify_webui')
-    execute('prov_config_node')
-    execute('prov_database_node')
-    execute('prov_analytics_node')
+    execute('prov_config')
+    execute('prov_database')
+    execute('prov_analytics')
     execute('setup_remote_syslog')
 
 @roles('build')
