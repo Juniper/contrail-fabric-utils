@@ -24,8 +24,7 @@ def get_database_dir():
     return getattr(testbed, 'database_dir', None)
 
 def get_analytics_data_dir():
-    return getattr(testbed, 'analytics_data_dir',
-                   '/var/lib/cassandra/data')
+    return getattr(testbed, 'analytics_data_dir', None)
 
 def get_ssd_data_dir():
     return getattr(testbed, 'ssd_data_dir', None)
