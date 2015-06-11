@@ -6,6 +6,7 @@ import time
 import tempfile
 from copy import deepcopy
 import collections
+import yaml
 
 from fabfile.config import *
 import fabfile.common as common
@@ -1143,7 +1144,12 @@ def delete_cassandra_db_files():
 def check_disk_space():
     data_dir = get_analytics_data_dir()
     if not exists(data_dir, use_sudo=True):
-        return True
+        if exists('/etc/cassandra/cassandra.yaml'):
+            with open('/etc/cassandra/cassandra.yaml', 'r') as fd:
+                file_content = yaml.load(fd)
+                data_dir = file_content['data_file_directories'][0]
+        else:
+            data_dir = '/var/lib/'
     disk_cmd = "df -Pk " + data_dir + " | grep % | awk '{print $2}'"
     total_disk = sudo(disk_cmd)
     if (int(total_disk)/(1024*1024) < int(get_minimum_diskGB())):
