@@ -519,7 +519,7 @@ def setup_cmon_schema():
     elif pdist in ['centos', 'redhat']:
         mysql_svc = 'mysqld'
 
-    if verify_mysql_status(host_string) == False:
+    if verify_mysql_status(env.host_string) == False:
         raise "Galera cluster is not in SYNCed state \
                Cannot continue with CMON setup"
 
