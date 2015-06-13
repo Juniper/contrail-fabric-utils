@@ -1875,15 +1875,17 @@ def add_tor_agent_by_index(index, node_info, restart=True):
                      %(tor_agent_name, compute_control_ip, cfgm_ip,
                        admin_user, admin_password,
                        admin_tenant_name, authserver_ip)
-        pr_args = "--device_name %s --vendor_name %s --product_name %s\
+        pr_args = "--device_name %s --vendor_name %s\
                    --device_mgmt_ip %s --device_tunnel_ip %s\
                    --device_tor_agent %s --device_tsn %s\
                    --api_server_ip %s --oper add\
                    --admin_user %s --admin_password %s\
                    --admin_tenant_name %s --openstack_ip %s"\
-            %(tor_name, tor_vendor_name, tor_product_name, tor_mgmt_ip, tor_tunnel_ip,
+            %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
               tor_agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
               admin_tenant_name, authserver_ip)
+        if tor_product_name:
+            pr_args += " --product_name %s" %(tor_product_name)
         with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
             sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
             sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
