@@ -2,7 +2,7 @@ import tempfile
 
 from fabfile.config import *
 from fabfile.templates import openstack_haproxy, collector_haproxy
-from fabfile.tasks.helpers import enable_haproxy
+from fabfile.tasks.helpers import enable_haproxy, verify_mysql_status
 from fabfile.utils.fabos import detect_ostype, get_as_sudo
 from fabfile.utils.host import get_keystone_ip, get_control_host_string,\
     hstr_to_ip, get_from_testbed_dict, get_service_token, get_env_passwords,\
@@ -495,6 +495,7 @@ def create_and_copy_service_token():
             else:
                 sudo("echo '%s' > /etc/contrail/service.token" % service_token)
 
+
 @task
 @serial
 @roles('openstack')
@@ -516,6 +517,11 @@ def setup_cmon_schema():
         mysql_svc = 'mysql'
     elif pdist in ['centos', 'redhat']:
         mysql_svc = 'mysqld'
+
+    if verify_mysql_status(env.host_string) == False:
+        raise "Galera cluster is not in SYNCed state \
+               Cannot continue with CMON setup"
+
     # Create cmon schema
     sudo('mysql -u root -p%s -e "CREATE SCHEMA IF NOT EXISTS cmon"' % mysql_token)
     sudo('mysql -u root -p%s < /usr/local/cmon/share/cmon/cmon_db.sql' % mysql_token)
