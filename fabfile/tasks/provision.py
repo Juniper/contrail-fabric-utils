@@ -3,6 +3,7 @@ import string
 import textwrap
 import json
 import socket
+import six
 from time import sleep
 
 from fabric.contrib.files import exists
@@ -1129,9 +1130,7 @@ def setup_redis_server_node(*args):
 
                 sudo("service %s stop" % (redis_svc_name))
                 sudo("sed -i -e '/^[ ]*bind/s/^/#/' %s" % (redis_conf_file))
-                # Set the lua-time-limit to 15000 milliseconds
-                sudo("sed -i -e 's/lua-time-limit.*/lua-time-limit 15000/' %s" % (redis_conf_file))
-                # If redis passwd specified, add that to the conf file
+                # If redis passwd sepcified add that to the conf file
                 if get_redis_password():
                     sudo("sed -i '/^# requirepass/ c\ requirepass %s' %s" % (get_redis_password(), redis_conf_file))
                 # Disable persistence
@@ -1488,6 +1487,10 @@ def prov_control_bgp():
         cmd += " --api_server_ip %s" % cfgm_ip
         cmd += " --api_server_port 8082"
         cmd += " --router_asn %s" % testbed.router_asn
+        if 'md5' in env.keys():
+            if ("root" + "@" + tgt_ip) in env.md5:
+                if isinstance(env.md5["root" + "@" + tgt_ip], six.string_types):
+                    cmd += " --md5 %s" % env.md5["root" + "@" + tgt_ip]
         cmd += " %s" % get_mt_opts()
         sudo(cmd)
         print "Adding control node as bgp router"
@@ -1777,9 +1780,6 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         tor_name= toragent_dict[host_string][i]['tor_name']
         tor_tunnel_ip= toragent_dict[host_string][i]['tor_tunnel_ip']
         tor_vendor_name= toragent_dict[host_string][i]['tor_vendor_name']
-        tor_product_name= ""
-        if 'tor_product_name' in toragent_dict[host_string][i]:
-            tor_product_name= toragent_dict[host_string][i]['tor_product_name']
         tsn_name=toragent_dict[host_string][i]['tor_tsn_name']
         tor_mgmt_ip=toragent_dict[host_string][i]['tor_ip']
         http_server_port = -1
@@ -1875,17 +1875,14 @@ def add_tor_agent_by_index(index, node_info, restart=True):
                      %(tor_agent_name, compute_control_ip, cfgm_ip,
                        admin_user, admin_password,
                        admin_tenant_name, authserver_ip)
-        pr_args = "--device_name %s --vendor_name %s\
-                   --device_mgmt_ip %s --device_tunnel_ip %s\
-                   --device_tor_agent %s --device_tsn %s\
-                   --api_server_ip %s --oper add\
+        pr_args = "--device_name %s --vendor_name %s --device_mgmt_ip %s\
+                   --device_tunnel_ip %s --device_tor_agent %s\
+                   --device_tsn %s --api_server_ip %s --oper add\
                    --admin_user %s --admin_password %s\
                    --admin_tenant_name %s --openstack_ip %s"\
             %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
               tor_agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
               admin_tenant_name, authserver_ip)
-        if tor_product_name:
-            pr_args += " --product_name %s" %(tor_product_name)
         with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
             sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
             sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
