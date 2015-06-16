@@ -2,6 +2,7 @@ from time import sleep
 
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype
+from fabfile.utils.cluster import get_orchestrator
 
 class OpenStackSetupError(Exception):
     pass
@@ -49,7 +50,8 @@ def verify_cfgm():
     verify_service("contrail-api")
     verify_service("contrail-discovery")
     verify_service("contrail-schema")
-    verify_service("contrail-svc-monitor")
+    if get_orchestrator is 'openstack':
+       verify_service("contrail-svc-monitor")
 
 @task
 @roles('control')

@@ -15,7 +15,7 @@ from fabfile.utils.fabos import *
 from fabric.contrib.files import exists
 import datetime
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
-from fabfile.utils.cluster import get_ntp_server
+from fabfile.utils.cluster import get_ntp_server, get_orchestrator
 from fabfile.utils.analytics import get_analytics_data_dir, get_minimum_diskGB
 
 @task
@@ -346,7 +346,8 @@ def cfgm_status():
     sudo("service contrail-api status")
     sudo("service contrail-schema status")
     sudo("service contrail-discovery status")
-    sudo("service contrail-svc-monitor status")
+    if get_orchestrator is 'openstack':
+       sudo("service contrail-svc-monitor status")
     sudo("service ifmap status")
 #end cfgm_status
 
