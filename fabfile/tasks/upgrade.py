@@ -183,8 +183,11 @@ def upgrade_compute_node(from_rel, pkg, *args):
 def upgrade_orchestrator(from_rel, pkg):
     if get_orchestrator() is 'openstack':
         execute('upgrade_openstack', from_rel, pkg)
-        execute('setup_cmon_schema')
-        execute('setup_cluster_monitors')
+        if (get_openstack_internal_vip() and
+            from_rel < 2.2 and
+            get_release() >= 2.2):
+             execute('setup_cmon_schema')
+             execute('setup_cluster_monitors')
     if get_orchestrator() is 'vcenter':
         execute('upgrade_vcenter')
 
