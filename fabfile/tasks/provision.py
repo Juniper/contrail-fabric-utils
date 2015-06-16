@@ -1499,6 +1499,10 @@ def prov_control_bgp():
         cmd += " --api_server_ip %s" % cfgm_ip
         cmd += " --api_server_port 8082"
         cmd += " --router_asn %s" % testbed.router_asn
+        if 'md5' in env.keys():
+            if ("root" + "@" + tgt_ip) in env.md5:
+                if isinstance(env.md5["root" + "@" + tgt_ip], basestring):
+                    cmd += " --md5 %s" % env.md5["root" + "@" + tgt_ip]
         cmd += " %s" % get_mt_opts()
         sudo(cmd)
         print "Adding control node as bgp router"
