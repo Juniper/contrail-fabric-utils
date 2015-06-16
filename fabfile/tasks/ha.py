@@ -460,11 +460,14 @@ def fix_cmon_param_and_add_keys_to_compute():
     sudo("echo '%s' >> %s" % (computes, cmon_param))
     sudo("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
     sudo("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
-    sudo("echo 'PERIODIC_RMQ_CHK_INTER=120' >> %s" % cmon_param)
-    sudo("echo 'RABBITMQ_RESET=True' >> %s" % cmon_param)
+    sudo("grep -q '# Modified below two params in 2.2 #' %s || echo '# Modified below two params in 2.2 #' >> %s" % (cmon_param, cmon_param))
+    sudo("echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % cmon_param)
+    sudo("echo 'RABBITMQ_RESET=False' >> %s" % cmon_param)
     amqps = 'DIPHOSTS=("' + '" "'.join(amqp_host_list) + '")'
     sudo("echo '%s' >> %s" % (amqps, cmon_param))
     sudo("echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % cmon_param)
+    sudo("uniq %s > /tmp/cmon_param" % cmon_param)
+    sudo("mv /tmp/cmon_param %s" % cmon_param)
     id_rsa_pubs = {}
     if files.exists('~/.ssh', use_sudo=True):
         sudo('chmod 700 ~/.ssh')
@@ -519,10 +522,6 @@ def setup_cmon_schema():
     elif pdist in ['centos', 'redhat']:
         mysql_svc = 'mysqld'
 
-    if verify_mysql_status(env.host_string) == False:
-        raise "Galera cluster is not in SYNCed state \
-               Cannot continue with CMON setup"
-
     # Create cmon schema
     sudo('mysql -u root -p%s -e "CREATE SCHEMA IF NOT EXISTS cmon"' % mysql_token)
     sudo('mysql -u root -p%s < /usr/local/cmon/share/cmon/cmon_db.sql' % mysql_token)
@@ -544,10 +543,6 @@ def setup_cmon_schema():
     for host in host_list:
         sudo('%s "GRANT ALL PRIVILEGES on *.* TO cmon@%s IDENTIFIED BY \'cmon\' WITH GRANT OPTION"' %
                (mysql_cmd, host))
-    # Restarting mysql in all openstack nodes
-    for host_string in env.roledefs['openstack']:
-        with settings(host_string=host_string):
-            sudo("service %s restart" % mysql_svc)
 
 
 @task
