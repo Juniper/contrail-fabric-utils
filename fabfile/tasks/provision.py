@@ -547,7 +547,7 @@ def setup_cfgm_node(*args):
                     esxi_ip = esxi_info[esxi_host]['ip']
                     vrouter_ip_string = esxi_info[esxi_host]['contrail_vm']['host']
                     vrouter_ip = hstr_to_ip(vrouter_ip_string)
-                    sudo("echo '%s:%s' >> %s" %(esxi_ip, vrouter_ip, tmp_fname))
+                    local("echo '%s:%s' >> %s" %(esxi_ip, vrouter_ip, tmp_fname))
                 put(tmp_fname, "/etc/contrail/ESXiToVRouterIp.map", use_sudo=True)
                 local("rm %s" %(tmp_fname))
                 # Frame the command  to provision vcenter-plugin
