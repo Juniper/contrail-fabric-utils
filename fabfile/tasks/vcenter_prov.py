@@ -424,7 +424,7 @@ class Vcenter(object):
 
             for host in hosts:
                 dvs_config_spec.uplinkPortPolicy.uplinkPortName = uplink_port_names
-                dvs_config_spec.maxPorts = 2000
+                dvs_config_spec.maxPorts = 60000
                 #pnic_spec = self.pyVmomi.vim.dvs.HostMember.PnicSpec()
                 #pnic_spec.pnicDevice = 'vmnic1'
                 #pnic_specs.append(pnic_spec)
