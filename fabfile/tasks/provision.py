@@ -1302,7 +1302,7 @@ def setup_control_node(*args):
             with cd(INSTALLER_DIR):
                 sudo(cmd)
                 if detect_ostype() in ['centos', 'redhat', 'fedora', 'centoslinux']:
-                    sudo("service contrail-control restart")
+                    sudo("service supervisor-control restart")
 #end setup_control
 
 @task
