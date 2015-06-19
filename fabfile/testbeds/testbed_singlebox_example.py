@@ -322,5 +322,16 @@ env.ostypes = {
 # OPTIONAL vrouter limit parameter
 # ==================================
 #env.vrouter_module_params = {
-#     host2:{'mpls_labels':'131072', 'nexthops':'131072', 'vrfs':'65536', 'macs':'262144'},
+#     host1:{'mpls_labels':'131072', 'nexthops':'131072','vrfs':'65536','macs':'262144'},
 #}
+#
+# OPTIONAL md5 key enabling
+# There are 2 ways of enabling BGP md5 key on node apart from the webui.
+# 1. Before provisioning the node, include an env dict in testbed.py as shown below specifying the desired key value #    on the node. The key should be of type "string" only.
+# 2. If md5 is not included in testbed.py and the node is already provisioned, you can run the 
+#    contrail-controller/src/config/utils/provision_control.py script with a newly added argument for md5.
+# The below env dict is for first method specified, where you include a dict in testbed.py as shown below:
+#  env.md5 = {
+#     host1: 'juniper',
+#  }
+# 'juniper' is the md5 key that will be configured on the node.

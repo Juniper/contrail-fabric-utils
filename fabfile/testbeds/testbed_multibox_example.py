@@ -199,7 +199,6 @@ env.ostypes = {
 #    host6 : { 'disks' : ['/dev/sdc', '/dev/sdd'], 'local-disks' : ['/dev/sde'], 'local-ssd-disks' : ['/dev/sdf'] },
 #    host7 : { 'nfs' : ['10.10.10.10:/nfs', '11.11.11.11:/nfs']},
 #}
-#
 #Set Storage replica
 #storage_replica_size = 3
 
@@ -376,8 +375,8 @@ env.ostypes = {
 #-------------------------------------
 # tor_ip: IP of the tor switch
 # tor_agent_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
-# tor_agent_name: Unique name for TOR Agent. This is an optional field. If this is
-#                 not specified, name used will be <hostname>-<tor_agent_id>
+# tor_agent_name: Unique name for TOR Agent. This is optional field. If this is
+#                 not specified name used will be <hostname>-<tor_agent_id>
 # tor_type: Always ovs
 # tor_ovs_port: Port number to be used by ovs. If any redundant TOR Agent is
 #               specified for this tor-agent, it should have the same 'tor_ovs_port'
@@ -388,7 +387,6 @@ env.ostypes = {
 #           this tor-agent, it should have the same 'tor_name'
 # tor_tunnel_ip: Data plane IP for the tor switch
 # tor_vendor_name: Vendor type for TOR switch
-# tor_product_name: Product name of TOR switch. This is an optional field.
 # tor_agent_http_server_port: HTTP server port. Same will be used by tor agent for introspect
 #
 #env.tor_agent = {host10:[{
@@ -402,8 +400,7 @@ env.ostypes = {
 #                    'tor_tsn_name':'nodec45',
 #                    'tor_name':'bng-contrail-qfx51-2',
 #                    'tor_tunnel_ip':'34.34.34.34',
-#                    'tor_vendor_name':'Juniper',
-#                    'tor_product_name':'QFX5100',
+#                    'tor_vendor_name':'Juniper'
 #                    'tor_agent_http_server_port': '9010',
 #                       }]
 #                }
@@ -415,9 +412,9 @@ env.ostypes = {
 #password is the vcenter password credentials
 #auth is the autentication type used to talk to vcenter, http or https
 #datacenter is the datacenter name we are operating on
-#cluster is the list of clusters we are operating on
+#cluster is the clustername we are operating on
 #dvswitch section contains distributed switch related para,s
-#       dv_switch_name 
+#       dv_switch_name
 #dvportgroup section contains the distributed port group info
 #       dv_portgroupname and the number of ports the group has
 ######################################
@@ -438,15 +435,40 @@ env.ostypes = {
 #
 ####################################################################################
 # The compute vm provisioning on ESXI host
-# This section is used to copy a vmdk on to the ESXI box and bring it up 
+# This section is used to copy a vmdk on to the ESXI box and bring it up
 # the contrailVM which comes up will be setup as a compute node with only
-# vrouter running on it. Each host has an associated esxi to it. 
+# vrouter running on it. Each host has an associated esxi to it.
 #
 # esxi_host information:
 #    ip: the esxi ip on which the contrailvm(host/compute) runs
 #    username: username used to login to esxi
 #    password: password for esxi
-#    fabric_vswitch: the name of the underlay vswitch that runs on esxi 
+#    fabric_vswitch: the name of the underlay vswitch that runs on esxi
+#                    optional, defaults to 'vswitch0'
+#    fabric_port_group: the name of the underlay port group for esxi
+#                       optional, defaults to contrail-fab-pg'
+#    uplinck_nic: the nic used for underlay
+#                 optional, defaults to None
+#    data_store: the datastore on esxi where the vmdk is copied to
+#    cluster: name of the cluster to which this esxi is added
+#        'dv_switch': { 'dv_switch_name': 'kd_dvswitch',
+#                     },
+#        'dv_port_group': { 'dv_portgroup_name': 'kd_dvportgroup',
+#                           'number_of_ports': '3',
+#                     },
+#}
+#
+####################################################################################
+# The compute vm provisioning on ESXI host
+# This section is used to copy a vmdk on to the ESXI box and bring it up
+# the contrailVM which comes up will be setup as a compute node with only
+# vrouter running on it. Each host has an associated esxi to it.
+#
+# esxi_host information:
+#    ip: the esxi ip on which the contrailvm(host/compute) runs
+#    username: username used to login to esxi
+#    password: password for esxi
+#    fabric_vswitch: the name of the underlay vswitch that runs on esxi
 #                    optional, defaults to 'vswitch0'
 #    fabric_port_group: the name of the underlay port group for esxi
 #                       optional, defaults to contrail-fab-pg'
@@ -455,14 +477,13 @@ env.ostypes = {
 #    data_store: the datastore on esxi where the vmdk is copied to
 #    cluster: name of the cluster to which this esxi is added
 #    contrail_vm information:
-#        uplink: The SRIOV or Passthrough PCI Id(04:10.1). If not provided
-#                will default to vmxnet3 based fabric uplink
 #        mac: the virtual mac address for the contrail vm
 #        host: the contrail_vm ip in the form of 'user@contrailvm_ip'
 #        vmdk: the absolute path of the contrail-vmdk used to spawn vm
 #              optional, if vmdk_download_path is specified
-#        vmdk_download_path: download path of the contrail-vmdk.vmdk used to spawn vm  
+#        vmdk_download_path: download path of the contrail-vmdk.vmdk used to spawn vm
 #                            optional, if vmdk is specified
+#        ntp_server: ntp server ip for the contrail vm
 ######################################################################################
 #esxi_hosts = {
 #       'esxi': {
@@ -477,6 +498,8 @@ env.ostypes = {
 #                   'vmdk_download_path': "http://10.84.5.100/vmware/vmdk/ContrailVM-disk1.vmdk",
 #             }
 #       }
+#}
+#
 # OPTIONAL DPDK CONFIGURATION
 # ===========================
 # If some compute nodes should use DPDK vRouter version it has to be put in
@@ -496,3 +519,16 @@ env.ostypes = {
 #     host4:{'mpls_labels':'131072', 'nexthops':'131072', 'vrfs':'65536', 'macs':'262144'},
 #     host5:{'mpls_labels':'131072', 'nexthops':'131072', 'vrfs':'65536', 'macs':'262144'}
 #}
+#
+# OPTIONAL md5 key enabling
+# There are 2 ways of enabling BGP md5 key on node apart from the webui.
+# 1. Before provisioning the node, include an env dict in testbed.py as shown below specifying the desired key value #    on the node. The key should be of type "string" only.
+# 2. If md5 is not included in testbed.py and the node is already provisioned, you can run the 
+#    contrail-controller/src/config/utils/provision_control.py script with a newly added argument for md5
+# The below env dict is for first method specified, where you include a dict in testbed.py as shown below:
+#  env.md5 = {
+#     host1: 'juniper',
+#     host2: 'juniper',
+#     host3: 'juniper',
+#  }
+# 'juniper' is the md5 key that will be configured on the nodes.

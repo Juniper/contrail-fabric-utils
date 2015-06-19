@@ -19,11 +19,12 @@ from fabfile.utils.config import get_value
 from fabfile.tasks.install import *
 from fabfile.tasks.verify import *
 from fabfile.tasks.helpers import *
+from fabfile.utils.vcenter import *
 from fabfile.utils.commandline import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
-        configure_esxi_network, create_esxi_compute_vm, deprovision_vcenter
+        configure_esxi_network, create_esxi_compute_vm
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
         get_esxi_vms_and_hosts
@@ -197,9 +198,9 @@ def get_tor_agent_haproxy_config(proxy_name, key, ha_dict):
     for i in range(1, ha_dict_len):
         tor_agent_ha_config = tor_agent_ha_config + ',:%s' %(port_list[i])
     tor_agent_ha_config = tor_agent_ha_config + '\n'
-    tor_agent_ha_config = tor_agent_ha_config + '    server %s %s check inter 2000\n' %(ip1, ip1)
+    tor_agent_ha_config = tor_agent_ha_config + '    server %s %s\n' %(ip1, ip1)
     if ip2 != None:
-        tor_agent_ha_config = tor_agent_ha_config + '    server %s %s check inter 2000\n' %(ip2, ip2)
+        tor_agent_ha_config = tor_agent_ha_config + '    server %s %s\n' %(ip2, ip2)
         tor_agent_ha_config = tor_agent_ha_config + '    balance leastconn\n'
     tor_agent_ha_config = tor_agent_ha_config + '\n'
     return tor_agent_ha_config
@@ -540,16 +541,6 @@ def setup_cfgm_node(*args):
 
             orch = get_orchestrator()
             if orch == 'vcenter':
-                #create the static esxi:vrouter map file
-                esxi_info = getattr(testbed, 'esxi_hosts', None)
-                tmp_fname = "/tmp/ESXiToVRouterIp-%s" %(host_string)
-                for esxi_host in esxi_info:
-                    esxi_ip = esxi_info[esxi_host]['ip']
-                    vrouter_ip_string = esxi_info[esxi_host]['contrail_vm']['host']
-                    vrouter_ip = hstr_to_ip(vrouter_ip_string)
-                    local("echo '%s:%s' >> %s" %(esxi_ip, vrouter_ip, tmp_fname))
-                put(tmp_fname, "/etc/contrail/ESXiToVRouterIp.map", use_sudo=True)
-                local("rm %s" %(tmp_fname))
                 # Frame the command  to provision vcenter-plugin
                 vcenter_info = getattr(env, 'vcenter', None)
                 if not vcenter_info:
@@ -558,8 +549,7 @@ def setup_cfgm_node(*args):
                 cassandra_ip_list = [hstr_to_ip(get_control_host_string(\
                     cassandra_host)) for cassandra_host in env.roledefs['database']]
                 cfgm_ip = get_contrail_internal_vip() or\
-                    hstr_to_ip(host_string);
-                    #hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+                    hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
                 cmd = "setup-vcenter-plugin"
                 cmd += " --vcenter_url %s" % vcenter_info['server']
                 cmd += " --vcenter_username %s" % vcenter_info['username']
@@ -1002,6 +992,15 @@ def setup_nova_aggregate():
 
 @task
 def setup_nova_aggregate_node(*args):
+    docker = any(['docker' == get_hypervisor(compute_host)
+                  for compute_host in env.roledefs['compute']])
+    libvirt = any(['libvirt' == get_hypervisor(compute_host)
+                  for compute_host in env.roledefs['compute']])
+    if not (libvirt and docker):
+        # Not a hybrid setup(libvirt + docker)
+        # No need for the compute aggregate
+        return
+
     for compute_host in env.roledefs['compute']:
         hypervisor = get_hypervisor(compute_host)
         host_name = None
@@ -1302,7 +1301,7 @@ def setup_control_node(*args):
             with cd(INSTALLER_DIR):
                 sudo(cmd)
                 if detect_ostype() in ['centos', 'redhat', 'fedora', 'centoslinux']:
-                    sudo("service supervisor-control restart")
+                    sudo("service contrail-control restart")
 #end setup_control
 
 @task
@@ -1499,8 +1498,8 @@ def prov_control_bgp():
         cmd += " --api_server_ip %s" % cfgm_ip
         cmd += " --api_server_port 8082"
         cmd += " --router_asn %s" % testbed.router_asn
-        md5_value = get_from_testbed_dict('md5', env.host_string, None)
-        #if condition required so that literal value of None is not configured
+        md5_value = get_bgp_md5(env.host_string)
+        #if condition required because without it, it will configure literal 'None' md5 key
         if md5_value:
             cmd += " --md5 %s" % md5_value
         cmd += " %s" % get_mt_opts()
@@ -1543,10 +1542,11 @@ def prov_metadata_services():
         openstack_host = get_control_host_string(env.roledefs['openstack'][0])
         ipfabric_service_ip = get_openstack_internal_vip() or hstr_to_ip(openstack_host)
         ipfabric_service_port = '8775'
+        admin_user, admin_password = get_openstack_credentials()
     elif orch is 'vcenter':
-        ipfabric_service_ip = get_authserver_ip()
-        ipfabric_service_port = get_authserver_port()
-    admin_user, admin_password = get_authserver_credentials()
+        ipfabric_service_ip = get_vcenter_ip()
+        ipfabric_service_port = get_vcenter_port()
+        admin_user, admin_password = get_vcenter_credentials()
     metadata_args = "--admin_user %s" % admin_user
     metadata_args += " --admin_password %s" % admin_password
     metadata_args += " --ipfabric_service_ip %s" % ipfabric_service_ip
@@ -1563,7 +1563,14 @@ def prov_metadata_services():
 @task
 def prov_encap_type():
     cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
-    admin_user, admin_password = get_authserver_credentials()
+    orch = get_orchestrator()
+    if orch is 'none':
+        return
+
+    if orch is 'openstack':
+        admin_user, admin_password = get_openstack_credentials()
+    elif orch is 'vcenter':
+        admin_user, admin_password = get_vcenter_credentials()
     if 'encap_priority' not in env.keys():
         env.encap_priority="MPLSoUDP,MPLSoGRE,VXLAN"
     encap_args = "--admin_user %s" % admin_user
@@ -1691,7 +1698,7 @@ def add_tsn_node(restart=True,*args):
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
         compute_mgmt_ip= host_string.split('@')[1]
         compute_control_ip= hstr_to_ip(compute_host)
-        admin_tenant_name = get_admin_tenant_name()
+        admin_tenant_name = get_keystone_admin_tenant_name()
 
         # Check if nova-compute is allready running
         # Stop if running on TSN node
@@ -1709,14 +1716,18 @@ def add_tsn_node(restart=True,*args):
                 openstack_host = get_control_host_string(env.roledefs['openstack'][0])
                 with settings(host_string=openstack_host, warn_only=True):
                     sudo("nova-manage service disable --host=%s --service=nova-compute" %(compute_hostname))
-        admin_user, admin_password = get_authserver_credentials()
-        authserver_ip = get_authserver_ip()
+        orch = get_orchestrator()
+        if orch is 'openstack':
+            admin_user, admin_password = get_openstack_credentials()
+        elif orch is 'vcenter':
+            admin_user, admin_password = get_vcenter_credentials()
+        keystone_ip = get_keystone_ip()
         with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
             prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                         "--admin_user %s --admin_password %s --admin_tenant_name %s --openstack_ip %s --router_type tor-service-node" \
                         %(compute_hostname, compute_control_ip, cfgm_ip,
                           admin_user, admin_password,
-                          admin_tenant_name, authserver_ip)
+                          admin_tenant_name, keystone_ip)
             sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
         with settings(host_string=host_string, warn_only=True):
             nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
@@ -1777,14 +1788,6 @@ def add_tor_agent_by_index(index, node_info, restart=True):
     host_string = node_info
     with settings(host_string=host_string):
         toragent_dict = getattr(env,'tor_agent', None)
-        if not host_string in toragent_dict:
-            print 'tor-agent entry for %s does not exist in testbed file' \
-                %(host_string)
-            return
-        if not i < len(toragent_dict[host_string]):
-            print 'tor-agent entry for host %s and index %d does not exist ' \
-                'in testbed file' %(host_string, i)
-            return
         # Populate the argument to pass for setup-vnc-tor-agent
         tor_id = int(get_tor_agent_id(toragent_dict[host_string][i]))
         if tor_id == -1:
@@ -1792,9 +1795,6 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         tor_name= toragent_dict[host_string][i]['tor_name']
         tor_tunnel_ip= toragent_dict[host_string][i]['tor_tunnel_ip']
         tor_vendor_name= toragent_dict[host_string][i]['tor_vendor_name']
-        tor_product_name= ""
-        if 'tor_product_name' in toragent_dict[host_string][i]:
-            tor_product_name= toragent_dict[host_string][i]['tor_product_name']
         tsn_name=toragent_dict[host_string][i]['tor_tsn_name']
         tor_mgmt_ip=toragent_dict[host_string][i]['tor_ip']
         http_server_port = -1
@@ -1881,26 +1881,27 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
         compute_mgmt_ip= host_string.split('@')[1]
         compute_control_ip= hstr_to_ip(compute_host)
-        admin_tenant_name = get_admin_tenant_name()
-        admin_user, admin_password = get_authserver_credentials()
-        authserver_ip = get_authserver_ip()
+        admin_tenant_name = get_keystone_admin_tenant_name()
+        orch = get_orchestrator()
+        if orch is 'openstack':
+            admin_user, admin_password = get_openstack_credentials()
+        elif orch is 'vcenter':
+            admin_user, admin_password = get_vcenter_credentials()
+        keystone_ip = get_keystone_ip()
         prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                     "--admin_user %s --admin_password %s --admin_tenant_name %s\
                      --openstack_ip %s --router_type tor-agent" \
                      %(tor_agent_name, compute_control_ip, cfgm_ip,
                        admin_user, admin_password,
-                       admin_tenant_name, authserver_ip)
-        pr_args = "--device_name %s --vendor_name %s\
-                   --device_mgmt_ip %s --device_tunnel_ip %s\
-                   --device_tor_agent %s --device_tsn %s\
-                   --api_server_ip %s --oper add\
+                       admin_tenant_name, keystone_ip)
+        pr_args = "--device_name %s --vendor_name %s --device_mgmt_ip %s\
+                   --device_tunnel_ip %s --device_tor_agent %s\
+                   --device_tsn %s --api_server_ip %s --oper add\
                    --admin_user %s --admin_password %s\
                    --admin_tenant_name %s --openstack_ip %s"\
             %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
               tor_agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
-              admin_tenant_name, authserver_ip)
-        if tor_product_name:
-            pr_args += " --product_name %s" %(tor_product_name)
+              admin_tenant_name, keystone_ip)
         with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
             sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
             sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
@@ -2030,19 +2031,23 @@ def delete_tor_agent_by_index(index, node_info, restart=True):
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
         compute_mgmt_ip= host_string.split('@')[1]
         compute_control_ip= hstr_to_ip(compute_host)
-        admin_tenant_name = get_admin_tenant_name()
-        admin_user, admin_password = get_authserver_credentials()
-        authserver_ip = get_authserver_ip()
+        admin_tenant_name = get_keystone_admin_tenant_name()
+        orch = get_orchestrator()
+        if orch is 'openstack':
+            admin_user, admin_password = get_openstack_credentials()
+        elif orch is 'vcenter':
+            admin_user, admin_password = get_vcenter_credentials()
+        keystone_ip = get_keystone_ip()
         prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper del " \
                     "--admin_user %s --admin_password %s --admin_tenant_name %s\
                      --openstack_ip %s" \
                      %(tor_agent_name, compute_control_ip, cfgm_ip, admin_user,
-                       admin_password, admin_tenant_name, authserver_ip)
+                       admin_password, admin_tenant_name, keystone_ip)
         pr_args = "--device_name %s --vendor_name %s --api_server_ip %s\
                    --oper del --admin_user %s --admin_password %s\
                    --admin_tenant_name %s --openstack_ip %s"\
             %(tor_name, tor_vendor_name, cfgm_ip, admin_user, admin_password,
-              admin_tenant_name, authserver_ip)
+              admin_tenant_name, keystone_ip)
         with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
             sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
             sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
@@ -2438,42 +2443,7 @@ def add_esxi_to_vcenter(*args):
     (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
     provision_vcenter(vcenter_info, hosts, clusters, vms, 'True')
 
-@task
-def prov_vcenter_datastores():
-    vcenter_info = getattr(env, 'vcenter', None)
-    if not vcenter_info:
-        return
-    esxi_info = getattr(testbed, 'esxi_hosts', None)
-    if not esxi_info:
-        print 'Error: esxi_hosts block is not defined in testbed file.Exiting'
-        return
-    for esx in esxi_info:
-        host = esxi_info[esx]
-        host_string = host['username'] + '@' +  host['ip']
-        ds = os.path.split(host['datastore'])
-        if not ds[1]:
-            ds = os.path.split(ds[0])
-        old_ds = 'datastore1'
-        if old_ds == ds[1]:
-            print 'Old and New names for datastore are same, skipping'
-            continue
-        new_ds = os.path.join(ds[0], ds[1])
-        ds = ds[0]
-        print 'renaming %s to %s' % (old_ds, new_ds)
-        with settings(host_string=host_string, password=host['password'],
-                      shell = '/bin/sh -l -c'):
-            run("ln -s `ls -l %s | grep %s | awk '{print $11}` %s" % (ds, old_ds, new_ds))
-
-@hosts(env.roledefs['cfgm'][0])
-@task
-def cleanup_vcenter():
-    vcenter_info = getattr(env, 'vcenter', None)
-    if not vcenter_info:
-        print 'Error: vcenter block is not defined in testbed file.Exiting'
-        return
-    deprovision_vcenter(vcenter_info)
-
-@hosts(env.roledefs['cfgm'][0])
+@roles('build')
 @task
 def setup_vcenter():
     vcenter_info = getattr(env, 'vcenter', None)
