@@ -104,9 +104,14 @@ def get_config_pkgs():
      return pkgs
 
 def get_vcenter_plugin_pkg():
-    pkgs = ['contrail-install-vcenter-plugin']
-   
-    return pkgs
+    pkg = 'contrail-install-vcenter-plugin'
+    pkg = sudo('ls /opt/contrail/contrail_install_repo | grep %s' %pkg)
+    if pkg:
+        pkg = '/opt/contrail/contrail_install_repo/' + pkg
+    else:
+        pkg = None
+
+    return pkg
 
 def get_openstack_ceilometer_pkgs():
     """ Returns the list of ceilometer packages used in a
