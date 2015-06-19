@@ -53,6 +53,9 @@ def install_contrail_vcenter_plugin(pkg):
     if not pkg:
         print "Error:No vcenter plugin pkg, aborting"
         exit(1)
+    depend_pkgs = ['libxml-commons-external-java', 'libxml-commons-resolver1.1-java', 'libxerces2-java',
+                   'libslf4j-java', 'libnetty-java', 'libjline-java', 'libzookeeper-java']
+    apt_install(depend_pkgs)
     execute('install_pkg_node', pkg, env.host_string)
     execute('install_contrail_vcenter_plugin_node', env.host_string)
 
