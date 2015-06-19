@@ -1499,8 +1499,8 @@ def prov_control_bgp():
         cmd += " --api_server_ip %s" % cfgm_ip
         cmd += " --api_server_port 8082"
         cmd += " --router_asn %s" % testbed.router_asn
-        md5_value = get_from_testbed_dict('md5', env.host_string, None)
-        #if condition required so that literal value of None is not configured
+        md5_value = get_bgp_md5(env.host_string)
+        #if condition required because without it, it will configure literal 'None' md5 key
         if md5_value:
             cmd += " --md5 %s" % md5_value
         cmd += " %s" % get_mt_opts()
