@@ -1149,11 +1149,11 @@ def check_disk_space():
         # If Ubuntu
         if exists('/etc/cassandra/cassandra.yaml', use_sudo=True):
             yaml_file = '/etc/cassandra/cassandra.yaml'
-            out = local("%s %s" % (cmd, yaml_file), capture=True)
+            out = sudo("%s %s" % (cmd, yaml_file))
         # If redhat distros
         elif exists('/etc/cassandra/conf/cassandra.yaml', use_sudo=True):
             yaml_file = '/etc/cassandra/conf/cassandra.yaml'
-            out = local("%s %s" % (cmd, yaml_file), capture=True)
+            out = sudo("%s %s" % (cmd, yaml_file))
         data_dir = out[2:]
     if not exists(data_dir, use_sudo=True):
         data_dir = '/var/lib'
