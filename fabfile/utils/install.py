@@ -159,7 +159,10 @@ def get_compute_ceilometer_pkgs():
     return pkgs
 
 @task
-def create_yum_repo_from_tgz_node(tgz, *args):
+def create_yum_repo_from_tgz_node(tgz, *args, **kwargs):
+    extra_repo = kwargs.get('extra_repo', 'auto_check')
+    tgz_in_target = kwargs.get('tgz_in_target', 'no')
+
     for host_string in args:
         with settings(host_string=host_string):
             tgz_file_name = os.path.basename(tgz)
@@ -167,9 +170,14 @@ def create_yum_repo_from_tgz_node(tgz, *args):
             repo_dir_name = os.path.join(os.path.sep, 'opt', 'contrail', tgz_name[0])
             sudo('mkdir -p %s' % repo_dir_name)
 
-            # Check if tgz is available locally. If current node is the build
-            # node, no need to copy the tgz
-            if host_string not in env.roledefs['build']:
+            # Check if tgz is available locally. no need to copy the tgz
+            is_remote = None
+            if tgz_in_target == 'yes':
+                with settings(warn_only=True):
+                    is_remote = sudo('ls %s' % tgz)
+                    is_remote = is_remote.succeeded
+
+            if not is_remote and host_string not in env.roledefs['build']:
                 tempdir = sudo('mktemp -d')
                 remote_path = os.path.join(tempdir, tgz_file_name)
                 put(tgz, tempdir, use_sudo=True)
@@ -180,6 +188,11 @@ def create_yum_repo_from_tgz_node(tgz, *args):
             sudo('tar xfz %s -C %s' % (remote_path, repo_dir_name))
             with cd(repo_dir_name):
                 sudo('createrepo .')
+
+            # remove temp dir if created
+            if tempdir:
+                sudo('rm -rf %s' % tempdir)
+
             repo_def = "[%s]\n" \
                        "name=%s\n" \
                        "baseurl=file://%s/\n" \
@@ -202,7 +215,28 @@ def create_yum_repo_from_tgz_node(tgz, *args):
             with settings(warn_only=True):
                 sudo('yum clean all')
 
-def create_apt_repo_from_tgz_node(tgz, *args):
+            # decide to recurse if extra_repo arg is not sent by user
+            with settings(warn_only=True):
+                rpms_present = sudo('ls %s/*.rpm > /dev/null' % repo_dir_name)
+                if rpms_present.failed and extra_repo == 'auto_check':
+                    print 'Setting extra_repo = \'yes\''
+                    extra_repo = 'yes'
+
+            if extra_repo == 'yes':
+                with settings(warn_only=True):
+                    extra_tgzs = sudo('ls %s/*.tgz' % repo_dir_name)
+                    if extra_tgzs.succeeded:
+                        for tgzfile in extra_tgzs.split('\r\n'):
+                            kwargs.update([('tgz_in_target', 'yes')])
+                            # Recrucively extract the tgzs present in given tgz
+                            create_yum_repo_from_tgz_node(tgzfile, host_string, **kwargs)
+
+
+@task
+def create_apt_repo_from_tgz_node(tgz, *args, **kwargs):
+    extra_repo = kwargs.get('extra_repo', 'auto_check')
+    tgz_in_target = kwargs.get('tgz_in_target', 'no')
+
     for host_string in args:
         with settings(host_string=host_string):
             tempdir = ''
@@ -211,9 +245,14 @@ def create_apt_repo_from_tgz_node(tgz, *args):
             repo_dir_name = os.path.join(os.path.sep, 'opt', 'contrail', tgz_name[0])
             sudo('mkdir -p %s' % repo_dir_name)
 
-            # Check if tgz is available locally. If current node is the build
-            # node, no need to copy the tgz
-            if host_string not in env.roledefs['build']:
+            # Check if tgz is available locally. no need to copy the tgz
+            is_remote = None
+            if tgz_in_target == 'yes':
+                with settings(warn_only=True):
+                    is_remote = sudo('ls %s' % tgz)
+                    is_remote = is_remote.succeeded
+
+            if not is_remote and host_string not in env.roledefs['build']:
                 tempdir = sudo('mktemp -d')
                 remote_path = os.path.join(tempdir, tgz_file_name)
                 put(tgz, tempdir, use_sudo=True)
@@ -222,6 +261,7 @@ def create_apt_repo_from_tgz_node(tgz, *args):
 
             # Untar the given tgz file and create repo
             sudo('tar xfz %s -C %s' % (remote_path, repo_dir_name))
+
             with cd(repo_dir_name):
                 sudo('dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz')
 
@@ -230,7 +270,7 @@ def create_apt_repo_from_tgz_node(tgz, *args):
 
             # Add the repo entry
             with settings(warn_only=True):
-                is_repo_entry_exists = sudo('grep "deb file:%s ./" /etc/apt/sources.list' % repo_dir_name)
+                is_repo_entry_exists = sudo('grep "^deb file:%s ./" /etc/apt/sources.list' % repo_dir_name)
             if is_repo_entry_exists.failed:
                 node_date = sudo("date +%Y_%m_%d__%H_%M_%S")
                 sudo('cp /etc/apt/sources.list /etc/apt/sources.list.%s.contrailbackup' % node_date)
@@ -242,3 +282,19 @@ def create_apt_repo_from_tgz_node(tgz, *args):
             # Update all repos
             with settings(warn_only=True):
                 sudo("apt-get update")
+
+            # decide to recurse if extra_repo arg is not sent by user
+            with settings(warn_only=True):
+                debs_present = sudo('ls %s/*.deb > /dev/null' % repo_dir_name)
+                if debs_present.failed and extra_repo == 'auto_check':
+                    print 'Setting extra_repo = \'yes\''
+                    extra_repo = 'yes'
+
+            if extra_repo == 'yes':
+                with settings(warn_only=True):
+                    extra_tgzs = sudo('ls %s/*.tgz' % repo_dir_name)
+                    if extra_tgzs.succeeded:
+                        for tgzfile in extra_tgzs.split('\r\n'):
+                            kwargs.update([('tgz_in_target', 'yes')])
+                            # Recrucively extract the tgzs present in given tgz
+                            create_apt_repo_from_tgz_node(tgzfile, host_string, **kwargs)

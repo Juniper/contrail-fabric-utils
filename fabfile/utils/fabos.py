@@ -162,3 +162,22 @@ def remove_file(file_name):
     cmd = 'rm -f ' + file_name
     sudo(cmd)
 #end remove_file
+
+def get_available_packages(os_type, *packages):
+    '''Retrieve packages version available in the node'''
+
+    os_type = detect_ostype()
+    os_type = os_type.lower()
+
+    pkg_dict = {}
+    for package in packages:
+        pkg_dict[package] = None
+        if os_type in ['centos', 'redhat', 'centoslinux', 'fedora']:
+            versions = sudo("yum list %s | grep %s | awk -F ' ' '{print $2}'" %(package, package))
+        elif os_type in ['ubuntu']:
+            versions = sudo('apt-cache show %s | grep Version: | grep -Po "Version: \K.*"' % package)
+        else:
+            raise RuntimeError('Unknown OS Type')
+        if versions and versions.succeeded:
+            pkg_dict[package] = versions.split('\r\n')
+    return pkg_dict
