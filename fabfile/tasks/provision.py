@@ -2090,7 +2090,6 @@ def setup_orchestrator():
         execute('setup_openstack')
         if get_openstack_internal_vip():
             execute('sync_keystone_ssl_certs')
-            execute('setup_cluster_monitors')
         execute('verify_openstack')
     #setup_vcenter can be called outside of setup_all and need not be below. So commenting.
     #elif orch == 'vcenter':
@@ -2130,6 +2129,8 @@ def setup_all(reboot='True'):
     execute('add_tsn', restart=False)
     execute('add_tor_agent', restart=False)
     execute('increase_vrouter_limit')
+    if get_openstack_internal_vip():
+        execute('setup_cluster_monitors')
     if reboot == 'True':
         print "Rebooting the compute nodes after setup all."
         execute('compute_reboot')
