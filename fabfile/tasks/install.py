@@ -547,16 +547,16 @@ def create_installer_repo_node(*args):
 @task
 @EXECUTE_TASK
 @roles('all')
-def create_install_repo(*tgzs):
+def create_install_repo(*tgzs, **kwargs):
     """Creates contrail install repo in all nodes."""
     if len(tgzs) == 0:
         execute("create_install_repo_node", env.host_string)
     else:
-        execute("create_install_repo_from_tgz_node", env.host_string, *tgzs)
+        execute("create_install_repo_from_tgz_node", env.host_string, *tgzs, **kwargs)
 
 @task
 @roles('build')
-def create_install_repo_without_openstack(*tgzs):
+def create_install_repo_without_openstack(*tgzs, **kwargs):
     """Creates contrail install repo in all nodes excluding openstack node."""
     if len(tgzs) == 0:
         cmd = 'create_install_repo_node'
@@ -567,10 +567,10 @@ def create_install_repo_without_openstack(*tgzs):
         if host_string in env.roledefs['openstack']:
             continue
         with settings(host_string=host_string):
-            execute(cmd, host_string, *tgzs)
+            execute(cmd, host_string, *tgzs, **kwargs)
 
 @task
-def create_install_repo_from_tgz_node(host_string, *tgzs):
+def create_install_repo_from_tgz_node(host_string, *tgzs, **kwargs):
     """Create contrail repos from each tgz files in the given node
        * tgzs can be absolute/relative paths or a pattern
     """
@@ -597,23 +597,38 @@ def create_install_repo_from_tgz_node(host_string, *tgzs):
         with settings(host_string=host_string, warn_only=True):
             os_type = detect_ostype()
         if os_type in ['centos', 'fedora', 'redhat', 'centoslinux']:
-            execute(create_yum_repo_from_tgz_node, tgz, host_string)
+            execute(create_yum_repo_from_tgz_node, tgz, host_string, **kwargs)
         elif os_type in ['ubuntu']:
-            execute(create_apt_repo_from_tgz_node, tgz, host_string)
+            execute(create_apt_repo_from_tgz_node, tgz, host_string, **kwargs)
 
 @task
 def create_install_repo_node(*args):
     """Creates contrail install repo in one or list of nodes. USAGE:fab create_install_repo_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            contrail_setup_pkg = sudo("ls /opt/contrail/contrail_install_repo/contrail-setup*")
-            contrail_setup_pkgs = contrail_setup_pkg.split('\n')
-            if (len(contrail_setup_pkgs) == 1 and
-                get_release() in contrail_setup_pkgs[0] and
-                get_build().split('~')[0] in contrail_setup_pkgs[0]):
-                print "Contrail install repo created already in node: %s." % host_string
-                continue
-            sudo("sudo /opt/contrail/contrail_packages/setup.sh")
+            os_type = detect_ostype()
+            install_versions = get_pkg_version_release('contrail-install-packages')
+            # If contrail-install-packages is not installed, cant continue as setup.sh
+            # wont be present
+            if not install_versions:
+                print 'WARNING: contrail-install-packages is not installed, Skipping!!!'
+                return
+            if os_type in ['centos', 'redhat', 'centoslinux', 'fedora']:
+                install_versions = ['.'.join([install_version.split('~')[0], install_version.split('~')[1].split('.')[1]]) \
+                                for install_version in install_versions]
+            elif os_type in ['ubuntu']:
+                install_versions = [install_version.split('~')[0] for install_version in install_versions]
+            else:
+                raise RuntimeError('UnSupported os type (%s)' % os_type)
+
+            contrail_setup_versions = get_available_packages(os_type, 'contrail-setup')
+            setup_versions = contrail_setup_versions['contrail-setup']
+            exec_setup = (set(install_versions) - set(setup_versions)) == (set(setup_versions) - set(install_versions))
+            if not exec_setup:
+                if exists('/opt/contrail/contrail_packages/setup.sh', sudo=True):
+                    sudo("sudo /opt/contrail/contrail_packages/setup.sh")
+                else:
+                    raise RuntimeError('/opt/contrail/contrail_packages/setup.sh is not available')
 
 @task
 def create_install_repo_dpdk_node(*args):
@@ -771,7 +786,7 @@ def install_contrail(*tgzs, **kwargs):
     reboot = kwargs.get('reboot', 'True')
     execute('pre_check')
     execute('create_installer_repo')
-    execute(create_install_repo, *tgzs)
+    execute(create_install_repo, *tgzs, **kwargs)
     execute(create_install_repo_dpdk)
     execute(install_database)
     execute('install_orchestrator')
