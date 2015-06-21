@@ -197,8 +197,8 @@ listen memcached 0.0.0.0:11222
    option tcpka                                                                                    
    option nolinger                                                                                 
    timeout connect 5s                                                                              
-   timeout client 48h                                                                              
-   timeout server 48h 
+   timeout client 0
+   timeout server 0
 $__memcached_servers__
 
 listen  rabbitmq 0.0.0.0:5673
@@ -208,8 +208,8 @@ listen  rabbitmq 0.0.0.0:5673
     option tcpka
     option nolinger
     option forceclose
-    timeout client 48h
-    timeout server 48h
+    timeout client 0
+    timeout server 0
     timeout client-fin 60s
     timeout server-fin 60s
 $__rabbitmq_servers__
@@ -222,8 +222,8 @@ listen  mysql 0.0.0.0:33306
     option forceclose
     maxconn 10000
     timeout connect 30s
-    timeout client 24h
-    timeout server 24h
+    timeout client 0
+    timeout server 0
     timeout client-fin 60s
     timeout server-fin 60s
 $__mysql_servers__
