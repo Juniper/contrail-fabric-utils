@@ -387,6 +387,7 @@ env.ostypes = {
 #           this tor-agent, it should have the same 'tor_name'
 # tor_tunnel_ip: Data plane IP for the tor switch
 # tor_vendor_name: Vendor type for TOR switch
+# tor_product_name: Product name of TOR switch. This is an optional field.
 # tor_agent_http_server_port: HTTP server port. Same will be used by tor agent for introspect
 #
 #env.tor_agent = {host10:[{
@@ -400,7 +401,8 @@ env.ostypes = {
 #                    'tor_tsn_name':'nodec45',
 #                    'tor_name':'bng-contrail-qfx51-2',
 #                    'tor_tunnel_ip':'34.34.34.34',
-#                    'tor_vendor_name':'Juniper'
+#                    'tor_vendor_name':'Juniper',
+#                    'tor_product_name':'QFX5100',
 #                    'tor_agent_http_server_port': '9010',
 #                       }]
 #                }

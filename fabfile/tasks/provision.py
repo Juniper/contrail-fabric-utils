@@ -1791,6 +1791,9 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         tor_name= toragent_dict[host_string][i]['tor_name']
         tor_tunnel_ip= toragent_dict[host_string][i]['tor_tunnel_ip']
         tor_vendor_name= toragent_dict[host_string][i]['tor_vendor_name']
+        tor_product_name= ""
+        if 'tor_product_name' in toragent_dict[host_string][i]:
+            tor_product_name= toragent_dict[host_string][i]['tor_product_name']
         tsn_name=toragent_dict[host_string][i]['tor_tsn_name']
         tor_mgmt_ip=toragent_dict[host_string][i]['tor_ip']
         http_server_port = -1
@@ -1898,6 +1901,8 @@ def add_tor_agent_by_index(index, node_info, restart=True):
             %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
               tor_agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
               admin_tenant_name, keystone_ip)
+        if tor_product_name:
+            pr_args += " --product_name %s" %(tor_product_name)
         with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
             sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
             sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
