@@ -129,3 +129,10 @@ def is_ceilometer_compute_provision_supported():
         return False
     return supported
 #end is_ceilometer_compute_provision_supported
+
+def get_cassandra_name():
+     return getattr(testbed, 'cassandra_username', None)
+
+def get_cassandra_password():
+     return getattr(testbed, 'cassandra_password', None)
+#end cassandra configuration
