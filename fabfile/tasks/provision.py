@@ -2421,6 +2421,21 @@ def prov_esxi(*args):
          provision_dvs_fab(vcenter_info, esxi_info, host_list)
 #end prov_compute_vm
 
+@task
+def update_esxi_vrouter_map():
+    esxi_info = getattr(testbed, 'esxi_hosts', None)
+    for host_string in env.roledefs['cfgm']:
+        with settings(host_string=host_string):
+            tmp_fname = "/tmp/ESXiToVRouterIp-%s" %(env.host_string)
+            for esxi_host in esxi_info:
+                esxi_ip = esxi_info[esxi_host]['ip']
+                vrouter_ip_string = esxi_info[esxi_host]['contrail_vm']['host']
+                vrouter_ip = hstr_to_ip(vrouter_ip_string)
+                local("echo '%s:%s' >> %s" %(esxi_ip, vrouter_ip, tmp_fname))
+            put(tmp_fname, "/etc/contrail/ESXiToVRouterIp.map", use_sudo=True)
+            local("rm %s" %(tmp_fname))
+
+
 @roles('build')
 @task
 def add_esxi_to_vcenter(*args):
@@ -2436,6 +2451,7 @@ def add_esxi_to_vcenter(*args):
         host_list = args
     else:
         host_list = esxi_info.keys()
+    update_esxi_vrouter_map()
     (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
     provision_vcenter(vcenter_info, hosts, clusters, vms, 'True')
 
