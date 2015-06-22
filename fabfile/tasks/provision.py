@@ -2434,6 +2434,7 @@ def update_esxi_vrouter_map():
                 local("echo '%s:%s' >> %s" %(esxi_ip, vrouter_ip, tmp_fname))
             put(tmp_fname, "/etc/contrail/ESXiToVRouterIp.map", use_sudo=True)
             local("rm %s" %(tmp_fname))
+            sudo("service contrail-vcenter-plugin restart")
 
 
 @roles('build')
@@ -2451,9 +2452,9 @@ def add_esxi_to_vcenter(*args):
         host_list = args
     else:
         host_list = esxi_info.keys()
-    update_esxi_vrouter_map()
     (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
     provision_vcenter(vcenter_info, hosts, clusters, vms, 'True')
+    update_esxi_vrouter_map()
 
 @task
 def prov_vcenter_datastores():
