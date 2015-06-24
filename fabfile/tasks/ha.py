@@ -462,7 +462,7 @@ def fix_cmon_param_and_add_keys_to_compute():
     sudo("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
     sudo("grep -q '# Modified below two params in 2.2 #' %s || echo '# Modified below two params in 2.2 #' >> %s" % (cmon_param, cmon_param))
     sudo("echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % cmon_param)
-    sudo("echo 'RABBITMQ_RESET=False' >> %s" % cmon_param)
+    sudo("echo 'RABBITMQ_RESET=True' >> %s" % cmon_param)
     amqps = 'DIPHOSTS=("' + '" "'.join(amqp_host_list) + '")'
     sudo("echo '%s' >> %s" % (amqps, cmon_param))
     sudo("echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % cmon_param)
