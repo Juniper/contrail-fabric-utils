@@ -1824,12 +1824,18 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         cmd += " --self_ip %s" % tor_agent_control_ip
         cmd += " --agent_name %s" % tor_agent_name
         cmd += " --http_server_port %s" % http_server_port
-        cmd += " --discovery_server_ip %s" % hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
         cmd += " --tor_id %s" % tor_id
         cmd += " --tor_ip %s" % toragent_dict[host_string][i]['tor_ip']
         cmd += " --tor_ovs_port %s" % toragent_dict[host_string][i]['tor_ovs_port']
         cmd += " --tsn_ip %s" % toragent_dict[host_string][i]['tor_tsn_ip']
         cmd += " --tor_ovs_protocol %s" % toragent_dict[host_string][i]['tor_ovs_protocol']
+        # HA arguments
+        internal_vip = get_openstack_internal_vip()
+        if internal_vip:
+            # Highly availbale setup
+            cmd += " --discovery_server_ip %s" % internal_vip
+        else:
+            cmd += " --discovery_server_ip %s" % hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
         # Execute the provision toragent script
         with cd(INSTALLER_DIR):
             sudo(cmd)
