@@ -303,8 +303,9 @@ env.ostypes = {
 # tor_ovs_port: Port number to be used by ovs
 # tor_ovs_protocol: Connection protocol to be used by ovs. Currently only TCP
 # tor_tsn_ip: TSN node ip
+# tor_agent_ovs_ka: Tor Agent OVSDB keepalive timer in milli seconds
 #env.tor_agent =
-#{host3:[{'tor_ip':'10.204.217.39','tor_agent_id':'1','tor_agent_name':'nodexx-1', 'tor_ovs_port':'9999','tor_ovs_protocol':'tcp','tor_tsn_ip':'10.204.221.35'}]}
+#{host3:[{'tor_ip':'10.204.217.39','tor_agent_id':'1','tor_agent_name':'nodexx-1', 'tor_ovs_port':'9999','tor_ovs_protocol':'tcp','tor_tsn_ip':'10.204.221.35', 'tor_agent_ovs_ka':'10000'}]}
 
 # OPTIONAL DPDK CONFIGURATION
 # ===========================

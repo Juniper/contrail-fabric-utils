@@ -389,6 +389,7 @@ env.ostypes = {
 # tor_vendor_name: Vendor type for TOR switch
 # tor_product_name: Product name of TOR switch. This is an optional field.
 # tor_agent_http_server_port: HTTP server port. Same will be used by tor agent for introspect
+# tor_agent_ovs_ka: Tor Agent OVSDB keepalive timer in milli seconds
 #
 #env.tor_agent = {host10:[{
 #                    'tor_ip':'10.204.217.39',
@@ -404,6 +405,7 @@ env.ostypes = {
 #                    'tor_vendor_name':'Juniper',
 #                    'tor_product_name':'QFX5100',
 #                    'tor_agent_http_server_port': '9010',
+#                    'tor_agent_ovs_ka': '10000',
 #                       }]
 #                }
 #######################################
