@@ -47,7 +47,7 @@ class dvs_fab(object):
             if c.name == name:
                 obj = c
                 break
-        return
+        return obj
 
     def get_dvs_portgroup(self, vimtype, portgroup_name, dvs_name):
         """
@@ -60,7 +60,7 @@ class dvs_fab(object):
                 if c.config.distributedVirtualSwitch.name == dvs_name:
                     obj = c
                     break
-        return
+        return obj
 
     def connect_to_vcenter(self):
         from pyVim import connect
@@ -117,8 +117,8 @@ class dvs_fab(object):
                 nicspec.device.wakeOnLanEnabled = True
                 pg_obj = self.get_dvs_portgroup([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name, dv_switch.name)
                 dvs_port_connection = self.pyVmomi.vim.dvs.PortConnection()
-                dvs_port_connection.portgroupKey= pg_obj.key
-                dvs_port_connection.switchUuid= pg_obj.config.distributedVirtualSwitch.uuid
+                dvs_port_connection.portgroupKey = pg_obj.key
+                dvs_port_connection.switchUuid = pg_obj.config.distributedVirtualSwitch.uuid
                 nicspec.device.backing = self.pyVmomi.vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo()
                 nicspec.device.backing.port = dvs_port_connection
                 devices.append(nicspec)
