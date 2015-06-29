@@ -358,7 +358,7 @@ def get_remote_path(path):
     return remote_dir
 
 def get_test_features(feature=None):
-    cmd = "python contrail-test list"
+    cmd = "python tools/contrail-test list"
     if feature:
         cmd += " -f %s" % feature
     cfgm_host = env.roledefs['cfgm'][0]
@@ -366,7 +366,7 @@ def get_test_features(feature=None):
         remote_test_dir = get_remote_path(env.test_repo_dir)
         if not exists(remote_test_dir):
             execute(setup_test_env)
-        with cd('%s/tools/' % remote_test_dir):
+        with cd(remote_test_dir):
             features = sudo(cmd)
     return features.split("\r\n")
 
@@ -449,8 +449,8 @@ def run_sanity(feature='sanity', test=None):
                 cmd = '%s %s' % (env_vars, cmds[feature])
                 sudo(cmd)
         else:
-            with cd('%s/tools/' %(get_remote_path(env.test_repo_dir))):
-                cmd = '%s python contrail-test run -T ' % (env_vars)
+            with cd('%s/' %(get_remote_path(env.test_repo_dir))):
+                cmd = '%s python tools/contrail-test run -T ' % (env_vars)
                 sudo(cmd + test)
 
 #end run_sanity
