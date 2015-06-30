@@ -242,6 +242,7 @@ def setup_test_env():
         vcenter_dc = ''
         if orch == 'vcenter':
             vcenter_dc = env.vcenter['datacenter']
+            public_tenant_name='vCenter'
 
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__testbed_json_file__'   : 'sanity_testbed.json',
