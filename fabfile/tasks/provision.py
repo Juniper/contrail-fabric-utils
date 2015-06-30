@@ -193,6 +193,7 @@ def get_tor_agent_haproxy_config(proxy_name, key, ha_dict):
     else:
         ip1 = key
     tor_agent_ha_config = tor_agent_ha_config + 'listen %s\n' %(proxy_name)
+    tor_agent_ha_config = tor_agent_ha_config + '    option tcpka\n'
     tor_agent_ha_config = tor_agent_ha_config + '    mode tcp\n'
     tor_agent_ha_config = tor_agent_ha_config + '    bind :%s' %(port_list[0])
     for i in range(1, ha_dict_len):
