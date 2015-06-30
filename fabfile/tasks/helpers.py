@@ -175,12 +175,11 @@ def all_reimage(build_param="@LATEST"):
 
 @roles('build')
 @task
-def all_sm_reimage(build_param=None):
+def all_sm_reimage(build_param=None, esxi_reimage='yes'):
     hosts = env.roledefs['all'][:]
-    esxi_hosts = getattr(testbed, 'esxi_hosts', None)
-    if esxi_hosts:
-        for esxi in esxi_hosts:
-            hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+    esxi_hosts = getattr(testbed, 'esxi_hosts', [])
+    for esxi in esxi_hosts:
+        hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
     for host in hosts:
         hostname = None
         for i in range(5):
@@ -213,7 +212,7 @@ def all_sm_reimage(build_param=None):
                     local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
             sleep(1)
         sleep(30)
-    if esxi_hosts:
+    if esxi_reimage is 'yes':
        for esxi in esxi_hosts:
             with settings(warn_only=True):
                 local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (esxi,'esx5.5'))
