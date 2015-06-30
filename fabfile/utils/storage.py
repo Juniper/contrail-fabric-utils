@@ -205,8 +205,20 @@ def get_storage_mon_hosts():
     return (storage_mon_list)
 #end get_storage_mon_hosts config
 
+# Returns interal HA vip
 def get_cfg_ha_vip():
     ha_vip = get_from_testbed_dict('ha', 'contrail_internal_vip', None)
     if ha_vip:
         return ha_vip
     return 'none'
+#end get_cfg_ha_vip
+
+# Returns replica size
+def get_storage_replica_size():
+    replica_size = getattr(testbed, 'storage_replica_size', None)
+    if replica_size != None:
+        if int(replica_size) < 1:
+            print 'Replica should be >= 1'
+            sys.exit(0)
+    return (replica_size)
+#end get_storage_replica_size

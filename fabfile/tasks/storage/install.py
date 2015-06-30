@@ -126,11 +126,19 @@ def install_storage():
 @task
 @roles('build')
 def upgrade_storage(from_rel, pkg):
-    """upgrades all the contrail pkgs in all nodes."""
-    to_rel = get_release()
-    if Decimal(to_rel) > Decimal(from_rel):
+    """upgrades contrail-storage pkgs in all nodes."""
+    from_rel = get_release('contrail-storage-packages')
+    to_rel = sudo('dpkg --info %s |grep Version: | cut -d\':\' -f 2'
+                    %(pkg)).split('-')[0]
+    from_build = get_build('contrail-storage-packages').split('~')[0]
+    to_build = sudo('dpkg --info %s |grep Version: | cut -d\':\' -f 2'
+                    %(pkg)).split('-')[1].split('~')[0]
+    if (Decimal(to_rel) > Decimal(from_rel)) or \
+        (Decimal(to_rel) == Decimal(from_rel) and \
+        Decimal(to_build) > Decimal(from_build)):
         execute('install_storage_pkg_all', pkg)
         execute('install_storage')
         execute('setup_upgrade_storage')
     else:
-        raise RuntimeError("Upgrade not supported from release %s to %s" % (from_rel, to_rel))
+        raise RuntimeError("Downgrade not supported. Current version - %s~%s, New version - %s~%s"
+            %(from_rel, from_build, to_rel, to_build))
