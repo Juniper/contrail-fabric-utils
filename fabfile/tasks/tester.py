@@ -285,19 +285,25 @@ def setup_test_env():
             with settings(warn_only = True):
                 run('rm -rf /tmp/pip-build-root')
                 if detect_ostype() in ['centos', 'redhat']:
-                    pkg = 'fixtures testtools==1.1.0 testresources discover unittest2==0.8.0 \
-                        testrepository junitxml pytun'
+                    pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources discover \
+                        testrepository junitxml pytun requests==2.3.0'
                 elif 'ubuntu' == detect_ostype():
-                    pkg = 'fixtures testtools==1.1.0 testresources\
-                           testrepository junitxml pytun'
+                    pkg = 'fixtures=1.0.0 testtools==1.7.1 testresources\
+                           testrepository junitxml pytun requests==2.3.0'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
                 if ui_browser:
                     pkg = pkg + ' pyvirtualdisplay selenium'
                 if exists('/opt/contrail/api-venv/bin/activate'):
                     run('source /opt/contrail/api-venv/bin/activate && \
+                        pip install --upgrade unittest2 && \
                         pip install --upgrade %s' %pkg)
                 else:
+                    # Avoid installing linecache2 as dependency on unittest2
+                    # Avoid "TypeError: dist must be a Distribution instance"
+                    sudo("pip install linecache2")
+
+                    sudo("pip install --upgrade unittest2")
                     run("pip install --upgrade %s" %pkg)
 
                 if not exists('/usr/bin/ant'):
