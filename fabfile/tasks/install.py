@@ -14,7 +14,7 @@ from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator,\
 from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_compute_pkgs, get_ceilometer_plugin_pkgs, get_openstack_pkgs, \
      get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz_node, \
-     create_apt_repo_from_tgz_node, get_config_pkgs
+     create_apt_repo_from_tgz_node, get_config_pkgs, get_vcenter_plugin_pkg
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
@@ -427,7 +427,6 @@ def install_cfgm_node(*args):
                 apt_install(pkg)
             else:
                 yum_install(pkg)
-
 
 @task
 @EXECUTE_TASK
