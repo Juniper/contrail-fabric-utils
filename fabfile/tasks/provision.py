@@ -639,7 +639,8 @@ def fixup_ceilometer_pipeline_conf(analytics_ip):
                 print('Excluding floating IP meters from source %s' % (source['name']))
                 break
     # Add contrail source and sinks to the pipeline
-    contrail_source = {'interval': 600,
+    interval = int(get_ceilometer_interval())
+    contrail_source = {'interval': interval,
                        'meters': ['ip.floating.receive.bytes',
                                   'ip.floating.receive.packets',
                                   'ip.floating.transmit.bytes',
