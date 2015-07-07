@@ -265,3 +265,11 @@ def is_tor_agent_index_range_valid(range_str, host_string):
         return False
     return True
 #end is_tor_agent_index_range_valid
+
+def get_bgp_md5(host = env.host_string):
+    """ Gets md5 data if present
+        1. If md5 is supplied in testbed, retrieve its value from testbed
+        2. if not defined in testbed, return none
+    """
+    return get_from_testbed_dict('md5', host, None)
+#end get_bgp_md5
