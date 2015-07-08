@@ -343,7 +343,7 @@ def setup_test_env():
                     if ('1.9' in ant_version):
                         pkg_install(['ant-junit'] , disablerepo = False)
 
-                pkg_install(['patch', 'python-heatclient'],disablerepo = False)
+                pkg_install(['patch', 'python-heatclient', 'python-ceilometerclient'],disablerepo = False)
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
