@@ -20,6 +20,8 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     tgt_ip = hstr_to_ip(database_host)
     #derive kafka broker id from the list of servers specified
     broker_id = sorted(database_ip_list).index(tgt_ip)
+    cassandra_user = get_cassandra_user()
+    cassandra_password = get_cassandra_password()
 
     cmd += " --self_ip %s" % tgt_ip
     cmd += " --cfgm_ip %s" % cfgm_ip
@@ -43,6 +45,9 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     if minimum_diskGB is not None:
         cmd += " --minimum_diskGB %s" % minimum_diskGB
     cmd += " --kafka_broker_id %d" % broker_id
+    if cassandra_user is not None:
+        cmd += " --cassandra_user %s" % cassandra_user
+        cmd += " --cassandra_password %s" % cassandra_password
 
     return cmd
 
@@ -119,6 +124,8 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
                          for cassandra_host in env.roledefs['database']]
     amqp_server_ip = get_contrail_amqp_server()
     orch = get_orchestrator()
+    cassandra_user = get_cassandra_user()
+    cassandra_password = get_cassandra_password()
 
     cmd += " --self_ip %s" % tgt_ip
     cmd += " --collector_ip %s %s" % (collector_ip, mt_opt)
@@ -155,7 +162,9 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     if internal_vip:
         # Highly available setup
         cmd += ' --internal_vip %s' % (internal_vip)
-
+    if cassandra_user is not None:
+        cmd += ' --cassandra_user %s' % (cassandra_user)
+        cmd += ' --cassandra_password %s' % (cassandra_password)
     return cmd
 
 def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
@@ -389,6 +398,8 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
         cassandra_host_list.insert(0, collector_host)
     cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in cassandra_host_list]
     redis_master_ip = hstr_to_ip(redis_master_host)
+    cassandra_user = get_cassandra_user()
+    cassandra_password = get_cassandra_password()
 
     # Frame the command line to provision collector
     cmd += " --cassandra_ip_list %s" % (' '.join(cassandra_ip_list))
@@ -441,6 +452,9 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     if internal_vip:
         # Highly Available setup
         cmd += " --internal_vip %s" % internal_vip
+    if cassandra_user is not None:
+        cmd += " --cassandra_user %s" % cassandra_user
+        cmd += " --cassandra_password %s" % cassandra_password
 
     return cmd
 
