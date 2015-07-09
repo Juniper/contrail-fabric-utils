@@ -188,6 +188,7 @@ def upgrade_orchestrator(from_rel, pkg):
             get_release() >= 2.2):
              execute('setup_cmon_schema')
              execute('setup_cluster_monitors')
+             execute('setup_cmon_param_zkonupgrade')
     if get_orchestrator() is 'vcenter':
         execute('upgrade_vcenter')
 
