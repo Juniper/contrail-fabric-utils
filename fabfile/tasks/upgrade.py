@@ -185,6 +185,7 @@ def upgrade_orchestrator(from_rel, pkg):
         execute('upgrade_openstack', from_rel, pkg)
         execute('setup_cmon_schema')
         execute('setup_cluster_monitors')
+        execute('setup_cmon_param_zkonupgrade')
     if get_orchestrator() is 'vcenter':
         execute('upgrade_vcenter')
 
