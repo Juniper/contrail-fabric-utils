@@ -178,12 +178,15 @@ def setup_galera_cluster():
     internal_vip = get_openstack_internal_vip()
     external_vip = get_openstack_external_vip()
 
+    zoo_ip_list = [hstr_to_ip(get_control_host_string(\
+                    cassandra_host)) for cassandra_host in env.roledefs['database']]
+
     with cd(INSTALLER_DIR):
         cmd = "setup-vnc-galera\
             --self_ip %s --keystone_ip %s --galera_ip_list %s\
-            --internal_vip %s --openstack_index %d" % (self_ip, keystone_ip,
+            --internal_vip %s --openstack_index %d --zoo_ip_list %s" % (self_ip, keystone_ip,
             ' '.join(galera_ip_list), internal_vip,
-            (openstack_host_list.index(self_host) + 1))
+            (openstack_host_list.index(self_host) + 1), ' '.join(zoo_ip_list))
 
         if external_vip:
             cmd += ' --external_vip %s' % external_vip
@@ -539,6 +542,17 @@ def setup_cmon_schema():
     for host in host_list:
         sudo('%s "GRANT ALL PRIVILEGES on *.* TO cmon@%s IDENTIFIED BY \'cmon\' WITH GRANT OPTION"' %
                (mysql_cmd, host))
+
+
+@task
+@EXECUTE_TASK
+@roles('openstack')
+def setup_cmon_param_zkonupgrade():
+    zoo_ip_list = [hstr_to_ip(get_control_host_string(\
+                    cassandra_host)) for cassandra_host in env.roledefs['database']]
+    zk_servers_ports = ','.join(['%s:2181' %(s) for s in zoo_ip_list])
+    zks = 'ZK_SERVER_IP=("' + '" "'.join(zk_servers_ports) + '")'
+    sudo("grep -q 'ZK_SERVER_IP' %s || echo '%s' >> %s" % (cmon_param, zks, cmon_param))
 
 
 @task
