@@ -178,12 +178,15 @@ def setup_galera_cluster():
     internal_vip = get_openstack_internal_vip()
     external_vip = get_openstack_external_vip()
 
+    zoo_ip_list = [hstr_to_ip(get_control_host_string(\
+                    cassandra_host)) for cassandra_host in env.roledefs['database']]
+
     with cd(INSTALLER_DIR):
         cmd = "setup-vnc-galera\
             --self_ip %s --keystone_ip %s --galera_ip_list %s\
-            --internal_vip %s --openstack_index %d" % (self_ip, authserver_ip,
+            --internal_vip %s --openstack_index %d --zoo_ip_list %s" % (self_ip, authserver_ip,
                 ' '.join(galera_ip_list), internal_vip,
-                (openstack_host_list.index(self_host) + 1))
+                (openstack_host_list.index(self_host) + 1), ' '.join(zoo_ip_list))
 
         if external_vip:
              cmd += ' --external_vip %s' % external_vip
@@ -457,15 +460,14 @@ def fix_cmon_param_and_add_keys_to_compute():
         amqp_host_list.append(host_name)
 
     computes = 'COMPUTES=("' + '" "'.join(compute_host_list) + '")'
-    sudo("echo '%s' >> %s" % (computes, cmon_param))
-    sudo("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
-    sudo("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
-    sudo("grep -q '# Modified below two params in 2.2 #' %s || echo '# Modified below two params in 2.2 #' >> %s" % (cmon_param, cmon_param))
-    sudo("echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % cmon_param)
-    sudo("echo 'RABBITMQ_RESET=True' >> %s" % cmon_param)
+    sudo("grep -q 'COMPUTES' %s || echo '%s' >> %s" % (cmon_param, computes, cmon_param))
+    sudo("grep -q 'COMPUTES_SIZE' %s || echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % (cmon_param, cmon_param))
+    sudo("grep -q 'COMPUTES_USER' %s || echo 'COMPUTES_USER=root' >> %s" % (cmon_param, cmon_param))
+    sudo("grep -q 'PERIODIC_RMQ_CHK_INTER' %s || echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % (cmon_param, cmon_param))
+    sudo("grep -q 'RABBITMQ_RESET' %s || echo 'RABBITMQ_RESET=True' >> %s" % (cmon_param, cmon_param))
     amqps = 'DIPHOSTS=("' + '" "'.join(amqp_host_list) + '")'
-    sudo("echo '%s' >> %s" % (amqps, cmon_param))
-    sudo("echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % cmon_param)
+    sudo("grep -q 'DIPHOSTS' %s || echo '%s' >> %s" % (cmon_param, amqps, cmon_param))
+    sudo("grep -q 'DIPS_HOST_SIZE' %s || echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % (cmon_param, cmon_param))
     sudo("uniq %s > /tmp/cmon_param" % cmon_param)
     sudo("mv /tmp/cmon_param %s" % cmon_param)
     id_rsa_pubs = {}
