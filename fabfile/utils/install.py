@@ -77,6 +77,8 @@ def get_compute_pkgs(manage_nova_compute='yes'):
                'contrail-vrouter-common']
 	if get_orchestrator() is 'openstack':
             pkgs.append('contrail-nova-vif')
+        else:
+            pkgs.append('contrail-vmware-vrouter')
     # Append lbaas dependent packages if haproxy is enabled..
     if getattr(testbed, 'haproxy', False):
         pkgs.append('haproxy')
@@ -100,6 +102,16 @@ def get_config_pkgs():
          pkgs = ['contrail-openstack-config']
 
      return pkgs
+
+def get_vcenter_plugin_pkg():
+    pkg = 'contrail-install-vcenter-plugin'
+    pkg = sudo('ls /opt/contrail/contrail_install_repo | grep %s' %pkg)
+    if pkg:
+        pkg = '/opt/contrail/contrail_install_repo/' + pkg
+    else:
+        pkg = None
+
+    return pkg
 
 def get_openstack_ceilometer_pkgs():
     """ Returns the list of ceilometer packages used in a
