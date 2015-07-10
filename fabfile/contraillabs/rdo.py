@@ -79,7 +79,7 @@ def setup_rhosp_node():
             sudo("ln -s /root/keystonerc_admin /etc/contrail/openstackrc")
 
     cfgm_0_ip = testbed.env['roledefs']['cfgm'][0].split('@')[1]
-    keystone_ip = get_keystone_ip()
+    authserver_ip = get_authserver_ip()
     # For juno, neutron_url is deprecated instead use "url" in neutron section
     api_version = sudo("rpm -q --queryformat='%{VERSION}' openstack-nova-api")
     is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
@@ -90,7 +90,7 @@ def setup_rhosp_node():
 
     sudo("source /etc/contrail/openstackrc; nova service-disable $(hostname) nova-compute")
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT network_api_class nova.network.neutronv2.api.API")
-    sudo("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_admin_auth_url http://%s:35357/v2.0" % keystone_ip)
+    sudo("openstack-config --set /etc/nova/nova.conf DEFAULT neutron_admin_auth_url http://%s:35357/v2.0" % authserver_ip)
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT  compute_driver nova.virt.libvirt.LibvirtDriver")
     sudo("openstack-config --set /etc/nova/nova.conf DEFAULT  novncproxy_port 5999")
 
