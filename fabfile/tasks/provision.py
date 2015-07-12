@@ -1822,6 +1822,11 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         if tor_agent_name == None or not tor_agent_name:
             tor_agent_name = agent_name
 
+        # Default value for tor-agent ovsdb keepalive timer in millisec
+        tor_agent_ovs_ka = '10000'
+        if 'tor_agent_ovs_ka' in toragent_dict[host_string][i]:
+            tor_agent_ovs_ka = toragent_dict[host_string][i]['tor_agent_ovs_ka']
+
         cmd = "setup-vnc-tor-agent"
         cmd += " --self_ip %s" % tor_agent_control_ip
         cmd += " --agent_name %s" % tor_agent_name
@@ -1831,6 +1836,7 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         cmd += " --tor_ovs_port %s" % toragent_dict[host_string][i]['tor_ovs_port']
         cmd += " --tsn_ip %s" % toragent_dict[host_string][i]['tor_tsn_ip']
         cmd += " --tor_ovs_protocol %s" % toragent_dict[host_string][i]['tor_ovs_protocol']
+        cmd += " --tor_agent_ovs_ka %s" % tor_agent_ovs_ka
         # HA arguments
         internal_vip = get_openstack_internal_vip()
         if internal_vip:
