@@ -5,6 +5,23 @@ from fabfile.tasks.install import apt_install, pkg_install
 
 
 @task
+def set_grub_default_node(*args, **kwargs):
+    '''Set default kernel version to bootup for given list of nodes'''
+    value = kwargs.get('value', 'Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-40-generic')
+    for host_string in args:
+        with settings(host_string=host_string):
+            sudo("sed -i \'s/^GRUB_DEFAULT=.*/GRUB_DEFAULT=\"%s\"/g\' /etc/default/grub" % value)
+            sudo('update grub')
+            sudo("grep '^GRUB_DEFAULT=\"%s\"' /etc/default/grub" % value)
+            print '[%s]: Updated Default Grub to (%s)' % (host_string, value)
+
+@task
+@roles('all')
+def set_grub_default(value='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-40-generic'):
+    '''Set default kernel version to bootup for all nodes'''
+    execute('set_grub_default_node', env.host_string, value=value)
+
+@task
 @roles('build')
 def upgrade_kernel_all(*tgzs, **kwargs):
     """creates repo and upgrades kernel in Ubuntu"""
@@ -26,6 +43,7 @@ def upgrade_kernel_all(*tgzs, **kwargs):
         print "kernel is already of expected version"
         return
     execute(upgrade_kernel_node, *nodes)
+    execute('set_grub_default_node', *nodes)
     if reboot == 'yes':
         node_list_except_build = list(nodes)
         if env.host_string in nodes:
@@ -61,6 +79,7 @@ def upgrade_kernel_without_openstack(*tgzs, **kwargs):
               "kernel version" % ", ".join(nodes['installed'])
 
     execute(upgrade_kernel_node, *nodes['not_installed'])
+    execute('set_grub_default_node', *nodes['not_installed'])
     if reboot == 'yes':
         if env.host_string in nodes:
             nodes.remove(env.host_string).append(env.host_string)
