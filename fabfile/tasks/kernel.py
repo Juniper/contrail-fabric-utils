@@ -5,6 +5,23 @@ from fabfile.tasks.install import apt_install, pkg_install
 
 
 @task
+def set_grub_default_node(*args, **kwargs):
+    '''Set default kernel version to bootup for given list of nodes'''
+    value = kwargs.get('value', 'Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-35-generic')
+    for host_string in args:
+        with settings(host_string=host_string):
+            sudo("sed -i \'s/^GRUB_DEFAULT=.*/GRUB_DEFAULT=\"%s\"/g\' /etc/default/grub" % value)
+            sudo('update-grub')
+            sudo("grep '^GRUB_DEFAULT=\"%s\"' /etc/default/grub" % value)
+            print '[%s]: Updated Default Grub to (%s)' % (host_string, value)
+
+@task
+@roles('all')
+def set_grub_default(value='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-35-generic'):
+    '''Set default kernel version to bootup for all nodes'''
+    execute('set_grub_default_node', env.host_string, value=value)
+
+@task
 @roles('build')
 def upgrade_kernel_all(reboot='yes'):
     """creates repo and upgrades kernel in Ubuntu"""
@@ -15,8 +32,10 @@ def upgrade_kernel_all(reboot='yes'):
         dist, version, extra = get_linux_distro()
         if version == '12.04':
             (package, os_type) = ('linux-image-3.13.0-34-generic', 'ubuntu')
+            default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-34-generic'
         elif version == '14.04':
             (package, os_type) = ('linux-image-3.13.0-35-generic', 'ubuntu')
+            default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-35-generic'
         else:
             raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
                                " kernel upgrade." % (dist, version, extra))
@@ -25,6 +44,7 @@ def upgrade_kernel_all(reboot='yes'):
         print "kernel is already of expected version"
         return
     execute(upgrade_kernel_node, *nodes)
+    execute('set_grub_default_node', *nodes, value=default_grub)
     if reboot == 'yes':
         node_list_except_build = list(nodes)
         if env.host_string in nodes:
