@@ -367,6 +367,6 @@ def reboot_nova_instance():
     host = env.host_string
     with settings(host_string=host,warn_only=True):
         sudo(
-            "source /etc/contrail/openstackrc;nova  list --all_tenants  | awk '{print $2}' | xargs -L1 nova reboot --hard $2")
+            "source /etc/contrail/openstackrc;nova  list --all_tenants  | awk '{print $2}' | grep -v ID | xargs -L1 nova reboot --hard $2")
 
 
