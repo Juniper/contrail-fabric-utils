@@ -4,7 +4,6 @@ import tempfile
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype, get_as_sudo
 from fabfile.utils.host import hstr_to_ip, get_env_passwords
-from fabfile.tasks.upgrade import upgrade_package, remove_package
 
 @task
 @EXECUTE_TASK
@@ -23,8 +22,19 @@ def restart_zookeeper():
     with settings(warn_only=True):
         if sudo("service zookeeper restart").failed:
             sudo(restart_cmd)
+@task
+@roles('database')
+def start_zookeeper():
+    '''start zookeeper process'''
+    start_cmd = "/usr/lib/zookeeper/bin/zkServer.sh start"
+    if detect_ostype() in ['ubuntu']:
+        start_cmd = "/usr/share/zookeeper/bin/zkServer.sh start"
+    with settings(warn_only=True):
+        if sudo("service zookeeper start").failed:
+            sudo(start_cmd)
 
 @task
+@roles('database')
 def stop_zookeeper():
     stop_cmd = "/usr/lib/zookeeper/bin/zkServer.sh stop"
     if detect_ostype() in ['ubuntu']:
@@ -32,6 +42,32 @@ def stop_zookeeper():
     with settings(warn_only=True):
         if sudo("service zookeeper stop").failed:
             sudo(stop_cmd)
+
+def upgrade_package(pkgs, ostype):
+    if ostype in ['centos', 'fedora']:
+        run('yum clean all')
+        for pkg in pkgs:
+            run('yum -y --disablerepo=* --enablerepo=contrail_install_repo install %s' % pkg)
+    elif ostype in ['ubuntu']:
+        execute('backup_source_list')
+        execute('create_contrail_source_list')
+        run(' apt-get clean')
+        for pkg in pkgs:
+            cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confnew" install %s' % pkg
+            run(cmd)
+        execute('restore_source_list')
+        return
+
+def remove_package(pkgs, ostype):
+    with settings(warn_only=True):
+        for pkg in pkgs:
+            if pkg == 'zookeeper' and env.host_string in env.roledefs['database']:
+                print "need not remove zookeeper, cfgm and database in same nodes."
+                return
+            if ostype in ['centos', 'fedora']:
+                run('rpm -e --nodeps %s' % pkg)
+            elif ostype in ['ubuntu']:
+                run('DEBIAN_FRONTEND=noninteractive apt-get -y remove --purge  %s' % pkg)
 
 @task
 @roles('build')
