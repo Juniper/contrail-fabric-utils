@@ -400,11 +400,6 @@ class Vcenter(object):
             return
         else:
             host_list = []
-            dvs_host_configs = []
-            uplink_port_names = []
-            dvs_config_spec = self.pyVmomi.vim.DistributedVirtualSwitch.ConfigSpec()
-            dvs_config_spec.configVersion = dvs.config.configVersion
-            dvs_config_spec.uplinkPortPolicy = self.pyVmomi.vim.DistributedVirtualSwitch.NameArrayUplinkPortPolicy()
             for cluster_name in clusters:
                 cluster = self.get_obj([self.pyVmomi.vim.ClusterComputeResource], cluster_name)
                 host_list.append(cluster.host)
@@ -412,8 +407,6 @@ class Vcenter(object):
             for mo in host_list:
                 for host in mo:
                     hosts.append(host)
-            for x in range(len(hosts)):
-                uplink_port_names.append("dvUplink%d" % x)
             for each_host in dvs.config.host:
                 if each_host.config.host in hosts:
                     print "%s host already exists in the dvswitch" % each_host.config.host
@@ -423,6 +416,11 @@ class Vcenter(object):
                 return
 
             for host in hosts:
+                dvs_host_configs = []
+                uplink_port_names = "dvUplink1"
+                dvs_config_spec = self.pyVmomi.vim.DistributedVirtualSwitch.ConfigSpec()
+                dvs_config_spec.configVersion = dvs.config.configVersion
+                dvs_config_spec.uplinkPortPolicy = self.pyVmomi.vim.DistributedVirtualSwitch.NameArrayUplinkPortPolicy()
                 dvs_config_spec.uplinkPortPolicy.uplinkPortName = uplink_port_names
                 dvs_config_spec.maxPorts = 60000
                 #pnic_spec = self.pyVmomi.vim.dvs.HostMember.PnicSpec()
@@ -435,8 +433,8 @@ class Vcenter(object):
                 dvs_host_config.backing = self.pyVmomi.vim.dvs.HostMember.PnicBacking()
                 #dvs_host_config.backing.pnicSpec = pnic_specs
                 dvs_config_spec.host = dvs_host_configs
-            task = dvs.ReconfigureDvs_Task(dvs_config_spec)
-            self.wait_for_task(task,si)
+                task = dvs.ReconfigureDvs_Task(dvs_config_spec)
+                self.wait_for_task(task,si)
             print "Successfully configured hosts on dvswitch ", dvs_name
 
     def reconfigure_dvSwitch(self, si, clusters, dvs_name):
@@ -446,44 +444,34 @@ class Vcenter(object):
             return
         else:
             add_hosts = []
-            dvs_host_configs = []
-            uplink_port_names = []
-            host_list = []
-
-            dvs_config_spec = self.pyVmomi.vim.DistributedVirtualSwitch.ConfigSpec()
-            dvs_config_spec.configVersion = dvs.config.configVersion
-
-            dvs_config_spec.uplinkPortPolicy = self.pyVmomi.vim.DistributedVirtualSwitch.NameArrayUplinkPortPolicy()
-
             for host_info in self.hosts:
                 host = self.get_obj([self.pyVmomi.vim.HostSystem], host_info[0])
                 add_hosts.append(host)
 
-            for cluster_name in clusters:
-                cluster = self.get_obj([self.pyVmomi.vim.ClusterComputeResource], cluster_name)
-                host_list.append(cluster.host)
-            cluster_hosts = []
-            for mo in host_list:
-                for host in mo:
-                    cluster_hosts.append(host)
+            for each_host in dvs.config.host:
+                if each_host.config.host in add_hosts:
+                    print "%s host already exists in the dvswitch" % each_host.config.host
+                    add_hosts.remove(each_host.config.host)
+            if not add_hosts:
+                print "No hosts left to add to dvswitch ", dvs_name
+                return dvs
 
-            uplink = 0
-            for x in range(len(cluster_hosts)-1):
-                uplink = uplink + 1
-
+            print "Updating dvs_config_spec"
             for host in add_hosts:
-                print "Updating dvs_config_spec"
-                uplink_port_names.append("dvUplink%d" %uplink)
-                uplink = uplink + 1
+                dvs_host_configs = []
+                uplink_port_names = "dvUplink1"
+                dvs_config_spec = self.pyVmomi.vim.DistributedVirtualSwitch.ConfigSpec()
+                dvs_config_spec.configVersion = dvs.config.configVersion
+                dvs_config_spec.uplinkPortPolicy = self.pyVmomi.vim.DistributedVirtualSwitch.NameArrayUplinkPortPolicy()
                 dvs_config_spec.uplinkPortPolicy.uplinkPortName = uplink_port_names
                 dvs_host_config = self.pyVmomi.vim.dvs.HostMember.ConfigSpec()
                 dvs_host_config.operation = self.pyVmomi.vim.ConfigSpecOperation.add
                 dvs_host_config.host = host
                 dvs_config_spec.host.append(dvs_host_config)
-            task = dvs.ReconfigureDvs_Task(dvs_config_spec)
-            self.wait_for_task(task,si)
+                task = dvs.ReconfigureDvs_Task(dvs_config_spec)
+                self.wait_for_task(task,si)
             print "Successfully reconfigured DVS ", dvs_name
-            return self.get_obj( [self.pyVmomi.vim.DistributedVirtualSwitch],dvs_name)
+            return dvs
 
     def create_datacenter(self, dcname=None, folder=None):
         datacenter = self.get_obj([self.pyVmomi.vim.Datacenter], dcname)
