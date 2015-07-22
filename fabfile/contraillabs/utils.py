@@ -73,7 +73,7 @@ def cleanup_repo_node(*args):
 @task
 @EXECUTE_TASK
 @roles('all')
-def restore_repo():
+def restore_repo(merge=True):
     '''Removes all existing repos in all the nodes specified in testbed'''
     esxi_hosts = getattr(testbed, 'esxi_hosts', None)
     if esxi_hosts:
@@ -83,8 +83,9 @@ def restore_repo():
     execute('restore_repo_node', env.host_string)
 
 @task
-def restore_repo_node(*args):
+def restore_repo_node(*args, **kwargs):
     '''Remove existing repos in given node'''
+    merge = kwargs.get('merge', True)
     pattern = re.compile(r'\.[\d]+\.contrail$')
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
@@ -104,7 +105,10 @@ def restore_repo_node(*args):
                                   for repo_file in repo_files]
                 for original, restore_file in restore_map:
                     sudo('cp %s %s.oldbckup' % (original, original))
-                    sudo('mv %s %s' % (original, restore_file))
+                    if merge == True:
+                        sudo('cat %s >> %s' % (original, restore_file))
+                    else:
+                        sudo('mv %s %s' % (original, restore_file))
                     sudo('chmod 644 %s' % restore_file)
                 sudo(update_cmd)
 
