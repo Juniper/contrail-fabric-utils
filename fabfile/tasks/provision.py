@@ -2380,8 +2380,53 @@ def reset_config():
     execute(compute_reboot)
 #end reset_config
 
-@roles('build')
 @task
+def create_contrailvm(orch, host_list, host_string, esxi_info, vcenter_info):
+    host = ""
+    # find the esxi host given hostip from the esxi_info
+    for x in host_list:
+        if esxi_info[x]['ip'] == host_string:
+            host = x
+    if not host:
+        print "No op for esxi host -- %s" %env.host_string
+        return
+    if host in esxi_info.keys():
+         if orch == 'openstack':
+             std_switch = True
+         if orch == 'vcenter':
+             if 'dv_switch_fab' in vcenter_info.keys():
+                 if not 'fabric_vswitch' in esxi_info[host].keys():
+                     dv_switch_fab = True
+                     std_switch = False
+                 else:
+                     std_switch = True
+             else:
+                 std_switch = True
+         if (std_switch == True):
+             apply_esxi_defaults(esxi_info[host])
+             configure_esxi_network(esxi_info[host])
+             power_on = True
+         else:
+             apply_esxi_defaults(esxi_info[host])
+             esxi_info[host]['fabric_vswitch'] = None
+             power_on = False
+         if orch == 'openstack':
+             create_esxi_compute_vm(esxi_info[host], None, power_on)
+         if orch == 'vcenter':
+             create_esxi_compute_vm(esxi_info[host], vcenter_info, power_on)
+    else:
+         print 'Info: esxi_hosts block does not have the esxi host.Exiting'
+# end create_contrailvm
+
+@task
+@parallel(pool_size=20)
+@hosts([h['ip'] for h in getattr(testbed, 'esxi_hosts', {}).values()])
+def prov_esxi_task(orch, host_list, esxi_info, vcenter_info):
+    execute(create_contrailvm, orch, host_list, env.host_string, esxi_info, vcenter_info)
+#end prov_esxi_task
+
+@task
+@roles('build')
 def prov_esxi(*args):
     esxi_info = getattr(testbed, 'esxi_hosts', None)
     if not esxi_info:
@@ -2398,43 +2443,18 @@ def prov_esxi(*args):
     else:
         host_list = esxi_info.keys()
 
-    std_switch = False
+    execute(prov_esxi_task, orch, host_list, esxi_info, vcenter_info)
+
     dv_switch_fab = False
-    power_on = False
-
-    for host in host_list:
-         with settings(host=host):
-               if host in esxi_info.keys():
-                   if orch == 'openstack':
-                       std_switch = True
-                   if orch == 'vcenter':
-                       if 'dv_switch_fab' in vcenter_info.keys():
-                           if not 'fabric_vswitch' in esxi_info[host].keys():
-                               dv_switch_fab = True
-                               std_switch = False
-                           else:
-                               std_switch = True
-                       else:
-                           std_switch = True
-                   if (std_switch == True):
-                       apply_esxi_defaults(esxi_info[host])
-                       configure_esxi_network(esxi_info[host])
-                       power_on = True
-                   else:
-                       apply_esxi_defaults(esxi_info[host])
-                       esxi_info[host]['fabric_vswitch'] = None
-                       power_on = False
-                   if orch == 'openstack':
-                       create_esxi_compute_vm(esxi_info[host], None, power_on)
-                   if orch == 'vcenter':
-                       create_esxi_compute_vm(esxi_info[host], vcenter_info, power_on)
-               else:
-                   print 'Info: esxi_hosts block does not have the esxi host.Exiting'
-
+    if orch == 'vcenter':
+        for h in host_list:
+            if 'dv_switch_fab' in vcenter_info.keys():
+                 if not 'fabric_vswitch' in esxi_info[h].keys():
+                     dv_switch_fab = True
+                     esxi_info[h]['fabric_vswitch'] = None
     if (dv_switch_fab == True):
          sleep(30)
          provision_dvs_fab(vcenter_info, esxi_info, host_list)
-#end prov_compute_vm
 
 @task
 def update_esxi_vrouter_map():
