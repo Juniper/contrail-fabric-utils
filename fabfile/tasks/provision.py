@@ -1870,7 +1870,7 @@ def add_tor_agent_by_index(index, node_info, restart=True):
             if not ssl_files_copied_from_standby:
                 ssl_cmd = "openssl req -new -x509 -days 3650 -text -sha256"
                 ssl_cmd += " -newkey rsa:4096 -nodes -subj \"/C=US/ST=Global/O="
-                ssl_cmd += + tor_vendor_name + "/CN=" + domain_name + "\""
+                ssl_cmd += tor_vendor_name + "/CN=" + domain_name + "\""
                 ssl_cmd += " -keyout " + privkey_file + " -out " + cert_file
                 sudo(ssl_cmd)
 
