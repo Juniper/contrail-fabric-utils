@@ -752,6 +752,7 @@ def reboot_on_kernel_update_without_openstack(reboot='True'):
                               'Reboot manually before setup to avoid misconfiguration!' % node
                 else:
                     print '[%s]: Node is already booted with new kernel' % node
+
 @task
 @roles('build')
 def reboot_on_kernel_update(reboot='True'):
@@ -793,6 +794,39 @@ def reboot_on_kernel_update(reboot='True'):
                               'Reboot manually before setup to avoid misconfiguration!' % node
                 else:
                     print '[%s]: Node is already booted with new kernel' % node
+
+
+@roles('build')
+@task
+def install_new_contrail(**kwargs):
+    """Installs required contrail packages in all nodes as per the role definition.
+    """
+    new_host = kwargs.get('new_ctrl')
+    execute('pre_check')
+    execute(create_install_repo_node, new_host)
+
+    if new_host in env.roledefs['database']:
+        execute(install_database_node, True, new_host)
+    if (get_orchestrator() is 'openstack'):
+        if new_host in env.roledefs['openstack']:
+            execute("install_openstack_node", new_host)
+    else:
+        print "ERROR: Only adding a new Openstack controller is supported"
+        return
+
+    if new_host in env.roledefs['cfgm']:
+        execute(install_cfgm_node, new_host)
+
+    if new_host in env.roledefs['control']:
+        execute(install_control_node, new_host)
+
+    if new_host in env.roledefs['collector']:
+        execute(install_collector_node, new_host)
+
+    if new_host in env.roledefs['webui']:
+        execute(install_webui_node, new_host)
+
+    execute(upgrade_pkgs_node, new_host)
 
 @roles('build')
 @task

@@ -67,23 +67,34 @@ def set_tcp_keepalive_on_compute():
 @EXECUTE_TASK
 @roles('rabbit')
 def listen_at_supervisor_support_port():
-    with settings(warn_only=True):
-        if sudo("service supervisor-support-service status | grep running").failed:
-            sudo("service supervisor-support-service start")
-            sudo("supervisorctl -s unix:///tmp/supervisord_support_service.sock stop all")
+    execute('listen_at_supervisor_support_port_node', env.host_string)
+
+@task
+def listen_at_supervisor_support_port_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            if sudo("service supervisor-support-service status | grep running").failed:
+                sudo("service supervisor-support-service start")
+                sudo("supervisorctl -s unix:///tmp/supervisord_support_service.sock stop all")
+
 
 @task
 @EXECUTE_TASK
 @roles('rabbit')
 def remove_mnesia_database():
-    with settings(warn_only=True):
-         sudo("service rabbitmq-server stop")
-         if 'Killed' not in sudo("epmd -kill"):
-             sudo("pkill -9  beam")
-             sudo("pkill -9 epmd")
-         if 'beam' in sudo("netstat -anp | grep beam"):
-             sudo("pkill -9  beam")
-         sudo("rm -rf /var/lib/rabbitmq/mnesia")
+   execute('remove_mnesia_database_node', env.host_string)
+
+@task
+def remove_mnesia_database_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            sudo("service rabbitmq-server stop")
+            if 'Killed' not in sudo("epmd -kill"):
+                sudo("pkill -9  beam")
+                sudo("pkill -9 epmd")
+            if 'beam' in sudo("netstat -anp | grep beam"):
+                sudo("pkill -9  beam")
+                sudo("rm -rf /var/lib/rabbitmq/mnesia")
 
 @task
 @parallel
@@ -99,8 +110,8 @@ def rabbitmq_env():
     erl_node_name = None
     rabbit_env_conf = '/etc/rabbitmq/rabbitmq-env.conf'
     with settings(host_string=env.host_string, password=get_env_passwords(env.host_string)):
-      host_name = sudo('hostname -s') + ctrl
-      erl_node_name = "rabbit@%s" % (host_name)
+        host_name = sudo('hostname -s') + ctrl
+        erl_node_name = "rabbit@%s" % (host_name)
     rabbitmq_env_template = rabbitmq_env_conf
     rmq_env_conf = rabbitmq_env_template.template.safe_substitute({
             '__erl_node_ip__' : hstr_to_ip(get_control_host_string(env.host_string)),
@@ -145,30 +156,46 @@ def config_rabbitmq():
 @parallel
 @roles('rabbit')
 def allow_rabbitmq_port():
-    execute('disable_iptables')
+    execute('allow_rabbitmq_port_node', env.host_string)
+
+@task
+def allow_rabbitmq_port_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            execute('disable_iptables')
 
 @task
 @parallel
 @roles('rabbit')
 def stop_rabbitmq_and_set_cookie(uuid):
-     with settings(warn_only=True):
-         sudo("service rabbitmq-server stop")
-         if 'Killed' not in sudo("epmd -kill"):
-             sudo("pkill -9  beam")
-             sudo("pkill -9 epmd")
-         if 'beam' in sudo("netstat -anp | grep beam"):
-             sudo("pkill -9  beam")
-         sudo("rm -rf /var/lib/rabbitmq/mnesia/")
-     sudo("echo '%s' > /var/lib/rabbitmq/.erlang.cookie" % uuid)
-     sudo("chmod 400 /var/lib/rabbitmq/.erlang.cookie")
-     sudo("chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie")
+    execute('stop_rabbitmq_and_set_cookie_node', uuid, env.host_string)
 
+@task
+def stop_rabbitmq_and_set_cookie_node(uuid, *args):
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            sudo("service rabbitmq-server stop")
+            if 'Killed' not in sudo("epmd -kill"):
+                sudo("pkill -9  beam")
+                sudo("pkill -9 epmd")
+            if 'beam' in sudo("netstat -anp | grep beam"):
+                sudo("pkill -9  beam")
+            sudo("rm -rf /var/lib/rabbitmq/mnesia/")
+            sudo("echo '%s' > /var/lib/rabbitmq/.erlang.cookie" % uuid)
+            sudo("chmod 400 /var/lib/rabbitmq/.erlang.cookie")
+            sudo("chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie")
 
 @task
 @serial
 @roles('rabbit')
 def start_rabbitmq():
-     sudo("service rabbitmq-server restart")
+   execute('start_rabbitmq_node', env.host_string)
+
+@task
+def start_rabbitmq_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            sudo("service rabbitmq-server restart")
 
 @task
 @parallel
@@ -270,6 +297,52 @@ def set_ha_policy_in_rabbitmq():
 
 @task
 @roles('build')
+def join_rabbitmq_cluster(new_ctrl_host):
+    """ Task to join a new rabbit server into an existing cluster """
+    # Provision rabbitmq cluster in cfgm role nodes.
+    amqp_roles = ['cfgm']
+    if get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes':
+        #Provision rabbitmq cluster in openstack role nodes aswell.
+        amqp_roles.append('openstack')
+    for role in amqp_roles:
+        env.roledefs['rabbit'] = env.roledefs[role]
+
+        # copy the erlang cookie from one of the other nodes.
+        rabbitmq_cluster_uuid = None
+        for host_string in env.roledefs['rabbit']:
+            with settings(host_string=host_string, warn_only=True):
+                if host_string != new_ctrl_host and\
+                   sudo('ls /var/lib/rabbitmq/.erlang.cookie').succeeded:
+                    rabbitmq_cluster_uuid = \
+                        sudo('cat /var/lib/rabbitmq/.erlang.cookie')
+                    break;
+        if rabbitmq_cluster_uuid is None:
+            raise RuntimeError("Not able to get the Erlang cookie from the cluster nodes")
+
+        execute(listen_at_supervisor_support_port_node, new_ctrl_host)
+        execute(remove_mnesia_database_node, new_ctrl_host)
+        execute(verify_rabbit_node_hostname)
+        execute(allow_rabbitmq_port_node, new_ctrl_host)
+        execute(rabbitmq_env)
+        execute(config_rabbitmq)
+        execute('stop_rabbitmq_and_set_cookie_node', rabbitmq_cluster_uuid, new_ctrl_host)
+        execute('start_rabbitmq_node', new_ctrl_host)
+        # adding sleep to workaround rabbitmq bug 26370 prevent
+        # "rabbitmqctl cluster_status" from breaking the database,
+        # this is seen in ci
+        time.sleep(30)
+        if (role is 'openstack' and get_openstack_internal_vip() or
+            role is 'cfgm' and get_contrail_internal_vip()):
+            execute('set_ha_policy_in_rabbitmq')
+            execute('set_tcp_keepalive')
+
+        result = execute(verify_cluster_status)
+        if False in result.values():
+            print "Unable to setup RabbitMQ cluster in role[%s]...." % role
+            exit(1)
+
+@task
+@roles('build')
 def setup_rabbitmq_cluster(force=False):
     """Task to cluster the rabbit servers."""
     # Provision rabbitmq cluster in cfgm role nodes.
@@ -299,7 +372,9 @@ def setup_rabbitmq_cluster(force=False):
         execute(config_rabbitmq)
         execute("stop_rabbitmq_and_set_cookie", rabbitmq_cluster_uuid)
         execute(start_rabbitmq)
-        #adding sleep to workaround rabbitmq bug 26370 prevent "rabbitmqctl cluster_status" from breaking the database, this is seen in ci
+        # adding sleep to workaround rabbitmq bug 26370 prevent
+        # "rabbitmqctl cluster_status" from breaking the database,
+        # this is seen in ci
         time.sleep(60)
         #execute(rabbitmqctl_stop_app)
         #execute(rabbitmqctl_reset)
