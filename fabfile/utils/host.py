@@ -192,6 +192,12 @@ def get_openstack_internal_vip():
 def get_openstack_external_vip():
     return get_from_testbed_dict('ha', 'external_vip', None)
 
+def get_openstack_internal_virtual_router_id():
+    return get_from_testbed_dict('ha', 'internal_virtual_router_id', 100)
+
+def get_openstack_external_virtual_router_id():
+    return get_from_testbed_dict('ha', 'external_virtual_router_id', get_openstack_internal_virtual_router_id())
+
 def get_contrail_internal_vip():
     vip = get_from_testbed_dict('ha', 'internal_vip', None)
     return get_from_testbed_dict('ha', 'contrail_internal_vip', vip)
@@ -199,6 +205,12 @@ def get_contrail_internal_vip():
 def get_contrail_external_vip():
     vip = get_from_testbed_dict('ha', 'external_vip', None)
     return get_from_testbed_dict('ha', 'contrail_external_vip', vip)
+
+def get_contrail_internal_virtual_router_id():
+    return get_from_testbed_dict('ha', 'contrail_internal_virtual_router_id', get_openstack_internal_virtual_router_id())
+
+def get_contrail_external_virtual_router_id():
+    return get_from_testbed_dict('ha', 'contrail_external_virtual_router_id', get_contrail_internal_virtual_router_id())
 
 def get_openstack_amqp_server():
     amqp_in_role = 'cfgm'
