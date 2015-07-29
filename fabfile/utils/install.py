@@ -113,6 +113,12 @@ def get_vcenter_plugin_pkg():
 
     return pkg
 
+def get_vcenter_compute_pkgs():
+    pkgs = ['contrail-nova-vif', 'nova-compute',
+            'python-novaclient', 'nova-compute-kvm'] 
+
+    return pkgs
+
 def get_openstack_ceilometer_pkgs():
     """ Returns the list of ceilometer packages used in a
         openstack node.

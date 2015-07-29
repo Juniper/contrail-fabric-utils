@@ -25,8 +25,7 @@ from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
         configure_esxi_network, create_esxi_compute_vm, deprovision_vcenter
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
-        get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
-        get_esxi_vms_and_hosts
+        get_tsn_nodes, get_toragent_nodes, get_esxi_vms_and_hosts, get_mode
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
@@ -582,7 +581,7 @@ def setup_cfgm_node(*args):
                 sudo(cmd)
 
             orch = get_orchestrator()
-            if orch == 'vcenter':
+            if orch == 'vcenter' or env.roledefs['vcenter_compute']:
                 #create the static esxi:vrouter map file
                 esxi_info = getattr(testbed, 'esxi_hosts', None)
                 tmp_fname = "/tmp/ESXiToVRouterIp-%s" %(host_string)
@@ -614,6 +613,8 @@ def setup_cfgm_node(*args):
                 else:
                     # If unspecified, set it to default value
                     cmd += " --vcenter_ipfabricpg contrail-fab-pg"
+                if env.roledefs['vcenter_compute']: 
+                    cmd += " --vcenter_compute vcenter-as-compute"
                 cmd += " --api_hostname %s" % cfgm_ip
                 cmd += " --api_port 8082"
                 zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
@@ -1036,7 +1037,7 @@ def setup_openstack():
 @task
 @roles('openstack')
 def setup_nova_aggregate():
-    if get_orchestrator() == 'vcenter':
+    if get_orchestrator() == 'vcenter' or env.roledefs['vcenter_compute']:
         return
     if env.roledefs['openstack'].index(env.host_string) == 0:
         # Copy only once in a HA setup
@@ -1426,6 +1427,20 @@ def setup_agent_config_in_node(*args):
 
 @task
 @EXECUTE_TASK
+@roles('vcenter_compute')
+def setup_vcenter_compute():
+    execute("setup_vcenter_compute_node", env.host_string)
+
+@task
+def setup_vcenter_compute_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string):
+             if detect_ostype() == 'ubuntu':
+                with settings(warn_only=True):
+                     setup_vrouter('yes', 'yes')
+
+@task
+@EXECUTE_TASK
 @roles('compute')
 def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
     """Provisions vrouter services in all nodes defined in vrouter role.
@@ -1439,7 +1454,7 @@ def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
        if env.host_string in get_tsn_nodes():
            manage_nova_compute='no'
            configure_nova='no'
-       if get_orchestrator() == 'vcenter':
+       if get_mode(env.host_string) == 'vcenter':
            manage_nova_compute='no'
            configure_nova='no'
        execute("setup_only_vrouter_node", manage_nova_compute, configure_nova,  env.host_string)
@@ -2251,6 +2266,7 @@ def setup_all(reboot='True'):
     execute('verify_collector')
     execute('setup_webui')
     execute('verify_webui')
+    execute('setup_vcenter_compute')
     execute('setup_vrouter')
     execute('prov_config_node')
     execute('prov_database_node')
@@ -2524,17 +2540,22 @@ def prov_esxi(*args):
     for host in host_list:
          with settings(host=host):
                if host in esxi_info.keys():
-                   if orch == 'openstack':
+                   mode = esxi_info[host]['contrail_vm']['mode']
+                   if mode == 'openstack':
                        std_switch = True
-                   if orch == 'vcenter':
-                       if 'dv_switch_fab' in vcenter_info.keys():
-                           if not 'fabric_vswitch' in esxi_info[host].keys():
-                               dv_switch_fab = True
-                               std_switch = False
-                           else:
-                               std_switch = True
-                       else:
-                           std_switch = True
+                   if mode == 'vcenter':
+                      vcenter_info = getattr(env, 'vcenter', None)
+                      if not vcenter_info:
+                         print 'Info: vcenter block is not defined in testbed file.Exiting'
+                         return
+                      if 'dv_switch_fab' in vcenter_info.keys():
+                          if not 'fabric_vswitch' in esxi_info[host].keys():
+                              dv_switch_fab = True
+                              std_switch = False
+                          else:
+                              std_switch = True
+                      else:
+                          std_switch = True
                    if (std_switch == True):
                        apply_esxi_defaults(esxi_info[host])
                        configure_esxi_network(esxi_info[host])
@@ -2543,9 +2564,9 @@ def prov_esxi(*args):
                        apply_esxi_defaults(esxi_info[host])
                        esxi_info[host]['fabric_vswitch'] = None
                        power_on = False
-                   if orch == 'openstack':
+                   if mode == 'openstack':
                        create_esxi_compute_vm(esxi_info[host], None, power_on)
-                   if orch == 'vcenter':
+                   if mode == 'vcenter':
                        create_esxi_compute_vm(esxi_info[host], vcenter_info, power_on)
                else:
                    print 'Info: esxi_hosts block does not have the esxi host.Exiting'
