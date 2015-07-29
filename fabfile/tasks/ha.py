@@ -7,7 +7,9 @@ from fabfile.utils.fabos import detect_ostype, get_as_sudo
 from fabfile.utils.host import get_authserver_ip, get_control_host_string,\
     hstr_to_ip, get_from_testbed_dict, get_service_token, get_env_passwords,\
     get_openstack_internal_vip, get_openstack_external_vip,\
-    get_contrail_internal_vip, get_contrail_external_vip
+    get_contrail_internal_vip, get_contrail_external_vip, \
+    get_openstack_internal_virtual_router_id, get_contrail_internal_virtual_router_id, \
+    get_openstack_external_virtual_router_id, get_contrail_external_virtual_router_id
 
 @task
 @EXECUTE_TASK
@@ -227,9 +229,15 @@ def setup_keepalived_node(role):
 
     internal_vip = get_openstack_internal_vip()
     external_vip = get_openstack_external_vip()
+    internal_virtual_router_id = get_openstack_internal_virtual_router_id()
+    external_virtual_router_id = get_openstack_external_virtual_router_id()
+
     if role == 'cfgm':
         internal_vip = get_contrail_internal_vip()
         external_vip = get_contrail_external_vip()
+        internal_virtual_router_id = get_contrail_internal_virtual_router_id()
+        external_virtual_router_id = get_contrail_external_virtual_router_id()
+
     keepalived_host_list = [get_control_host_string(keepalived_host)\
                            for keepalived_host in env.roledefs[role]]
     myindex = keepalived_host_list.index(self_host)
@@ -244,11 +252,12 @@ def setup_keepalived_node(role):
     with cd(INSTALLER_DIR):
         cmd = "setup-vnc-keepalived\
                --self_ip %s --internal_vip %s --mgmt_self_ip %s\
-               --self_index %d --num_nodes %d --role %s" % ( self_ip,
+               --self_index %d --num_nodes %d --role %s --internal_virtual_router_id %d" % ( self_ip,
                 internal_vip, mgmt_ip, (keepalived_host_list.index(self_host) + 1),
-                len(env.roledefs[role]), role)
+                len(env.roledefs[role]), role, internal_virtual_router_id)
         if external_vip:
-             cmd += ' --external_vip %s' % external_vip
+             cmd += ' --external_vip %s --external_virtual_router_id %d' % (external_vip,
+                                    external_virtual_router_id)
         sudo(cmd)
 
 @task
