@@ -25,7 +25,7 @@ host_build = 'vjoshi@10.204.216.56'
 env.roledefs = {
     'all': [host1, host2, host3, host4, host5, host6, host7],
     'cfgm': [host1,host2,host3],
-    'openstack': [host2],
+    'openstack': [host1,host2,host3],
     'control': [host1,host2,host3],
     'compute': [host4,host5, host6, host7],
     'collector': [host1,host2,host3],
@@ -107,11 +107,11 @@ env.log_scenario='Ubuntu Icehouse multi-node Neutron Tests'
 #env.test_verify_on_setup='False'
 
 env.tor_agent = {host6:[{
-                    'tor_ip':'10.204.217.38',
+                    'tor_ip':'10.204.218.10',
                     'tor_id':'1',
                     'tor_type':'ovs',
                     'tor_ovs_port':'9999',
-                    'tor_ovs_protocol':'tcp',
+                    'tor_ovs_protocol':'pssl',
                     'tor_tsn_ip':'10.204.216.223',
                     'tor_tsn_name':'nodek3',
                     'tor_name':'bng-contrail-qfx51-1',
@@ -125,55 +125,61 @@ env.tor_agent = {host6:[{
                     'tor_id':'2',
                     'tor_type':'ovs',
                     'tor_ovs_port':'6632',
-                    'tor_ovs_protocol':'tcp',
+                    'tor_ovs_protocol':'pssl',
                     'tor_tsn_ip':'10.204.216.223',
                     'tor_tsn_name':'nodek3',
                     'tor_name':'br0',
                     'tor_tunnel_ip':'10.204.216.195',
                     'tor_vendor_name':'openworld',
                     'tor_http_server_port': '9011',
-                      'ca_cert_file':'/root/cacert.pem',
                        }],
 host7:[{
-                    'tor_ip':'10.204.217.38',
+                    'tor_ip':'10.204.218.10',
                     'tor_id':'3',
                     'tor_type':'ovs',
                     'tor_ovs_port':'9999',
-                    'tor_ovs_protocol':'tcp',
+                    'tor_ovs_protocol':'pssl',
                     'tor_tsn_ip':'10.204.217.51',
                     'tor_tsn_name':'nodeg11',
                     'tor_name':'bng-contrail-qfx51-1',
                     'tor_tunnel_ip':'99.99.99.99',
                     'tor_vendor_name':'Juniper',
                     'tor_http_server_port': '9012',
-                      'ca_cert_file':'/root/cacert.pem',
                        },
 {
                     'tor_ip':'10.204.216.195',
                     'tor_id':'4',
                     'tor_type':'ovs',
                     'tor_ovs_port':'6632',
-                    'tor_ovs_protocol':'tcp',
+                    'tor_ovs_protocol':'pssl',
                     'tor_tsn_ip':'10.204.217.51',
                     'tor_tsn_name':'nodeg11',
                     'tor_name':'br0',
                     'tor_tunnel_ip':'10.204.216.195',
                     'tor_vendor_name':'openworld',
                     'tor_http_server_port': '9013',
-                      'ca_cert_file':'/root/cacert.pem',
                        }]
  }
 
-env.test_repo_dir='/homes/vjoshi/github/mine/tor/contrail-test1/'
+env.ha = {
+    'internal_vip' : '10.204.216.184',
+    'external_vip' : '10.204.216.184',
+}
+env.openstack = {
+    'service_token' : '14bb72f9245aee58c987', #Common service token for for all openstack services
+    'amqp_host' : '10.204.216.58',            #IP of AMQP Server to be used in openstack
+    'manage_amqp' : 'no',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
+}
+
 env.tor_hosts={
-'10.204.217.38': [{ 'tor_port': 'ge-0/0/0',
+'10.204.218.10': [{ 'tor_port': 'ge-0/0/0',
                     'host_port' : 'p1p2',
                     'mgmt_ip' : '10.204.217.16',
                     'username' : 'root',
                     'password' : 'c0ntrail123',
                   }],
 '10.204.216.195': [{ 'tor_port': 'torport1',
-                    'host_port' : 'hostport1',
+                    'host_port' : 'hosttorport1',
                     'mgmt_ip' : '10.204.216.195',
                     'username' : 'root',
                     'password' : 'c0ntrail123',
@@ -190,6 +196,39 @@ env.physical_routers={
                      'mgmt_ip'  : '10.204.217.244',
                      'tunnel_ip' : '7.7.7.77',
                      'ports' : ['ge-1/1/7', 'ge-1/1/9'],
-             }
+                     'type'  : 'router',
+             },
+'br0'       : {
+                     'vendor': 'openvswitch',
+                     'model' : 'na',
+                     'asn'   : '64512',
+                     'name'  : 'br0',
+                     'ssh_username' : 'root',
+                     'ssh_password' : 'c0ntrail123',
+                     'mgmt_ip'  : '10.204.216.195',
+                     'tunnel_ip' : '10.204.216.195',
+                     'ports' : ['torport1'],
+                     'type'  : 'tor',
+},
+'bng-contrail-qfx51-1' : {
+                     'vendor': 'juniper',
+                     'model' : 'qfx5100',
+                     'asn'   : '64512',
+                     'name'  : 'bng-contrail-qfx51-1',
+                     'ssh_username' : 'root',
+                     'ssh_password' : 'c0ntrail123',
+                     'mgmt_ip'  : '10.204.218.10',
+                     'tunnel_ip' : '99.99.99.99',
+                     'ports' : ['ge-0/0/0'],
+                     'type'  : 'tor',
+}
 }
 
+env.ha = {
+    'internal_vip' : '10.204.216.184',
+    'external_vip' : '10.204.216.184',
+}
+ha_setup = True
+env.ca_cert_file='/homes/vjoshi/github/mine/tor/contrail-test-verify-on-setup/tools/tor/cacert.pem'
+env.test_repo_dir='/homes/vjoshi/github/mine/tor/contrail-test-verify-on-setup/'
+minimum_diskGB='200'

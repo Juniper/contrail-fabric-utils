@@ -157,13 +157,7 @@ def setup_test_env():
     # Read ToR config
     sanity_tor_dict = {}
     if env.has_key('tor_agent'):
-        for (k,v) in env.tor_agent.iteritems():
-            tor_agent_ip = k.split('@')[1]
-            for tor_dict in v:
-                tor_ip = tor_dict['tor_ip']
-                sanity_tor_dict[tor_ip] = tor_dict
-                sanity_tor_dict[tor_ip]['tor_agent_ip'] = tor_agent_ip
-    sanity_testbed_dict['tor'] = sanity_tor_dict
+        sanity_testbed_dict['tor_agent'] = env.tor_agent
 
     # Read any tor-host config
     if env.has_key('tor_hosts'):
@@ -337,10 +331,10 @@ def setup_test_env():
                 run('rm -rf /tmp/pip-build-root')
                 if detect_ostype() in ['centos', 'redhat', 'centoslinux']:
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources discover \
-                        testrepository junitxml pytun requests==2.3.0'
+                        testrepository junitxml pytun requests==2.3.0 junos-eznc'
                 elif 'ubuntu' == detect_ostype():
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources \
-                           testrepository junitxml pytun requests==2.3.0'
+                           testrepository junitxml pytun requests==2.3.0 junos-eznc'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
                 if ui_browser:
