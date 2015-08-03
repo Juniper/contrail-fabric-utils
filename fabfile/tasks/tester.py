@@ -157,13 +157,7 @@ def setup_test_env():
     # Read ToR config
     sanity_tor_dict = {}
     if env.has_key('tor_agent'):
-        for (k,v) in env.tor_agent.iteritems():
-            tor_agent_ip = k.split('@')[1]
-            for tor_dict in v:
-                tor_ip = tor_dict['tor_ip']
-                sanity_tor_dict[tor_ip] = tor_dict
-                sanity_tor_dict[tor_ip]['tor_agent_ip'] = tor_agent_ip
-    sanity_testbed_dict['tor'] = sanity_tor_dict
+        sanity_testbed_dict['tor_agent'] = env.tor_agent
 
     # Read any tor-host config
     if env.has_key('tor_hosts'):
