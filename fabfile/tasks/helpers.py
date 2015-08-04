@@ -212,12 +212,10 @@ def all_sm_reimage(build_param=None):
                 with settings(warn_only=True):
                     local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s centos-6.4" % (hostname))
             sleep(1)
-        sleep(30)
     if esxi_hosts:
        for esxi in esxi_hosts:
             with settings(warn_only=True):
                 local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (esxi,'esx5.5'))
-                sleep(30)
 #end all_sm_reimage
 
 @roles('compute')
