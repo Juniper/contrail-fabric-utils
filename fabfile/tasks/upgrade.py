@@ -1,11 +1,12 @@
 from fabfile.config import *
 
-from fabfile.tasks.install import pkg_install
+from fabfile.tasks.install import pkg_install, install_contrail_vcenter_plugin
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 from fabfile.utils.cluster import get_toragent_nodes, get_tsn_nodes
 from fabfile.utils.commandline import *
 from fabfile.utils.fabos import get_release, detect_ostype, get_linux_distro
-from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs
+from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs,\
+      get_config_pkgs, get_vcenter_plugin_pkg             
 
 @task
 @EXECUTE_TASK
@@ -64,8 +65,14 @@ def upgrade_config_node(from_rel, pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             pkg_install(['contrail-setup'])
+
+            if get_orchestrator() is 'vcenter':
+                pkg = get_vcenter_plugin_pkg()
+                install_contrail_vcenter_plugin(pkg)
+
+            pkgs = get_config_pkgs()
             cmd = frame_vnc_config_cmd(host_string, 'upgrade-vnc-config')
-            cmd += ' -P contrail-openstack-config'
+            cmd += ' -P %s' % ' '.join(pkgs)
             cmd += ' -F %s' % from_rel
             cmd += ' -T %s' % get_release()
             sudo(cmd)
@@ -195,7 +202,7 @@ def upgrade_orchestrator(from_rel, pkg):
 @roles('build')
 @task
 def upgrade_vcenter():
-    apt_install(['contrail-vmware-utils'])
+    pkg_install(['contrail-vmware-utils'])
 
 @task
 @roles('build')
