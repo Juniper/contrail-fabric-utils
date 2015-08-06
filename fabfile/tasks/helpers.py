@@ -1379,8 +1379,22 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
                     sys.stdout.write('%s :: %s -> %s\n' % (node, node_status_save[node], node_status[node]))
                     node_status_save[node]=node_status[node]
                 elif node_status_save[node] != "reimage_completed":
-                    sys.stdout.write('%s :: Reimage status of the node did not move through the reimage states expected.\n' % (node))
-                    sys.exit(1)
+                    sys.stdout.write('%s node status is reimage_completed, going for retries.\n')
+                    op_string='"reimage_completed"'
+                    for i in range(30):
+                        sys.stdout.write('Trial %d\n' % (i))
+                        time.sleep(10)
+                        try:
+                            with settings(hide('running'), warn_only=True):
+                                op_string=local(cmd,capture=True)
+                        except:
+                            time.sleep(2)
+                            continue
+                        if '\"restart_issued\"' in op_string:
+                            break
+                    else:
+                        sys.stdout.write('%s :: Reimage status of the node did not move through the reimage states expected.\n' % (node))
+                        sys.exit(1)
 
         if task_complete == 1:
             sys.stdout.write('Reimage Completed\n')
