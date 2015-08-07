@@ -181,7 +181,7 @@ def setup_galera_cluster():
     with cd(INSTALLER_DIR):
         cmd = "setup-vnc-galera\
             --self_ip %s --keystone_ip %s --galera_ip_list %s\
-            --internal_vip %s --openstack_index %d" % (self_ip, keystone_ip,
+            --internal_vip %s --openstack_index %d" % (self_ip, authserver_ip,
             ' '.join(galera_ip_list), internal_vip,
             (openstack_host_list.index(self_host) + 1))
 
