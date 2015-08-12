@@ -157,13 +157,7 @@ def setup_test_env():
     # Read ToR config
     sanity_tor_dict = {}
     if env.has_key('tor_agent'):
-        for (k,v) in env.tor_agent.iteritems():
-            tor_agent_ip = k.split('@')[1]
-            for tor_dict in v:
-                tor_ip = tor_dict['tor_ip']
-                sanity_tor_dict[tor_ip] = tor_dict
-                sanity_tor_dict[tor_ip]['tor_agent_ip'] = tor_agent_ip
-    sanity_testbed_dict['tor'] = sanity_tor_dict
+        sanity_testbed_dict['tor_agent'] = env.tor_agent
 
     # Read any tor-host config
     if env.has_key('tor_hosts'):
@@ -364,7 +358,8 @@ def setup_test_env():
                     if ('1.9' in ant_version):
                         pkg_install(['ant-junit'] , disablerepo = False)
 
-                pkg_install(['patch', 'python-heatclient', 'python-ceilometerclient'],disablerepo = False)
+                pkg_install(['patch', 'python-heatclient', 'python-ceilometerclient', 'python-setuptools'],disablerepo = False)
+                sudo('pip install junos-eznc==1.2.2')
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
