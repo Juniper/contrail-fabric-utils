@@ -167,7 +167,7 @@ def setup_test_env():
             host_dict['contrail_vm'] = esxi_hosts[esxi]['contrail_vm']['host']
             host_dict['roles'] = []
             sanity_testbed_dict['hosts'].append(host_dict)
-            sanity_testbed_dict['esxi_hosts'].append(host_dict)
+            sanity_testbed_dict['esxi_vms'].append(host_dict)
     # Adding vip VIP dict for HA test setup
     if CONTROLLER_TYPE == 'Openstack':
         with settings(host_string = env.roledefs['openstack'][0]):
