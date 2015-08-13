@@ -26,7 +26,7 @@ from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
         configure_esxi_network, create_esxi_compute_vm, deprovision_vcenter
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
-        get_esxi_vms_and_hosts
+        get_esxi_vms_and_hosts, get_mode
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
@@ -540,7 +540,7 @@ def setup_cfgm_node(*args):
                 sudo(cmd)
 
             orch = get_orchestrator()
-            if orch == 'vcenter':
+            if orch == 'vcenter' or 'vcenter_compute' in env.roles:
                 # Frame the command  to provision vcenter-plugin
                 vcenter_info = getattr(env, 'vcenter', None)
                 if not vcenter_info:
@@ -561,6 +561,8 @@ def setup_cfgm_node(*args):
                 else:
                     # If unspecified, set it to default value
                     cmd += " --vcenter_ipfabricpg contrail-fab-pg"
+                if 'vcenter_compute' in env.roles: 
+                    cmd += " --vcenter_compute vcenter-as-compute"
                 cmd += " --api_hostname %s" % cfgm_ip
                 cmd += " --api_port 8082"
                 zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
@@ -984,7 +986,8 @@ def setup_openstack():
 @task
 @roles('openstack')
 def setup_nova_aggregate():
-    if get_orchestrator() == 'vcenter':
+    #if get_orchestrator() == 'vcenter':
+    if get_orchestrator() == 'vcenter' or 'vcenter_compute' in env.roles:
         return
     if env.roledefs['openstack'].index(env.host_string) == 0:
         # Copy only once in a HA setup
@@ -1353,6 +1356,20 @@ def setup_agent_config_in_node(*args):
 
 @task
 @EXECUTE_TASK
+@roles('vcenter_compute')
+def setup_vcenter_compute():
+    execute("setup_vcenter_compute_node", env.host_string)
+
+@task
+def setup_vcenter_compute_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string):
+             if detect_ostype() == 'ubuntu':
+                with settings(warn_only=True):
+                     setup_vrouter('yes', 'yes')
+
+@task
+@EXECUTE_TASK
 @roles('compute')
 def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
     """Provisions vrouter services in all nodes defined in vrouter role.
@@ -1366,7 +1383,7 @@ def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
        if env.host_string in get_tsn_nodes():
            manage_nova_compute='no'
            configure_nova='no'
-       if get_orchestrator() == 'vcenter':
+       if get_mode(env.host_string) == 'vcenter':
            manage_nova_compute='no'
            configure_nova='no'
        execute("setup_only_vrouter_node", manage_nova_compute, configure_nova,  env.host_string)
@@ -2124,6 +2141,8 @@ def setup_all(reboot='True'):
     execute('verify_collector')
     execute('setup_webui')
     execute('verify_webui')
+    if 'vcenter_compute' in env.roles:
+        execute('setup_vcenter_compute')
     execute('setup_vrouter')
     execute('prov_config_node')
     execute('prov_database_node')
@@ -2374,7 +2393,7 @@ def reset_config():
 #end reset_config
 
 @task
-def create_contrailvm(orch, host_list, host_string, esxi_info, vcenter_info):
+def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
     host = ""
     # find the esxi host given hostip from the esxi_info
     for x in host_list:
@@ -2383,10 +2402,16 @@ def create_contrailvm(orch, host_list, host_string, esxi_info, vcenter_info):
     if not host:
         print "No op for esxi host -- %s" %env.host_string
         return
+
+    std_switch = False
+    dv_switch_fab = False
+    power_on = False
+
     if host in esxi_info.keys():
-         if orch == 'openstack':
+         mode = get_mode(esxi_info[host]['contrail_vm']['host'])
+         if mode == 'openstack':
              std_switch = True
-         if orch == 'vcenter':
+         if mode == 'vcenter':
              if 'dv_switch_fab' in vcenter_info.keys():
                  if not 'fabric_vswitch' in esxi_info[host].keys():
                      dv_switch_fab = True
@@ -2403,10 +2428,7 @@ def create_contrailvm(orch, host_list, host_string, esxi_info, vcenter_info):
              apply_esxi_defaults(esxi_info[host])
              esxi_info[host]['fabric_vswitch'] = None
              power_on = False
-         if orch == 'openstack':
-             create_esxi_compute_vm(esxi_info[host], None, power_on)
-         if orch == 'vcenter':
-             create_esxi_compute_vm(esxi_info[host], vcenter_info, power_on)
+         create_esxi_compute_vm(esxi_info[host], vcenter_info, power_on)
     else:
          print 'Info: esxi_hosts block does not have the esxi host.Exiting'
 # end create_contrailvm
@@ -2414,8 +2436,8 @@ def create_contrailvm(orch, host_list, host_string, esxi_info, vcenter_info):
 @task
 @parallel(pool_size=20)
 @hosts([h['ip'] for h in getattr(testbed, 'esxi_hosts', {}).values()])
-def prov_esxi_task(orch, host_list, esxi_info, vcenter_info):
-    execute(create_contrailvm, orch, host_list, env.host_string, esxi_info, vcenter_info)
+def prov_esxi_task(host_list, esxi_info, vcenter_info):
+    execute(create_contrailvm, host_list, env.host_string, esxi_info, vcenter_info)
 #end prov_esxi_task
 
 @task
@@ -2425,26 +2447,34 @@ def prov_esxi(*args):
     if not esxi_info:
         print 'Info: esxi_hosts block is not defined in testbed file. Exiting'
         return
-    orch =  get_orchestrator()
-    if orch == 'vcenter':
-        vcenter_info = getattr(env, 'vcenter', None)
-        if not vcenter_info:
-            print 'Info: vcenter block is not defined in testbed file.Exiting'
-            return
     if args:
         host_list = args
     else:
         host_list = esxi_info.keys()
 
-    execute(prov_esxi_task, orch, host_list, esxi_info, vcenter_info)
+    orch = get_orchestrator()
+    if orch == 'vcenter' or 'vcenter_compute' in env.roles:
+        vcenter_info = getattr(env, 'vcenter', None)
+        if not vcenter_info:
+            print 'Info: vcenter block is not defined in testbed file.Exiting'
+            return
+    else:
+        vcenter_info = None
+
+    execute(prov_esxi_task, host_list, esxi_info, vcenter_info)
 
     dv_switch_fab = False
-    if orch == 'vcenter':
-        for h in host_list:
-            if 'dv_switch_fab' in vcenter_info.keys():
-                 if not 'fabric_vswitch' in esxi_info[h].keys():
-                     dv_switch_fab = True
-                     esxi_info[h]['fabric_vswitch'] = None
+    for h in host_list:
+         mode = get_mode(esxi_info[h]['contrail_vm']['host'])
+         if mode == 'vcenter':
+             vcenter_info = getattr(env, 'vcenter', None)
+             if not vcenter_info:
+                 print 'Info: vcenter block is not defined in testbed file.Exiting'
+                 return
+             if 'dv_switch_fab' in vcenter_info.keys():
+                  if not 'fabric_vswitch' in esxi_info[h].keys():
+                      dv_switch_fab = True
+                      esxi_info[h]['fabric_vswitch'] = None
     if (dv_switch_fab == True):
          sleep(30)
          provision_dvs_fab(vcenter_info, esxi_info, host_list)
