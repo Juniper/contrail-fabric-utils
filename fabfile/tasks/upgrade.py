@@ -6,7 +6,8 @@ from fabfile.utils.cluster import get_toragent_nodes, get_tsn_nodes
 from fabfile.utils.commandline import *
 from fabfile.utils.fabos import get_release, detect_ostype, get_linux_distro
 from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs,\
-      get_config_pkgs, get_vcenter_plugin_pkg             
+      get_config_pkgs, get_vcenter_plugin_pkg
+from fabfile.tasks.vmware import provision_vcenter_features
 
 @task
 @EXECUTE_TASK
@@ -203,6 +204,16 @@ def upgrade_orchestrator(from_rel, pkg):
 @task
 def upgrade_vcenter():
     pkg_install(['contrail-vmware-utils'])
+    vcenter_info = getattr(env, 'vcenter', None)
+    if not vcenter_info:
+        print 'Info: vcenter block is not defined in testbed file.Exiting'
+        return
+    esxi_info = getattr(testbed, 'esxi_hosts', None)
+    if not esxi_info:
+        print 'Info: esxi_hosts block is not defined in testbed file. Exiting'
+        return
+    host_list = esxi_info.keys()
+    provision_vcenter_features(vcenter_info, esxi_info, host_list)
 
 @task
 @roles('build')

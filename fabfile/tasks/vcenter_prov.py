@@ -1,9 +1,93 @@
 """
-Python program for provisioning vcenter 
+Python program for provisioning vcenter
 """
 
 import atexit
 import time
+
+class vcenter_fab(object):
+    def __init__(self, vcenter_params):
+        self.pyVmomi =  __import__("pyVmomi")
+
+        self.vcenter_server = vcenter_params['vcenter_server']
+        self.vcenter_username = vcenter_params['vcenter_username']
+        self.vcenter_password = vcenter_params['vcenter_password']
+
+        self.cluster_name = vcenter_params['cluster_name']
+        self.datacenter_name = vcenter_params['datacenter_name']
+
+        self.esxi_info = vcenter_params['esxi_info']
+        self.host_list = vcenter_params['host_list']
+
+        try:
+            self.connect_to_vcenter()
+            for host in self.host_list:
+                vm_name = "ContrailVM" + "-" + self.datacenter_name + "-" + self.esxi_info[host]['ip']
+                self.configure_auto_restart(self.esxi_info[host]['ip'], vm_name)
+        except self.pyVmomi.vmodl.MethodFault as error:
+            print "Caught vmodl fault : " + error.msg
+            return
+
+    def get_obj(self, vimtype, name):
+        """
+        Get the vsphere object associated with a given text name
+        """
+        obj = None
+        container = self.content.viewManager.CreateContainerView(self.content.rootFolder, vimtype, True)
+        for c in container.view:
+            if c.name == name:
+                obj = c
+                break
+        return obj
+
+    def connect_to_vcenter(self):
+        from pyVim import connect
+        self.service_instance = connect.SmartConnect(host=self.vcenter_server,
+                                        user=self.vcenter_username,
+                                        pwd=self.vcenter_password,
+                                        port=443)
+        self.content = self.service_instance.RetrieveContent()
+        atexit.register(connect.Disconnect, self.service_instance)
+
+    def wait_for_task(self, task, actionName='job', hideResult=False):
+         while task.info.state == (self.pyVmomi.vim.TaskInfo.State.running or self.pyVmomi.vim.TaskInfo.State.queued):
+             time.sleep(2)
+         if task.info.state == self.pyVmomi.vim.TaskInfo.State.success:
+             if task.info.result is not None and not hideResult:
+                 out = '%s completed successfully, result: %s' % (actionName, task.info.result)
+                 print out
+             else:
+                 out = '%s completed successfully.' % actionName
+                 print out
+         elif task.info.state == self.pyVmomi.vim.TaskInfo.State.error:
+             out = 'Error - %s did not complete successfully: %s' % (actionName, task.info.error)
+             raise ValueError(out)
+         return task.info.result
+
+    def configure_auto_restart(self, host_name, vm_name):
+        host = self.get_obj([self.pyVmomi.vim.HostSystem], host_name)
+        if host is None:
+            print "Host %s is not found" %(host_name)
+            return
+        vm = self.get_obj([self.pyVmomi.vim.VirtualMachine], vm_name)
+        if vm is None:
+            print "ContrailVM %s is not found" %(vm_name)
+            return
+        host_settings = self.pyVmomi.vim.host.AutoStartManager.SystemDefaults()
+        host_settings.enabled = True
+        config = host.configManager.autoStartManager.config
+        config.defaults = host_settings
+        auto_power_info = self.pyVmomi.vim.host.AutoStartManager.AutoPowerInfo()
+        auto_power_info.key = vm
+        auto_power_info.startOrder = 1
+        auto_power_info.startAction = "powerOn"
+        auto_power_info.startDelay = -1
+        auto_power_info.stopAction = "powerOff"
+        auto_power_info.stopDelay = -1
+        auto_power_info.waitForHeartbeat = 'no'
+        config.powerInfo = [auto_power_info]
+        host.configManager.autoStartManager.ReconfigureAutostart(config)
+        print "auto_restart configured successfully for ContrailVM:%s" %(vm_name)
 
 class dvs_fab(object):
     def __init__(self, dvs_params):
