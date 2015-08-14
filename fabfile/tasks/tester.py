@@ -237,7 +237,8 @@ def setup_test_env():
         generate_html_report = 'True'
         key = 'key1'
         mailSender = 'contrailbuild@juniper.net'
-
+        
+        use_devicemanager_for_md5 = getattr(testbed, 'use_devicemanager_for_md5', False)
         orch = getattr(env, 'orchestrator', 'openstack')
         router_asn = getattr(testbed, 'router_asn', '')
         public_vn_rtgt = getattr(testbed, 'public_vn_rtgt', '')
@@ -303,6 +304,7 @@ def setup_test_env():
              '__ha_setup__'            : getattr(testbed, 'ha_setup', ''),
              '__ipmi_username__'       : getattr(testbed, 'ipmi_username', ''),
              '__ipmi_password__'       : getattr(testbed, 'ipmi_password', ''),
+             '__use_devicemanager_for_md5__'       : use_devicemanager_for_md5,
             })
 
         fd, fname = tempfile.mkstemp()
