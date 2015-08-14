@@ -7,6 +7,7 @@ from fabfile.templates import compute_vmx_template
 from fabfile.tasks.install import yum_install, apt_install
 from vcenter_prov import Vcenter as Vcenter
 from vcenter_prov import cleanup_vcenter
+from vcenter_prov import dvs_fab as dvs_fab
 from fabfile.utils.cluster import get_orchestrator
 
 def configure_esxi_network(esxi_info):
