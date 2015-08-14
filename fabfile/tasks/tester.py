@@ -360,6 +360,10 @@ def setup_test_env():
                         pkg_install(['ant-junit'] , disablerepo = False)
 
                 pkg_install(['patch', 'python-heatclient', 'python-ceilometerclient', 'python-setuptools'],disablerepo = False)
+
+                # On centos, junos-eznc install requires devel pkgs of libxml2 and libxslt
+                if detect_ostype() in ['redhat', 'centos']:
+                    pkg_install(['libxslt-devel', 'libxml2-devel'], disablerepo=False)
                 sudo('pip install junos-eznc==1.2.2')
 
         for host_string in env.roledefs['compute']:
