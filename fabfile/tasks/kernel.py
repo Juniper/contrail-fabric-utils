@@ -11,7 +11,7 @@ def set_grub_default_node(*args, **kwargs):
     for host_string in args:
         with settings(host_string=host_string):
             sudo("sed -i \'s/^GRUB_DEFAULT=.*/GRUB_DEFAULT=\"%s\"/g\' /etc/default/grub" % value)
-            sudo('update grub')
+            sudo('update-grub')
             sudo("grep '^GRUB_DEFAULT=\"%s\"' /etc/default/grub" % value)
             print '[%s]: Updated Default Grub to (%s)' % (host_string, value)
 
