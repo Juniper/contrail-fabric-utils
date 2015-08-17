@@ -930,10 +930,17 @@ def setup_identity_service_node(*args):
     """Provisions identity services in one or list of nodes.
        USAGE: fab setup_identity_service_node:user@1.1.1.1,user@2.2.2.2"""
     amqp_server_ip = get_openstack_amqp_server()
+    rabbit_port    = "5672"
+
+    # If HA is enabled, then use the frontend HAProxy Rabbit port
+    if get_openstack_internal_vip():
+        rabbit_port = "5673"
+
     conf_file = '/etc/keystone/keystone.conf'
     keystone_configs = {'DEFAULT' : {'notification_driver' : 'messaging',
-                                     'rabbit_host' : '%s' % amqp_server_ip}
-                      }
+                                     'rabbit_host' : '%s' % amqp_server_ip,
+                                     'rabbit_port' : '%s' % rabbit_port }
+                       }
     for host_string in args:
         for section, key_values in keystone_configs.iteritems():
             for key, value in key_values.iteritems():
