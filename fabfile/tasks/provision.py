@@ -1126,45 +1126,44 @@ def setup_redis_server_node(*args):
     for host_string in args:
         # We need the redis to be listening on *, comment bind line
         with settings(host_string=host_string):
-            with settings(warn_only=True):
-                if detect_ostype() == 'ubuntu':
-                    redis_svc_name = 'redis-server'
-                    redis_conf_file = '/etc/redis/redis.conf'
-                    do_chkconfig = False
-                    check_svc_started = True
-                else:
-                    redis_svc_name = 'redis'
-                    redis_conf_file = '/etc/redis.conf'
-                    do_chkconfig = True
-                    check_svc_started = False
+            if detect_ostype() == 'ubuntu':
+                redis_svc_name = 'redis-server'
+                redis_conf_file = '/etc/redis/redis.conf'
+                do_chkconfig = False
+                check_svc_started = True
+            else:
+                redis_svc_name = 'redis'
+                redis_conf_file = '/etc/redis.conf'
+                do_chkconfig = True
+                check_svc_started = False
 
-                sudo("service %s stop" % (redis_svc_name))
-                sudo("sed -i -e '/^[ ]*bind/s/^/#/' %s" % (redis_conf_file))
-                # Set the lua-time-limit to 15000 milliseconds
-                sudo("sed -i -e 's/lua-time-limit.*/lua-time-limit 15000/' %s" % (redis_conf_file))
-                # If redis passwd specified, add that to the conf file
-                if get_redis_password():
-                    sudo("sed -i '/^# requirepass/ c\ requirepass %s' %s" % (get_redis_password(), redis_conf_file))
-                # Disable persistence
-                dbfilename = sudo("grep '^dbfilename' %s | awk '{print $2}'" % (redis_conf_file))
-                if dbfilename:
-                    dbdir = sudo("grep '^dir' %s | awk '{print $2}'" % (redis_conf_file))
-                    if dbdir:
-                        sudo("rm -f %s/%s" % (dbdir, dbfilename))
-                sudo("sed -i -e '/^[ ]*save/s/^/#/' %s" % (redis_conf_file))
-                sudo("sed -i -e '/^[ ]*dbfilename/s/^/#/' %s" % (redis_conf_file))
-                if do_chkconfig:
-                    sudo("chkconfig %s on" % (redis_svc_name))
-                sudo("service %s start" % (redis_svc_name))
-                if check_svc_started:
-                    # Check if the redis-server is running, if not, issue start again
-                    count = 1
-                    while sudo("service %s status | grep not" % (redis_svc_name)).succeeded:
-                        count += 1
-                        if count > 10:
-                            break
-                        sleep(1)
-                        sudo("service %s restart" % (redis_svc_name))
+            sudo("service %s stop" % (redis_svc_name))
+            sudo("sed -i -e '/^[ ]*bind/s/^/#/' %s" % (redis_conf_file))
+            # Set the lua-time-limit to 15000 milliseconds
+            sudo("sed -i -e 's/lua-time-limit.*/lua-time-limit 15000/' %s" % (redis_conf_file))
+            # If redis passwd specified, add that to the conf file
+            if get_redis_password():
+                sudo("sed -i '/^# requirepass/ c\ requirepass %s' %s" % (get_redis_password(), redis_conf_file))
+            # Disable persistence
+            dbfilename = sudo("grep '^dbfilename' %s | awk '{print $2}'" % (redis_conf_file))
+            if dbfilename:
+                dbdir = sudo("grep '^dir' %s | awk '{print $2}'" % (redis_conf_file))
+                if dbdir:
+                    sudo("rm -f %s/%s" % (dbdir, dbfilename))
+            sudo("sed -i -e '/^[ ]*save/s/^/#/' %s" % (redis_conf_file))
+            sudo("sed -i -e '/^[ ]*dbfilename/s/^/#/' %s" % (redis_conf_file))
+            if do_chkconfig:
+                sudo("chkconfig %s on" % (redis_svc_name))
+            sudo("service %s start" % (redis_svc_name))
+            if check_svc_started:
+                # Check if the redis-server is running, if not, issue start again
+                count = 1
+                while sudo("service %s status | grep not" % (redis_svc_name)).succeeded:
+                    count += 1
+                    if count > 10:
+                        break
+                    sleep(1)
+                    sudo("service %s restart" % (redis_svc_name))
 #end setup_redis_server_node
 
 @task
