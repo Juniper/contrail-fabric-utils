@@ -239,10 +239,19 @@ def join_galera_cluster(new_ctrl_host):
                      --node_to_add %s\
                      --self_ip %s\
                      --keystone_ip %s\
+                     --zoo_ip_list %s\
+                     --keystone_user %s\
+                     --keystone_pass %s\
+                     --cmon_user %s\
+                     --cmon_pass %s\
+                     --monitor_galera %s\
                      --galera_ip_list %s\
                      --internal_vip %s\
                      --openstack_index %d" % (new_ctrl_ip,
                      self_ip, authserver_ip,
+                     ' '.join(zoo_ip_list), 
+                     keystone_db_user, keystone_db_pass,
+                     cmon_db_user, cmon_db_pass, monitor_galera, 
                      ' '.join(galera_ip_list), internal_vip,
                      (openstack_host_list.index(self_host) + 1))
                 sudo(cmd)
@@ -789,7 +798,7 @@ def join_ha_cluster(new_ctrl_host):
         if new_ctrl_host in env.roledefs['database']:
             execute('prov_database_node', new_ctrl_host)
 
-        if new_ctrl_host in env.roledefs['analytics']:
+        if new_ctrl_host in env.roledefs['collector']:
             execute('prov_analytics_node', new_ctrl_host)
 
         if new_ctrl_host in env.roledefs['control']:
