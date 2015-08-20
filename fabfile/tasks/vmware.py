@@ -94,63 +94,64 @@ def create_esxi_compute_vm (esxi_host, vcenter_info, power_on):
     '''Spawns contrail vm on openstack managed esxi server (non vcenter env)'''
     orch = get_orchestrator()
     datastore = esxi_host['datastore']
-    if 'vmdk_download_path' in esxi_host['contrail_vm'].keys():
-         vmdk_download_path = esxi_host['contrail_vm']['vmdk_download_path']
-         run("wget -O /tmp/ContrailVM-disk1.vmdk %s" % vmdk_download_path)
-         vmdk = "/tmp/ContrailVM-disk1.vmdk"
-    else:
-         vmdk = esxi_host['contrail_vm']['vmdk']
-         if vmdk is None:
-            assert vmdk, "Contrail VM vmdk image or download path should be specified in testbed file"
-    if orch is 'openstack':
-        vm_name = esxi_host['contrail_vm']['name']
-    if orch is 'vcenter':
-        name = "ContrailVM"
-        vm_name = name+"-"+vcenter_info['datacenter']+"-"+esxi_host['ip']
-    vm_store = datastore + '/' + vm_name + '/'
-
-    vmx_file = create_vmx(esxi_host, vm_name)
     with settings(host_string = esxi_host['username'] + '@' + esxi_host['ip'],
                   password = esxi_host['password'], warn_only = True,
                   shell = '/bin/sh -l -c'):
-         vmid = run("vim-cmd vmsvc/getallvms | grep %s | awk \'{print $1}\'" % vm_name)
-         if vmid:
-             run("vim-cmd vmsvc/power.off %s" % vmid)
-             run("vim-cmd vmsvc/unregister %s" % vmid)
+        if orch == 'openstack':
+            src_vmdk = "/var/tmp/%s" % os.path.split(vmdk)[-1]
+        if orch == 'vcenter':
+            src_vmdk = "/var/tmp/ContrailVM-disk1.vmdk"
 
-         run("rm -rf %s" % vm_store)
-         out = run("mkdir -p %s" % vm_store)
-         if out.failed:
-             raise Exception("Unable create %s on esxi host %s:%s" % (vm_store,
+        if 'vmdk_download_path' in esxi_host['contrail_vm'].keys():
+            vmdk_download_path = esxi_host['contrail_vm']['vmdk_download_path']
+            run("wget -O %s %s" % (src_vmdk, vmdk_download_path))
+        else:
+            vmdk = esxi_host['contrail_vm']['vmdk']
+            if vmdk is None:
+                assert vmdk, "Contrail VM vmdk image or download path should be specified in testbed file"
+            put(vmdk, src_vmdk)
+
+        if orch is 'openstack':
+            vm_name = esxi_host['contrail_vm']['name']
+        if orch is 'vcenter':
+            name = "ContrailVM"
+            vm_name = name+"-"+vcenter_info['datacenter']+"-"+esxi_host['ip']
+        vm_store = datastore + '/' + vm_name + '/'
+
+        vmx_file = create_vmx(esxi_host, vm_name)
+        vmid = run("vim-cmd vmsvc/getallvms | grep %s | awk \'{print $1}\'" % vm_name)
+        if vmid:
+            run("vim-cmd vmsvc/power.off %s" % vmid)
+            run("vim-cmd vmsvc/unregister %s" % vmid)
+
+        run("rm -rf %s" % vm_store)
+        out = run("mkdir -p %s" % vm_store)
+        if out.failed:
+            raise Exception("Unable create %s on esxi host %s:%s" % (vm_store,
                                      esxi_host['ip'], out))
-         dst_vmx = vm_store + vm_name + '.vmx'
-         out = put(vmx_file, dst_vmx)
-         os.remove(vmx_file)
-         if out.failed:
-             raise Exception("Unable to copy %s to %s on %s:%s" % (vmx_file,
+        dst_vmx = vm_store + vm_name + '.vmx'
+        out = put(vmx_file, dst_vmx)
+        os.remove(vmx_file)
+        if out.failed:
+            raise Exception("Unable to copy %s to %s on %s:%s" % (vmx_file,
                                      vm_store, esxi_host['ip'], out))
-         if orch == 'openstack':
-             src_vmdk = '/var/tmp/%s' % os.path.split(vmdk)[-1]
-         if orch == 'vcenter':
-             src_vmdk = '/var/tmp/ContrailVM-disk1.vmdk'
-         dst_vmdk = vm_store + vm_name + '.vmdk'
-         put(vmdk, src_vmdk)
-         out = run('vmkfstools -i "%s" -d zeroedthick "%s"' % (src_vmdk, dst_vmdk))
-         if out.failed:
-             raise Exception("Unable to create vmdk on %s:%s" %
+        dst_vmdk = vm_store + vm_name + '.vmdk'
+        out = run('vmkfstools -i "%s" -d zeroedthick "%s"' % (src_vmdk, dst_vmdk))
+        if out.failed:
+            raise Exception("Unable to create vmdk on %s:%s" %
                                       (esxi_host['ip'], out))
-         run('rm ' + src_vmdk)
-         out = run("vim-cmd solo/registervm " + dst_vmx)
-         if out.failed:
-             raise Exception("Unable to register VM %s on %s:%s" % (vm_name,
+        run('rm ' + src_vmdk)
+        out = run("vim-cmd solo/registervm " + dst_vmx)
+        if out.failed:
+            raise Exception("Unable to register VM %s on %s:%s" % (vm_name,
                                       esxi_host['ip'], out))
 
-         if (power_on == False):
-             return
+        if (power_on == False):
+            return
 
-         out = run("vim-cmd vmsvc/power.on %s" % out)
-         if out.failed:
-             raise Exception("Unable to power on %s on %s:%s" % (vm_name,
+        out = run("vim-cmd vmsvc/power.on %s" % out)
+        if out.failed:
+            raise Exception("Unable to power on %s on %s:%s" % (vm_name,
                                       esxi_host['ip'], out))
 #end create_esxi_compute_vm
 
