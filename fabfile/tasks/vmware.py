@@ -96,8 +96,12 @@ def create_esxi_compute_vm (esxi_host, vcenter_info, power_on):
     datastore = esxi_host['datastore']
     if 'vmdk_download_path' in esxi_host['contrail_vm'].keys():
          vmdk_download_path = esxi_host['contrail_vm']['vmdk_download_path']
-         run("wget -O /tmp/ContrailVM-disk1.vmdk %s" % vmdk_download_path)
-         vmdk = "/tmp/ContrailVM-disk1.vmdk"
+         #run("wget -O /tmp/ContrailVM-disk1.vmdk %s" % vmdk_download_path)
+         #vmdk = "/tmp/ContrailVM-disk1.vmdk"
+         dst_vmdk = "/tmp/ContrailVM-"+esxi_host['ip']+"-disk.vmdk"
+         cmd = "wget -O %s %s" % (dst_vmdk, vmdk_download_path)
+         os.system(cmd)
+         vmdk = dst_vmdk
     else:
          vmdk = esxi_host['contrail_vm']['vmdk']
          if vmdk is None:
