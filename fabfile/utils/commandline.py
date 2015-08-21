@@ -401,24 +401,15 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     analytics_database_ttl = get_database_ttl()
     if analytics_database_ttl is not None:
         cmd += "--analytics_data_ttl %d " % analytics_database_ttl
-    else:
-        #if nothing is provided we default to 48h
-        cmd += "--analytics_data_ttl 48 "
     analytics_config_audit_ttl = get_analytics_config_audit_ttl()
     if analytics_config_audit_ttl is not None:
         cmd += "--analytics_config_audit_ttl %d " % analytics_config_audit_ttl
-    else:
-        cmd += "--analytics_config_audit_ttl -1 "
     analytics_statistics_ttl = get_analytics_statistics_ttl()
     if analytics_statistics_ttl is not None:
         cmd += "--analytics_statistics_ttl %d " % analytics_statistics_ttl
-    else:
-        cmd += "--analytics_statistics_ttl -1 "
     analytics_flow_ttl = get_analytics_flow_ttl()
     if analytics_flow_ttl is not None:
         cmd += "--analytics_flow_ttl %d " % analytics_flow_ttl
-    else:
-        cmd += "--analytics_flow_ttl -1 "
     analytics_redis_password = get_redis_password()
     if analytics_redis_password is not None:
         cmd += "--redis_password %s " % analytics_redis_password
