@@ -2565,6 +2565,9 @@ def prov_esxi(*args):
         if not vcenter_info:
             print 'Info: vcenter block is not defined in testbed file.Exiting'
             return
+    else:
+        vcenter_info = None
+
     if args:
         host_list = args
     else:
