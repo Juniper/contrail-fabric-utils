@@ -329,7 +329,13 @@ def uninstall_only_vrouter_node(manage_nova_compute='yes', *args):
             with cd('/etc/'):
                 sudo('sudo rm -rf libvirt')
                 with settings(warn_only=True):
-                    sudo('find ./contrail/* ! -iname \'contrail_ifrename.sh\' -delete')
+                    cmds = ['find ./contrail/*'
+                            '! -iname "contrail_ifrename.sh"',
+                            '! -iname "debs_list.txt"',
+                            '! -iname "rpm_list.txt"',
+                            ' -delete',
+                           ]
+                    sudo(' '.join(cmds))
             with cd('/var/'):
                 sudo('sudo rm -rf crashes')
                 sudo('sudo rm -rf tmp')
