@@ -71,6 +71,11 @@ def upgrade_config_node(from_rel, pkg, *args):
                 pkg = get_vcenter_plugin_pkg()
                 install_contrail_vcenter_plugin(pkg)
 
+            if (float(from_rel) == 2.2 and get_release() >= 2.2):
+                dist, version, extra = get_linux_distro()
+                if version == '14.04':
+                    pkg_install(['keepalived=1.2.13-0~276~ubuntu14.04.1'])
+
             pkgs = get_config_pkgs()
             cmd = frame_vnc_config_cmd(host_string, 'upgrade-vnc-config')
             cmd += ' -P %s' % ' '.join(pkgs)
