@@ -144,7 +144,6 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
         cmd += ' --neutron_password %s' % get_neutron_password()
         cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
         cmd += " --keystone_auth_port %s" % get_authserver_port()
-        cmd += " --keystone_admin_token %s" % get_keystone_admin_token()
         cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
         cmd += " --region_name %s" % get_region_name()
         manage_neutron = get_manage_neutron()
@@ -211,7 +210,6 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
         cmd += " --openstack_ip %s" % openstack_ip
         cmd += " --admin_user %s" % ks_admin_user
         cmd += " --admin_password %s" % ks_admin_password
-        cmd += " --admin_token %s" % get_keystone_admin_token()
         cmd += " --admin_tenant_name %s" % get_admin_tenant_name()
     elif orch == 'vcenter':
         vcenter_info = getattr(env, 'vcenter', None)
@@ -425,7 +423,6 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
         cmd += " --keystone_auth_protocol %s" % \
                 get_authserver_protocol()
         cmd += " --keystone_auth_port %s" % get_authserver_port()
-        cmd += " --keystone_admin_token %s" % get_keystone_admin_token()
         cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
 
     internal_vip = get_contrail_internal_vip()
