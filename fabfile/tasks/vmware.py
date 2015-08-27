@@ -7,8 +7,7 @@ from fabfile.templates import compute_vmx_template
 from fabfile.tasks.install import yum_install, apt_install
 from vcenter_prov import Vcenter as Vcenter
 from vcenter_prov import cleanup_vcenter
-from vcenter_prov import dvs_fab as dvs_fab
-from fabfile.utils.cluster import get_orchestrator
+from fabfile.utils.cluster import get_orchestrator, get_mode
 
 def configure_esxi_network(esxi_info):
     '''Provision ESXi server'''
@@ -18,7 +17,8 @@ def configure_esxi_network(esxi_info):
     assert (user and ip and password), "User, password and IP of the ESXi server must be specified"
 
     orch = get_orchestrator()
-    if orch == 'openstack':
+    mode = get_mode(esxi_info['contrail_vm']['host'])
+    if mode == 'openstack':
         vm_pg = esxi_info['vm_port_group']
         vm_switch = esxi_info['vm_vswitch']
         vm_switch_mtu = esxi_info['vm_vswitch_mtu']
@@ -36,7 +36,7 @@ def configure_esxi_network(esxi_info):
         run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(fabric_pg, fab_switch))
         if uplink_nic:
             run('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(uplink_nic, fab_switch))
-        if orch == 'openstack':
+        if mode == 'openstack':
             run('esxcli network vswitch standard add --vswitch-name=%s' %(vm_switch))
             run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(vm_pg, vm_switch))
             run('esxcli network vswitch standard set -v %s -m %s' % (vm_switch, vm_switch_mtu))
@@ -58,11 +58,12 @@ def create_vmx (esxi_host, vm_name):
     vm_pg = esxi_host['vm_port_group']
     data_pg = esxi_host.get('data_port_group', None)
     orch = get_orchestrator()
+    mode = get_mode(esxi_host['contrail_vm']['host'])
     vm_name = vm_name
     vm_mac = esxi_host['contrail_vm']['mac']
     assert vm_mac, "MAC address for contrail-compute-vm must be specified"
 
-    if orch is 'vcenter':
+    if mode is 'vcenter':
         eth0_type = "vmxnet3"
         ext_params = compute_vmx_template.vcenter_ext_template
     else:
@@ -89,6 +90,7 @@ def create_vmx (esxi_host, vm_name):
 def create_esxi_compute_vm (esxi_host, vcenter_info, power_on):
     '''Spawns contrail vm on openstack managed esxi server (non vcenter env)'''
     orch = get_orchestrator()
+    mode = get_mode(esxi_host['contrail_vm']['host'])
     datastore = esxi_host['datastore']
     if 'vmdk_download_path' in esxi_host['contrail_vm'].keys():
          vmdk_download_path = esxi_host['contrail_vm']['vmdk_download_path']
@@ -98,9 +100,9 @@ def create_esxi_compute_vm (esxi_host, vcenter_info, power_on):
          vmdk = esxi_host['contrail_vm']['vmdk']
          if vmdk is None:
             assert vmdk, "Contrail VM vmdk image or download path should be specified in testbed file"
-    if orch is 'openstack':
+    if mode is 'openstack':
         vm_name = esxi_host['contrail_vm']['name']
-    if orch is 'vcenter':
+    if mode is 'vcenter':
         name = "ContrailVM"
         vm_name = name+"-"+vcenter_info['datacenter']+"-"+esxi_host['ip']
     vm_store = datastore + '/' + vm_name + '/'
@@ -125,9 +127,9 @@ def create_esxi_compute_vm (esxi_host, vcenter_info, power_on):
          if out.failed:
              raise Exception("Unable to copy %s to %s on %s:%s" % (vmx_file,
                                      vm_store, esxi_host['ip'], out))
-         if orch == 'openstack':
+         if mode == 'openstack':
              src_vmdk = '/var/tmp/%s' % os.path.split(vmdk)[-1]
-         if orch == 'vcenter':
+         if mode == 'vcenter':
              src_vmdk = '/var/tmp/ContrailVM-disk1.vmdk'
          dst_vmdk = vm_store + vm_name + '.vmdk'
          put(vmdk, src_vmdk)

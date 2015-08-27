@@ -356,6 +356,21 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
         if gateway_routes:
             cmd += " --vgw_gateway_routes %s" % str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
 
+    if 'vcenter_compute' in env.roledefs:
+        if compute_mgmt_ip in env.roledefs['vcenter_compute'][0]:
+            vcenter_info = getattr(env, 'vcenter', None)
+            cmd += " --vcenter_server %s" % vcenter_info['server']
+            cmd += " --vcenter_username %s" % vcenter_info['username']
+            cmd += " --vcenter_password %s" % vcenter_info['password']
+            cluster_list = vcenter_info['cluster']
+            cluster_list_now = "" 
+            for cluster in cluster_list:
+                cluster_list_now += cluster
+                cluster_list_now += ","
+            cluster_list_now = cluster_list_now.rstrip(',')
+            cmd += " --vcenter_cluster %s" % cluster_list_now 
+            cmd += " --vcenter_dvswitch %s" % vcenter_info['dv_switch']['dv_switch_name']    
+
     # Contrail with vmware as orchestrator
     esxi_data = get_vmware_details(host_string)
     if esxi_data:
@@ -370,6 +385,7 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
             cmd += " --vmware_vmpg_vswitch_mtu %s" % mtu
         else:
             cmd += " --vmware_vmpg_vswitch_mtu %s" % esxi_data['vm_vswitch_mtu']
+        cmd += " --mode %s" % esxi_data['contrail_vm']['mode']
 
     dpdk = getattr(env, 'dpdk', None)
     if dpdk:
