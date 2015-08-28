@@ -64,6 +64,16 @@ def upgrade_config_node(from_rel, pkg, *args):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             pkg_install(['contrail-setup'])
+
+            #Downgrading keepalived as we are packaging lower version of keepalivd in R2.20
+            if (float(from_rel) == 2.2 and get_release() >= 2.2):
+                dist, version, extra = get_linux_distro()
+                if version == '14.04':
+                    cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes'
+                    cmd += ' -o Dpkg::Options::="--force-overwrite"'
+                    cmd += ' -o Dpkg::Options::="--force-confold" install keepalived=1.2.13-0~276~ubuntu14.04.1'
+                    sudo(cmd)
+
             cmd = frame_vnc_config_cmd(host_string, 'upgrade-vnc-config')
             cmd += ' -P contrail-openstack-config'
             cmd += ' -F %s' % from_rel
