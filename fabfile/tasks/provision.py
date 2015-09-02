@@ -1004,19 +1004,10 @@ def setup_nova_aggregate_node(*args):
 
     for compute_host in env.roledefs['compute']:
         hypervisor = get_hypervisor(compute_host)
-        host_names = None
-        for i in range(5):
-            try:
-                host_names = socket.gethostbyaddr(hstr_to_ip(compute_host))[:2]
-                host_names = [host_names[0], host_names[1][0]]
-            except socket.herror:
-                sleep(5)
-                continue
-            else:
-                break
-        if not host_names:
-            raise RuntimeError("Not able to get the hostname of compute host:%s" % compute_host)
         if hypervisor == 'docker':
+            with settings(host_string=compute_host,
+                          password=get_env_passwords(compute_host)):
+                host_name = sudo("hostname")
             env_vars = 'source /etc/contrail/openstackrc'
             retry = 10
             while retry:
@@ -1028,12 +1019,6 @@ def setup_nova_aggregate_node(*args):
                             sleep(6)
                             retry -= 1
                             continue
-                        for host_name in host_names:
-                            if sudo("nova host-describe %s" % (host_name)).succeeded:
-                                # This is the host_name known to nova api
-                                break
-                        else:
-                            raise RuntimeError("Both hostnames %s are not known to nova api" % host_names)
                         aggregate_details = sudo("(nova aggregate-details %s)" % (hypervisor))
                         if host_name not in aggregate_details:
                             if hypervisor not in aggregate_list:
