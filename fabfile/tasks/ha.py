@@ -2,7 +2,9 @@ import tempfile
 
 from fabfile.config import *
 from fabfile.templates import openstack_haproxy, collector_haproxy
-from fabfile.tasks.helpers import enable_haproxy, verify_mysql_status
+from fabfile.tasks.helpers import enable_haproxy, verify_mysql_status,\
+    ping_test
+from fabfile.tasks.rabbitmq import purge_node_from_rabbitmq_cluster
 from fabfile.utils.fabos import detect_ostype, get_as_sudo, is_package_installed
 from fabfile.utils.host import get_authserver_ip, get_control_host_string,\
     hstr_to_ip, get_from_testbed_dict, get_service_token, get_env_passwords,\
@@ -11,6 +13,9 @@ from fabfile.utils.host import get_authserver_ip, get_control_host_string,\
     get_openstack_internal_virtual_router_id, get_contrail_internal_virtual_router_id, \
     get_openstack_external_virtual_router_id, get_contrail_external_virtual_router_id
 from fabfile.utils.cluster import get_orchestrator
+from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm, fixup_irond_config
+from fabfile.utils.commandline import frame_vnc_database_cmd
+
 
 @task
 @EXECUTE_TASK
@@ -303,6 +308,39 @@ def setup_galera_cluster():
         sudo(cmd)
 
 @task
+@serial
+@roles('openstack')
+def remove_node_from_galera(del_galera_node):
+    """Task to remove a node from the galera cluster """
+    if len(env.roledefs['openstack']) < 3:
+        print "Galera cluster needs a quorum of at least 3 nodes"
+        return
+
+    self_host = get_control_host_string(env.host_string)
+    self_ip = hstr_to_ip(self_host)
+
+    openstack_host_list = [get_control_host_string(openstack_host)\
+                           for openstack_host in env.roledefs['openstack']]
+    galera_ip_list = [hstr_to_ip(galera_host)\
+                      for galera_host in openstack_host_list]
+    authserver_ip = get_authserver_ip()
+    internal_vip = get_openstack_internal_vip()
+    external_vip = get_openstack_external_vip()
+    zoo_ip_list = [hstr_to_ip(get_control_host_string(\
+                    cassandra_host)) for cassandra_host in env.roledefs['database']]
+
+    with cd(INSTALLER_DIR):
+        cmd = "remove-galera-node\
+            --self_ip %s --node_to_del %s --keystone_ip %s --galera_ip_list %s\
+            --internal_vip %s --openstack_index %d --zoo_ip_list %s" % (self_ip, del_galera_node, 
+                authserver_ip, ' '.join(galera_ip_list), internal_vip,
+                (openstack_host_list.index(self_host) + 1), ' '.join(zoo_ip_list))
+
+        if external_vip:
+             cmd += ' --external_vip %s' % external_vip
+        sudo(cmd)
+
+@task
 def setup_keepalived():
     """Task to provision VIP for openstack/cfgm nodes with keepalived"""
     if get_openstack_internal_vip():
@@ -517,8 +555,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
         # haproxy enable
         with settings(host_string=host_string, warn_only=True):
             sudo("chkconfig haproxy on")
-            sudo("service supervisor-openstack stop")
-            enable_haproxy()
+            enable_haproxy()     
             sudo("service haproxy restart")
             #Change the keystone admin/public port
             sudo("openstack-config --set /etc/keystone/keystone.conf DEFAULT public_port 6000")
@@ -686,7 +723,7 @@ def setup_cmon_schema_node(*args):
                 sudo(mysql_cmon_user_cmd)
 
         mysql_cmd =  "mysql -uroot -p%s -e" % mysql_token
-        # Grant privilages for cmon user.
+        # Grant privileges for cmon user.
         for host in host_list:
             sudo('%s "GRANT ALL PRIVILEGES on *.* TO cmon@%s IDENTIFIED BY \'cmon\' WITH GRANT OPTION"' %
                    (mysql_cmd, host))
@@ -738,6 +775,193 @@ def join_orchestrator(new_ctrl_host):
             sudo('service supervisor-openstack restart')
         execute('verify_openstack')
 
+@task
+@roles('build')
+def purge_node_from_openstack_cluster(del_openstack_node):
+
+    # If CMON is running in the node to be purged, stop it. 
+    # Invalidate the config.
+    with settings(host_string=del_openstack_node, warn_only=True):
+        sudo("service contrail-hamon stop")
+        sudo("service cmon stop")
+        sudo("chkconfig contrail-hamon off")
+        sudo("mv /etc/cmon.cnf /etc/cmon.cnf.removed")
+
+    execute('fixup_restart_haproxy_in_openstack')
+    for host_string in env.roledefs['openstack']:
+        with settings(host_string = host_string, warn_only = True):
+            sudo("service supervisor-openstack start")
+    del_openstack_node_ip = hstr_to_ip(del_openstack_node)
+    execute('remove_node_from_galera', del_openstack_node_ip)
+    execute('fix_cmon_param_and_add_keys_to_compute')
+
+    with settings(host_string = env.roledefs['openstack'][0]):
+        sudo("unregister-openstack-services --node_to_unregister %s", del_openstack_node_ip)
+
+    with settings(host_string = del_openstack_node, warn_only=True):
+        sudo("service mysql stop")
+        sudo("service supervisor-openstack stop")
+        sudo("chkconfig supervisor-openstack off")
+
+@task
+@roles('build')
+def purge_node_from_keepalived_cluster(del_ctrl_ip, role_to_purge):
+    if ping_test(del_ctrl_ip):
+        return
+
+    with settings(host_string=del_ctrl_ip):
+        # If the node is no more part of an Openstack or Contrail
+        # Cluster, then stop keepalived from running and empty
+        # out the config.
+        if role_to_purge == 'all':
+            sudo('service keepalived stop')
+            sudo('mv /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.conf.removed')
+            sudo("chkconfig keepalived off")
+        elif role_to_purge == 'openstack':
+            setup_keepalived_node('cfgm')
+        elif role_to_purge == 'cfgm':
+            setup_keepalived_node('openstack')
+        else:
+            raise RuntimeError("Invalid options for removing keepalived node from a cluster")
+
+@task
+@roles('build')
+def purge_node_from_cfgm(del_cfgm_node):
+    with settings(host_string=del_cfgm_node, warn_only = True):
+       sudo("service supervisor-config stop")
+       sudo("chkconfig supervisor-config off")
+       execute("prov_config_node", del_cfgm_node, 'del')
+       execute("prov_metadata_services_node", del_cfgm_node, 'del')
+       execute("prov_encap_type_node", del_cfgm_node, 'del')
+
+    for cfgm in env.roledefs['cfgm']:
+        nworkers = 1
+        fixup_restart_haproxy_in_all_cfgm(nworkers)
+
+@task
+@roles('build')
+def purge_node_from_collector(del_collector_node):
+    with settings(host_string=del_collector_node, warn_only = True):
+       sudo("service supervisor-analytics stop")
+       sudo("chkconfig supervisor-analytics off")
+       execute('prov_analytics_node', del_collector_node, 'del')
+
+@task
+@roles('build')
+def purge_node_from_control_cluster(del_ctrl_node):
+    with settings(host_string = del_ctrl_node, warn_only = True):
+        sudo("service supervisor-control stop")
+        sudo("chkconfig supervisor-control off")
+        execute('prov_control_bgp_node', del_ctrl_node, 'del')
+        fixup_irond_config()
+
+@task
+@roles('build')
+def purge_node_from_database(del_db_node):
+    with settings(host_string = del_db_node, warn_only = True):
+        del_db_ctrl_ip = hstr_to_ip(get_control_host_string(del_db_node))
+        is_part_of_db = local('nodetool status | grep %s' % del_db_ctrl_ip).succeeded 
+
+        if not is_part_of_db:
+            print "Node %s is not part of DB Cluster", del_db_node
+            return
+
+        is_seed = local('grep "\- seeds: " /etc/cassandra/cassandra.yaml | grep %s' % del_db_ctrl_ip).succeeded
+        is_alive = local('nodetool status | grep %s | grep "UN"' % del_db_ctrl_ip).succeeded  
+
+    if is_seed:
+        # If the node to be removed is a seed node, then we need to re-establish other nodes
+        # as seed node before removing this node.
+        print "Removing the seed node %s from DB Cluster and re-electing new seed nodes", del_db_ctrl_ip
+        for db in env.roldefs['database']:
+            with settings(host_string = db):
+                cmd = frame_vnc_database_cmd(db, cmd = 'readjust-cassandra-seed-list')
+                sudo(cmd)
+
+    if is_alive:
+        # Node is active in the cluster. The tokens need to be redistributed before the
+        # node can be brought down.
+        with settings(host_string = del_db_node):
+            cmd = frame_vnc_database_cmd(del_db_node, cmd = 'decommission-cassandra-node')
+            sudo(cmd)
+    else:
+        # Node is part of the cluster but not active. Hence, remove the node 
+        # from the cluster
+        with settings(host_string = env.roledefs['database'][0]):
+            cmd = frame_vnc_database_cmd(del_db_node, cmd = 'remove-cassandra-node')
+            sudo(cmd)
+
+@task
+@roles('build')
+def purge_node_from_webui_cluster(del_webui_node):
+    with settings(host_string = del_webui_node, warn_only = True):
+        sudo("service supervisor-webui stop")
+        sudo("chkconfig supervisor-webui off")
+        execute("fix_webui_config")
+
+@task
+@roles('build')
+def purge_node_from_cluster(del_ctrl_ip, roles_to_purge):
+#def purge_node_from_cluster(del_ctrl_ip):
+    #roles_to_purge = {'control', 'cfgm', 'collector', 'database', 'openstack', 'webui'}
+    # Handling keepalived
+    if 'openstack' in roles_to_purge and \
+       'cfgm' in roles_to_purge:
+        purge_node_from_keepalived_cluster(del_ctrl_ip, 'all')
+    elif 'openstack' in roles_to_purge:
+        purge_node_from_keepalived_cluster(del_ctrl_ip, 'openstack')
+    elif 'cfgm' in roles_to_purge:
+        purge_node_from_keepalived_cluster(del_ctrl_ip, 'cfgm')
+
+    if 'openstack' in roles_to_purge:
+        purge_node_from_openstack_cluster(del_ctrl_ip)
+
+    if 'cfgm' in roles_to_purge and\
+       'openstack' in roles_to_purge:
+        # If node has both cfgm and openstack configured in the same node, then
+        # and both the roles need to be removed,
+        # we can remove this node from RabbitMQ cluster.
+        purge_node_from_rabbitmq_cluster(del_ctrl_ip, 'cfgm')
+    elif 'openstack' in roles_to_purge and\
+         del_ctrl_ip not in  env.roledefs['cfgm']:
+        # Same host has OS and CFGM, but only OS role is removed. So, check 
+        # once for CFGM not being there in the existing list of CFGMs and remove.
+        purge_node_from_rabbitmq_cluster(del_ctrl_ip, 'openstack')
+    elif 'cfgm' in roles_to_purge and\
+         del_ctrl_ip not in  env.roledefs['openstack']:
+        # Same host has OS and CFGM, but only CFGM role is removed. So, check 
+        # once for CFGM not being there in the existing list of CFGMs and remove.
+        purge_node_from_rabbitmq_cluster(del_ctrl_ip, 'cfgm')
+
+    if 'cfgm' in roles_to_purge:
+        purge_node_from_cfgm(del_ctrl_ip)
+
+    if 'collector' in roles_to_purge:
+        purge_node_from_collector(del_ctrl_ip)
+
+    if 'database' in roles_to_purge:
+        purge_node_from_database(del_ctrl_ip)
+        execute('fix_zookeeper_config')
+        execute('restart_all_zookeeper_servers')
+        # Modify the Zk/Cassandra config in the API Server
+        execute('fix_cfgm_config')
+        # Modify the Zk/Cassandra config in the Analytics Server
+        execute('fix_collector_config')
+        execute('fix_webui_config')
+        with settings(warn_only = True):
+            execute('prov_database_node', del_ctrl_ip, 'del')
+
+    if 'control' in roles_to_purge:
+        purge_node_from_control_cluster(del_ctrl_ip)
+
+    if 'webui' in roles_to_purge:
+        purge_node_from_webui_cluster(del_ctrl_ip)
+
+    # Triggers a cleanup in the discovery server
+    execute("wget http://%s:5998/cleanup" % env.roledefs['cfgm'][0])
+
+    return
+    
 @task
 @roles('build')
 def join_ha_cluster(new_ctrl_host):

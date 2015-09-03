@@ -8,6 +8,9 @@ from multitenancy import *
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
 def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
+    
+    parent_cmd = cmd
+    
     database_host = host_string
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
     cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
@@ -17,8 +20,9 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     database_host=get_control_host_string(host_string)
     database_host_password=get_env_passwords(host_string)
     tgt_ip = hstr_to_ip(database_host)
-    #derive kafka broker id from the list of servers specified
-    broker_id = sorted(database_ip_list).index(tgt_ip)
+    if parent_cmd == "setup-vnc-database" or parent_cmd == "update-zoo-servers":
+        #derive kafka broker id from the list of servers specified
+        broker_id = sorted(database_ip_list).index(tgt_ip)
 
     cmd += " --self_ip %s" % tgt_ip
     cmd += " --cfgm_ip %s" % cfgm_ip
@@ -37,12 +41,17 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
         cmd += " --seed_list %s" % (hstr_to_ip(get_control_host_string(
                                        env.roledefs['database'][0])))
     cmd += " --zookeeper_ip_list %s" % ' '.join(database_ip_list)
-    cmd += " --database_index %d" % (database_host_list.index(database_host) + 1)
+    if parent_cmd == "setup-vnc-database" or parent_cmd == "update-zoo-servers":
+        cmd += " --database_index %d" % (database_host_list.index(database_host) + 1)
     minimum_diskGB = get_minimum_diskGB()
     if minimum_diskGB is not None:
         cmd += " --minimum_diskGB %s" % minimum_diskGB
-    if get_kafka_enabled() is not None:
+    if parent_cmd == "setup-vnc-database" and get_kafka_enabled() is not None:
         cmd += " --kafka_broker_id %d" % broker_id
+
+    if parent_cmd == "remove-db-node":
+        cmd += " --node_to_delete %s", hstr_to_ip(host_string)
+        
 
     return cmd
 

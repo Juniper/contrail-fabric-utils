@@ -17,6 +17,7 @@ import datetime
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.utils.cluster import get_ntp_server, get_orchestrator
 from fabfile.utils.analytics import get_analytics_data_dir, get_minimum_diskGB
+from fabfile.utils.fabos import detect_ostype, is_package_installed
 
 @task
 @parallel
@@ -302,7 +303,16 @@ def all_command(command):
 def all_ping():
     for host in env.hostnames["all"]:
         local("ping -c 1 -q %s " %(host))
+
 #end all_ping
+
+def ping_test(host_string):
+    with settings(host_string=host_string, warn_only = True):
+        result = local("ping -c 1 -q %s" % hstr_to_ip(host_string))
+        if result.return_code == 0:
+            return True
+        else:
+            return False
 
 @roles('all')
 @task
@@ -1409,6 +1419,62 @@ def ssh_copy_id(id_file=None):
         os.rename(contrail_ssh_config, ssh_config)
     # Remove temporary password file.
     os.remove(fname)
+
+@roles('build')
+@task
+def purge_node(del_ctrl_ip):
+    with settings(host_string=del_ctrl_ip):
+        pkg_list = (
+                    # Format
+                    # Package_name, role, minimum nodes
+                    ('contrail-control', 'control', 1), 
+                    ('contrail-config', 'cfgm', 1),
+                    ('contrail-analytics', 'collector', 1),
+                    ('contrail-openstack-database', 'database', 3),
+                    ('contrail-openstack', 'openstack', 3),
+                    ('contrail-web-core', 'webui', 1)
+                   )
+        del_role_list = []
+
+        if not ping_test(del_ctrl_ip):
+            print "The controller to be deleted %s is not reachable" % del_ctrl_ip
+            print "We cannot completely remove configuration if the node is not reachable"
+            print "DO NOT bring up the node up again if you chose to continue"
+
+            if raw_input("Should we assume it is dead (Y/n): ") != "Y":
+                print "Restore connectivity to %s to continue" % del_ctrl_ip
+                return
+
+        for host_string in env.roledefs['all']:
+            if not ping_test(host_string):
+                print "Node %s is not reachable" % host_string
+                print "All the existing nodes in the cluster needs to be reachable to remove"
+                print "a node from the cluster"
+                print "Restore connectivity before continuing"
+                return
+
+        for pkg in pkg_list:
+            # If the package is installed and if it is not
+            # there in the current testbed for the role then
+            # mark it for removal.
+            if is_package_installed(pkg[0]) and \
+               del_ctrl_ip not in env.roledefs[pkg[1]]: 
+                if len(env.roledefs[pkg[1]]) < pkg[2]:
+                    raise SystemExit(del_ctrl_ip + " cannot be removed from role " + pkg[1] +
+                                     " since it violates the minimum node requirement for the role")
+                del_role_list.append(pkg[1])
+
+    if len(del_role_list) == 0:
+        print "Nothing to remove from the cluster. To remove a node, change testbed.py roles"
+        return
+                
+    print "****************************************************************"
+    print " The following roles will be removed from ", del_ctrl_ip
+    print del_role_list
+    print "****************************************************************"
+
+    if raw_input("Are you sure? (Y/n): ") == "Y":
+        execute("purge_node_from_cluster", del_ctrl_ip, del_role_list)
 
 @roles('build')
 @task
