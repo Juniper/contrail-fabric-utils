@@ -8,6 +8,7 @@ from multitenancy import *
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
 def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
+    parent_cmd = cmd
     database_host = host_string
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
     cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
@@ -17,8 +18,9 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     database_host=get_control_host_string(host_string)
     database_host_password=get_env_passwords(host_string)
     tgt_ip = hstr_to_ip(database_host)
-    #derive kafka broker id from the list of servers specified
-    broker_id = sorted(database_ip_list).index(tgt_ip)
+    if parent_cmd != "remove-cassandra-node" and parent_cmd != 'decommission-cassandra-node':
+        #derive kafka broker id from the list of servers specified
+        broker_id = sorted(database_ip_list).index(tgt_ip)
 
     cmd += " --self_ip %s" % tgt_ip
     cmd += " --cfgm_ip %s" % cfgm_ip
@@ -37,12 +39,16 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
         cmd += " --seed_list %s" % (hstr_to_ip(get_control_host_string(
                                        env.roledefs['database'][0])))
     cmd += " --zookeeper_ip_list %s" % ' '.join(database_ip_list)
-    cmd += " --database_index %d" % (database_host_list.index(database_host) + 1)
+    if parent_cmd == "setup-vnc-database" or parent_cmd == "update-zoo-servers":
+        cmd += " --database_index %d" % (database_host_list.index(database_host) + 1)
     minimum_diskGB = get_minimum_diskGB()
     if minimum_diskGB is not None:
         cmd += " --minimum_diskGB %s" % minimum_diskGB
-    if get_kafka_enabled() is not None:
+    if parent_cmd == "setup-vnc-database" and get_kafka_enabled() is not None:
         cmd += " --kafka_broker_id %d" % broker_id
+
+    if parent_cmd == "remove-cassandra-node":
+        cmd += " --node_to_delete %s", hstr_to_ip(host_string)
 
     return cmd
 
@@ -107,18 +113,24 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
                      for entry in env.roledefs['cfgm']]
     collector_host_list = [get_control_host_string(entry)\
                           for entry in env.roledefs['collector']]
-    if cfgm_host in collector_host_list:
-        collector_ip = tgt_ip
-    else:
-        # Select based on index
-        hindex = cfgm_host_list.index(cfgm_host)
-        hindex = hindex % len(env.roledefs['collector'])
-        collector_host = get_control_host_string(
-                             env.roledefs['collector'][hindex])
-        collector_ip = hstr_to_ip(collector_host)
+    collector_ip = None
+    if cmd == 'update-ifmap-users':
+        if cfgm_host in collector_host_list:
+            collector_ip = tgt_ip
+        else:
+            # Select based on index
+            hindex = cfgm_host_list.index(cfgm_host)
+            hindex = hindex % len(env.roledefs['collector'])
+            collector_host = get_control_host_string(
+                                 env.roledefs['collector'][hindex])
+            collector_ip = hstr_to_ip(collector_host)
+
     mt_opt = '--multi_tenancy' if get_mt_enable() else ''
     cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host))\
                          for cassandra_host in env.roledefs['database']]
+    control_ip_list = [hstr_to_ip(get_control_host_string(control_host))\
+                         for control_host in env.roledefs['control']]
+
     amqp_server_ip = get_contrail_amqp_server()
     orch = get_orchestrator()
 
@@ -126,6 +138,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cmd += " --collector_ip %s %s" % (collector_ip, mt_opt)
     cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
     cmd += " --zookeeper_ip_list %s" % ' '.join(cassandra_ip_list)
+    cmd += " --control_ip_list %s" % ' '.join(control_ip_list)
     cmd += " --quantum_port %s" % quantum_port
     cmd += " --nworkers %d" % nworkers
     cmd += " --service_token %s" % get_service_token()
