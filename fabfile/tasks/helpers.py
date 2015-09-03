@@ -884,6 +884,10 @@ def setup_hugepages_node(*args):
     USAGE: fab setup_hugepages_node:user@host1,user@host2,...
     """
 
+    # How many times DPDK inits hugepages (rte_eal_init())
+    # See function map_all_hugepages() in DPDK
+    DPDK_HUGEPAGES_INIT_TIMES = 2
+
     for host_string in args:
         # get required size of hugetlbfs
         dpdk = getattr(env, 'dpdk', None)
@@ -912,6 +916,19 @@ def setup_hugepages_node(*args):
             if (requested > int(reserved)):
                 pattern = "^vm.nr_hugepages ="
                 line = "vm.nr_hugepages = %d" %requested
+                insert_line_to_file(pattern = pattern, line = line,
+                                    file_name = '/etc/sysctl.conf')
+
+            current_max_map_count = sudo("sysctl -n vm.max_map_count")
+            if current_max_map_count == "":
+                current_max_map_count = 0
+
+            current_huge_pages = max(int(requested), int(reserved))
+
+            requested_max_map_count = DPDK_HUGEPAGES_INIT_TIMES * int(current_huge_pages)
+            if int(requested_max_map_count) > int(current_max_map_count):
+                pattern = "^vm.max_map_count ="
+                line = "vm.max_map_count = %d" %requested_max_map_count
                 insert_line_to_file(pattern = pattern, line = line,
                                     file_name = '/etc/sysctl.conf')
 
