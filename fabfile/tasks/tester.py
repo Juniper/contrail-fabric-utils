@@ -342,14 +342,14 @@ def setup_test_env():
                 if exists('/opt/contrail/api-venv/bin/activate'):
                     sudo('source /opt/contrail/api-venv/bin/activate && \
                         pip install --upgrade unittest2 && \
-                        pip install --upgrade %s' %pkg)
+                        pip install --upgrade %s --force-reinstall' %pkg)
                 else:
                     # Avoid installing linecache2 as dependency on unittest2
                     # Avoid "TypeError: dist must be a Distribution instance"
                     sudo("pip install linecache2")
 
                     sudo("pip install --upgrade unittest2")
-                    sudo("pip install --upgrade %s" %pkg)
+                    sudo("pip install --upgrade %s --force-reinstall" %pkg)
                 if not exists('/usr/bin/ant'):
                     pkg_install(['ant'],disablerepo = False)
                     ant_version = sudo('ant -version')
