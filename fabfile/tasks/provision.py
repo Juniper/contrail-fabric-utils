@@ -1053,39 +1053,41 @@ def setup_nova_aggregate():
 
 @task
 def setup_nova_aggregate_node(*args):
+    docker = any(['docker' == get_hypervisor(compute_host)
+                  for compute_host in env.roledefs['compute']])
+    libvirt = any(['libvirt' == get_hypervisor(compute_host)
+                  for compute_host in env.roledefs['compute']])
+    if not (libvirt and docker):
+        # Not a hybrid setup(libvirt + docker)
+        # No need for the compute aggregate
+        return
+
     for compute_host in env.roledefs['compute']:
         hypervisor = get_hypervisor(compute_host)
-        host_name = None
-        for i in range(5):
-            try:
-                host_name = socket.gethostbyaddr(
-                    hstr_to_ip(compute_host))[0].split('.')[0]
-            except socket.herror:
-                sleep(5)
-                continue
-            else:
-                break
-        if not host_name:
-            raise RuntimeError("Not able to get the hostname of compute host:%s", compute_host)
         if hypervisor == 'docker':
+            with settings(host_string=compute_host,
+                          password=get_env_passwords(compute_host)):
+                host_name = sudo("hostname")
+            env_vars = 'source /etc/contrail/openstackrc'
             retry = 10
             while retry:
-                with settings(warn_only=True):
-                    aggregate_list = sudo("(source /etc/contrail/openstackrc; nova aggregate-list)")
-                    if aggregate_list.failed: # Services might be starting up after reboot
-                        sleep(6)
-                        retry -= 1
-                        continue
-                    aggregate_details = sudo("(source /etc/contrail/openstackrc;nova aggregate-details %s)" % hypervisor)
-                    if host_name not in aggregate_details:
-                        if hypervisor not in aggregate_list:
-                            create = sudo("(source /etc/contrail/openstackrc; nova aggregate-create %s nova/%s)" % (hypervisor, hypervisor))
-                            if create.failed: # Services might be starting up after reboot
-                                continue
-                        if sudo("(source /etc/contrail/openstackrc; nova aggregate-add-host %s %s)" % (hypervisor, host_name)).failed:
-                            continue # Services might be starting up after reboot
-                    break # Stop retrying as the aggregate is created and compute is added
-
+                with settings(warn_only=True, prefix='source /etc/contrail/openstackrc'):
+                    with prefix('source /etc/contrail/openstackrc'):
+                        #aggregate_list = sudo("(%s; nova aggregate-list)" % env_vars)
+                        aggregate_list = sudo("(nova aggregate-list)")
+                        if aggregate_list.failed: # Services might be starting up after reboot
+                            sleep(6)
+                            retry -= 1
+                            continue
+                        aggregate_details = sudo("(nova aggregate-details %s)" % (hypervisor))
+                        if host_name not in aggregate_details:
+                            if hypervisor not in aggregate_list:
+                                create = sudo("(nova aggregate-create %s nova/%s)" % (hypervisor, hypervisor))
+                                if create.failed: # Services might be starting up after reboot
+                                    continue
+                            if sudo("(nova aggregate-add-host %s %s)" % (hypervisor, host_name)).failed:
+                                continue # Services might be starting up after reboot
+                        break # Stop retrying as the aggregate is created and compute is added.
 
 @roles('openstack')
 @task
