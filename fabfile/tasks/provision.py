@@ -841,7 +841,7 @@ def setup_ceilometer():
         execute("setup_ceilometer_node", env.host_string)
 
     execute("setup_image_service_node", env.host_string)
-    execute("setup_network_service_node", env.host_string)
+    execute("setup_network_service_node")
     execute("setup_identity_service_node", env.host_string)
 
 @task
@@ -912,6 +912,7 @@ def setup_ceilometer_node(*args):
 #end setup_ceilometer_node
 
 @task
+@roles('cfgm')
 def setup_network_service_node(*args):
     """Provisions network services in one or list of nodes.
        USAGE: fab setup_network_service_node:user@1.1.1.1,user@2.2.2.2"""
