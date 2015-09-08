@@ -6,7 +6,7 @@ from fabfile.config import *
 from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node,\
     rabbitmq_env_conf
 from fabfile.utils.fabos import detect_ostype
-from fabfile.tasks.helpers import disable_iptables
+from fabfile.tasks.helpers import disable_iptables, ping_test
 from fabfile.utils.host import get_from_testbed_dict, get_control_host_string,\
     hstr_to_ip, get_openstack_internal_vip, get_contrail_internal_vip,\
     get_env_passwords
@@ -291,9 +291,48 @@ def verify_cluster_status(retry='yes'):
 
 @task
 @roles('rabbit')
-@task
 def set_ha_policy_in_rabbitmq():
     sudo("rabbitmqctl set_policy HA-all \"\" '{\"ha-mode\":\"all\",\"ha-sync-mode\":\"automatic\"}'")
+
+@task
+@roles('build')
+def purge_node_from_rabbitmq_cluster(del_rabbitmq_node, role):
+
+    if get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'no' and\
+                             role == 'openstack':
+        # We are not managing the RabbitMQ server. No-op.
+        return
+
+    env.roledefs['rabbit'] = env.roledefs[role]
+    del_rabbitmq_ip = hstr_to_ip(del_rabbitmq_node)
+    if ping_test(del_rabbitmq_node):
+        with settings(host_string = del_rabbitmq_node, warn_only = True):
+            sudo("rabbitmqctl stop_app")
+            sudo("rabbitmqctl reset")
+            sudo("service supervisor-support-service stop")
+            sudo("mv /var/lib/rabbitmq/.erlang.cookie /var/lib/rabbitmq/.erlang.cookie.removed")
+            sudo("mv /etc/rabbitmq/rabbitmq.config /etc/rabbitmq/rabbitmq.config.removed")
+    else:
+        # If the node is not reachable, then delete the node remotely from one
+        # of the nodes in the cluster.
+        with settings(host_string = env.roledefs['rabbit'][0], warn_only = True):
+            hostname = local('getent hosts %s | awk \'{print $3\'}' % del_rabbitmq_ip, capture = True)
+            sudo("rabbitmqctl forget_cluster_node rabbit@%s" % hostname)
+
+    # Giving some time for the other nodes to re-adjust the cluster, 
+    time.sleep(30)
+
+    execute(config_rabbitmq)
+    for host_string in env.roledefs[role]:
+        with settings(host_string = host_string):
+            sudo("service rabbitmq-server restart")
+            # Give time for RabbitMQ to recluster
+            time.sleep(30)
+
+    result = execute(verify_cluster_status)
+    if False in result.values():
+        print "Unable to recluster RabbitMQ cluster after removing the node %s" % del_rabbitmq_node
+        exit(1)
 
 @task
 @roles('build')
