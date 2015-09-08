@@ -101,7 +101,7 @@ def get_cassandra_db_files():
 
 @roles('build')
 @task
-def attach_logs_cores(bug_id, timestamp=None, duration=None):
+def attach_logs_cores(bug_id, timestamp=None, duration=None, analytics_log='yes'):
     '''
     Attach the logs, core-files, bt and contrail-version to a specified location
     
@@ -117,8 +117,9 @@ def attach_logs_cores(bug_id, timestamp=None, duration=None):
         folder='%s/%s' %(bug_id, time_str)
     local('mkdir -p %s' % ( folder ) )
     execute(tar_logs_cores)
-    execute(get_cassandra_logs,duration)
-    execute(get_cassandra_db_files)
+    if analytics_log is 'yes': 
+        execute(get_cassandra_logs,duration)
+        execute(get_cassandra_db_files)
     with hide('everything'):
         for host in env.roledefs['all']:
             with settings( host_string=host, password=get_env_passwords(host),
@@ -127,8 +128,9 @@ def attach_logs_cores(bug_id, timestamp=None, duration=None):
                 get('/var/crashes/*gz', '%s/' %( folder ) )
                 get('/var/log/gdb_*.log','%s/' %( folder ) )
                 get('/var/log/contrail_version*.log','%s/' %( folder ) )
-                get('/var/log/cassandra_log*.gz','%s/' %( folder ) )
-                get('/var/cassandra_log/cassandra_file*.tgz','%s/' %( folder ) ) 
+                if analytics_log is 'yes':
+                    get('/var/log/cassandra_log*.gz','%s/' %( folder ) )
+                    get('/var/cassandra_log/cassandra_file*.tgz','%s/' %( folder ) ) 
 
     print "\nAll logs and cores are saved in %s of %s" %(folder, env.host) 
 #end attach_logs_cores
