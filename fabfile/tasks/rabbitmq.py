@@ -305,6 +305,7 @@ def purge_node_from_rabbitmq_cluster(del_rabbitmq_node, role):
 
     env.roledefs['rabbit'] = env.roledefs[role]
     del_rabbitmq_ip = hstr_to_ip(del_rabbitmq_node)
+    del_rabbitmq_ctrl_ip = hstr_to_ip(get_control_host_string(del_rabbitmq_node))
     if ping_test(del_rabbitmq_node):
         with settings(host_string = del_rabbitmq_node, warn_only = True):
             sudo("rabbitmqctl stop_app")
@@ -316,7 +317,7 @@ def purge_node_from_rabbitmq_cluster(del_rabbitmq_node, role):
         # If the node is not reachable, then delete the node remotely from one
         # of the nodes in the cluster.
         with settings(host_string = env.roledefs['rabbit'][0], warn_only = True):
-            hostname = local('getent hosts %s | awk \'{print $3\'}' % del_rabbitmq_ip, capture = True)
+            hostname = local('getent hosts %s | awk \'{print $3\'}' % del_rabbitmq_ctrl_ip, capture = True)
             sudo("rabbitmqctl forget_cluster_node rabbit@%s" % hostname)
 
     # Giving some time for the other nodes to re-adjust the cluster, 

@@ -779,13 +779,14 @@ def join_orchestrator(new_ctrl_host):
 @task
 @roles('build')
 def purge_node_from_openstack_cluster(del_openstack_node):
-    # If CMON is running in the node to be purged, stop it. 
-    # Invalidate the config.
-    with settings(host_string=del_openstack_node, warn_only=True):
-        sudo("service contrail-hamon stop")
-        sudo("service cmon stop")
-        sudo("chkconfig contrail-hamon off")
-        sudo("mv /etc/cmon.cnf /etc/cmon.cnf.removed")
+    if ping_test(del_openstack_node):
+        # If CMON is running in the node to be purged, stop it.
+        # Invalidate the config.
+        with settings(host_string=del_openstack_node, warn_only=True):
+            sudo("service contrail-hamon stop")
+            sudo("service cmon stop")
+            sudo("chkconfig contrail-hamon off")
+            sudo("mv /etc/cmon.cnf /etc/cmon.cnf.removed")
 
     del_openstack_node_ip = hstr_to_ip(del_openstack_node)
     execute('fixup_restart_haproxy_in_openstack')
@@ -796,10 +797,11 @@ def purge_node_from_openstack_cluster(del_openstack_node):
     with settings(host_string = env.roledefs['openstack'][0]):
         sudo("unregister-openstack-services --node_to_unregister %s" % del_openstack_node_ip)
 
-    with settings(host_string = del_openstack_node, warn_only=True):
-        sudo("service mysql stop")
-        sudo("service supervisor-openstack stop")
-        sudo("chkconfig supervisor-openstack off")
+    if ping_test(del_openstack_node):
+        with settings(host_string=del_openstack_node, warn_only=True):
+            sudo("service mysql stop")
+            sudo("service supervisor-openstack stop")
+            sudo("chkconfig supervisor-openstack off")
 
 @task
 @roles('build')
@@ -830,12 +832,14 @@ def purge_node_from_keepalived_cluster(del_ctrl_ip, role_to_purge):
 @task
 @roles('build')
 def purge_node_from_cfgm(del_cfgm_node):
-    with settings(host_string=del_cfgm_node, warn_only = True):
-       sudo("service supervisor-config stop")
-       sudo("chkconfig supervisor-config off")
-       execute("prov_config_node", del_cfgm_node, 'del')
-       execute("prov_metadata_services_node", del_cfgm_node, 'del')
-       execute("prov_encap_type_node", del_cfgm_node, 'del')
+    if ping_test(del_cfgm_node):
+        with settings(host_string=del_cfgm_node, warn_only=True):
+           sudo("service supervisor-config stop")
+           sudo("chkconfig supervisor-config off")
+           execute("prov_metadata_services_node", del_cfgm_node, 'del')
+
+    with settings(warn_only = True):
+        execute("prov_config_node", env.roledefs['cfgm'][0], oper='del', tgt_node=del_cfgm_node)
 
     for cfgm in env.roledefs['cfgm']:
         nworkers = 1
@@ -844,31 +848,36 @@ def purge_node_from_cfgm(del_cfgm_node):
 @task
 @roles('build')
 def purge_node_from_collector(del_collector_node):
-    with settings(host_string=del_collector_node, warn_only = True):
-       sudo("service supervisor-analytics stop")
-       sudo("chkconfig supervisor-analytics off")
-       execute('prov_analytics_node', del_collector_node, 'del')
+    if ping_test(del_collector_node):
+        with settings(host_string=del_collector_node, warn_only = True):
+            sudo("service supervisor-analytics stop")
+            sudo("chkconfig supervisor-analytics off")
+    with settings(warn_only = True):
+        execute('prov_analytics_node', env.roledefs['collector'][0], oper='del', tgt_node=del_collector_node)
 
 @task
 @roles('build')
 def purge_node_from_control_cluster(del_ctrl_node):
-    with settings(host_string = del_ctrl_node, warn_only = True):
-        sudo("service supervisor-control stop")
-        sudo("chkconfig supervisor-control off")
-        execute('prov_control_bgp_node', del_ctrl_node, 'del')
+    if ping_test(del_ctrl_node):
+        with settings(host_string=del_ctrl_node, warn_only=True):
+            sudo("service supervisor-control stop")
+            sudo("chkconfig supervisor-control off")
+    with settings(warn_only = True):
+        execute('prov_control_bgp_node', env.roledefs['control'][0], oper = 'del', tgt_node=del_ctrl_node)
 
     for host_string in env.roledefs['cfgm']:
-        with settings(host_string = host_string):
+        with settings(host_string=host_string):
             cmd = frame_vnc_config_cmd(del_ctrl_node, cmd = 'update-ifmap-users')
             sudo(cmd)
 
 @task
 @roles('build')
 def purge_node_from_database(del_db_node):
-    with settings(host_string = del_db_node, warn_only = True):
-        del_db_ctrl_ip = hstr_to_ip(get_control_host_string(del_db_node))
-        is_part_of_db = local('nodetool status | grep %s' % del_db_ctrl_ip).succeeded
 
+    del_db_ctrl_ip = hstr_to_ip(get_control_host_string(del_db_node))
+
+    with settings(host_string = env.roledefs['database'][0], warn_only = True):
+        is_part_of_db = local('nodetool status | grep %s' % del_db_ctrl_ip).succeeded
         if not is_part_of_db:
             print "Node %s is not part of DB Cluster", del_db_node
             return
@@ -885,7 +894,7 @@ def purge_node_from_database(del_db_node):
                 cmd = frame_vnc_database_cmd(db, cmd='readjust-cassandra-seed-list')
                 sudo(cmd)
 
-    if is_alive:
+    if is_alive and ping_test(del_db_node):
         # Node is active in the cluster. The tokens need to be redistributed before the
         # node can be brought down.
         with settings(host_string=del_db_node):
@@ -901,10 +910,11 @@ def purge_node_from_database(del_db_node):
 @task
 @roles('build')
 def purge_node_from_webui_cluster(del_webui_node):
-    with settings(host_string = del_webui_node, warn_only = True):
-        sudo("service supervisor-webui stop")
-        sudo("chkconfig supervisor-webui off")
-        execute("fix_webui_config")
+    if ping_test(del_webui_node):
+        with settings(host_string=del_webui_node, warn_only=True):
+            sudo("service supervisor-webui stop")
+            sudo("chkconfig supervisor-webui off")
+            execute("fix_webui_config")
 
 @task
 @roles('build')
@@ -929,13 +939,13 @@ def purge_node_from_cluster(del_ctrl_ip, roles_to_purge):
         purge_node_from_rabbitmq_cluster(del_ctrl_ip, 'cfgm')
     elif 'openstack' in roles_to_purge and\
          del_ctrl_ip not in  env.roledefs['cfgm']:
-        # Same host has OS and CFGM, but only OS role is removed. So, check 
+        # Different hosts has OS and CFGM, but only OS role is removed. So, check
         # once for CFGM not being there in the existing list of CFGMs and remove.
         purge_node_from_rabbitmq_cluster(del_ctrl_ip, 'openstack')
     elif 'cfgm' in roles_to_purge and\
          del_ctrl_ip not in  env.roledefs['openstack']:
-        # Same host has OS and CFGM, but only CFGM role is removed. So, check 
-        # once for CFGM not being there in the existing list of CFGMs and remove.
+        # Different hosts has OS and CFGM, but only CFGM role is removed. So, check
+        # once for OS not being there in the existing list of OS's and remove.
         purge_node_from_rabbitmq_cluster(del_ctrl_ip, 'cfgm')
 
     if 'cfgm' in roles_to_purge:
@@ -954,7 +964,7 @@ def purge_node_from_cluster(del_ctrl_ip, roles_to_purge):
         execute('fix_collector_config')
         execute('fix_webui_config')
         with settings(warn_only = True):
-            execute('prov_database_node', del_ctrl_ip, 'del')
+            execute('prov_database_node', env.roledefs['database'][0], oper='del', tgt_node=del_ctrl_ip)
 
     if 'control' in roles_to_purge:
         purge_node_from_control_cluster(del_ctrl_ip)
