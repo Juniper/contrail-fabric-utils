@@ -1463,8 +1463,10 @@ def purge_node(del_ctrl_ip):
                     ('contrail-web-core', 'webui', 1)
                    )
         del_role_list = []
+        ctrl_node_dead = False
 
         if not ping_test(del_ctrl_ip):
+            ctrl_node_dead = True
             print "The controller to be deleted %s is not reachable" % del_ctrl_ip
             print "We cannot completely remove configuration if the node is not reachable"
             print "DO NOT bring up the node up again if you chose to continue"
@@ -1482,15 +1484,21 @@ def purge_node(del_ctrl_ip):
                 return
 
         for pkg in pkg_list:
-            # If the package is installed and if it is not
-            # there in the current testbed for the role then
-            # mark it for removal.
-            if is_package_installed(pkg[0]) and \
-               del_ctrl_ip not in env.roledefs[pkg[1]]: 
-                if len(env.roledefs[pkg[1]]) < pkg[2]:
-                    raise SystemExit(del_ctrl_ip + " cannot be removed from role " + pkg[1] +
-                                     " since it violates the minimum node requirement for the role")
-                del_role_list.append(pkg[1])
+            if ctrl_node_dead:
+                if raw_input("Remove %s in %s (Y/n): " % (pkg[1], del_ctrl_ip)) != 'Y':
+                    continue
+            else:
+                # If the package is not installed or if it is 
+                # there in the current testbed for the role then
+                # dont mark it for removal.
+                if not is_package_installed(pkg[0]) or \
+                   del_ctrl_ip in env.roledefs[pkg[1]]: 
+                    continue
+
+            if len(env.roledefs[pkg[1]]) < pkg[2]:
+                raise SystemExit(del_ctrl_ip + " cannot be removed from role " + pkg[1] +
+                                 " since it violates the minimum node requirement for the role")
+            del_role_list.append(pkg[1])
 
     if len(del_role_list) == 0:
         print "Nothing to remove from the cluster. To remove the node from specific roles, modify roledefs in testbed.py"

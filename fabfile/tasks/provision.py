@@ -1497,11 +1497,14 @@ def prov_config():
     execute("prov_config_node", env.host_string, 'add')
 
 @task
-def prov_config_node(host_string, oper = 'add'):
+def prov_config_node(host_string, oper='add', tgt_node=None):
     with settings(host_string = host_string):
         cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
-        tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
-        tgt_hostname = sudo("hostname")
+        if tgt_node == None:
+            tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+        else:
+            tgt_ip = hstr_to_ip(get_control_host_string(tgt_node))
+        tgt_hostname = sudo("getent hosts %s | awk \'{print $2}\'" % tgt_ip)
 
     with cd(UTILS_DIR):
         cmd = "python provision_config_node.py"
@@ -1520,13 +1523,16 @@ def prov_database():
     execute("prov_database_node", env.host_string)
 
 @task
-def prov_database_node(host_string, oper = 'add'):
+def prov_database_node(host_string, oper = 'add', tgt_node = None):
     with settings(host_string = host_string):
         cfgm_host = env.roledefs['cfgm'][0]
         cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
         cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-        tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
-        tgt_hostname = sudo("hostname")
+        if tgt_node == None:
+            tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+        else:
+            tgt_ip = hstr_to_ip(get_control_host_string(tgt_node))
+        tgt_hostname = sudo("getent hosts %s | awk \'{print $2}\'" % tgt_ip)
 
         with settings(cd(UTILS_DIR), host_string=cfgm_host,
                       password=cfgm_host_password):
@@ -1546,13 +1552,16 @@ def prov_analytics():
     execute("prov_analytics_node", env.host_string)
 
 @task
-def prov_analytics_node(host_string, oper = 'add'):
+def prov_analytics_node(host_string, oper = 'add', tgt_node = None):
     with settings(host_string = host_string):
         cfgm_host = env.roledefs['cfgm'][0]
         cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
         cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-        tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
-        tgt_hostname = sudo("hostname")
+        if tgt_node == None:
+            tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+        else:
+            tgt_ip = hstr_to_ip(get_control_host_string(tgt_node))
+        tgt_hostname = sudo("getent hosts %s | awk \'{print $2}\'" % tgt_ip)
 
         with settings(cd(UTILS_DIR), host_string=cfgm_host,
                       password=cfgm_host_password):
@@ -1572,13 +1581,17 @@ def prov_control_bgp():
     execute("prov_control_bgp_node", env.host_string)
 
 @task
-def prov_control_bgp_node(host_string, oper = 'add'):
+def prov_control_bgp_node(host_string, oper = 'add', tgt_node = None):
     with settings(host_string = host_string):
         cfgm_host = env.roledefs['cfgm'][0]
         cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
         cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-        tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
-        tgt_hostname = sudo("hostname")
+
+        if tgt_node == None:
+            tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+        else:
+            tgt_ip = hstr_to_ip(get_control_host_string(tgt_node))
+        tgt_hostname = sudo("getent hosts %s | awk \'{print $2}\'" % tgt_ip)
 
         with settings(cd(UTILS_DIR), host_string=cfgm_host,
                       password=cfgm_host_password):

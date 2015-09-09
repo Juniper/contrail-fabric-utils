@@ -48,7 +48,7 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
         cmd += " --kafka_broker_id %d" % broker_id
 
     if parent_cmd == "remove-cassandra-node":
-        cmd += " --node_to_delete %s", hstr_to_ip(host_string)
+        cmd += " --node_to_delete %s" % hstr_to_ip(host_string)
 
     return cmd
 
