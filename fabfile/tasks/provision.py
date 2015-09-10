@@ -1507,14 +1507,14 @@ def prov_config_node(host_string, oper='add', tgt_node=None):
             tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
             tgt_hostname = sudo("hostname")
 
-    with cd(UTILS_DIR):
-        cmd = "python provision_config_node.py"
-        cmd += " --api_server_ip %s" % cfgm_ip
-        cmd += " --host_name %s" % tgt_hostname
-        cmd += " --host_ip %s" % tgt_ip
-        cmd += " --oper %s" % oper
-        cmd += " %s" % get_mt_opts()
-        sudo(cmd)
+        with cd(UTILS_DIR):
+            cmd = "python provision_config_node.py"
+            cmd += " --api_server_ip %s" % cfgm_ip
+            cmd += " --host_name %s" % tgt_hostname
+            cmd += " --host_ip %s" % tgt_ip
+            cmd += " --oper %s" % oper
+            cmd += " %s" % get_mt_opts()
+            sudo(cmd)
 #end prov_config_node
 
 @task
