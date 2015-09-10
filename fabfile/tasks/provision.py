@@ -1590,7 +1590,7 @@ def prov_control_bgp_node(host_string, oper='add', tgt_node=None):
         cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
         cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
 
-        if tgt_node == None:
+        if tgt_node:
             tgt_ip = hstr_to_ip(get_control_host_string(tgt_node))
             tgt_hostname = sudo("getent hosts %s | awk \'{print $2}\'" % tgt_ip)
         else:
