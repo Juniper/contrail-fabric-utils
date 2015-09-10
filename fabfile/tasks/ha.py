@@ -789,13 +789,14 @@ def purge_node_from_openstack_cluster(del_openstack_node):
             sudo("mv /etc/cmon.cnf /etc/cmon.cnf.removed")
 
     del_openstack_node_ip = hstr_to_ip(del_openstack_node)
+    del_openstack_ctrl_ip = hstr_to_ip(get_control_host_string(del_openstack_node))
     execute('fixup_restart_haproxy_in_openstack')
     execute("restart_openstack")
     execute('remove_node_from_galera', del_openstack_node_ip)
     execute('fix_cmon_param_and_add_keys_to_compute')
 
     with settings(host_string = env.roledefs['openstack'][0]):
-        sudo("unregister-openstack-services --node_to_unregister %s" % del_openstack_node_ip)
+        sudo("unregister-openstack-services --node_to_unregister %s" % del_openstack_ctrl_ip)
 
     if ping_test(del_openstack_node):
         with settings(host_string=del_openstack_node, warn_only=True):
@@ -889,7 +890,7 @@ def purge_node_from_database(del_db_node):
         # If the node to be removed is a seed node, then we need to re-establish other nodes
         # as seed node before removing this node.
         print "Removing the seed node %s from DB Cluster and re-electing new seed nodes", del_db_ctrl_ip
-        for db in env.roldefs['database']:
+        for db in env.roledefs['database']:
             with settings(host_string = db):
                 cmd = frame_vnc_database_cmd(db, cmd='readjust-cassandra-seed-list')
                 sudo(cmd)
