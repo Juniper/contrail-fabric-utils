@@ -377,6 +377,7 @@ def run_sanity(feature='sanity', test=None):
     repo = env.test_repo_dir
     test_delay_factor = os.environ.get("TEST_DELAY_FACTOR") or "1.0"
     test_retry_factor = os.environ.get("TEST_RETRY_FACTOR") or "1.0"
+    image_web_server = os.environ.get("IMAGE_WEB_SERVER")
 
     date_string = dt.now().strftime('%Y-%m-%d_%H:%M:%S')
     env_vars = " TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s SCRIPT_TS=%s " % (
@@ -384,6 +385,9 @@ def run_sanity(feature='sanity', test=None):
 
     if os.environ.has_key('GUESTVM_IMAGE'):
         env_vars = env_vars + ' ci_image=%s' %(os.environ['GUESTVM_IMAGE'])
+
+    if image_web_server:
+        env_vars = env_vars + ' IMAGE_WEB_SERVER=%s ' % (image_web_server)
 
     if feature in ('upgrade','upgrade_only'):
         with settings(host_string = env.roledefs['cfgm'][0]):
