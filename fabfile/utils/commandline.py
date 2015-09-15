@@ -59,7 +59,7 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     mgmt_self_ip = hstr_to_ip(host_string)
     openstack_host_password = get_env_passwords(host_string)
     authserver_ip = get_authserver_ip(ignore_vip=True,
-                                  openstack_node=env.host_string)
+                                  openstack_node=host_string)
     (_, openstack_admin_password) = get_authserver_credentials()
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
     cfgm_ip = hstr_to_ip(cfgm_host)
