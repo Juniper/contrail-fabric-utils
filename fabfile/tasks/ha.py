@@ -562,7 +562,7 @@ def setup_cmon_param_zkonupgrade():
     zoo_ip_list = [hstr_to_ip(get_control_host_string(\
                     cassandra_host)) for cassandra_host in env.roledefs['database']]
     zk_servers_ports = ','.join(['%s:2181' %(s) for s in zoo_ip_list])
-    zks = 'ZK_SERVER_IP=("' + '" "'.join(zk_servers_ports) + '")'
+    zks = 'ZK_SERVER_IP="%s"' % (zk_servers_ports)
     monitor_galera="False"
     if get_contrail_internal_vip():
        monitor_galera="True"
