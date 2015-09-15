@@ -59,7 +59,7 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     mgmt_self_ip = hstr_to_ip(host_string)
     openstack_host_password = get_env_passwords(host_string)
     authserver_ip = get_authserver_ip(ignore_vip=True,
-                                  openstack_node=env.host_string)
+                                  openstack_node=host_string)
     (_, openstack_admin_password) = get_authserver_credentials()
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
     cfgm_ip = hstr_to_ip(cfgm_host)
@@ -114,7 +114,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     collector_host_list = [get_control_host_string(entry)\
                           for entry in env.roledefs['collector']]
     collector_ip = None
-    if cmd == 'update-ifmap-users':
+    if cmd != 'update-ifmap-users':
         if cfgm_host in collector_host_list:
             collector_ip = tgt_ip
         else:
