@@ -606,6 +606,21 @@ def restore_zookeeper_data():
 
 # end  restore_zookeeper_data
 
+def change_zk_file_permission(file_path='/var/lib/zookeeper'):
+    '''
+    After taking the backup on different machine, /var/lib/zookeeper file ownership chnages.
+    During restore on the target node, change the ownership and permission.
+    '''
+    if exists(file_path):
+        try:
+            cmd='chown -R zookeeper:zookeeper %s' %file_path
+            sudo(cmd)
+            cmd='chmod -R 0755  %s' %file_path
+            sudo(cmd)
+        except: 
+            print 'failed to change owner-ship or file permission'
+            raise
+#end change_zk_file_permission
 
 @task
 def restore_nova_instance_data():
@@ -852,7 +867,6 @@ def restore_instance_image(backup_data_path, store_db='local'):
 @roles('database')
 def restore_zookeeper(backup_data_path, store_db='local'):
     """Restore zookeeper data to all database nodes  """
-    #import pdb;pdb.set_trace()
     global backup_path
     host = env.host_string
     msg = "Restoring backed-up data in ({HOST}).\n"
@@ -862,6 +876,7 @@ def restore_zookeeper(backup_data_path, store_db='local'):
         zoo_path = data_path.split('=')
         zoo_path = zoo_path[-1]
         zoo_path = zoo_path.strip()
+        file_path = zoo_path
         zoo_path = zoo_path.split('zookeeper')
         zoo_path = zoo_path[0]
         remote_data_path = '%s%s/' % (backup_path, host_name)
@@ -893,6 +908,7 @@ def restore_zookeeper(backup_data_path, store_db='local'):
             sudo('rm -rf %szookeeper' %zoo_path)
             remote_cmd='rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress   %s:%s    %s' %(remote_host, remote_path, zoo_path)
             sudo(remote_cmd)
+            change_zk_file_permission(file_path)
     with settings(host_string=host):
         if store_db == 'local':
             print (msg.format(HOST=host_name))
