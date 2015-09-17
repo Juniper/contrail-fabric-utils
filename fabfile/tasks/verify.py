@@ -7,13 +7,19 @@ from fabfile.utils.cluster import get_orchestrator
 class OpenStackSetupError(Exception):
     pass
 
-def verify_service(service):
+def verify_service(service, initd_service=False):
     for x in xrange(10):
         output = sudo("service %s status" % service)
-        if 'running' in output.lower():
-            return
+        if initd_service:
+            if output.succeeded:
+                return
+            else:
+                sleep(20)
         else:
-            sleep(20)
+            if 'running' in output.lower():
+                return
+            else:
+                sleep(20)
     raise SystemExit("Service %s not running." % service)
     
 @task
@@ -22,7 +28,7 @@ def verify_database():
     zoo_svc = 'zookeeper'
     verify_service(zoo_svc)
     verify_service("supervisor-database")
-    verify_service("contrail-database")
+    verify_service("contrail-database", initd_service=True)
 
 @task
 @roles('webui')
