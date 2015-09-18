@@ -2495,8 +2495,8 @@ def reset_config():
     else:
         execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
     sleep(60)
-    execute(prov_database_node)
-    execute(prov_analytics_node)
+    execute(prov_database)
+    execute(prov_analytics)
     execute(prov_control_bgp)
     execute(prov_external_bgp)
     execute(prov_metadata_services)
