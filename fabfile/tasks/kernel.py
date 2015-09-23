@@ -81,7 +81,6 @@ def upgrade_kernel_without_openstack(*tgzs, **kwargs):
               "kernel version" % ", ".join(nodes['installed'])
 
     execute(upgrade_kernel_node, *nodes['not_installed'])
-    execute('set_grub_default_node', *nodes['not_installed'])
     if reboot == 'yes':
         if env.host_string in nodes:
             nodes.remove(env.host_string).append(env.host_string)
