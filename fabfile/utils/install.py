@@ -84,7 +84,7 @@ def get_compute_pkgs(manage_nova_compute='yes'):
         pkgs.append('haproxy')
 
     # Append lbaas dependent packages if Lbaas is enabled..
-    if (ostype == 'ubuntu' and is_lbaas_enabled()):
+    if (ostype in ['ubuntu', 'redhat', 'centoslinux'] and is_lbaas_enabled()):
         pkgs.append('haproxy')
         pkgs.append('iproute')
 
