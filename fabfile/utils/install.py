@@ -4,8 +4,8 @@ import glob
 from fabric.api import env, settings, sudo
 from fabric.contrib.files import exists
 
-from fabos import detect_ostype, get_release, get_build, get_openstack_sku
-from fabfile.utils.host import get_hypervisor, get_openstack_internal_vip
+from fabos import detect_ostype, get_release, get_build, get_openstack_sku, get_linux_distro
+from fabfile.utils.host import get_hypervisor, get_openstack_internal_vip, get_contrail_internal_vip
 from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator
 from fabfile.config import *
 
@@ -96,12 +96,22 @@ def get_compute_pkgs(manage_nova_compute='yes'):
     return pkgs
 
 def get_config_pkgs():
-     if get_orchestrator() is 'vcenter':
-         pkgs = ['contrail-vmware-config']
-     else:
-         pkgs = ['contrail-openstack-config']
+    if get_orchestrator() is 'vcenter':
+        pkgs = ['contrail-vmware-config']
+    else:
+        pkgs = ['contrail-openstack-config']
 
-     return pkgs
+    # Ideally, we need to create a contrail-opestack-config-ha package
+    # and add the Config HA related packages into that. For now, 
+    # installing keepalived in the config node if HA is configured.
+    (dist, version, extra) = get_linux_distro()
+    if get_contrail_internal_vip() != None and dist == 'Ubuntu':
+        if version == '14.04':
+            pkgs += ['keepalived=1.2.13-0~276~ubuntu14.04.1']
+        if version == '12.04':
+            pkgs += ['keepalived=1:1.2.13-1~bpo70+1']
+
+    return pkgs
 
 def get_vcenter_plugin_pkg():
     pkg = 'contrail-install-vcenter-plugin'
