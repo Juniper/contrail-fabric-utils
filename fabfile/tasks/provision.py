@@ -27,7 +27,7 @@ from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
         provision_vcenter_features
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
-        get_esxi_vms_and_hosts
+        get_esxi_vms_and_hosts, get_contrail_nodes
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
@@ -1695,7 +1695,7 @@ def prov_encap_type_node(host_string, oper = 'add'):
 #end prov_encap_type
 
 @task
-@hosts(env.roledefs['all'])
+@hosts(get_contrail_nodes())
 def setup_remote_syslog():
     """Provisions all the configs needed to bring up rsyslog as per the options mentioned
     in the testbed file. USAGE: fab setup_remote_syslog."""
