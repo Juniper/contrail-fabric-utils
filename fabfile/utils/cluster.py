@@ -210,15 +210,11 @@ def get_metadata_secret():
         print "WARNING get_metadata_secret: Orchestrator(%s) is not supported" % orch
     return metadata_secret
 
-def get_contrail_nodes():
-    '''retrieve contrail nodes. Assuming that all contrail nodes are installed with
-       package - contrail-setup, retrieves nodes that has contrail-setup installed in it
+def is_contrail_node(node):
+    '''Assuming that all contrail nodes are installed with
+       package - contrail-setup, returns True if the package is installed in the node
     '''
-    all_nodes = env.roledefs['all']
-    contrail_nodes = []
-    for node in all_nodes:
-        with settings(host_string=node, warn_only=True):
-            package_info = get_build('contrail-setup')
-        if package_info:
-            contrail_nodes.append(node)
-    return contrail_nodes
+    package_info = ''
+    with settings(host_string=node, warn_only=True):
+        package_info = get_build('contrail-setup')
+    return True if package_info else False
