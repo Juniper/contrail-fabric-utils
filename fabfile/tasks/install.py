@@ -10,11 +10,12 @@ from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabric.contrib.files import exists
 from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator,\
-     reboot_nodes
+     reboot_nodes, get_mode
 from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_compute_pkgs, get_ceilometer_plugin_pkgs, get_openstack_pkgs, \
      get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz_node, \
-     create_apt_repo_from_tgz_node, get_config_pkgs, get_vcenter_plugin_pkg
+     create_apt_repo_from_tgz_node, get_config_pkgs, get_vcenter_plugin_pkg, \
+     get_vcenter_compute_pkgs
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
@@ -497,6 +498,26 @@ def install_webui_node(*args):
             else:
                 yum_install(pkg)
 
+@task
+@EXECUTE_TASK
+@roles('vcenter_compute')
+def install_vcenter_compute():
+    """Installs nova compute in all nodes defined in vcenter_compute role."""
+    if env.roledefs['vcenter_compute']:
+       execute("install_vcenter_compute_node", env.host_string)
+
+@task
+def install_vcenter_compute_node(*args):
+    """Installs nova compute in all nodes defined in vcenter_compute role."""
+    for host_string in args:
+        with  settings(host_string=host_string):
+              ostype = detect_ostype()
+              pkgs = get_vcenter_compute_pkgs()
+
+              if ostype == 'ubuntu':
+                 apt_install(pkgs)
+              else:
+                 yum_install(pkgs)
 
 @task
 @EXECUTE_TASK
@@ -507,7 +528,8 @@ def install_vrouter(manage_nova_compute='yes'):
         # Nova compute need not required for TSN node
         if 'tsn' in env.roledefs.keys():
             if  env.host_string in env.roledefs['tsn']: manage_nova_compute='no'
-        if get_orchestrator() is 'vcenter': manage_nova_compute='no'
+        if get_mode(env.host_string) is 'vcenter': 
+            manage_nova_compute='no'
         execute("install_only_vrouter_node", manage_nova_compute, env.host_string)
 
 @task
@@ -809,6 +831,8 @@ def install_contrail(*tgzs, **kwargs):
     execute(install_control)
     execute(install_collector)
     execute(install_webui)
+    if 'vcenter_compute' in env.roledefs:
+        execute(install_vcenter_compute)
     execute(install_vrouter)
     execute(upgrade_pkgs)
     if getattr(env, 'interface_rename', True):
