@@ -23,7 +23,8 @@ from fabfile.utils.commandline import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
-        configure_esxi_network, create_esxi_compute_vm, deprovision_vcenter
+        configure_esxi_network, create_esxi_compute_vm, deprovision_vcenter,
+        provision_vcenter_features
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
         get_esxi_vms_and_hosts, get_mode
@@ -2488,6 +2489,9 @@ def prov_esxi(*args):
     if (dv_switch_fab == True):
          sleep(30)
          provision_dvs_fab(vcenter_info, esxi_info, host_list)
+    if orch == 'vcenter':
+         sleep(30)
+         provision_vcenter_features(vcenter_info, esxi_info, host_list)
 
 @task
 def update_esxi_vrouter_map():
