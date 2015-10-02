@@ -389,7 +389,7 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
 
     dpdk = getattr(env, 'dpdk', None)
     if dpdk:
-        if env.host_string in dpdk:
+        if host_string in dpdk:
             cmd += " --dpdk"
 
     return cmd
