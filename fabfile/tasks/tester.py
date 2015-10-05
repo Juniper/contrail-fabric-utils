@@ -6,7 +6,7 @@ import socket
 import tempfile
 from random import randrange
 from datetime import datetime as dt
-
+import time
 from fabfile.config import *
 from fabfile.utils.host import *
 from fabfile.utils.interface import *
@@ -367,6 +367,10 @@ def setup_test_env():
                     pkg_install(['libxslt-devel', 'libxml2-devel'], disablerepo=False)
                 sudo('pip install junos-eznc==1.2.2')
 
+                #Restart DM. Only temp fix. This has to be removed after #1490860 is fixed
+                sudo('service contrail-device-manager restart')
+                time.sleep(120)
+ 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
                 #pkg_install(['python-setuptools', 'python-pkg-resources', 'python-ncclient'],disablerepo = False)
