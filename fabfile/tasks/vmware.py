@@ -8,6 +8,7 @@ from fabfile.tasks.install import yum_install, apt_install
 from vcenter_prov import Vcenter as Vcenter
 from vcenter_prov import cleanup_vcenter
 from vcenter_prov import dvs_fab as dvs_fab
+from vcenter_prov import vcenter_fab as vcenter_fab
 from fabfile.utils.cluster import get_mode
 
 def configure_esxi_network(esxi_info):
@@ -161,6 +162,24 @@ def _template_substitute_write(template, vals, filename):
     outfile.write(data)
     outfile.close()
 #end _template_substitute_write
+
+@task
+def provision_vcenter_features(vcenter_info, esxi_info, host_list):
+    apt_install(['contrail-vmware-utils'])
+    vcenter_params = {}
+
+    vcenter_params['vcenter_server'] = vcenter_info['server']
+    vcenter_params['vcenter_username'] = vcenter_info['username']
+    vcenter_params['vcenter_password'] = vcenter_info['password']
+
+    vcenter_params['cluster_name'] = vcenter_info['cluster']
+    vcenter_params['datacenter_name'] = vcenter_info['datacenter']
+
+    vcenter_params['esxi_info'] = esxi_info
+    vcenter_params['host_list'] = host_list
+
+    vcenter_fab(vcenter_params)
+#end provision_vcenter_features
 
 @task
 def provision_dvs_fab(vcenter_info, esxi_info, host_list):
