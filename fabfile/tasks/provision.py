@@ -542,6 +542,17 @@ def setup_cfgm_node(*args):
 
             orch = get_orchestrator()
             if orch == 'vcenter' or 'vcenter_compute' in env.roledefs:
+                #create the static esxi:vrouter map file
+                esxi_info = getattr(testbed, 'esxi_hosts', None)
+                tmp_fname = "/tmp/ESXiToVRouterIp-%s" %(host_string)
+                for esxi_host in esxi_info:
+                    esxi_ip = esxi_info[esxi_host]['ip']
+                    vrouter_ip_string = esxi_info[esxi_host]['contrail_vm']['host']
+                    vrouter_ip = hstr_to_ip(vrouter_ip_string)
+                    local("echo '%s:%s' >> %s" %(esxi_ip, vrouter_ip, tmp_fname))
+                put(tmp_fname, "/etc/contrail/ESXiToVRouterIp.map", use_sudo=True)
+                local("rm %s" %(tmp_fname))
+
                 # Frame the command  to provision vcenter-plugin
                 vcenter_info = getattr(env, 'vcenter', None)
                 if not vcenter_info:
