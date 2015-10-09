@@ -84,7 +84,7 @@ def get_compute_pkgs(manage_nova_compute='yes'):
         pkgs.append('haproxy')
 
     # Append lbaas dependent packages if Lbaas is enabled..
-    if (ostype in ['ubuntu', 'centos', 'redhat', 'centoslinux'] and is_lbaas_enabled()):
+    if (ostype == 'ubuntu' and is_lbaas_enabled()):
         pkgs.append('haproxy')
         pkgs.append('iproute')
 
@@ -112,6 +112,14 @@ def get_vcenter_plugin_pkg():
         pkg = None
 
     return pkg
+
+def get_vcenter_compute_pkgs():
+    pkgs = ['contrail-nova-vif', 'nova-compute',
+            'python-novaclient', 'nova-compute-kvm',
+            'contrail-utils', 
+            'python-contrail-vrouter-api']
+
+    return pkgs
 
 def get_openstack_ceilometer_pkgs():
     """ Returns the list of ceilometer packages used in a

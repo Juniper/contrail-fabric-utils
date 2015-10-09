@@ -10,6 +10,25 @@ from fabfile.utils.config import get_value
 def get_orchestrator():
     return getattr(env, 'orchestrator', 'openstack')
 
+def get_mode(compute_host):
+    mode = None
+    esxi_info = getattr(testbed, 'esxi_hosts', None)
+
+    if not esxi_info:
+        print 'Info: esxi_hosts block is not defined in testbed file. Exiting'
+        return
+
+    if esxi_info:
+        for host in esxi_info.keys():
+            esxi_data = esxi_info[host]
+            data = esxi_data['contrail_vm']
+            if (esxi_data['contrail_vm']['host'] == compute_host):
+                if 'mode' in data.keys():
+                   mode = esxi_data['contrail_vm']['mode']
+                else:
+                   mode = get_orchestrator()
+    return mode
+
 def is_lbaas_enabled():
     if 'enable_lbaas' not in env.keys():
         return False
@@ -209,12 +228,3 @@ def get_metadata_secret():
     else:
         print "WARNING get_metadata_secret: Orchestrator(%s) is not supported" % orch
     return metadata_secret
-
-def is_contrail_node(node):
-    '''Assuming that all contrail nodes are installed with
-       package - contrail-setup, returns True if the package is installed in the node
-    '''
-    package_info = ''
-    with settings(host_string=node, warn_only=True):
-        package_info = get_build('contrail-setup')
-    return True if package_info else False
