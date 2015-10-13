@@ -364,6 +364,7 @@ def run_sanity(feature='sanity', test=None):
     repo = env.test_repo_dir
     test_delay_factor = os.environ.get("TEST_DELAY_FACTOR") or "1.0"
     test_retry_factor = os.environ.get("TEST_RETRY_FACTOR") or "1.0"
+    image_web_server = os.environ.get("IMAGE_WEB_SERVER")
 
     env_vars = " TEST_DELAY_FACTOR=%s TEST_RETRY_FACTOR=%s" % (test_delay_factor, test_retry_factor)
     if os.environ.has_key('GUESTVM_IMAGE'):
@@ -413,6 +414,10 @@ def run_sanity(feature='sanity', test=None):
             pre_cmd = 'source /opt/contrail/api-venv/bin/activate && '
         else :
             pre_cmd = ''
+
+    if image_web_server:
+        env_vars = env_vars + ' IMAGE_WEB_SERVER=%s ' % (image_web_server)
+
     cmd = pre_cmd + '%s python -m testtools.run ' % (env_vars)
     cmds = {'sanity'       : pre_cmd + '%s ./run_tests.sh --sanity --send-mail -U' % (env_vars),
             'quick_sanity' : pre_cmd + '%s ./run_tests.sh -T quick_sanity --send-mail -t' % (env_vars),
