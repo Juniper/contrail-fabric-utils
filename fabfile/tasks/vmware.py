@@ -9,6 +9,7 @@ from vcenter_prov import Vcenter as Vcenter
 from vcenter_prov import cleanup_vcenter
 from vcenter_prov import dvs_fab as dvs_fab
 from vcenter_prov import vcenter_fab as vcenter_fab
+from vcenter_prov import pci_fab as pci_fab
 from fabfile.utils.cluster import get_mode
 
 def configure_esxi_network(esxi_info):
@@ -200,6 +201,28 @@ def provision_dvs_fab(vcenter_info, esxi_info, host_list):
 
     dvs_fab(dvs_params)
 #end provision_dvs_fab
+
+@task
+def provision_pci_fab(vcenter_info, esxi_info, host_list, compute_list, password_list, bond_list):
+    apt_install(['contrail-vmware-utils'])
+    pci_params = {}
+
+    pci_params['vcenter_server'] = vcenter_info['server']
+    pci_params['vcenter_username'] = vcenter_info['username']
+    pci_params['vcenter_password'] = vcenter_info['password']
+
+    pci_params['cluster_name'] = vcenter_info['cluster']
+    pci_params['datacenter_name'] = vcenter_info['datacenter']
+
+    pci_params['esxi_info'] = esxi_info
+    pci_params['host_list'] = host_list
+
+    pci_params['compute_list'] = compute_list
+    pci_params['password_list'] = password_list
+    pci_params['bond_list'] = bond_list
+
+    pci_fab(pci_params)
+#end provision_pci_fab
 
 @task
 def deprovision_vcenter(vcenter_info):

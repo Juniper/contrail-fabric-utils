@@ -14,6 +14,7 @@ from fabfile.tasks.provision import setup_vrouter_node
 from fabfile.tasks.install import create_install_repo_node,\
          install_interface_name_node, install_vrouter_node, apt_install
 from fabfile.utils.multitenancy import get_mt_opts
+from fabfile.utils.cluster import get_orchestrator
 
 @task
 def add_vrouter_node(*args):
@@ -30,7 +31,11 @@ def add_vrouter_node(*args):
                 execute("install_interface_name_node", env.host_string)
                 #Clear the connections cache
                 connections.clear()
-            execute("setup_interface_node", env.host_string)
+            orch = get_orchestrator();
+            if orch == 'vcenter' or 'vcenter_compute' in env.roledefs:
+                setup_interface_node = False
+            if (setup_interface_node == True):
+                execute("setup_interface_node", env.host_string)
             execute("add_static_route_node", env.host_string)
             execute("upgrade_pkgs_node", env.host_string)
             execute("setup_vrouter_node", env.host_string)

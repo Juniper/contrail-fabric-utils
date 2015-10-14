@@ -4,6 +4,252 @@ Python program for provisioning vcenter
 
 import atexit
 import time
+import os
+
+from fabfile.config import *
+from fabric.contrib.files import exists
+
+class pci_fab(object):
+    def __init__(self, pci_params):
+        self.pyVmomi =  __import__("pyVmomi")
+
+        self.vcenter_server = pci_params['vcenter_server']
+        self.vcenter_username = pci_params['vcenter_username']
+        self.vcenter_password = pci_params['vcenter_password']
+
+        self.cluster_name = pci_params['cluster_name']
+        self.datacenter_name = pci_params['datacenter_name']
+
+        self.esxi_info = pci_params['esxi_info']
+        self.host_list = pci_params['host_list']
+
+        self.compute_list = pci_params['compute_list']
+        self.password_list = pci_params['password_list']
+        self.bond_list = pci_params['bond_list']
+
+        try:
+            self.connect_to_vcenter()
+            for host in self.host_list:
+                if ('pci_devices' in self.esxi_info[host]['contrail_vm']) and \
+                   ('nic' in self.esxi_info[host]['contrail_vm']['pci_devices']):
+                    vm_name = "ContrailVM" + "-" + self.datacenter_name + "-" + self.esxi_info[host]['ip']
+                    ret = self.add_pci_nics(self.service_instance, self.esxi_info, \
+                               host, vm_name, self.compute_list, self.password_list, self.bond_list)
+                    if (ret == False):
+                        print "Fatal Error. Cannot proceed further!"
+                        return
+        except self.pyVmomi.vmodl.MethodFault as error:
+            print "Caught vmodl fault : " + error.msg
+            return
+
+    def add_pci_nics(self, si, esxi_info, host, vm_name, compute_list, password_list, bond_list):
+        vm = self.get_obj([self.pyVmomi.vim.VirtualMachine], vm_name)
+        nic_list = esxi_info[host]['contrail_vm']['pci_devices']['nic']
+        nic_list.sort()
+        if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOn:
+            print "VM:%s is powered ON. Cannot do hot pci add now. Shutting it down" %(vm_name)
+            self.poweroff(si, vm);
+        for nic in nic_list:
+            device_config_list = []
+            found = False
+            user = esxi_info[host]['username']
+            ip = esxi_info[host]['ip']
+            password = esxi_info[host]['password']
+            login = '%s@%s' % (user, ip)
+            with settings(host_string = login, password = password,
+                    warn_only = True, shell = '/bin/sh -l -c'):
+                idx = nic.find(":")
+                if (idx >= 0):
+                    nic = nic.partition(':')
+                    vf = nic[2]
+                    nic = nic[0]
+                    pci_id = run("vmkchdev -l | grep %s | cut -f 1 -d' '" %(nic))
+                    pci_id = pci_id.split(':', 1)[1]
+                    pci_slot = str(int(pci_id.split(':', 1)[0]))
+                    port = str(int(pci_id.split('.', 1)[1]))
+                    device_id = "PF_0." + pci_slot + "." +  port + "_VF_" + vf
+                else:
+                    device_id = nic
+                pci_id = run("vmkchdev -l | grep %s | cut -f 1 -d' '" %(device_id))
+                pci_id = pci_id.split(':', 1)[1]
+            for device_list in vm.config.hardware.device:
+                if (isinstance(device_list,self.pyVmomi.vim.vm.device.VirtualPCIPassthrough)) == True \
+                    and device_list.backing.id == pci_id:
+                    print "pci_device already present! Not adding the pci device."
+                    found = True
+                    break
+            if found == True:
+                continue
+            pci_passthroughs = vm.environmentBrowser.QueryConfigTarget(host=None).pciPassthrough
+            for pci_entry in pci_passthroughs:
+                if pci_entry.pciDevice.id == pci_id:
+                    found = True
+                    print "Found the pci device %s in the host" %(pci_id)
+                    break
+            if found == False:
+                print "Did not find the pci passthrough device %s on the host" %(pci_id)
+                return False
+            print "Adding PCI device to Contrail VM: %s" %(vm_name)
+            deviceId = hex(pci_entry.pciDevice.deviceId % 2**16).lstrip('0x')
+            backing = self.pyVmomi.vim.VirtualPCIPassthroughDeviceBackingInfo(deviceId=deviceId,
+                         id=pci_entry.pciDevice.id,
+                         systemId=pci_entry.systemId,
+                         vendorId=pci_entry.pciDevice.vendorId,
+                         deviceName=pci_entry.pciDevice.deviceName)
+            hba_object = self.pyVmomi.vim.VirtualPCIPassthrough(key=-100, backing=backing)
+            new_device_config = self.pyVmomi.vim.VirtualDeviceConfigSpec(device=hba_object)
+            new_device_config.operation = "add"
+            new_device_config.device.connectable = self.pyVmomi.vim.vm.device.VirtualDevice.ConnectInfo()
+            new_device_config.device.connectable.startConnected = True
+            device_config_list.append(new_device_config)
+            vm_spec=self.pyVmomi.vim.vm.ConfigSpec()
+            vm_spec.deviceChange=device_config_list
+            task=vm.ReconfigVM_Task(spec=vm_spec)
+            self.wait_for_task(task, si)
+        if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOff:
+            print "Turning VM: %s On" %(vm_name)
+            self.poweron(si, vm)
+        sleep(30)
+        for host_string in compute_list:
+            if host_string == esxi_info[host]['contrail_vm']['host']:
+                found = True
+                break
+        password = password_list[host_string]
+        bond = ""
+        if (bond_list and host_string in bond_list):
+            bond = bond_list[host_string]
+        with settings(host_string = host_string, password = password,
+                     warn_only = True, shell = '/bin/bash -l -c'):
+            iface_idx = 1
+            iface_list = ""
+            mode = ""
+            ori_file = "/etc/network/interfaces"
+            new_file = "/var/tmp/interfaces"
+            run("cp %s %s" %(ori_file, new_file))
+            for nic in nic_list:
+                    iface = "eth%d" %iface_idx
+                    run("printf '\n' >> %s" %new_file)
+                    run("printf 'auto %s\n' >> %s" %(iface, new_file))
+                    if (bond and nic in bond['member']):
+                        idx = nic.find(":")
+                        if (idx >= 0):
+                            cur_nic_mode = "sr-iov"
+                            if (mode == ""):
+                                mode = "sr-iov"
+                        else:
+                            cur_nic_mode = "pass-through"
+                            if (mode == ""):
+                                mode = cur_nic_mode
+                        if (mode != cur_nic_mode):
+                            print "bond is configured with mixed interface-types"
+                            return False
+                        run("printf 'iface %s inet manual\n' >> %s" %(iface, new_file))
+                        run("printf '    bond-master  %s\n'>> %s" %(bond['name'], new_file))
+                        iface_list += iface
+                        iface_list += " "
+                    else:
+                        run("printf 'iface %s inet dhcp\n' >> %s" %(iface, new_file))
+                    iface_idx += 1
+            run("touch /var/tmp/pci")
+            if (bond and len(iface_list)):
+                run("printf '\n' >> %s" %new_file)
+                run("printf 'auto %s\n' >> %s" %(bond['name'], new_file))
+                run("printf 'iface %s inet dhcp\n' >> %s" %(bond['name'], new_file))
+                run("printf '    bond_mode %s\n' >> %s" %(bond['mode'], new_file))
+                run("printf '    bond_xmit_hash_policy %s\n' >> %s" %(bond['xmit_hash_policy'], new_file))
+                run("printf '    bond_miimon 100\n' >> %s" %new_file)
+                run("printf '    bond-slaves %s\n' >> %s" %(iface_list, new_file))
+            run("cp %s %s" %(new_file, ori_file))
+            run("rm %s" %new_file)
+            run('reboot')
+        return True
+
+    def get_obj(self, vimtype, name):
+        """
+        Get the vsphere object associated with a given text name
+        """
+        obj = None
+        container = self.content.viewManager.CreateContainerView(self.content.rootFolder, vimtype, True)
+        for c in container.view:
+            if c.name == name:
+                obj = c
+                break
+        return obj
+
+    def connect_to_vcenter(self):
+        from pyVim import connect
+        self.service_instance = connect.SmartConnect(host=self.vcenter_server,
+                                        user=self.vcenter_username,
+                                        pwd=self.vcenter_password,
+                                        port=443)
+        self.content = self.service_instance.RetrieveContent()
+        atexit.register(connect.Disconnect, self.service_instance)
+
+    def wait_for_task(self, task, actionName='job', hideResult=False):
+         while task.info.state == (self.pyVmomi.vim.TaskInfo.State.running or self.pyVmomi.vim.TaskInfo.State.queued):
+             time.sleep(2)
+         if task.info.state == self.pyVmomi.vim.TaskInfo.State.success:
+             if task.info.result is not None and not hideResult:
+                 out = '%s completed successfully, result: %s' % (actionName, task.info.result)
+                 print out
+             else:
+                 out = '%s completed successfully.' % actionName
+                 print out
+         elif task.info.state == self.pyVmomi.vim.TaskInfo.State.error:
+             out = 'Error - %s did not complete successfully: %s' % (actionName, task.info.error)
+             raise ValueError(out)
+         return task.info.result
+
+    def answer_vm_question(vm):
+        choices = vm.runtime.question.choice.choiceInfo
+        default_option = None
+        if vm.runtime.question.choice.defaultIndex is not None:
+            ii = vm.runtime.question.choice.defaultIndex
+            default_option = choices[ii]
+            choice = None
+        while choice not in [o.key for o in choices]:
+            print "VM power on is paused by this question:\n\n"
+            print "\n".join(textwrap.wrap(vm.runtime.question.text, 60))
+            for option in choices:
+                print "\t %s: %s " % (option.key, option.label)
+            if default_option is not None:
+                print "default (%s): %s\n" % (default_option.label,
+                                              default_option.key)
+            choice = raw_input("\nchoice number: ").strip()
+            print "..."
+        return choice
+
+    def poweroff(self, si, vm):
+        task = vm.PowerOff()
+        actionName = 'job'
+        while task.info.state not in [self.pyVmomi.vim.TaskInfo.State.success or self.pyVmomi.vim.TaskInfo.State.error]:
+            time.sleep(2)
+        if task.info.state == self.pyVmomi.vim.TaskInfo.State.success:
+            out = '%s completed successfully.' % actionName
+            print out
+        elif task.info.state == self.pyVmomi.vim.TaskInfo.State.error:
+            out = 'Error - %s did not complete successfully: %s' % (actionName, task.info.error)
+            raise ValueError(out)
+        return
+
+    def poweron(self, si, vm):
+        task = vm.PowerOn()
+        actionName = 'job'
+        answers = {}
+        while task.info.state not in [self.pyVmomi.vim.TaskInfo.State.success or self.pyVmomi.vim.TaskInfo.State.error]:
+            if vm.runtime.question is not None:
+                question_id = vm.runtime.question.id
+                if question_id not in answers.keys():
+                    answers[question_id] = answer_vm_question(vm)
+                    vm.AnswerVM(question_id, answers[question_id])
+            time.sleep(2)
+        if task.info.state == self.pyVmomi.vim.TaskInfo.State.success:
+            out = '%s completed successfully.' % actionName
+            print out
+        elif task.info.state == self.pyVmomi.vim.TaskInfo.State.error:
+            out = 'Error - %s did not complete successfully: %s' % (actionName, task.info.error)
+            raise ValueError(out)
+        return
 
 class vcenter_fab(object):
     def __init__(self, vcenter_params):
@@ -246,13 +492,57 @@ class Vcenter(object):
                 dvs=self.create_dvSwitch(self.service_instance, network_folder, self.clusters, self.dvswitch_name)
                 self.configure_hosts_on_dvSwitch(self.service_instance, network_folder, self.clusters, self.dvswitch_name)
             self.add_dvPort_group(self.service_instance,dvs, self.dvportgroup_name)
-            for vm_name in self.vms:
-                self.add_vm_to_dvpg(self.service_instance,vm_name,dvs, self.dvportgroup_name)
+            for vm_info_list in self.vms:
+                self.add_vm_to_dvpg(self.service_instance, vm_info_list, dvs, self.dvportgroup_name)
             
         except self.pyVmomi.vmodl.MethodFault as error:
             print "Caught vmodl fault : " + error.msg
             return 
-        
+
+    def add_iface_config(self, host_string, password):
+        overlay_iface = "eth1"
+        data_iface = "eth0"
+        ori_file = "/etc/network/interfaces"
+        new_file = "/var/tmp/interfaces"
+        with settings(host_string = host_string, password = password,
+                      warn_only = True, shell = '/bin/bash -l -c'):
+            run("cp %s %s" %(ori_file, new_file))
+            if not exists('/var/tmp/pci'):
+                run("sed -i '/auto %s/,/auto/{/auto/!d}' %s" %(data_iface, new_file))
+                run("printf 'iface %s inet dhcp\n' >> %s" %(data_iface, new_file))
+                run("printf '    pre-up ifconfig %s up\n' >> %s" %(data_iface, new_file))
+                run("printf '    post-down ifconfig %s down\n' >> %s" %(data_iface, new_file))
+                run("printf '    pre-up ethtool --offload %s rx off\n' >> %s" %(data_iface, new_file))
+                run("printf '    pre-up ethtool --offload %s tx off\n' >> %s" %(data_iface, new_file))
+                run("printf '\n' >> %s" %new_file)
+                run("printf 'auto %s\n' >> %s" %(overlay_iface, new_file))
+                run("printf 'iface %s inet manual\n' >> %s" %(overlay_iface, new_file))
+                run("printf '    pre-up ifconfig %s up mtu 1500\n' >> %s" %(overlay_iface, new_file))
+                run("printf '    post-down ifconfig %s down\n' >> %s" %(overlay_iface, new_file))
+                run("printf '    pre-up ethtool --offload %s lro off\n' >> %s" %(overlay_iface, new_file))
+            else:
+                count = 1
+                tot_eth_iface = int(run("ifconfig -a | grep ^eth | wc -l"))
+                new_iface_idx = tot_eth_iface
+                while count < tot_eth_iface:
+                    new_iface = "eth%d" %(new_iface_idx)
+                    old_iface = "eth%d" %(new_iface_idx - 1)
+                    run("sed -i 's/%s/%s/' %s" %(old_iface, new_iface, new_file))
+                    if (exists("/etc/udev/rules.d/70-persistent-net.rules")):
+                        run("sed -i 's/%s/%s/' /etc/udev/rules.d/70-persistent-net.rules" %(old_iface, new_iface))
+                    new_iface_idx -= 1
+                    count += 1
+                new_iface_idx = tot_eth_iface
+                run("printf '\n' >> %s" %new_file)
+                run("printf 'auto %s\n' >> %s" %(overlay_iface, new_file))
+                run("printf 'iface %s inet manual\n' >> %s" %(overlay_iface, new_file))
+                run("printf '    pre-up ifconfig %s up mtu 1500\n' >> %s" %(overlay_iface, new_file))
+                run("printf '    post-down ifconfig %s down\n' >> %s" %(overlay_iface, new_file))
+                run("printf '    pre-up ethtool --offload %s lro off\n' >> %s" %(overlay_iface, new_file))
+                run("rm /var/tmp/pci")
+            run("cp %s %s" %(new_file, ori_file))
+            run("rm %s" %new_file)
+            run('init 0')
 
     def create_cluster(self, cluster_name, datacenter):
         
@@ -354,14 +644,19 @@ class Vcenter(object):
             self.wait_for_task(task, si)
             print "Successfully created DV Port Group ", dv_port_name
 
-    def add_vm_to_dvpg(self, si, vm_name, dv_switch, dv_port_name):
+    def add_vm_to_dvpg(self, si, vm_info_list, dv_switch, dv_port_name):
         devices = []
-        vm_was_on = False
-        print "Adding Contrail VM: %s to the DV port group" %(vm_name)
+        vm_name = vm_info_list[0]
+        self.add_iface_config(vm_info_list[1], vm_info_list[2])
         vm = self.get_obj([self.pyVmomi.vim.VirtualMachine], vm_name)
+        pg_obj = self.get_obj([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name)
+        for device_list in vm.config.hardware.device:
+            if (isinstance(device_list,self.pyVmomi.vim.vm.device.VirtualVmxnet3)) == True and hasattr(device_list.backing,'port') and device_list.backing.port.portgroupKey == pg_obj.key:
+                print "Contrail VM interface already present in dvpg!!"
+                return 0
+        print "Adding Contrail VM: %s to the DV port group" %(vm_name)
         if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOn:
                 print "VM:%s is powered ON. Cannot do hot add now. Shutting it down" %(vm_name)
-                vm_was_on= True
                 task = vm.PowerOff()
                 self.wait_for_task(task, si)
         nicspec = self.pyVmomi.vim.vm.device.VirtualDeviceSpec()
@@ -379,7 +674,7 @@ class Vcenter(object):
         vmconf = self.pyVmomi.vim.vm.ConfigSpec(deviceChange=devices)
         task = vm.ReconfigVM_Task(vmconf)
         self.wait_for_task(task, si)
-        if vm_was_on:
+        if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOff:
             print "Turning VM: %s On" %(vm_name)
             task = vm.PowerOn()
             self.wait_for_task(task, si)
