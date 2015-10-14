@@ -82,7 +82,7 @@ def get_esxi_ssl_thumbprint(esxi_data):
           print 'ssl thumbprint of the ESXi host %s is %s' % (esxi_data['ip'], ssl_thumbprint)
     return ssl_thumbprint
 
-def get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list):
+def get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, password_list):
     hosts = []
     vms = []
     clusters = []
@@ -95,7 +95,12 @@ def get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list):
                    esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint,esxi_data['cluster']
                    hosts.append(esx_list)
                    modified_vm_name = vm_name+"-"+vcenter_info['datacenter']+"-"+esxi_data['ip']
-                   vms.append(modified_vm_name)
+                   for host_string in compute_list:
+                       if host_string == esxi_data['contrail_vm']['host']:
+                           break
+                   password  = password_list[host_string]
+                   vm_info_list = modified_vm_name, host_string, password
+                   vms.append(vm_info_list)
                else:
                    print 'Info: esxi_hosts block does not have the esxi host.Exiting'
                    return

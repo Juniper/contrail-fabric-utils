@@ -24,7 +24,7 @@ from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
         configure_esxi_network, create_esxi_compute_vm, deprovision_vcenter,\
-        provision_vcenter_features
+        provision_vcenter_features, provision_pci_fab
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
         get_esxi_vms_and_hosts, get_mode, is_contrail_node
@@ -2425,31 +2425,31 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
         print "No op for esxi host -- %s" %env.host_string
         return
 
-    std_switch = False
-    dv_switch_fab = False
-    power_on = False
-
     if host in esxi_info.keys():
          mode = get_mode(esxi_info[host]['contrail_vm']['host'])
          if mode == 'openstack':
              std_switch = True
+             power_on = True
          if mode == 'vcenter':
-             if 'dv_switch_fab' in vcenter_info.keys():
-                 if not 'fabric_vswitch' in esxi_info[host].keys():
-                     dv_switch_fab = True
-                     std_switch = False
-                 else:
-                     std_switch = True
+             if 'fabric_vswitch' in esxi_info[host].keys():
+                 std_switch = True
+                 power_on = True
+             elif ('pci_devices' in esxi_info[host]['contrail_vm']) and \
+                  ('nic' in esxi_info[host]['contrail_vm']['pci_devices']):
+                 std_switch = True
+                 power_on = False
+             elif 'dv_switch_fab' in vcenter_info.keys():
+                 std_switch = False
+                 power_on = False
              else:
                  std_switch = True
+                 power_on = True
          if (std_switch == True):
              apply_esxi_defaults(esxi_info[host])
              configure_esxi_network(esxi_info[host])
-             power_on = True
          else:
              apply_esxi_defaults(esxi_info[host])
              esxi_info[host]['fabric_vswitch'] = None
-             power_on = False
          create_esxi_compute_vm(esxi_info[host], vcenter_info, power_on)
     else:
          print 'Info: esxi_hosts block does not have the esxi host.Exiting'
@@ -2486,22 +2486,34 @@ def prov_esxi(*args):
     execute(prov_esxi_task, host_list, esxi_info, vcenter_info)
 
     dv_switch_fab = False
+    pci_fab = False
     for h in host_list:
-         mode = get_mode(esxi_info[h]['contrail_vm']['host'])
-         if mode == 'vcenter':
-             vcenter_info = getattr(env, 'vcenter', None)
-             if not vcenter_info:
-                 print 'Info: vcenter block is not defined in testbed file.Exiting'
-                 return
-             if 'dv_switch_fab' in vcenter_info.keys():
-                  if not 'fabric_vswitch' in esxi_info[h].keys():
-                      dv_switch_fab = True
-                      esxi_info[h]['fabric_vswitch'] = None
+        mode = get_mode(esxi_info[h]['contrail_vm']['host'])
+        if mode == 'vcenter':
+            vcenter_info = getattr(env, 'vcenter', None)
+            if not vcenter_info:
+                print 'Info: vcenter block is not defined in testbed file.Exiting'
+                return
+            if 'fabric_vswitch' in esxi_info[h].keys():
+                std_switch = True
+            elif ('pci_devices' in esxi_info[h]['contrail_vm']) and \
+                 ('nic' in esxi_info[h]['contrail_vm']['pci_devices']):
+                pci_fab = True
+            elif 'dv_switch_fab' in vcenter_info.keys():
+                esxi_info[h]['fabric_vswitch'] = None
+                dv_switch_fab = True
+            else:
+                std_switch = True
+    sleep(20)
     if (dv_switch_fab == True):
-         sleep(30)
          provision_dvs_fab(vcenter_info, esxi_info, host_list)
-    if orch == 'vcenter':
-         sleep(30)
+    if (pci_fab == True):
+        role_info = getattr(env, 'roledefs', None)
+        compute_list = role_info['compute']
+        password_list = getattr(env, 'passwords', None)
+        bond_list = getattr(testbed, 'bond', None)
+        provision_pci_fab(vcenter_info, esxi_info, host_list, compute_list, password_list, bond_list)
+    if orch == 'vcenter' or 'vcenter_compute' in env.roledefs:
          provision_vcenter_features(vcenter_info, esxi_info, host_list)
 
 @task
@@ -2569,7 +2581,10 @@ def add_esxi_to_vcenter(*args):
         host_list = args
     else:
         host_list = esxi_info.keys()
-    (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
+    role_info = getattr(env, 'roledefs', None)
+    compute_list = role_info['compute']
+    password_list = getattr(env, 'passwords', None)
+    (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, password_list)
     provision_vcenter(vcenter_info, hosts, clusters, vms, 'True')
     update_esxi_vrouter_map()
 
@@ -2585,7 +2600,10 @@ def setup_vcenter():
         print 'Error: esxi_hosts block is not defined in testbed file.Exiting'
         return
     host_list = esxi_info.keys()
-    (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list)
+    role_info = getattr(env, 'roledefs', None)
+    compute_list = role_info['compute']
+    password_list = getattr(env, 'passwords', None)
+    (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, password_list)
     provision_vcenter(vcenter_info, hosts, clusters, vms, 'False')
 
 @task
