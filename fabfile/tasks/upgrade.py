@@ -141,6 +141,10 @@ UBUNTU_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.
 UBUNTU_R1_20_TO_R2_01 = copy.deepcopy(UPGRADE_SCHEMA)
 UBUNTU_R2_0_TO_R2_01 = copy.deepcopy(UBUNTU_R2_0_TO_R2_0)
 UBUNTU_R2_01_TO_R2_01 = copy.deepcopy(UBUNTU_R2_0_TO_R2_0)
+# Support Upgrade to R2.02
+UBUNTU_R2_0_TO_R2_02 = copy.deepcopy(UBUNTU_R2_0_TO_R2_0)
+UBUNTU_R2_01_TO_R2_02 = copy.deepcopy(UBUNTU_R2_0_TO_R2_0)
+UBUNTU_R2_02_TO_R2_02 = copy.deepcopy(UBUNTU_R2_0_TO_R2_0)
 
 CENTOS_UPGRADE_SCHEMA = copy.deepcopy(UPGRADE_SCHEMA)
 # Add contrail-interface-name to upgrade list if interface rename enabled.
@@ -199,6 +203,10 @@ CENTOS_R2_0_TO_R2_0['control']['rename_files'].remove(('/etc/contrail/dns/named.
 CENTOS_R1_20_TO_R2_01 = copy.deepcopy(CENTOS_R1_10_TO_R2_0)
 CENTOS_R2_0_TO_R2_01 = copy.deepcopy(CENTOS_R2_0_TO_R2_0)
 CENTOS_R2_01_TO_R2_01 = copy.deepcopy(CENTOS_R2_0_TO_R2_0)
+# Support Upgrade to R2.02
+CENTOS_R2_0_TO_R2_02 = copy.deepcopy(CENTOS_R2_0_TO_R2_0)
+CENTOS_R2_01_TO_R2_02 = copy.deepcopy(CENTOS_R2_0_TO_R2_0)
+CENTOS_R2_02_TO_R2_02 = copy.deepcopy(CENTOS_R2_0_TO_R2_0)
 
 def format_upgrade_schema(data, **formater):
     if type(data) is dict:
@@ -612,7 +620,7 @@ def upgrade_cfgm_node(from_rel, pkg, *args):
             execute('upgrade_pkgs_node', host_string)
             # Populate the new SCHEDULER section in svc_monitor.conf
             conf_file = '/etc/contrail/svc_monitor.conf'
-            if get_release() in ['2.0', '2.01']:
+            if get_release() in ['2.0', '2.01', '2.02']:
                  conf_file = '/etc/contrail/contrail-svc-monitor.conf'
             lbaas_svc_instance_params = {'analytics_server_ip' : hstr_to_ip(env.roledefs['collector'][0]),
                                          'analytics_server_port' : '8081'
@@ -815,7 +823,7 @@ def upgrade_vrouter_node(from_rel, pkg, *args):
                 execute('setup_vrouter_node', host_string)
 
             # Upgrade nova parameters in nova.conf in compute host from 2.0 to 2.1
-            if get_openstack_internal_vip() and from_rel in ['2.0', '2.01']:
+            if get_openstack_internal_vip() and from_rel in ['2.0', '2.01', '2.02']:
                 nova_conf_file = '/etc/nova/nova.conf'
                 openstack_compute_service = 'openstack-nova-compute'
                 if (ostype == 'ubuntu'):
