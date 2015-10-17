@@ -470,7 +470,7 @@ def install_collector_node(*args):
     """Installs analytics pkgs in one or list of nodes. USAGE:fab install_collector_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            pkg = ['contrail-openstack-analytics']
+            pkg = ['contrail-openstack-analytics', 'contrail-docs']
             if detect_ostype() == 'ubuntu':
                 sudo('echo "manual" >> /etc/init/supervisor-analytics.override')
                 apt_install(pkg)
