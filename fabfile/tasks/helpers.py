@@ -1390,6 +1390,12 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
                 nodes.remove(esxi_hosts[esxi]['contrail_vm']['host'])
                 nodes.append(esxi_hosts[esxi]['username']+'@'+esxi_hosts[esxi]['ip'])
 
+        # Skip checking for nodes which are vms
+        vm_nodes = getattr(testbed, 'vm_node_details', None)
+        if vm_nodes:
+            for vm_node in vm_nodes.keys():
+                nodes.remove(vm_node)
+
     count = 0
     node_status = {}
     node_status_save = {}
