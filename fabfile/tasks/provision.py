@@ -578,7 +578,7 @@ def setup_cfgm_node(*args):
                 zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
                 cmd += " --zookeeper_serverlist %s" % zk_servers_ports
                 if 'vcenter_compute' in env.roledefs:
-                    cmd += " --vcenter_compute vcenter-as-compute"
+                    cmd += " --vcenter_mode vcenter-as-compute"
                     # Pass keystone arguments in case of vcenter-as-compute mode
                     authserver_ip = get_authserver_ip()
                     ks_admin_user, ks_admin_password = get_authserver_credentials()
@@ -588,6 +588,8 @@ def setup_cfgm_node(*args):
                     cmd += " --keystone_admin_tenant_name %s" % get_admin_tenant_name()
                     cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
                     cmd += " --keystone_auth_port %s" % get_authserver_port()
+                else:
+                    cmd += " --vcenter_mode vcenter-only"
 
                 # Execute the provision vcenter-plugin script
                 with cd(INSTALLER_DIR):
