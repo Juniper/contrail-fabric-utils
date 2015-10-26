@@ -4,6 +4,7 @@ import textwrap
 import json
 import socket
 from time import sleep
+from multiprocessing import cpu_count
 
 from fabric.contrib.files import exists
 
@@ -2261,7 +2262,6 @@ def setup_orchestrator():
     #elif orch == 'vcenter':
         #execute('setup_vcenter')
 
-
 @roles('build')
 @task
 def join_cluster(new_ctrl_ip):
@@ -2269,6 +2269,106 @@ def join_cluster(new_ctrl_ip):
     """
     execute('setup_common_node', new_ctrl_ip)
     execute('join_ha_cluster', new_ctrl_ip)
+
+
+@task
+@roles('compute')
+def setup_vm_coremask(q_coremask=False):
+    """
+    On all nodes setup CPU affinity for QEMU processes based on vRouter/DPDK
+    core affinity or q_coremask argument.
+    """
+    if env.roledefs['compute']:
+        execute("setup_vm_coremask_node", q_coremask, env.host_string)
+
+@task
+def setup_vm_coremask_node(q_coremask, *args):
+    """
+    Setup CPU affinity for QEMU processes based on vRouter/DPDK core affinity
+    on a given node.
+
+    Supported core mask format:
+        vRouter/DPDK:   hex (0x3f), list (0,1,2,3,4,5), range (0,3-5)
+        QEMU/nova.conf: list (0,1,2,3,4,5), range (0,3-5), exclusion (0-5,^4)
+
+    QEMU needs to be pinned to different cores than vRouter. Because of
+    different core mask formats, it is not possible to just set QEMU to
+    <not vRouter cores>. This function takes vRouter core mask from testbed,
+    changes it to list of cores and removes them from list of all possible
+    cores (generated as a list from 0 to N-1, where N = number of cores).
+    This is changed back to string and passed to openstack-config.
+    """
+    vrouter_file = '/etc/contrail/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
+
+    for host_string in args:
+        dpdk = getattr(env, 'dpdk', None)
+        if dpdk:
+            if env.host_string in dpdk:
+                try:
+                    vr_coremask = dpdk[env.host_string]['coremask']
+                except KeyError:
+                    raise RuntimeError("vRouter core mask for host %s is not defined." \
+                        %(host_string))
+            else:
+                print "No %s in the dpdk section in testbed file." \
+                    %(env.host_string)
+                return
+        else:
+            print "No dpdk section in testbed file on host %s." %(env.host_string)
+            return
+
+        if not vr_coremask:
+            raise RuntimeError("Core mask for host %s is not defined." \
+                % host_string)
+
+        if not q_coremask:
+            all_cores = [x for x in xrange(cpu_count())]
+
+            if 'x' in vr_coremask:  # String containing hexadecimal mask.
+                vr_coremask = int(vr_coremask, 16)
+
+                """
+                Convert hexmask to a string with numbers of cores to be used, eg.
+                0x19 -> 11001 -> 10011 -> [(0,1), (1,0), (2,0), (3,1), (4,1)] -> '0,3,4'
+                """
+                vr_coremask = [x[0] for x in enumerate(reversed(bin(vr_coremask)[2:])) if x[1] == '1']
+            elif (',' in vr_coremask) or ('-' in vr_coremask):  # Range or list of cores.
+                vr_coremask = vr_coremask.split(',')  # Get list of core numbers and/or core ranges.
+
+                # Expand ranges like 0-4 to 0, 1, 2, 3, 4.
+                vr_coremask_expanded = []
+                for rng in vr_coremask:
+                    if '-' in rng:  # If it's a range - expand it.
+                        a, b = rng.split('-')
+                        vr_coremask_expanded += range(int(a), int(b)+1)
+                    else:  # If not, just add to the list.
+                        vr_coremask_expanded.append(int(rng))
+
+                vr_coremask = vr_coremask_expanded
+            else:  # A single core.
+                try:
+                    single_core = int(vr_coremask)
+                except ValueError:
+                    raise RuntimeError("Error: vRouter core mask %s for host %s is invalid." \
+                        %(vr_coremask, host_string))
+
+                vr_coremask = []
+                vr_coremask.append(single_core)
+
+            # From list of all cores remove list of vRouter cores and stringify.
+            diff = set(all_cores) - set(vr_coremask)
+            q_coremask = ','.join(str(x) for x in diff)
+
+        with settings(host_string=host_string):
+            # This can fail eg. because openstack-config is not present.
+            # There's no sanity check in openstack-config.
+            if sudo("openstack-config --set /etc/nova/nova.conf DEFAULT vcpu_pin_set %s" \
+                % q_coremask).succeeded:
+                print "QEMU coremask on host %s set to %s." \
+                    %(env.host_string, q_coremask)
+            else:
+                raise RuntimeError("Error: setting QEMU core mask %s for host %s failed." \
+                    %(vr_coremask, host_string))
 
 @roles('build')
 @task
@@ -2306,6 +2406,7 @@ def setup_all(reboot='True'):
     execute('add_tsn', restart=False)
     execute('add_tor_agent', restart=False)
     execute('increase_vrouter_limit')
+    execute('setup_vm_coremask')
     if get_openstack_internal_vip():
         execute('setup_cluster_monitors')
     if reboot == 'True':
