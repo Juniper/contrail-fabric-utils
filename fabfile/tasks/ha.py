@@ -193,7 +193,7 @@ def setup_galera_cluster():
         cmd = "setup-vnc-galera\
             --self_ip %s --keystone_ip %s --galera_ip_list %s\
             --internal_vip %s --openstack_index %d --zoo_ip_list %s --keystone_user %s\
-            --keystone_pass %s --cmon_user %s --cmon_pass %s --monitor_galera %s" % (self_ip, keystone_ip,
+            --keystone_pass %s --cmon_user %s --cmon_pass %s --monitor_galera %s" % (self_ip, authserver_ip,
             ' '.join(galera_ip_list), internal_vip,
             (openstack_host_list.index(self_host) + 1), ' '.join(zoo_ip_list), keystone_db_user, keystone_db_pass,
             cmon_db_user, cmon_db_pass, monitor_galera)
