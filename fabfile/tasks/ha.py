@@ -3,11 +3,12 @@ import tempfile
 from fabfile.config import *
 from fabfile.templates import openstack_haproxy, collector_haproxy
 from fabfile.tasks.helpers import enable_haproxy
-from fabfile.utils.fabos import detect_ostype, get_as_sudo
+from fabfile.utils.fabos import detect_ostype, get_as_sudo, is_package_installed
 from fabfile.utils.host import get_authserver_ip, get_control_host_string,\
     hstr_to_ip, get_from_testbed_dict, get_service_token, get_env_passwords,\
     get_openstack_internal_vip, get_openstack_external_vip,\
     get_contrail_internal_vip, get_contrail_external_vip
+from fabfile.utils.cluster import get_orchestrator
 
 @task
 @EXECUTE_TASK
@@ -18,12 +19,14 @@ def fix_restart_xinetd_conf():
 
 @task
 def fix_restart_xinetd_conf_node(*args):
-    """Fix contrail-mysqlprobe to accept connection only from this node, USAGE:fab fix_restart_xinetd_conf_node:user@1.1.1.1,user@2.2.2.2"""
+    """Fix contrail-mysqlprobe to accept connection only from this node,
+       USAGE:fab fix_restart_xinetd_conf_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        self_ip = hstr_to_ip(get_control_host_string(host_string))
-        sudo("sed -i -e 's#only_from       = 0.0.0.0/0#only_from       = %s 127.0.0.1#' /etc/xinetd.d/contrail-mysqlprobe" % self_ip)
-        sudo("service xinetd restart")
-        sudo("chkconfig xinetd on")
+        with settings(host_string=host_string):
+            self_ip = hstr_to_ip(get_control_host_string(host_string))
+            sudo("sed -i -e 's#only_from       = 0.0.0.0/0#only_from       = %s 127.0.0.1#' /etc/xinetd.d/contrail-mysqlprobe" % self_ip)
+            sudo("service xinetd restart")
+            sudo("chkconfig xinetd on")
 
 @task
 @EXECUTE_TASK
@@ -34,10 +37,11 @@ def fix_memcache_conf():
 
 @task
 def fix_memcache_conf_node(*args):
-    """Increases the memcached memory to 2048 and listen address to mgmt ip. USAGE:fab fix_memcache_conf_node:user@1.1.1.1,user@2.2.2.2"""
+    """Increases the memcached memory to 2048 and listen address to mgmt ip.
+       USAGE:fab fix_memcache_conf_node:user@1.1.1.1,user@2.2.2.2"""
     memory = '2048'
     for host_string in args:
-        listen_ip = hstr_to_ip(env.host_string)
+        listen_ip = hstr_to_ip(host_string)
         with settings(host_string=host_string, warn_only=True):
             if detect_ostype() == 'ubuntu':
                 memcache_conf='/etc/memcached.conf'
@@ -59,21 +63,27 @@ def fix_memcache_conf_node(*args):
 @EXECUTE_TASK
 @roles('cfgm')
 def tune_tcp():
-    with settings(hide('stderr'), warn_only=True):
-        if sudo("grep '^net.netfilter.nf_conntrack_max' /etc/sysctl.conf").failed:
-            sudo('echo "net.netfilter.nf_conntrack_max = 256000" >> /etc/sysctl.conf')
-        if sudo("grep '^net.netfilter.nf_conntrack_tcp_timeout_time_wait' /etc/sysctl.conf").failed:
-            sudo('echo "net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30" >> /etc/sysctl.conf')
-        if sudo("grep '^net.ipv4.tcp_syncookies' /etc/sysctl.conf").failed:
-            sudo('echo "net.ipv4.tcp_syncookies = 1" >> /etc/sysctl.conf')
-        if sudo("grep '^net.ipv4.tcp_tw_recycle' /etc/sysctl.conf").failed:
-            sudo('echo "net.ipv4.tcp_tw_recycle = 1" >> /etc/sysctl.conf')
-        if sudo("grep '^net.ipv4.tcp_tw_reuse' /etc/sysctl.conf").failed:
-            sudo('echo "net.ipv4.tcp_tw_reuse = 1" >> /etc/sysctl.conf')
-        if sudo("grep '^net.ipv4.tcp_fin_timeout' /etc/sysctl.conf").failed:
-            sudo('echo "net.ipv4.tcp_fin_timeout = 30" >> /etc/sysctl.conf')
-        if sudo("grep '^net.unix.max_dgram_qlen' /etc/sysctl.conf").failed:
-            sudo('echo "net.unix.max_dgram_qlen = 1000" >> /etc/sysctl.conf')
+    """ Tune TCP parameters in all cfgm nodes """
+    execute('tune_tcp_node', env.host_string)
+
+@task
+def tune_tcp_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            if sudo("grep '^net.netfilter.nf_conntrack_max' /etc/sysctl.conf").failed:
+                sudo('echo "net.netfilter.nf_conntrack_max = 256000" >> /etc/sysctl.conf')
+            if sudo("grep '^net.netfilter.nf_conntrack_tcp_timeout_time_wait' /etc/sysctl.conf").failed:
+                sudo('echo "net.netfilter.nf_conntrack_tcp_timeout_time_wait = 30" >> /etc/sysctl.conf')
+            if sudo("grep '^net.ipv4.tcp_syncookies' /etc/sysctl.conf").failed:
+                sudo('echo "net.ipv4.tcp_syncookies = 1" >> /etc/sysctl.conf')
+            if sudo("grep '^net.ipv4.tcp_tw_recycle' /etc/sysctl.conf").failed:
+                sudo('echo "net.ipv4.tcp_tw_recycle = 1" >> /etc/sysctl.conf')
+            if sudo("grep '^net.ipv4.tcp_tw_reuse' /etc/sysctl.conf").failed:
+                sudo('echo "net.ipv4.tcp_tw_reuse = 1" >> /etc/sysctl.conf')
+            if sudo("grep '^net.ipv4.tcp_fin_timeout' /etc/sysctl.conf").failed:
+                sudo('echo "net.ipv4.tcp_fin_timeout = 30" >> /etc/sysctl.conf')
+            if sudo("grep '^net.unix.max_dgram_qlen' /etc/sysctl.conf").failed:
+                sudo('echo "net.unix.max_dgram_qlen = 1000" >> /etc/sysctl.conf')
 
 def get_nfs_server():
     try:
@@ -114,13 +124,17 @@ def setup_glance_images_loc():
 @serial
 @hosts(*env.roledefs['openstack'][1:])
 def sync_keystone_ssl_certs():
-    host_string = env.host_string
-    temp_dir= tempfile.mkdtemp()
-    with settings(host_string=env.roledefs['openstack'][0], password=get_env_passwords(env.roledefs['openstack'][0])):
-       get_as_sudo('/etc/keystone/ssl/', temp_dir)
-    with settings(host_string=host_string, password=get_env_passwords(host_string)):
-        put('%s/ssl/' % temp_dir, '/etc/keystone/', use_sudo=True)
-        sudo('service keystone restart')
+    execute('sync_keystone_ssl_certs_node', env.host_string)
+
+@task
+def sync_keystone_ssl_certs_node(*args):
+    for host_string in args:
+        temp_dir= tempfile.mkdtemp()
+        with settings(host_string=env.roledefs['openstack'][0], password=get_env_passwords(env.roledefs['openstack'][0])):
+            get_as_sudo('/etc/keystone/ssl/', temp_dir)
+        with settings(host_string=host_string, password=get_env_passwords(host_string)):
+            put('%s/ssl/' % temp_dir, '/etc/keystone/', use_sudo=True)
+            sudo('service keystone restart')
 
 @task
 def fix_wsrep_cluster_address():
@@ -153,8 +167,73 @@ def setup_cluster_monitors():
     if len(env.roledefs['openstack']) <= 1:
         print "Single Openstack cluster, skipping starting cluster monitor."
         return
-    sudo("service contrail-hamon restart")
-    sudo("chkconfig contrail-hamon on")
+    execute('setup_cluster_monitors_node', env.host_string)
+
+@task
+def setup_cluster_monitors_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string):
+            sudo("service contrail-hamon restart")
+            sudo("chkconfig contrail-hamon on")
+
+@task
+def join_galera_cluster(new_ctrl_host):
+    """ Task to join a new into an existing Galera cluster """
+    execute('setup_passwordless_ssh', *env.roledefs['openstack'])
+
+    # Adding the user permission for the node to be added in
+    # the other nodes.
+    new_ctrl_data_host_string = get_control_host_string(new_ctrl_host)
+    new_ctrl_ip = new_ctrl_data_host_string.split('@')[1]
+
+    for host_string in env.roledefs['openstack']:
+        if host_string != new_ctrl_host:
+            with settings(host_string=host_string):
+                cmd = "add-mysql-perm --node_to_add %s" % new_ctrl_ip
+                sudo(cmd)
+
+    openstack_host_list = [get_control_host_string(openstack_host)\
+                           for openstack_host in env.roledefs['openstack']]
+
+    galera_ip_list = [hstr_to_ip(galera_host)\
+                      for galera_host in openstack_host_list]
+
+    authserver_ip = get_authserver_ip()
+    internal_vip = get_openstack_internal_vip()
+
+    with settings(host_string = new_ctrl_host):
+        sudo("setup-vnc-galera\
+            --self_ip %s --keystone_ip %s --galera_ip_list %s\
+            --internal_vip %s --openstack_index %d" % (new_ctrl_ip, authserver_ip,
+                ' '.join(galera_ip_list), internal_vip,
+                (openstack_host_list.index(new_ctrl_data_host_string) + 1)))
+
+    for host_string in env.roledefs['openstack']:
+        if host_string != new_ctrl_host:
+            with settings(host_string=host_string):
+                self_host = get_control_host_string(env.host_string)
+                self_ip = hstr_to_ip(self_host)
+
+                cmd = "add-galera-config\
+                     --node_to_add %s\
+                     --self_ip %s\
+                     --keystone_ip %s\
+                     --zoo_ip_list %s\
+                     --keystone_user %s\
+                     --keystone_pass %s\
+                     --cmon_user %s\
+                     --cmon_pass %s\
+                     --monitor_galera %s\
+                     --galera_ip_list %s\
+                     --internal_vip %s\
+                     --openstack_index %d" % (new_ctrl_ip,
+                     self_ip, authserver_ip,
+                     ' '.join(zoo_ip_list), 
+                     keystone_db_user, keystone_db_pass,
+                     cmon_db_user, cmon_db_pass, monitor_galera, 
+                     ' '.join(galera_ip_list), internal_vip,
+                     (openstack_host_list.index(self_host) + 1))
+                sudo(cmd)
 
 @task
 @serial
@@ -395,7 +474,6 @@ def fixup_restart_haproxy_in_openstack_node(*args):
             sudo("openstack-config --set /etc/keystone/keystone.conf DEFAULT public_port 6000")
             sudo("openstack-config --set /etc/keystone/keystone.conf DEFAULT admin_port 35358")
 
-
 @task
 @EXECUTE_TASK
 @roles('cfgm')
@@ -448,6 +526,14 @@ def fixup_restart_haproxy_in_collector_node(*args):
             sudo("chkconfig haproxy on")
             enable_haproxy()
             sudo("service haproxy restart")
+
+@task
+def join_keepalived_cluster(new_ctrl_host):
+    """Task to configure a new node into an existing keepalived cluster"""
+    if get_openstack_internal_vip():
+        execute('join_openstack_keepalived_node', new_ctrl_host)
+    if get_contrail_internal_vip() != get_openstack_internal_vip():
+        execute('join_contrail_keepalived_node', new_ctrl_host)
 
 @task
 @serial
@@ -513,48 +599,69 @@ def create_and_copy_service_token():
                 sudo("echo '%s' > /etc/contrail/service.token" % service_token)
 
 @task
+def join_openstack_keepalived_node(new_ctrl_host):
+    """Task to provision a new node into a cluster of openstack nodes with keepalived"""
+    with settings(host_string = new_ctrl_host):
+        enable_haproxy()
+        sudo("service haproxy restart")
+        setup_keepalived_node('openstack')
+
+@task
+def join_contrail_keepalived_node(new_ctrl_host):
+    """Task to provision a new node into a cluster of Contrail CFGM nodes with keepalived"""
+    with settings(host_string = new_ctrl_host):
+        enable_haproxy()
+        sudo("service haproxy restart")
+        setup_keepalived_node('cfgm')
+
+@task
 @serial
 @roles('openstack')
 def setup_cmon_schema():
-    """Task to configure cmon schema in the openstack nodes to monitor galera cluster"""
+    execute('setup_cmon_schema_node', env.host_string)
+
+@task
+def setup_cmon_schema_node(*args):
+    """Task to configure cmon schema in the given host to monitor galera cluster"""
     if len(env.roledefs['openstack']) <= 1:
         print "Single Openstack cluster, skipping cmon schema  setup."
         return
 
-    openstack_host_list = [get_control_host_string(openstack_host)\
-                           for openstack_host in env.roledefs['openstack']]
-    galera_ip_list = [hstr_to_ip(galera_host)\
-                      for galera_host in openstack_host_list]
-    internal_vip = get_openstack_internal_vip()
+    for host_string in args:
+        openstack_host_list = [get_control_host_string(openstack_host)\
+                               for openstack_host in env.roledefs['openstack']]
+        galera_ip_list = [hstr_to_ip(galera_host)\
+                          for galera_host in openstack_host_list]
+        internal_vip = get_openstack_internal_vip()
 
-    mysql_token = sudo("cat /etc/contrail/mysql.token")
-    pdist = detect_ostype()
-    if pdist in ['ubuntu']:
-        mysql_svc = 'mysql'
-    elif pdist in ['centos', 'redhat']:
-        mysql_svc = 'mysqld'
-    # Create cmon schema
-    sudo('mysql -u root -p%s -e "CREATE SCHEMA IF NOT EXISTS cmon"' % mysql_token)
-    sudo('mysql -u root -p%s < /usr/local/cmon/share/cmon/cmon_db.sql' % mysql_token)
-    sudo('mysql -u root -p%s < /usr/local/cmon/share/cmon/cmon_data.sql' % mysql_token)
+        mysql_token = sudo("cat /etc/contrail/mysql.token")
+        pdist = detect_ostype()
+        if pdist in ['ubuntu']:
+            mysql_svc = 'mysql'
+        elif pdist in ['centos', 'redhat']:
+            mysql_svc = 'mysqld'
 
-    # insert static data
-    sudo('mysql -u root -p%s -e "use cmon; insert into cluster(type) VALUES (\'galera\')"' % mysql_token)
+        # Create cmon schema
+        sudo('mysql -u root -p%s -e "CREATE SCHEMA IF NOT EXISTS cmon"' % mysql_token)
+        sudo('mysql -u root -p%s < /usr/local/cmon/share/cmon/cmon_db.sql' % mysql_token)
+        sudo('mysql -u root -p%s < /usr/local/cmon/share/cmon/cmon_data.sql' % mysql_token)
 
-    host_list = galera_ip_list + ['localhost', '127.0.0.1', internal_vip]
-    # Create cmon user
-    for host in host_list:
-        mysql_cmon_user_cmd = 'mysql -u root -p%s -e "CREATE USER \'cmon\'@\'%s\' IDENTIFIED BY \'cmon\'"' % (
-                               mysql_token, host)
-        with settings(hide('everything'),warn_only=True):
-            sudo(mysql_cmon_user_cmd)
+        # insert static data
+        sudo('mysql -u root -p%s -e "use cmon; insert into cluster(type) VALUES (\'galera\')"' % mysql_token)
 
-    mysql_cmd =  "mysql -uroot -p%s -e" % mysql_token
-    # Grant privilages for cmon user.
-    for host in host_list:
-        sudo('%s "GRANT ALL PRIVILEGES on *.* TO cmon@%s IDENTIFIED BY \'cmon\' WITH GRANT OPTION"' %
-               (mysql_cmd, host))
+        host_list = galera_ip_list + ['localhost', '127.0.0.1', internal_vip]
+        # Create cmon user
+        for host in host_list:
+            mysql_cmon_user_cmd = 'mysql -u root -p%s -e "CREATE USER \'cmon\'@\'%s\' IDENTIFIED BY \'cmon\'"' % (
+                                   mysql_token, host)
+            with settings(hide('everything'),warn_only=True):
+                sudo(mysql_cmon_user_cmd)
 
+        mysql_cmd =  "mysql -uroot -p%s -e" % mysql_token
+        # Grant privileges for cmon user.
+        for host in host_list:
+            sudo('%s "GRANT ALL PRIVILEGES on *.* TO cmon@%s IDENTIFIED BY \'cmon\' WITH GRANT OPTION"' %
+                   (mysql_cmd, host))
 
 @task
 @EXECUTE_TASK
@@ -581,6 +688,97 @@ def setup_cmon_param_zkonupgrade():
     sudo("grep -q 'CMON_PASS' %s || echo 'CMON_PASS=%s' >> %s" % (cmon_param, cmon_db_pass, cmon_param))
     sudo("grep -q 'MONITOR_GALERA' %s || echo 'MONITOR_GALERA=%s' >> %s" % (cmon_param, monitor_galera, cmon_param))
 
+@task
+@roles('openstack')
+def start_openstack():
+    with settings(warn_only=True):
+        sudo('service supervisor-openstack start')
+
+@task
+@roles('build')
+def join_orchestrator(new_ctrl_host):
+    orch = get_orchestrator()
+    if orch == 'openstack':
+        execute('increase_ulimits_node', new_ctrl_host)
+        execute('setup_openstack_node', new_ctrl_host)
+        if is_package_installed('contrail-openstack-dashboard'):
+            execute('setup_contrail_horizon_node', new_ctrl_host)
+        if get_openstack_internal_vip():
+            execute('sync_keystone_ssl_certs_node', new_ctrl_host)
+            execute('setup_cluster_monitors_node', new_ctrl_host)
+        with settings(host_string = new_ctrl_host):
+            sudo('service supervisor-openstack restart')
+        execute('verify_openstack')
+
+@task
+@roles('build')
+def join_ha_cluster(new_ctrl_host):
+    execute('pre_check')
+
+    if get_contrail_internal_vip():
+        print "Contrail HA setup - Adding %s to existing \
+               cluster", new_ctrl_host
+        execute('join_keepalived_cluster', new_ctrl_host)
+        execute('fixup_restart_haproxy_in_collector')
+
+    if get_openstack_internal_vip():
+        if new_ctrl_host in env.roledefs['openstack']:
+            print "Multi Openstack setup, Adding %s to the existing \
+                   OpenStack cluster", new_ctrl_host
+            execute('join_galera_cluster', new_ctrl_host)
+            execute('setup_cmon_schema_node', new_ctrl_host)
+            execute('fix_restart_xinetd_conf_node', new_ctrl_host)
+            execute('fixup_restart_haproxy_in_openstack')
+            execute('start_openstack')
+            execute('fix_memcache_conf_node', new_ctrl_host)
+            execute('tune_tcp_node', new_ctrl_host)
+            execute('fix_cmon_param_and_add_keys_to_compute')
+            execute('create_and_copy_service_token')
+            execute('join_rabbitmq_cluster', new_ctrl_host)
+            execute('increase_limits_node', new_ctrl_host)
+            execute('join_orchestrator', new_ctrl_host)
+
+        if new_ctrl_host in env.roledefs['database']:
+            execute('setup_database_node', new_ctrl_host)
+            execute('fix_zookeeper_config')
+            execute('restart_all_zookeeper_servers')
+
+        if new_ctrl_host in env.roledefs['cfgm']:
+            execute('setup_cfgm_node', new_ctrl_host)
+            execute('verify_cfgm')
+            execute('fix_cfgm_config')
+
+        if new_ctrl_host in env.roledefs['control']:
+            execute('setup_control_node', new_ctrl_host)
+            execute('verify_control')
+
+        if new_ctrl_host in env.roledefs['collector']:
+            execute('setup_collector_node', new_ctrl_host)
+            execute('fix_collector_config')
+            execute('verify_collector')
+
+        if new_ctrl_host in env.roledefs['webui']:
+            execute('setup_webui_node', new_ctrl_host)
+            execute('fix_webui_config')
+            execute('verify_webui')
+
+        if new_ctrl_host in env.roledefs['cfgm']:
+            execute('prov_config_node', new_ctrl_host)
+            execute('prov_metadata_services')
+            execute('prov_encap_type')
+
+        if new_ctrl_host in env.roledefs['database']:
+            execute('prov_database_node', new_ctrl_host)
+
+        if new_ctrl_host in env.roledefs['collector']:
+            execute('prov_analytics_node', new_ctrl_host)
+
+        if new_ctrl_host in env.roledefs['control']:
+            execute('prov_control_bgp')
+            execute('prov_external_bgp')
+
+        execute('setup_remote_syslog')
+ 
 @task
 @roles('build')
 def setup_ha():
