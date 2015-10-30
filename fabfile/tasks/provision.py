@@ -1908,7 +1908,7 @@ def add_tor_agent_by_id(tid, node_info, restart=True):
             %(host_string)
         return
     for i in range(len(toragent_dict[host_string])):
-        tor_id= int(toragent_dict[host_string][i]['tor_id'])
+        tor_id = int(get_tor_agent_id(toragent_dict[host_string][i]))
         if int(tid) == tor_id:
             execute("add_tor_agent_by_index", i, host_string, restart)
 
@@ -2104,7 +2104,7 @@ def delete_tor_agent_by_id(tid, node_info, restart=True):
             %(host_string)
         return
     for i in range(len(toragent_dict[host_string])):
-        tor_id= int(toragent_dict[host_string][i]['tor_id'])
+        tor_id = int(get_tor_agent_id(toragent_dict[host_string][i]))
         if int(tid) == tor_id:
             execute("delete_tor_agent_by_index", i, host_string, restart)
 
