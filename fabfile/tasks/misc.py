@@ -31,12 +31,7 @@ def add_vrouter_node(*args):
                 execute("install_interface_name_node", env.host_string)
                 #Clear the connections cache
                 connections.clear()
-            orch = get_orchestrator();
-            run_setup_iface = True
-            if orch == 'vcenter' or 'vcenter_compute' in env.roledefs:
-                run_setup_iface = False
-            if (run_setup_iface == True):
-                execute("setup_interface_node", env.host_string)
+            execute("setup_interface_node", env.host_string)
             execute("add_static_route_node", env.host_string)
             execute("upgrade_pkgs_node", env.host_string)
             execute("setup_vrouter_node", env.host_string)
