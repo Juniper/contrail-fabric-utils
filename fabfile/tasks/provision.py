@@ -647,18 +647,30 @@ def setup_cfgm_node(*args):
 
 
 def fixup_ceilometer_conf_common():
-    conf_file = '/etc/ceilometer/ceilometer.conf'
+    conf_file = "/etc/ceilometer/ceilometer.conf"
+    openstack_sku = get_openstack_sku()
+    database_host_list = [get_control_host_string(entry)\
+                            for entry in env.roledefs['database']]
+    database_ip_list = ["%s:27017" % (hstr_to_ip(db_host))\
+                            for db_host in database_host_list]
+    database_ip_str = ','.join(database_ip_list)
+    value = "mongodb://ceilometer:CEILOMETER_DBPASS@" + database_ip_str + \
+                "/ceilometer?replicaSet=rs-ceilometer"
+    if openstack_sku == 'havana':
+        sudo("openstack-config --set %s DEFAULT connection %s" % (conf_file, value))
+    else:
+        sudo("openstack-config --set %s database connection %s" % (conf_file, value))
     amqp_server_ip = get_openstack_amqp_server()
     sudo("openstack-config --set %s DEFAULT rabbit_host %s" % (conf_file, amqp_server_ip))
     value = "/var/log/ceilometer"
     sudo("openstack-config --set %s DEFAULT log_dir %s" % (conf_file, value))
     value = "a74ca26452848001921c"
-    openstack_sku = get_openstack_sku()
     if openstack_sku == 'havana':
         sudo("openstack-config --set %s DEFAULT metering_secret %s" % (conf_file, value))
     else:
         sudo("openstack-config --set %s publisher metering_secret %s" % (conf_file, value))
     sudo("openstack-config --set %s DEFAULT auth_strategy keystone" % conf_file)
+    sudo("openstack-config --set %s database time_to_live %d" % (conf_file, get_ceilometer_ttl()))
 #end fixup_ceilometer_conf_common
 
 def fixup_ceilometer_conf_keystone(openstack_ip):
@@ -934,18 +946,6 @@ def setup_ceilometer_node(*args):
                                        'ceilometer-collector',
                                        'ceilometer-alarm-evaluator',
                                        'ceilometer-alarm-notifier']
-            conf_file = "/etc/ceilometer/ceilometer.conf"
-            database_host_list = [get_control_host_string(entry)\
-                                     for entry in env.roledefs['database']]
-            database_ip_list = ["%s:27017" % (hstr_to_ip(db_host))\
-                                   for db_host in database_host_list]
-            database_ip_str = ','.join(database_ip_list)
-            value = "mongodb://ceilometer:CEILOMETER_DBPASS@" + database_ip_str + \
-                        "/ceilometer?replicaSet=rs-ceilometer"
-            if openstack_sku == 'havana':
-                sudo("openstack-config --set %s DEFAULT connection %s" % (conf_file, value))
-            else:
-                sudo("openstack-config --set %s database connection %s" % (conf_file, value))
             fixup_ceilometer_conf_common()
             #keystone auth params
             cmd = "source /etc/contrail/openstackrc;keystone user-get ceilometer"

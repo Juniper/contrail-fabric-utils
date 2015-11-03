@@ -60,6 +60,9 @@ def get_ceilometer_interval():
     return getattr(testbed, 'ceilometer_polling_interval', '600')
 #end get_ceilometer_interval
 
+def get_ceilometer_ttl():
+    return getattr(testbed, 'ceilometer_ttl', 7200)
+#end get_ceilometer_ttl
 
 def is_ceilometer_supported(use_install_repo=False):
     # Ceilometer should be enabled
