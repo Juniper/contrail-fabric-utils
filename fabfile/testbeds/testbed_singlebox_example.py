@@ -255,6 +255,14 @@ env.ostypes = {
 # Default Value: False
 #enable_ceilometer = True
 
+# Ceilometer polling interval for meters in seconds
+# Default Value: 600
+#ceilometer_polling_interval = 600
+
+# Ceilometer data TTL in seconds
+# Default Value: 7200
+#ceilometer_ttl = 7200
+
 #OPTIONAL REMOTE SYSLOG CONFIGURATION
 #===================================
 #For R1.10 this needs to be specified to enable rsyslog.
