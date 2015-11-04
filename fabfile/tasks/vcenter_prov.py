@@ -109,59 +109,6 @@ class pci_fab(object):
         if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOff:
             print "Turning VM: %s On" %(vm_name)
             self.poweron(si, vm)
-        sleep(30)
-        for host_string in compute_list:
-            if host_string == esxi_info[host]['contrail_vm']['host']:
-                found = True
-                break
-        password = password_list[host_string]
-        bond = ""
-        if (bond_list and host_string in bond_list):
-            bond = bond_list[host_string]
-        with settings(host_string = host_string, password = password,
-                     warn_only = True, shell = '/bin/bash -l -c'):
-            iface_idx = 1
-            iface_list = ""
-            mode = ""
-            ori_file = "/etc/network/interfaces"
-            new_file = "/var/tmp/interfaces"
-            run("cp %s %s" %(ori_file, new_file))
-            for nic in nic_list:
-                    iface = "eth%d" %iface_idx
-                    run("printf '\n' >> %s" %new_file)
-                    run("printf 'auto %s\n' >> %s" %(iface, new_file))
-                    if (bond and nic in bond['member']):
-                        idx = nic.find(":")
-                        if (idx >= 0):
-                            cur_nic_mode = "sr-iov"
-                            if (mode == ""):
-                                mode = "sr-iov"
-                        else:
-                            cur_nic_mode = "pass-through"
-                            if (mode == ""):
-                                mode = cur_nic_mode
-                        if (mode != cur_nic_mode):
-                            print "bond is configured with mixed interface-types"
-                            return False
-                        run("printf 'iface %s inet manual\n' >> %s" %(iface, new_file))
-                        run("printf '    bond-master  %s\n'>> %s" %(bond['name'], new_file))
-                        iface_list += iface
-                        iface_list += " "
-                    else:
-                        run("printf 'iface %s inet dhcp\n' >> %s" %(iface, new_file))
-                    iface_idx += 1
-            run("touch /var/tmp/pci")
-            if (bond and len(iface_list)):
-                run("printf '\n' >> %s" %new_file)
-                run("printf 'auto %s\n' >> %s" %(bond['name'], new_file))
-                run("printf 'iface %s inet dhcp\n' >> %s" %(bond['name'], new_file))
-                run("printf '    bond_mode %s\n' >> %s" %(bond['mode'], new_file))
-                run("printf '    bond_xmit_hash_policy %s\n' >> %s" %(bond['xmit_hash_policy'], new_file))
-                run("printf '    bond_miimon 100\n' >> %s" %new_file)
-                run("printf '    bond-slaves %s\n' >> %s" %(iface_list, new_file))
-            run("cp %s %s" %(new_file, ori_file))
-            run("rm %s" %new_file)
-            run('reboot')
         return True
 
     def get_obj(self, vimtype, name):
@@ -500,51 +447,6 @@ class Vcenter(object):
             print "Caught vmodl fault : " + error.msg
             return 
 
-    def add_iface_config(self, host_string, password):
-        overlay_iface = "eth1"
-        data_iface = "eth0"
-        ori_file = "/etc/network/interfaces"
-        new_file = "/var/tmp/interfaces"
-        with settings(host_string = host_string, password = password,
-                      warn_only = True, shell = '/bin/bash -l -c'):
-            run("cp %s %s" %(ori_file, new_file))
-            if not exists('/var/tmp/pci'):
-                run("sed -i '/auto %s/,/auto/{/auto/!d}' %s" %(data_iface, new_file))
-                run("printf 'iface %s inet dhcp\n' >> %s" %(data_iface, new_file))
-                run("printf '    pre-up ifconfig %s up\n' >> %s" %(data_iface, new_file))
-                run("printf '    post-down ifconfig %s down\n' >> %s" %(data_iface, new_file))
-                run("printf '    pre-up ethtool --offload %s rx off\n' >> %s" %(data_iface, new_file))
-                run("printf '    pre-up ethtool --offload %s tx off\n' >> %s" %(data_iface, new_file))
-                run("printf '\n' >> %s" %new_file)
-                run("printf 'auto %s\n' >> %s" %(overlay_iface, new_file))
-                run("printf 'iface %s inet manual\n' >> %s" %(overlay_iface, new_file))
-                run("printf '    pre-up ifconfig %s up mtu 1500\n' >> %s" %(overlay_iface, new_file))
-                run("printf '    post-down ifconfig %s down\n' >> %s" %(overlay_iface, new_file))
-                run("printf '    pre-up ethtool --offload %s lro off\n' >> %s" %(overlay_iface, new_file))
-            else:
-                count = 1
-                tot_eth_iface = int(run("ifconfig -a | grep ^eth | wc -l"))
-                new_iface_idx = tot_eth_iface
-                while count < tot_eth_iface:
-                    new_iface = "eth%d" %(new_iface_idx)
-                    old_iface = "eth%d" %(new_iface_idx - 1)
-                    run("sed -i 's/%s/%s/' %s" %(old_iface, new_iface, new_file))
-                    if (exists("/etc/udev/rules.d/70-persistent-net.rules")):
-                        run("sed -i 's/%s/%s/' /etc/udev/rules.d/70-persistent-net.rules" %(old_iface, new_iface))
-                    new_iface_idx -= 1
-                    count += 1
-                new_iface_idx = tot_eth_iface
-                run("printf '\n' >> %s" %new_file)
-                run("printf 'auto %s\n' >> %s" %(overlay_iface, new_file))
-                run("printf 'iface %s inet manual\n' >> %s" %(overlay_iface, new_file))
-                run("printf '    pre-up ifconfig %s up mtu 1500\n' >> %s" %(overlay_iface, new_file))
-                run("printf '    post-down ifconfig %s down\n' >> %s" %(overlay_iface, new_file))
-                run("printf '    pre-up ethtool --offload %s lro off\n' >> %s" %(overlay_iface, new_file))
-                run("rm /var/tmp/pci")
-            run("cp %s %s" %(new_file, ori_file))
-            run("rm %s" %new_file)
-            run('init 0')
-
     def create_cluster(self, cluster_name, datacenter):
         
         cluster = self.get_obj([self.pyVmomi.vim.ClusterComputeResource], cluster_name)
@@ -648,7 +550,6 @@ class Vcenter(object):
     def add_vm_to_dvpg(self, si, vm_info_list, dv_switch, dv_port_name):
         devices = []
         vm_name = vm_info_list[0]
-        self.add_iface_config(vm_info_list[1], vm_info_list[2])
         vm = self.get_obj([self.pyVmomi.vim.VirtualMachine], vm_name)
         pg_obj = self.get_obj([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name)
         for device_list in vm.config.hardware.device:

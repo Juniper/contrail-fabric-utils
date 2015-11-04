@@ -2753,8 +2753,12 @@ def update_esxi_vrouter_map():
             tmp_fname = "/tmp/ESXiToVRouterIp-%s" %(env.host_string)
             for esxi_host in esxi_info:
                 esxi_ip = esxi_info[esxi_host]['ip']
+                #use control_data address if specified
                 vrouter_ip_string = esxi_info[esxi_host]['contrail_vm']['host']
-                vrouter_ip = hstr_to_ip(vrouter_ip_string)
+                if vrouter_ip_string in getattr(testbed, 'control_data', []):
+                    vrouter_ip = testbed.control_data[vrouter_ip_string]['ip'].split('/')[0]
+                else:
+                    vrouter_ip = hstr_to_ip(vrouter_ip_string)
                 local("echo '%s:%s' >> %s" %(esxi_ip, vrouter_ip, tmp_fname))
             put(tmp_fname, "/etc/contrail/ESXiToVRouterIp.map", use_sudo=True)
             local("rm %s" %(tmp_fname))
