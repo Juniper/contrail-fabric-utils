@@ -4,7 +4,6 @@ import textwrap
 import json
 import socket
 from time import sleep
-from multiprocessing import cpu_count
 
 from fabric.contrib.files import exists
 
@@ -2277,6 +2276,10 @@ def setup_vm_coremask(q_coremask=False):
     """
     On all nodes setup CPU affinity for QEMU processes based on vRouter/DPDK
     core affinity or q_coremask argument.
+
+    Usage: fab setup_vm_coremask
+           fab setup_vm_coremask:"0-4"
+           fab setup_vm_coremask:"0\,1\,2\,6-7" <- escape commas
     """
     if env.roledefs['compute']:
         execute("setup_vm_coremask_node", q_coremask, env.host_string)
@@ -2318,11 +2321,22 @@ def setup_vm_coremask_node(q_coremask, *args):
             return
 
         if not vr_coremask:
-            raise RuntimeError("Core mask for host %s is not defined." \
+            raise RuntimeError("vRouter core mask for host %s is not defined." \
                 % host_string)
 
         if not q_coremask:
-            all_cores = [x for x in xrange(cpu_count())]
+            try:
+                cpu_count = os.sysconf('SC_NPROCESSORS_CONF')
+            except ValueError:
+                print "Cannot count CPUs on host %s. VM core mask cannot be computed." \
+                    %(env.host_string)
+                raise
+
+            if not cpu_count or cpu_count == -1:
+                raise ValueError("Cannot count CPUs on host %s. VM core mask cannot be computed." \
+                    %(env.host_string))
+
+            all_cores = [x for x in xrange(cpu_count)]
 
             if 'x' in vr_coremask:  # String containing hexadecimal mask.
                 vr_coremask = int(vr_coremask, 16)
@@ -2349,8 +2363,9 @@ def setup_vm_coremask_node(q_coremask, *args):
                 try:
                     single_core = int(vr_coremask)
                 except ValueError:
-                    raise RuntimeError("Error: vRouter core mask %s for host %s is invalid." \
-                        %(vr_coremask, host_string))
+                    print "Error: vRouter core mask %s for host %s is invalid." \
+                        %(vr_coremask, host_string)
+                    raise
 
                 vr_coremask = []
                 vr_coremask.append(single_core)
@@ -2358,6 +2373,11 @@ def setup_vm_coremask_node(q_coremask, *args):
             # From list of all cores remove list of vRouter cores and stringify.
             diff = set(all_cores) - set(vr_coremask)
             q_coremask = ','.join(str(x) for x in diff)
+
+            # If we have no spare cores for VMs
+            if not q_coremask:
+                raise RuntimeError("Setting QEMU core mask for host %s failed - empty string." \
+                    %(host_string))
 
         with settings(host_string=host_string):
             # This can fail eg. because openstack-config is not present.
