@@ -1,4 +1,5 @@
 from fabfile.config import *
+from distutils.version import LooseVersion
 
 from fabfile.tasks.install import pkg_install
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
@@ -160,7 +161,7 @@ def upgrade_compute_node(from_rel, pkg, *args):
             if (getattr(env, 'interface_rename', True) and
                 detect_ostype() not in ['ubuntu', 'redhat']):
                pkgs.append('contrail-interface-name')
-            if float(from_rel) < 2.1:
+            if LooseVersion(from_rel) < LooseVersion('2.10'):
                 dist, version, extra = get_linux_distro()
                 if version == '14.04' and 'contrail-vrouter-3.13.0-35-generic' in pkgs:
                     pkgs.remove('contrail-vrouter-3.13.0-35-generic')
@@ -218,7 +219,7 @@ def upgrade_contrail(from_rel, pkg, orch='yes'):
     execute('upgrade_webui', from_rel, pkg)
     execute('upgrade_compute', from_rel, pkg)
     # Adding config, database and analytics nodes to api-server
-    if float(from_rel) < 2.2:
+    if LooseVersion(from_rel) < LooseVersion('2.20'):
         execute('prov_config_node')
         execute('prov_database_node')
         execute('prov_analytics_node')
