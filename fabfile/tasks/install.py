@@ -273,6 +273,9 @@ def install_database_node(install_mongodb, *args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-database']
+            (dist, version, extra) = get_linux_distro()
+            if dist.lower() == 'ubuntu' and version == '14.04':
+                pkg = ['default-jre-headless'] + pkg
             if install_mongodb and is_ceilometer_install_supported(use_install_repo=True):
                 pkgs_ceilometer_database = ['mongodb-clients', 'mongodb-server']
                 pkg.extend(pkgs_ceilometer_database)
