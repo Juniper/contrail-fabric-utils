@@ -4,6 +4,18 @@ import tempfile
 
 from fabfile.config import *
 
+def normalize_release(rel):
+    rel_list = rel.split('.')
+    normalized_rel_list = [rel_list[0]]
+    for sub_rel in rel_list[1:]:
+        if len(sub_rel) == 1:
+            normalized_sub_rel = sub_rel + '0'
+            normalized_rel_list.append(normalized_sub_rel)
+        else:
+            normalized_rel_list.append(sub_rel)
+
+    return '.'.join(normalized_rel_list)
+
 def copy_pkg(tgt_host, pkg_file):
     with settings(host_string = tgt_host):
         put(pkg_file, use_sudo=True)
@@ -75,7 +87,7 @@ def get_release(pkg='contrail-install-packages', use_install_repo=False):
     if 'is not installed' in pkg_ver or 'is not available' in pkg_ver or 'No such file or directory' in pkg_ver:
         print "Package %s not installed." % pkg
         return None
-    return pkg_ver
+    return normalize_release(pkg_ver)
 
 def get_build(pkg='contrail-install-packages'):
     pkg_rel = None
