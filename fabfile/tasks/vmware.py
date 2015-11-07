@@ -203,7 +203,7 @@ def provision_dvs_fab(vcenter_info, esxi_info, host_list):
 #end provision_dvs_fab
 
 @task
-def provision_pci_fab(vcenter_info, esxi_info, host_list, compute_list, password_list, bond_list):
+def provision_pci_fab(vcenter_info, esxi_info, host_list):
     apt_install(['contrail-vmware-utils'])
     pci_params = {}
 
@@ -216,10 +216,6 @@ def provision_pci_fab(vcenter_info, esxi_info, host_list, compute_list, password
 
     pci_params['esxi_info'] = esxi_info
     pci_params['host_list'] = host_list
-
-    pci_params['compute_list'] = compute_list
-    pci_params['password_list'] = password_list
-    pci_params['bond_list'] = bond_list
 
     pci_fab(pci_params)
 #end provision_pci_fab

@@ -2680,13 +2680,13 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
              std_switch = True
              power_on = True
          if mode == 'vcenter':
-             if 'fabric_vswitch' in esxi_info[host].keys():
-                 std_switch = True
-                 power_on = True
-             elif ('pci_devices' in esxi_info[host]['contrail_vm']) and \
+             if ('pci_devices' in esxi_info[host]['contrail_vm']) and \
                   ('nic' in esxi_info[host]['contrail_vm']['pci_devices']):
                  std_switch = True
                  power_on = False
+             if 'fabric_vswitch' in esxi_info[host].keys():
+                 std_switch = True
+                 power_on = True
              elif 'dv_switch_fab' in vcenter_info.keys():
                  std_switch = False
                  power_on = False
@@ -2743,25 +2743,21 @@ def prov_esxi(*args):
             if not vcenter_info:
                 print 'Info: vcenter block is not defined in testbed file.Exiting'
                 return
-            if 'fabric_vswitch' in esxi_info[h].keys():
-                std_switch = True
-            elif ('pci_devices' in esxi_info[h]['contrail_vm']) and \
+            if ('pci_devices' in esxi_info[h]['contrail_vm']) and \
                  ('nic' in esxi_info[h]['contrail_vm']['pci_devices']):
                 pci_fab = True
+            elif 'fabric_vswitch' in esxi_info[h].keys():
+                std_switch = True
             elif 'dv_switch_fab' in vcenter_info.keys():
                 esxi_info[h]['fabric_vswitch'] = None
                 dv_switch_fab = True
             else:
                 std_switch = True
-    sleep(20)
+    sleep(30)
     if (dv_switch_fab == True):
          provision_dvs_fab(vcenter_info, esxi_info, host_list)
     if (pci_fab == True):
-        role_info = getattr(env, 'roledefs', None)
-        compute_list = role_info['compute']
-        password_list = getattr(env, 'passwords', None)
-        bond_list = getattr(testbed, 'bond', None)
-        provision_pci_fab(vcenter_info, esxi_info, host_list, compute_list, password_list, bond_list)
+        provision_pci_fab(vcenter_info, esxi_info, host_list)
     if orch == 'vcenter' or 'vcenter_compute' in env.roledefs:
          provision_vcenter_features(vcenter_info, esxi_info, host_list)
 
