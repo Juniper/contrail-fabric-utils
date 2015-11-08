@@ -9,7 +9,8 @@ class OpenStackSetupError(Exception):
 
 def verify_service(service, initd_service=False):
     for x in xrange(10):
-        output = sudo("service %s status" % service)
+        with settings(warn_only=True):
+            output = sudo("service %s status" % service)
         if initd_service:
             if output.succeeded:
                 return
