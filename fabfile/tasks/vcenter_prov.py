@@ -23,18 +23,13 @@ class pci_fab(object):
         self.esxi_info = pci_params['esxi_info']
         self.host_list = pci_params['host_list']
 
-        self.compute_list = pci_params['compute_list']
-        self.password_list = pci_params['password_list']
-        self.bond_list = pci_params['bond_list']
-
         try:
             self.connect_to_vcenter()
             for host in self.host_list:
                 if ('pci_devices' in self.esxi_info[host]['contrail_vm']) and \
                    ('nic' in self.esxi_info[host]['contrail_vm']['pci_devices']):
                     vm_name = "ContrailVM" + "-" + self.datacenter_name + "-" + self.esxi_info[host]['ip']
-                    ret = self.add_pci_nics(self.service_instance, self.esxi_info, \
-                               host, vm_name, self.compute_list, self.password_list, self.bond_list)
+                    ret = self.add_pci_nics(self.service_instance, self.esxi_info, host, vm_name)
                     if (ret == False):
                         print "Fatal Error. Cannot proceed further!"
                         return
@@ -42,36 +37,16 @@ class pci_fab(object):
             print "Caught vmodl fault : " + error.msg
             return
 
-    def add_pci_nics(self, si, esxi_info, host, vm_name, compute_list, password_list, bond_list):
+    def add_pci_nics(self, si, esxi_info, host, vm_name):
         vm = self.get_obj([self.pyVmomi.vim.VirtualMachine], vm_name)
-        nic_list = esxi_info[host]['contrail_vm']['pci_devices']['nic']
-        nic_list.sort()
+        pci_id_list = esxi_info[host]['contrail_vm']['pci_devices']['nic']
+        pci_id_list.sort()
         if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOn:
             print "VM:%s is powered ON. Cannot do hot pci add now. Shutting it down" %(vm_name)
             self.poweroff(si, vm);
-        for nic in nic_list:
+        for pci_id in pci_id_list:
             device_config_list = []
             found = False
-            user = esxi_info[host]['username']
-            ip = esxi_info[host]['ip']
-            password = esxi_info[host]['password']
-            login = '%s@%s' % (user, ip)
-            with settings(host_string = login, password = password,
-                    warn_only = True, shell = '/bin/sh -l -c'):
-                idx = nic.find(":")
-                if (idx >= 0):
-                    nic = nic.partition(':')
-                    vf = nic[2]
-                    nic = nic[0]
-                    pci_id = run("vmkchdev -l | grep %s | cut -f 1 -d' '" %(nic))
-                    pci_id = pci_id.split(':', 1)[1]
-                    pci_slot = str(int(pci_id.split(':', 1)[0]))
-                    port = str(int(pci_id.split('.', 1)[1]))
-                    device_id = "PF_0." + pci_slot + "." +  port + "_VF_" + vf
-                else:
-                    device_id = nic
-                pci_id = run("vmkchdev -l | grep %s | cut -f 1 -d' '" %(device_id))
-                pci_id = pci_id.split(':', 1)[1]
             for device_list in vm.config.hardware.device:
                 if (isinstance(device_list,self.pyVmomi.vim.vm.device.VirtualPCIPassthrough)) == True \
                     and device_list.backing.id == pci_id:
