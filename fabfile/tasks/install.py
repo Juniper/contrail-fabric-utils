@@ -20,7 +20,8 @@ from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
 from fabfile.utils.analytics import is_ceilometer_install_supported, \
-    is_ceilometer_compute_install_supported
+    is_ceilometer_compute_install_supported, \
+    is_ceilometer_contrail_plugin_install_supported
 
 @task
 @parallel(pool_size=20)
