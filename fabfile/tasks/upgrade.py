@@ -238,9 +238,9 @@ def upgrade_contrail(from_rel, pkg, orch='yes'):
     execute('upgrade_compute', from_rel, pkg)
     # Adding config, database and analytics nodes to api-server
     if float(from_rel) < 2.2:
-        execute('prov_config_node')
-        execute('prov_database_node')
-        execute('prov_analytics_node')
+        execute('prov_config')
+        execute('prov_database')
+        execute('prov_analytics')
     execute('compute_reboot')
     #Clear the connections cache
     connections.clear()

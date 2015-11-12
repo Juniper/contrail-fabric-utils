@@ -2415,9 +2415,9 @@ def setup_all(reboot='True'):
     if 'vcenter_compute' in env.roledefs:
         execute('setup_vcenter_compute')
     execute('setup_vrouter')
-    execute('prov_config_node')
-    execute('prov_database_node')
-    execute('prov_analytics_node')
+    execute('prov_config')
+    execute('prov_database')
+    execute('prov_analytics')
     execute('prov_control_bgp')
     execute('prov_external_bgp')
     execute('prov_metadata_services')
@@ -2652,8 +2652,8 @@ def reset_config():
     else:
         execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
     sleep(60)
-    execute(prov_database_node)
-    execute(prov_analytics_node)
+    execute(prov_database)
+    execute(prov_analytics)
     execute(prov_control_bgp)
     execute(prov_external_bgp)
     execute(prov_metadata_services)
