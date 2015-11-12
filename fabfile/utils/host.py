@@ -210,8 +210,21 @@ def get_openstack_amqp_server():
         (rabbit_vip or hstr_to_ip(get_control_host_string(env.roledefs[amqp_in_role][0]))))
 
 def get_contrail_amqp_server():
+    """Returns first cfgm ip in case of non HA setup and
+       contrail_internal_vip in case of HA setup
+    """
     internal_vip = get_contrail_internal_vip()
     return (internal_vip or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0])))
+
+def get_amqp_servers():
+    """Returns a list of amqp servers"""
+    amqp_ip_list = get_from_testbed_dict('cfgm', 'amqp_hosts',
+                       [hstr_to_ip(get_control_host_string(amqp_host))\
+                        for amqp_host in env.roledefs['cfgm']]
+    return amqp_ip_list
+
+def get_amqp_port():
+    return get_from_testbed_dict('cfgm', 'amqp_port', '5672')
 
 def get_quantum_service_protocol():
     return get_from_testbed_dict('neutron', 'protocol', 'http')

@@ -121,7 +121,6 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     mt_opt = '--multi_tenancy' if get_mt_enable() else ''
     cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host))\
                          for cassandra_host in env.roledefs['database']]
-    amqp_server_ip = get_contrail_amqp_server()
     orch = get_orchestrator()
     cassandra_user = get_cassandra_user()
     cassandra_password = get_cassandra_password()
@@ -133,7 +132,8 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cmd += " --quantum_port %s" % quantum_port
     cmd += " --nworkers %d" % nworkers
     cmd += " --service_token %s" % get_service_token()
-    cmd += " --amqp_server_ip %s" % amqp_server_ip
+    cmd += " --amqp_ip_list %s" % ' '.join(get_amqp_servers())
+    cmd += " --amqp_port %s" % get_amqp_port()
     cmd += " --orchestrator %s" % orch
     haproxy = get_haproxy()
     if haproxy:
