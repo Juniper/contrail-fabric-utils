@@ -345,6 +345,10 @@ def join_rabbitmq_cluster(new_ctrl_host):
 @roles('build')
 def setup_rabbitmq_cluster(force=False):
     """Task to cluster the rabbit servers."""
+    rabbit_servers = get_from_testbed_dict('cfgm', 'amqp_hosts', None)
+    if rabbit_servers:
+        print "Using external rabbitmq servers %s" % rabbit_servers
+        return
     # Provision rabbitmq cluster in cfgm role nodes.
     amqp_roles = ['cfgm']
     if get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes':
