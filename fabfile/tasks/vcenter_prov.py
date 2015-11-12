@@ -592,7 +592,6 @@ class Vcenter(object):
 
             dvs_config_spec.name = dvs_name
             dvs_create_spec.configSpec = dvs_config_spec
-            dvs_create_spec.productInfo = self.pyVmomi.vim.dvs.ProductSpec(version='5.5.0')
             task = network_folder.CreateDVS_Task(dvs_create_spec)
             self.wait_for_task(task,si)
             print "Successfully created DVS ", dvs_name
