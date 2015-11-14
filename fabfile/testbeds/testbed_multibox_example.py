@@ -382,7 +382,7 @@ env.ostypes = {
 #Definition for the Key used
 #-------------------------------------
 # tor_ip: IP of the tor switch
-# tor_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
+# tor_agent_id: Unique Id of the tor switch to identify. Typicaly a numeric value.
 # tor_agent_name: Unique name for TOR Agent. This is an optional field. If this is
 #                 not specified, name used will be <hostname>-<tor_id>
 # tor_type: Always ovs
@@ -401,7 +401,7 @@ env.ostypes = {
 #
 #env.tor_agent = {host10:[{
 #                    'tor_ip':'10.204.217.39',
-#                    'tor_id':'1',
+#                    'tor_agent_id':'1',
 #                    'tor_agent_name':'nodexx-1',
 #                    'tor_type':'ovs',
 #                    'tor_ovs_port':'9999',
