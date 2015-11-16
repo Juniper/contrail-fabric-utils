@@ -23,10 +23,34 @@ def install_rhosp5_repo():
 
 @task
 @roles('openstack')
+def install_rhosp7_repo():
+    """ copy local rhosp7 repo locations """
+    put('fabfile/contraillabs/repo/rhosp7_local.repo', '/etc/yum.repos.d/rhosp7_local.repo', use_sudo=True)
+    sudo('yum clean all')
+
+@task
+@roles('openstack')
 def install_rhosp6_repo():
     """ copy local rhosp6 repo locations """
     put('fabfile/contraillabs/repo/rhosp6_local.repo', '/etc/yum.repos.d/rhosp6_local.repo', use_sudo=True)
     sudo('yum clean all')
+
+@task
+@roles('all')
+def update_all_node(reboot='True'):
+    with settings(warn_only=True):
+        sudo("yum -y install yum-utils")
+        sudo("yum -y install kernel-headers")
+        sudo("yum update -y")
+        print "[%s]: Disable NeworkManager and reboot" % env.host_string
+        sudo("systemctl stop NetworkManager")
+        sudo("systemctl disable NetworkManager")
+    if reboot == 'True':
+        execute(reboot_nodes, env.host_string)
+        pass
+    else:
+        print '[%s]: WARNING: Skipping Reboot as reboot!=True. '\
+              'Reboot manually to avoid misconfiguration!' % env.host_string
 
 @task
 @roles('openstack')
@@ -96,7 +120,7 @@ def setup_rhosp_node():
 
     # remove endpoint lists pointing to openstack and recreate point to first cfgm
     os_ip = testbed.env['roledefs']['openstack'][0].split('@')[1]
-    endpoint_id_openstack = sudo('source /etc/contrail/openstackrc; keystone endpoint-list | grep %s:9696 | tr -d " " | cut -d "|" -f2' % os_ip)
+    endpoint_id_openstack = sudo('source /etc/contrail/openstackrc; keystone endpoint-list 2> /dev/null | grep %s:9696 | tr -d " " | cut -d "|" -f2' % os_ip)
     # remove endpoint list
     sudo('source /etc/contrail/openstackrc; keystone endpoint-delete %s' % endpoint_id_openstack)
 
@@ -215,10 +239,10 @@ def update_service_tenant():
     '''
     openstack_node = testbed.env['roledefs']['openstack'][0]
     with settings(host_string=openstack_node):
-        neutron_tenant_id = sudo('source /etc/contrail/openstackrc; keystone user-get neutron | grep tenantId | tr -d " " | cut -d "|" -f3')
+        neutron_tenant_id = sudo('source /etc/contrail/openstackrc; keystone user-get neutron 2> /dev/null | grep tenantId | tr -d " " | cut -d "|" -f3')
         if not neutron_tenant_id:
             raise RuntimeError('Unable to retrieve neutron tenant ID from openstack node (%s)' % openstack_node)
-        neutron_service_name = sudo('source /etc/contrail/openstackrc; keystone tenant-list | grep %s | tr -d " " | cut -d "|" -f3' % neutron_tenant_id)
+        neutron_service_name = sudo('source /etc/contrail/openstackrc; keystone tenant-list  2> /dev/null| grep %s | tr -d " " | cut -d "|" -f3' % neutron_tenant_id)
         print 'Retrieved Neutron service tenant name: %s' % neutron_service_name
         print 'Updating testbed.py with neutron service tenant name under env.keystone section'
         local('sed -i "s/\'service_tenant\'.*/\'service_tenant\' : \'%s\',/g" fabfile/testbeds/testbed.py' % neutron_service_name)
