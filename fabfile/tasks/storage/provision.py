@@ -1,3 +1,4 @@
+import json
 from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.utils.host import *
@@ -54,22 +55,32 @@ def create_storage_setup_cmd(mode):
     storage_pass_list=[]
     storage_host_list=[]
     storage_hostnames=[]
+    orig_hostnames=[]
     collector_pass_list=[]
     collector_host_list=[]
     cfg_host_list=[]
     storage_os_pass_list=[]
     storage_os_host_list=[]
     storage_compute_hostnames=[]
+    openstack_ip = ''
+    storage_network = False
     index = 0
+    data_ip_info = getattr(testbed, 'storage_data', None)
+    if data_ip_info != None:
+        storage_network = True
     for entry in env.roledefs['storage-master']:
         for sthostname, sthostentry in zip(env.hostnames['all'],
                                                 env.roledefs['all']):
             if entry == sthostentry:
-                storage_hostnames.append(sthostname)
+                if storage_network == True:
+                    storage_hostnames.append('%s-storage' %(sthostname))
+                else:
+                    storage_hostnames.append(sthostname)
+                orig_hostnames.append(sthostname)
                 storage_host_password=get_env_passwords(entry)
                 storage_pass_list.append(storage_host_password)
                 storage_host = get_control_host_string(entry)
-                storage_data_ip=get_data_ip(storage_host)[0]
+                storage_data_ip=get_storage_data_ip(storage_host)[0]
                 storage_host_list.append(storage_data_ip)
                 if index != 0:
                     storage_os_pass_list.append(storage_host_password)
@@ -79,15 +90,22 @@ def create_storage_setup_cmd(mode):
         for sthostname, sthostentry in zip(env.hostnames['all'],
                                                 env.roledefs['all']):
             if entry == sthostentry:
-                storage_compute_hostnames.append(sthostname)
+                if storage_network == True:
+                    storage_compute_hostnames.append('%s-storage' %(sthostname))
+                else:
+                    storage_compute_hostnames.append(sthostname)
 
             if entry == sthostentry and \
                             entry != env.roledefs['storage-master'][0]:
-                storage_hostnames.append(sthostname)
+                if storage_network == True:
+                    storage_hostnames.append('%s-storage' %(sthostname))
+                else:
+                    storage_hostnames.append(sthostname)
+                orig_hostnames.append(sthostname)
                 storage_host_password=get_env_passwords(entry)
                 storage_pass_list.append(storage_host_password)
                 storage_host = get_control_host_string(entry)
-                storage_data_ip=get_data_ip(storage_host)[0]
+                storage_data_ip=get_storage_data_ip(storage_host)[0]
                 storage_host_list.append(storage_data_ip)
     for entry in env.roledefs['collector']:
         for sthostname, sthostentry in zip(env.hostnames['all'],
@@ -118,7 +136,8 @@ def create_storage_setup_cmd(mode):
         storage_os_pass_list.append('none')
 
     storage_master=env.roledefs['storage-master'][0]
-    storage_master_ip=get_data_ip(storage_master)[0]
+    storage_master_ip=get_storage_data_ip(storage_master)[0]
+    openstack_ip = get_data_ip(storage_master)[0]
     cfm = env.roledefs['cfgm'][0]
     cfm_ip = get_data_ip(cfm)[0]
     storage_master_password=get_env_passwords(env.roledefs['storage-master'][0])
@@ -151,10 +170,12 @@ def create_storage_setup_cmd(mode):
     # cfg-vip -- cfg internal vip address
     # storage-compute-hostnames - hostnames of all storage compute nodes
     # storage-replica-size - Replica size for Ceph storage
+    # openstack-ip - IP address of the first openstack node
+    # orig-hostnames - Original hostnames
     # WARNING: If anything is added in the arguments, make sure it
     # doesn't break add_storage_node task.
-    cmd = "PASSWORD=%s setup-vnc-storage --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --storage-chassis-config %s --live-migration %s --collector-hosts %s --collector-host-tokens %s --cfg-host %s --cinder-vip %s --config-hosts %s --storage-os-hosts %s --storage-os-host-tokens %s --storage-mon-hosts %s --cfg-vip %s --storage-compute-hostnames %s --storage-replica-size %s" \
-            %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), ' '.join(get_storage_chassis_config()), get_live_migration_opts(), ' '.join(collector_host_list), ' '.join(collector_pass_list), cfm_ip, get_cinder_ha_vip(), ' '.join(cfg_host_list), ' '.join(storage_os_host_list), ' '.join(storage_os_pass_list), ' '.join(get_storage_mon_hosts()), get_cfg_ha_vip(), ' '.join(storage_compute_hostnames), get_storage_replica_size())
+    cmd = "PASSWORD=%s setup-vnc-storage --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --storage-chassis-config %s --live-migration %s --collector-hosts %s --collector-host-tokens %s --cfg-host %s --cinder-vip %s --config-hosts %s --storage-os-hosts %s --storage-os-host-tokens %s --storage-mon-hosts %s --cfg-vip %s --storage-compute-hostnames %s --storage-replica-size %s --openstack-ip %s --orig-hostnames %s" \
+            %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), ' '.join(get_storage_chassis_config()), get_live_migration_opts(), ' '.join(collector_host_list), ' '.join(collector_pass_list), cfm_ip, get_cinder_ha_vip(), ' '.join(cfg_host_list), ' '.join(storage_os_host_list), ' '.join(storage_os_pass_list), ' '.join(get_storage_mon_hosts()), get_cfg_ha_vip(), ' '.join(storage_compute_hostnames), get_storage_replica_size(), openstack_ip, ' '.join(orig_hostnames))
     return cmd
 
 
@@ -391,3 +412,70 @@ def unconfigure_nfs_livem():
     """
     execute("setup_nfs_live_migration", "unconfigure")
 #end unconfigure_nfs_livem
+
+@task
+@roles('build')
+def setup_storage_interface():
+    '''
+    Configure the IP address, netmask, gateway and vlan information
+    based on parameter passed in 'control_data' stanza of testbed file.
+    Also generate ifcfg file for the interface if the file is not present.
+    '''
+    execute('setup_storage_interface_node')
+#end setup_storage_interface_node
+
+@task
+def setup_storage_interface_node(*args):
+    '''
+    Configure the IP address, netmask, gateway and vlan information
+    in one or list of nodes based on parameter passed to this task.
+    '''
+    hosts = getattr(testbed, 'storage_data', None)
+    if not hosts:
+        print 'WARNING: \'storage_data\' block is not defined in testbed file.',\
+              'Skipping setup-interface...'
+        return
+    # setup interface for only the required nodes.
+    if args:
+        for host in args:
+            if host not in hosts.keys():
+                print "\n\n*** WARNING: storage_data interface details for host " +\
+                      "%s not defined in testbed file. Skipping! ***\n\n" % host
+        hosts = dict((key, val) for (key, val) in
+                     getattr(testbed, 'storage_data', None).items()
+                     if key in args)
+    bondinfo = getattr(testbed, 'bond', None)
+
+    retries = 5; timeout = 5
+    for host in hosts.keys():
+        cmd = 'setup-vnc-interfaces'
+        errmsg = 'WARNING: Host ({HOST}) is defined with device ({DEVICE})'+\
+                 ' but its bond info is not available\n'
+        if hosts[host].has_key('device') and hosts[host].has_key('ip'):
+            cmd += ' --device {device} --ip {ip}'.format(**hosts[host])
+            device = hosts[host]['device']
+            if 'bond' in device.lower():
+                if not bondinfo or not (bondinfo.has_key(host)
+                    and device == bondinfo[host]['name']):
+                    print (errmsg.format(HOST=host,
+                                           DEVICE=hosts[host]['device']))
+                    continue
+                if not bondinfo[host].has_key('member'):
+                    raise AttributeError('Bond members are not defined for'+ \
+                                         ' host %s, device %s' %(host, device))
+                bond_members = " ".join(bondinfo[host]['member'])
+                del bondinfo[host]['member']; del bondinfo[host]['name']
+                cmd += ' --members %s --bond-opts \'%s\''%(bond_members,
+                                             json.dumps(bondinfo[host]))
+            if hosts[host].has_key('vlan'):
+                cmd += ' --vlan %s' %hosts[host]['vlan']
+            if (get_storage_host_string(host) == host) and hosts[host].has_key('gw'):
+                cmd += ' --gw %s' %hosts[host]['gw']
+            with settings(host_string= host,
+                          timeout= timeout,
+                          connection_attempts= retries):
+                with cd(INSTALLER_DIR):
+                    sudo(cmd)
+        else:
+            raise AttributeError("'device' or 'ip' is not defined for %s" %host)
+# end setup_storage_interface_node
