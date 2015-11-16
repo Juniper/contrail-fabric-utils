@@ -1,0 +1,6 @@
+[rhosp7-local-repo]
+name=rhosp7-local-repo
+baseurl=http://10.84.5.120/cs-shared/builder/cache/redhatenterpriselinuxserver70/rhosp7_local_repo/packages
+enabled=1
+priority=1
+gpgcheck=0
