@@ -1,0 +1,6 @@
+[centos7-test-repo]
+name=centos7-test-repo
+baseurl=http://10.84.5.120/cs-shared/builder/cache/centoslinux71/kilo/contrail-test/packages
+enabled=1
+priority=1
+gpgcheck=0

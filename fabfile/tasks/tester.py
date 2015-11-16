@@ -341,6 +341,7 @@ def setup_test_env():
             with settings(warn_only = True):
                 run('rm -rf /tmp/pip-build-root')
                 if detect_ostype() in ['centos', 'redhat', 'centoslinux']:
+                    sudo('yum -y install python-pip')
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources==0.2.7 discover \
                         testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0'
                 elif 'ubuntu' == detect_ostype():
