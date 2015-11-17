@@ -227,6 +227,14 @@ env.ostypes = {
 #    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
 #}
 
+#Config node related config knobs
+#amqp_hosts : List of customer deployed AMQP servers to be used by config services.
+#amqp_port : Port of the customer deployed AMQP servers.
+#env.cfgm = {
+#    'amqp_hosts' : ['10.10.10.1', '10.10.10.2']
+#    'amqp_port' : '5672'
+#}
+
 # Neutron specific configuration 
 #env.neutron = {
 #   'protocol': 'http', # Default is http
