@@ -1,0 +1,6 @@
+[rhel7-kilo-test]
+name=rhel7-test-repo
+baseurl=http://10.84.5.120/cs-shared/builder/cache/redhatenterpriselinuxserver70/kilo/contrail-test/packages/
+enabled=1
+priority=1
+gpgcheck=0
