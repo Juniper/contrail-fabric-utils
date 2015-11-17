@@ -2087,7 +2087,7 @@ def delete_tor_agent_node(restart=True, *args):
         with settings(host_string=host_string):
             toragent_dict = getattr(env,'tor_agent', None)
             for i in range(len(toragent_dict[host_string])):
-                execute("delete_tor_agent_by_index", i, host_string, restart)
+                execute("delete_tor_agent_by_index", i, host_string, restart, remove_cacert=True)
 
 @task
 def delete_tor_agent_by_id(tid, node_info, restart=True):
@@ -2117,7 +2117,7 @@ def delete_tor_agent_by_index_range(range_str, host_string, restart=True):
         execute("delete_tor_agent_by_index", i, host_string, restart)
 
 @task
-def delete_tor_agent_by_index(index, node_info, restart=True):
+def delete_tor_agent_by_index(index, node_info, restart=True, remove_cacert=False):
     '''Disable tor agent functionality in particular node.
         USAGE: fab delete_tor_agent_by_index:0,root@1.1.1.2
     '''
@@ -2178,8 +2178,9 @@ def delete_tor_agent_by_index(index, node_info, restart=True):
             remove_file(cert_file)
         if exists(privkey_file, use_sudo=True):
             remove_file(privkey_file)
-        if exists('/etc/contrail/ssl/certs/cacert.pem', use_sudo=True):
-            remove_file('/etc/contrail/ssl/certs/cacert.pem')
+        if remove_cacert:
+            if exists('/etc/contrail/ssl/certs/cacert.pem', use_sudo=True):
+                remove_file('/etc/contrail/ssl/certs/cacert.pem')
 
         cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
         cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
