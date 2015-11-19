@@ -1539,6 +1539,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
 
 @task
 @EXECUTE_TASK
+@roles('cfgm')
 def prov_config():
     execute("prov_config_node", env.host_string)
 
