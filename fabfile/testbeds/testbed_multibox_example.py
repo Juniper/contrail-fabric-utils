@@ -437,7 +437,8 @@ env.ostypes = {
 #                    'tor_agent_ovs_ka': '10000',
 #                       }]
 #                }
-#######################################
+
+####################################################################################
 #vcenter provisioning
 #server is the vcenter server ip
 #port is the port on which vcenter is listening for connection
@@ -446,11 +447,15 @@ env.ostypes = {
 #auth is the autentication type used to talk to vcenter, http or https
 #datacenter is the datacenter name we are operating on
 #cluster is the clustername we are operating on
-#dvswitch section contains distributed switch related para,s
+#dv_switch_fab section contains distributed switch related params for fab network
 #       dv_switch_name
-#dvportgroup section contains the distributed port group info
-#       dv_portgroupname and the number of ports the group has
-######################################
+#dv_port_group_fab section contains distributed port group params for fab network
+#       dv_portgroup_name and the number of ports the group has
+#dvswitch section contains distributed switch related params for overlay network
+#       dv_switch_name
+#dvportgroup section contains distributed port group info for overlay network
+#       dv_portgroup_name and the number of ports the group has
+####################################################################################
 #env.vcenter = {
 #        'server':'127.0.0.1',
 #        'port': '443',
@@ -459,14 +464,19 @@ env.ostypes = {
 #        'auth': 'https',
 #        'datacenter': 'kd_dc',
 #        'cluster': ['kd_cluster_1','kd_cluster_2'],
-#        'dv_switch': { 'dv_switch_name': 'kd_dvswitch',
-#                     },
-#        'dv_port_group': { 'dv_portgroup_name': 'kd_dvportgroup',
-#                           'number_of_ports': '3',
-#                     },
+#        'dv_switch_fab': {'dv_switch_name': 'dvs-lag'},
+#        'dv_port_group_fab': {
+#                'dv_portgroup_name': 'fab-pg',
+#                'number_of_ports': '3',
+#         },
+#        'dv_switch': { 'dv_switch_name': 'kd_dvswitch'},
+#        'dv_port_group': {
+#                'dv_portgroup_name': 'kd_dvportgroup',
+#                'number_of_ports': '3',
+#         },
 #}
 #
-####################################################################################
+######################################################################################
 # The compute vm provisioning on ESXI host
 # This section is used to copy a vmdk on to the ESXI box and bring it up
 # the contrailVM which comes up will be setup as a compute node with only
@@ -480,38 +490,15 @@ env.ostypes = {
 #                    optional, defaults to 'vswitch0'
 #    fabric_port_group: the name of the underlay port group for esxi
 #                       optional, defaults to contrail-fab-pg'
-#    uplinck_nic: the nic used for underlay
-#                 optional, defaults to None
-#    data_store: the datastore on esxi where the vmdk is copied to
-#    cluster: name of the cluster to which this esxi is added
-#        'dv_switch': { 'dv_switch_name': 'kd_dvswitch',
-#                     },
-#        'dv_port_group': { 'dv_portgroup_name': 'kd_dvportgroup',
-#                           'number_of_ports': '3',
-#                     },
-#}
-#
-####################################################################################
-# The compute vm provisioning on ESXI host
-# This section is used to copy a vmdk on to the ESXI box and bring it up
-# the contrailVM which comes up will be setup as a compute node with only
-# vrouter running on it. Each host has an associated esxi to it.
-#
-# esxi_host information:
-#    ip: the esxi ip on which the contrailvm(host/compute) runs
-#    username: username used to login to esxi
-#    password: password for esxi
-#    fabric_vswitch: the name of the underlay vswitch that runs on esxi
-#                    optional, defaults to 'vswitch0'
-#    fabric_port_group: the name of the underlay port group for esxi
-#                       optional, defaults to contrail-fab-pg'
-#    uplinck_nic: the nic used for underlay
+#    uplink_nic: the nic used for underlay
 #                 optional, defaults to None
 #    data_store: the datastore on esxi where the vmdk is copied to
 #    cluster: name of the cluster to which this esxi is added
 #    contrail_vm information:
 #        mac: the virtual mac address for the contrail vm
 #        host: the contrail_vm ip in the form of 'user@contrailvm_ip'
+#        pci_devices: pci_devices information
+#            nic: pci_id of the pass-through interfaces
 #        vmdk: the absolute path of the contrail-vmdk used to spawn vm
 #              optional, if vmdk_download_path is specified
 #        vmdk_download_path: download path of the contrail-vmdk.vmdk used to spawn vm
@@ -528,11 +515,15 @@ env.ostypes = {
 #             'contrail_vm': {
 #                   'mac': "00:50:56:05:ba:ba",
 #                   'host': "root@2.2.2.2",
+#                   'pci_devices': {
+#                        nic: ["04:00.0", "04:00.1"],
+#                    },
 #                   'vmdk_download_path': "http://10.84.5.100/vmware/vmdk/ContrailVM-disk1.vmdk",
 #             }
 #       }
 #}
-#
+######################################################################################
+
 # OPTIONAL DPDK CONFIGURATION
 # ===========================
 # If some compute nodes should use DPDK vRouter version it has to be put in
