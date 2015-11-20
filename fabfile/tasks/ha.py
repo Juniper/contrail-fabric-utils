@@ -200,13 +200,32 @@ def join_galera_cluster(new_ctrl_host):
 
     authserver_ip = get_authserver_ip()
     internal_vip = get_openstack_internal_vip()
+    external_vip = get_openstack_external_vip()
 
     with settings(host_string = new_ctrl_host):
-        sudo("setup-vnc-galera\
+        zoo_ip_list = [hstr_to_ip(get_control_host_string(\
+                        cassandra_host)) for cassandra_host in env.roledefs['database']]
+
+        monitor_galera="False"
+        if get_openstack_internal_vip():
+            monitor_galera="True"
+
+        cmon_db_user="cmon"
+        cmon_db_pass="cmon"
+        keystone_db_user="keystone"
+        keystone_db_pass="keystone"
+
+        cmd = "setup-vnc-galera\
             --self_ip %s --keystone_ip %s --galera_ip_list %s\
-            --internal_vip %s --openstack_index %d" % (new_ctrl_ip, authserver_ip,
-                ' '.join(galera_ip_list), internal_vip,
-                (openstack_host_list.index(new_ctrl_data_host_string) + 1)))
+            --internal_vip %s --openstack_index %d --zoo_ip_list %s --keystone_user %s\
+            --keystone_pass %s --cmon_user %s --cmon_pass %s --monitor_galera %s" % (new_ctrl_ip,
+            authserver_ip, ' '.join(galera_ip_list), internal_vip,
+            (openstack_host_list.index(new_ctrl_data_host_string) + 1), ' '.join(zoo_ip_list),
+            keystone_db_user, keystone_db_pass, cmon_db_user, cmon_db_pass, monitor_galera)
+
+        if external_vip:
+            cmd += ' --external_vip %s' % external_vip
+        sudo(cmd)
 
     for host_string in env.roledefs['openstack']:
         if host_string != new_ctrl_host:
@@ -417,6 +436,30 @@ def fixup_restart_haproxy_in_openstack_node(*args):
                    '%s server mysql%s %s:3306 weight 100 check inter 2000 rise 2 fall 3 backup\n'\
                    % (space, server_index, host_ip)        
 
+@task
+@EXECUTE_TASK
+@roles('openstack')
+def setup_cmon_param_zkonupgrade():
+    cmon_param = '/etc/contrail/ha/cmon_param'
+    zoo_ip_list = [hstr_to_ip(get_control_host_string(\
+                    cassandra_host)) for cassandra_host in env.roledefs['database']]
+    zk_servers_ports = ','.join(['%s:2181' %(s) for s in zoo_ip_list])
+    zks = 'ZK_SERVER_IP=("' + '" "'.join(zk_servers_ports) + '")'
+    monitor_galera="False"
+    if get_contrail_internal_vip():
+       monitor_galera="True"
+    # Assuming that keystone is the user and pass
+    # if changed we need to fetch and update these fields
+    keystone_db_user="keystone"
+    keystone_db_pass="keystone"
+    cmon_db_user="cmon"
+    cmon_db_pass="cmon"
+    sudo("grep -q 'ZK_SERVER_IP' %s || echo '%s' >> %s" % (cmon_param, zks, cmon_param))
+    sudo("grep -q 'OS_KS_USER' %s || echo 'OS_KS_USER=%s' >> %s" % (cmon_param, keystone_db_user, cmon_param))
+    sudo("grep -q 'OS_KS_PASS' %s || echo 'OS_KS_PASS=%s' >> %s" % (cmon_param, keystone_db_pass, cmon_param))
+    sudo("grep -q 'CMON_USER' %s || echo 'CMON_USER=%s' >> %s" % (cmon_param, cmon_db_user, cmon_param))
+    sudo("grep -q 'CMON_PASS' %s || echo 'CMON_PASS=%s' >> %s" % (cmon_param, cmon_db_pass, cmon_param))
+    sudo("grep -q 'MONITOR_GALERA' %s || echo 'MONITOR_GALERA=%s' >> %s" % (cmon_param, monitor_galera, cmon_param))
 
     for host_string in env.roledefs['openstack']:
         haproxy_config = openstack_haproxy.template.safe_substitute({
@@ -557,14 +600,14 @@ def fix_cmon_param_and_add_keys_to_compute():
         amqp_host_list.append(host_name)
 
     computes = 'COMPUTES=("' + '" "'.join(compute_host_list) + '")'
-    sudo("echo '%s' >> %s" % (computes, cmon_param))
-    sudo("echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % cmon_param)
-    sudo("echo 'COMPUTES_USER=root' >> %s" % cmon_param)
-    sudo("echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % cmon_param)
-    sudo("echo 'RABBITMQ_RESET=True' >> %s" % cmon_param)
+    sudo("grep -q 'COMPUTES' %s || echo '%s' >> %s" % (cmon_param, computes, cmon_param))
+    sudo("grep -q 'COMPUTES_SIZE' %s || echo 'COMPUTES_SIZE=${#COMPUTES[@]}' >> %s" % (cmon_param, cmon_param))
+    sudo("grep -q 'COMPUTES_USER' %s || echo 'COMPUTES_USER=root' >> %s" % (cmon_param, cmon_param))
+    sudo("grep -q 'PERIODIC_RMQ_CHK_INTER' %s || echo 'PERIODIC_RMQ_CHK_INTER=60' >> %s" % (cmon_param, cmon_param))
+    sudo("grep -q 'RABBITMQ_RESET' %s || echo 'RABBITMQ_RESET=True' >> %s" % (cmon_param, cmon_param))
     amqps = 'DIPHOSTS=("' + '" "'.join(amqp_host_list) + '")'
-    sudo("echo '%s' >> %s" % (amqps, cmon_param))
-    sudo("echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % cmon_param)
+    sudo("grep -q 'DIPHOSTS' %s || echo '%s' >> %s" % (cmon_param, amqps, cmon_param))
+    sudo("grep -q 'DIPS_HOST_SIZE' %s || echo 'DIPS_HOST_SIZE=${#DIPHOSTS[@]}' >> %s" % (cmon_param, cmon_param))
     sudo("sort %s | uniq > /tmp/cmon_param" % cmon_param)
     sudo("mv /tmp/cmon_param %s" % cmon_param)
     id_rsa_pubs = {}
