@@ -209,7 +209,7 @@ def upgrade_pkgs_node(*args):
             if detect_ostype() in ['centos', 'fedora', 'redhat', 'centoslinux']:
                 sudo(cmd)
 
-def yum_install(rpms, disablerepo = True):
+def yum_install(rpms, disablerepo = False):
     if disablerepo:
         cmd = "yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail* install "
     else:
@@ -228,7 +228,7 @@ def apt_install(debs):
         for deb in debs:
             sudo(cmd + deb)
 
-def pkg_install(pkgs,disablerepo = True):
+def pkg_install(pkgs,disablerepo = False):
     if detect_ostype() in ['ubuntu']:
         apt_install(pkgs)
     elif detect_ostype() in ['centos', 'fedora', 'redhat', 'centoslinux']:
