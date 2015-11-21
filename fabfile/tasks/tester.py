@@ -374,9 +374,7 @@ def setup_test_env():
             with settings(host_string=host_string):
                 #pkg_install(['python-setuptools', 'python-pkg-resources', 'python-ncclient'],disablerepo = False)
                 pkg_install(['python-setuptools', 'python-ncclient'],disablerepo = False)
-                if detect_ostype() in ['centos', 'centoslinux']:
-                    sudo("yum -y --disablerepo=* --enablerepo=contrail* install tcpdump")
-                if 'redhat' == detect_ostype():
+                if detect_ostype() in ['centos', 'centoslinux', 'redhat']:
                     sudo("yum -y install tcpdump")
 #end setup_test_env
 
