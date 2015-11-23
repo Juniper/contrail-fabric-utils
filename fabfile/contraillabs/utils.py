@@ -121,3 +121,30 @@ def update_keystone_admin_token():
         admin_token = run('echo "ADMING_KEY: $(grep -Po "^admin_token\s*=\s*\K\w+" /etc/keystone/keystone.conf)" | grep -Po "ADMING_KEY: \K\w+"')
     local('sed -i "s/\'admin_token\'.*/\'admin_token\' : \'%s\',/g" fabfile/testbeds/testbed.py' % admin_token)
     local('sed -i "s/\'service_token\'.*/\'service_token\' : \'%s\',/g" fabfile/testbeds/testbed.py' % admin_token)
+
+
+@task
+def centos7_kilo_test_repo(action='create'):
+    '''Add local centos7 kilo repo to server packages needed for sanity
+    '''
+    if action == 'create':
+        put('fabfile/contraillabs/repo/centos7_kilo_test.repo', '/etc/yum.repos.d/centos7_kilo_test.repo', use_sudo=True)
+    elif action == 'delete':
+        with settings(warn_only=True):
+            sudo('rm -f /etc/yum.repos.d/centos7_kilo_test.repo')
+    else:
+        print "WARNING: Unknown Action (%s)" % action
+    sudo('yum clean all')
+
+@task
+def rhel7_kilo_test_repo(action='create'):
+    '''Add local rhel7 kilo repo to server packages needed for sanity
+    '''
+    if action == 'create':
+        put('fabfile/contraillabs/repo/rhel7_kilo_test.repo', '/etc/yum.repos.d/rhel7_kilo_test.repo', use_sudo=True)
+    elif action == 'delete':
+        with settings(warn_only=True):
+            sudo('rm -f /etc/yum.repos.d/rhel7_kilo_test.repo')
+    else:
+        print "WARNING: Unknown Action (%s)" % action
+    sudo('yum clean all')
