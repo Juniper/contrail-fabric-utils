@@ -2328,7 +2328,7 @@ def setup_vm_coremask_node(q_coremask, *args):
 
         if not q_coremask:
             try:
-                cpu_count = os.sysconf('SC_NPROCESSORS_CONF')
+                cpu_count = int(run('grep -c processor /proc/cpuinfo'))
             except ValueError:
                 print "Cannot count CPUs on host %s. VM core mask cannot be computed." \
                     %(env.host_string)
