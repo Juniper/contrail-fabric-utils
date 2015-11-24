@@ -550,7 +550,7 @@ def preload_image_to_esx(url, glance_id, sizes, version):
             # for icehouse, images are stored under datstore/<ip>_base/<glanceid>/
             if '2014.1' in version:
                 ip = esxi['contrail_vm']['host'].split('@')[-1]
-                base = esxi['datastore'] + ip + '_base/' + glance_id + '/'
+                base = esxi['datastore'] + '/' + ip + '_base/' + glance_id + '/'
 
             with settings(host_string = esxi['username'] + '@' + esxi['ip'],
                           password = esxi['password'], warn_only=True,
