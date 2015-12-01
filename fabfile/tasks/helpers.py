@@ -1244,12 +1244,12 @@ def pre_check():
         exit(1)
     if (len(env.roledefs['openstack']) > 1 and
         set(env.roledefs['openstack']) == set(env.roledefs['cfgm']) and
-        get_openstack_internal_vip() != get_openstack_internal_vip()):
+        get_openstack_internal_vip() != get_contrail_internal_vip()):
         print "\nERROR: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
         exit(1)
     if (len(env.roledefs['openstack']) > 1 and
         set(env.roledefs['openstack']) != set(env.roledefs['cfgm']) and
-        get_openstack_internal_vip() == get_openstack_internal_vip()):
+        get_openstack_internal_vip() == get_contrail_internal_vip()):
         print "\nERROR: \n\tOpenstack and cfgm nodes are different, Need to specify  contrail_internal_vip testbed.py."
         exit(1)
     else:
