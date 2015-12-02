@@ -228,3 +228,12 @@ def get_metadata_secret():
     else:
         print "WARNING get_metadata_secret: Orchestrator(%s) is not supported" % orch
     return metadata_secret
+
+def is_contrail_node(node):
+    '''Assuming that all contrail nodes are installed with
+       package - contrail-setup, returns True if the package is installed in the node
+    '''
+    package_info = ''
+    with settings(host_string=node, warn_only=True):
+        package_info = get_build('contrail-setup')
+    return True if package_info else False
