@@ -1018,29 +1018,21 @@ def increase_ulimits():
 def increase_ulimits_node(*args):
     for host_string in args:
         with settings(host_string=host_string, warn_only = True):
-            if detect_ostype() == 'ubuntu':
+            ostype = detect_ostype()
+            if ostype == 'ubuntu':
                 sudo("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql")
                 sudo("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
                 sudo("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
                 sudo("sed -i '/\[mysqld\]/a\max_connections = 10000' /etc/mysql/my.cnf")
                 sudo("echo 'ulimit -n 10240' >> /etc/default/rabbitmq-server")
+            elif ostype() == 'centoslinux':
+                sudo("sed -i '/\[mysqld\]/a\open_files_limit = 10240' /etc/my.cnf")
+                sudo("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/my.cnf")
             else:
                 sudo("sed -i '/start(){/ a\    ulimit -n 10240' /etc/init.d/mysqld")
                 sudo("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
                 sudo("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/my.cnf")
 
-
-    with settings(warn_only = True):
-        if detect_ostype() == 'ubuntu':
-            sudo("sed -i '/start|stop)/ a\    ulimit -n 10240' /etc/init.d/mysql")
-            sudo("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
-            sudo("sed -i '/umask 007/ a\limit nofile 10240 10240' /etc/init/mysql.conf")
-            sudo("sed -i '/\[mysqld\]/a\max_connections = 10000' /etc/mysql/my.cnf")
-            sudo("echo 'ulimit -n 10240' >> /etc/default/rabbitmq-server")
-        else:
-            sudo("sed -i '/start(){/ a\    ulimit -n 10240' /etc/init.d/mysqld")
-            sudo("sed -i '/start_rabbitmq () {/a\    ulimit -n 10240' /etc/init.d/rabbitmq-server")
-            sudo("sed -i '/\[mysqld\]/a\max_connections = 2048' /etc/my.cnf")
 
 @roles('cfgm','database','control','collector')
 @task
