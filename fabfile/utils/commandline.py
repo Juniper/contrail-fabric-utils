@@ -451,7 +451,7 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
         cmd += " --keystone_admin_user %s" % ks_admin_user
         cmd += " --keystone_admin_passwd %s" % ks_admin_password
         cmd += " --keystone_admin_tenant_name %s" % \
-                get_keystone_service_tenant_name()
+                get_admin_tenant_name()
         cmd += " --keystone_auth_protocol %s" % \
                 get_authserver_protocol()
         cmd += " --keystone_auth_port %s" % get_authserver_port()
