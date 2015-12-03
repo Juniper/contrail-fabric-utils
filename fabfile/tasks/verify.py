@@ -3,6 +3,7 @@ from time import sleep
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.cluster import get_orchestrator
+import re
 
 class OpenStackSetupError(Exception):
     pass
@@ -12,7 +13,7 @@ def verify_service(service, initd_service=False):
         with settings(warn_only=True):
             output = sudo("service %s status" % service)
         if initd_service:
-            if output.succeeded:
+            if output.succeeded or re.search('Active:.*active', output):
                 return
             else:
                 sleep(20)
