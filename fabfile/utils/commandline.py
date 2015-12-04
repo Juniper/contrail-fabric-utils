@@ -159,10 +159,14 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
             cmd += ' --manage_neutron %s' % manage_neutron
     else:
         cmd += ' --manage_neutron no'
-    internal_vip = get_contrail_internal_vip()
+    internal_vip = get_openstack_internal_vip()
+    contrail_internal_vip = get_contrail_internal_vip()
     if internal_vip:
-        # Highly available setup
+        # Highly available openstack setup
         cmd += ' --internal_vip %s' % (internal_vip)
+    if contrail_internal_vip:
+        # Highly available contrail setup
+        cmd += ' --contrail_internal_vip %s' % (contrail_internal_vip)
     if cassandra_user is not None:
         cmd += ' --cassandra_user %s' % (cassandra_user)
         cmd += ' --cassandra_password %s' % (cassandra_password)
