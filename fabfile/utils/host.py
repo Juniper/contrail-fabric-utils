@@ -88,6 +88,24 @@ def get_region_name_opt():
     return '--region_name %s' %(region_name)
 
 
+def get_vcenter_ip():
+    return get_from_testbed_dict('vcenter', 'server', None)
+
+def get_vcenter_port():
+    return get_from_testbed_dict('vcenter', 'port', None)
+
+def get_vcenter_username():
+    return get_from_testbed_dict('vcenter', 'username', None)
+
+def get_vcenter_password():
+    return get_from_testbed_dict('vcenter', 'password', None)
+
+def get_vcenter_datacenter():
+    return get_from_testbed_dict('vcenter', 'datacenter', None)
+
+def get_vcenter_compute():
+    return get_from_testbed_dict('vcenter', 'vcenter_compute', None)
+
 def get_authserver_ip(ignore_vip=False, openstack_node=None):
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
