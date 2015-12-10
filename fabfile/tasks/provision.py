@@ -24,7 +24,7 @@ from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
 from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
         configure_esxi_network, create_esxi_compute_vm, deprovision_vcenter,\
-        provision_vcenter_features, provision_pci_fab
+        provision_vcenter_features, provision_pci_fab, provision_sr_iov_fab
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
         get_esxi_vms_and_hosts, get_mode, is_contrail_node
@@ -2686,7 +2686,10 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
                   ('nic' in esxi_info[host]['contrail_vm']['pci_devices']):
                  std_switch = True
                  power_on = False
-             if 'fabric_vswitch' in esxi_info[host].keys():
+             elif ('sr_iov_nics' in esxi_info[host]['contrail_vm']):
+                 std_switch = True
+                 power_on = False
+             elif 'fabric_vswitch' in esxi_info[host].keys():
                  std_switch = True
                  power_on = True
              elif 'dv_switch_fab' in vcenter_info.keys():
@@ -2738,6 +2741,7 @@ def prov_esxi(*args):
 
     dv_switch_fab = False
     pci_fab = False
+    sr_iov_fab = False
     for h in host_list:
         mode = get_mode(esxi_info[h]['contrail_vm']['host'])
         if mode == 'vcenter':
@@ -2748,6 +2752,8 @@ def prov_esxi(*args):
             if ('pci_devices' in esxi_info[h]['contrail_vm']) and \
                  ('nic' in esxi_info[h]['contrail_vm']['pci_devices']):
                 pci_fab = True
+            elif ('sr_iov_nics' in esxi_info[h]['contrail_vm']):
+                sr_iov_fab = True
             elif 'fabric_vswitch' in esxi_info[h].keys():
                 std_switch = True
             elif 'dv_switch_fab' in vcenter_info.keys():
@@ -2760,6 +2766,8 @@ def prov_esxi(*args):
          provision_dvs_fab(vcenter_info, esxi_info, host_list)
     if (pci_fab == True):
         provision_pci_fab(vcenter_info, esxi_info, host_list)
+    if (sr_iov_fab == True):
+        provision_sr_iov_fab(vcenter_info, esxi_info, host_list)
     if orch == 'vcenter' or 'vcenter_compute' in env.roledefs:
          provision_vcenter_features(vcenter_info, esxi_info, host_list)
 

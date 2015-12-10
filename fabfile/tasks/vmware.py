@@ -10,6 +10,7 @@ from vcenter_prov import cleanup_vcenter
 from vcenter_prov import dvs_fab as dvs_fab
 from vcenter_prov import vcenter_fab as vcenter_fab
 from vcenter_prov import pci_fab as pci_fab
+from vcenter_prov import sr_iov_fab as sr_iov_fab
 from fabfile.utils.cluster import get_mode
 
 def configure_esxi_network(esxi_info):
@@ -219,6 +220,28 @@ def provision_pci_fab(vcenter_info, esxi_info, host_list):
 
     pci_fab(pci_params)
 #end provision_pci_fab
+
+@task
+def provision_sr_iov_fab(vcenter_info, esxi_info, host_list):
+    apt_install(['contrail-vmware-utils'])
+    sr_iov_params = {}
+
+    sr_iov_params['dvs_name'] = vcenter_info['sr_iov_dv_switch']['dv_switch_name']
+    sr_iov_params['dvportgroup_name'] = vcenter_info['sr_iov_dv_port_group']['dv_portgroup_name']
+    sr_iov_params['dvportgroup_num_ports'] = vcenter_info['sr_iov_dv_port_group']['number_of_ports']
+
+    sr_iov_params['vcenter_server'] = vcenter_info['server']
+    sr_iov_params['vcenter_username'] = vcenter_info['username']
+    sr_iov_params['vcenter_password'] = vcenter_info['password']
+
+    sr_iov_params['cluster_name'] = vcenter_info['cluster']
+    sr_iov_params['datacenter_name'] = vcenter_info['datacenter']
+
+    sr_iov_params['esxi_info'] = esxi_info
+    sr_iov_params['host_list'] = host_list
+
+    sr_iov_fab(sr_iov_params)
+#end provision_sr_iov_fab
 
 @task
 def deprovision_vcenter(vcenter_info):
