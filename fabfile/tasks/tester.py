@@ -6,7 +6,6 @@ import socket
 import tempfile
 from random import randrange
 from datetime import datetime as dt
-
 from fabfile.config import *
 from fabfile.utils.host import *
 from fabfile.utils.interface import *
@@ -53,6 +52,7 @@ def setup_test_env():
     sanity_testbed_dict = {
         'hosts': [],
         'vgw': [],
+        'esxi_vms':[],
         'hosts_ipmi': [],
         'tor':[],
     }
@@ -177,9 +177,10 @@ def setup_test_env():
             host_dict['name'] = esxi
             host_dict['username'] = esxi_hosts[esxi]['username']
             host_dict['password'] = esxi_hosts[esxi]['password']
+            host_dict['contrail_vm'] = esxi_hosts[esxi]['contrail_vm']['host']
             host_dict['roles'] = []
             sanity_testbed_dict['hosts'].append(host_dict)
-
+            sanity_testbed_dict['esxi_vms'].append(host_dict)
     # Adding vip VIP dict for HA test setup
     if CONTROLLER_TYPE == 'Openstack':
         with settings(host_string = env.roledefs['openstack'][0]):
@@ -237,7 +238,7 @@ def setup_test_env():
         generate_html_report = 'True'
         key = 'key1'
         mailSender = 'contrailbuild@juniper.net'
-        
+
         use_devicemanager_for_md5 = getattr(testbed, 'use_devicemanager_for_md5', False)
         orch = getattr(env, 'orchestrator', 'openstack')
         router_asn = getattr(testbed, 'router_asn', '')
@@ -254,10 +255,13 @@ def setup_test_env():
             mail_server = env.mail_server
             mail_port = env.mail_port
 
-        vcenter_params = None
+        vcenter_dc = ''
         if orch == 'vcenter':
-            public_tenant_name = 'vCenter'
-            vcenter_params = '[vcenter]\nvcenter_dc=%s' % env.vcenter['datacenter']
+            public_tenant_name='vCenter'
+
+        if env.has_key('vcenter'):
+            if env.vcenter:
+                vcenter_dc = env.vcenter['datacenter']
 
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__testbed_json_file__'   : 'sanity_testbed.json',
@@ -304,6 +308,13 @@ def setup_test_env():
              '__ha_setup__'            : getattr(testbed, 'ha_setup', ''),
              '__ipmi_username__'       : getattr(testbed, 'ipmi_username', ''),
              '__ipmi_password__'       : getattr(testbed, 'ipmi_password', ''),
+             '__vcenter_dc__'          : vcenter_dc,
+             '__vcenter_server__'      : get_vcenter_ip(),
+             '__vcenter_port__'        : get_vcenter_port(),
+             '__vcenter_username__'    : get_vcenter_username(),
+             '__vcenter_password__'    : get_vcenter_password(),
+             '__vcenter_datacenter__'  : get_vcenter_datacenter(),
+             '__vcenter_compute__'     : get_vcenter_compute(),
              '__use_devicemanager_for_md5__'       : use_devicemanager_for_md5,
             })
 
@@ -318,8 +329,6 @@ def setup_test_env():
         fd, fname = tempfile.mkstemp()
         of = os.fdopen(fd, 'w')
         of.write(sanity_params)
-        if vcenter_params:
-            of.write('\n%s\n' % vcenter_params)
         of.close()
         put(fname, "%s/sanity_params.ini" %(repo_path), use_sudo=True)
         local ("cp %s %s/sanity_params.ini" %(fname, env.test_repo_dir))
@@ -333,10 +342,10 @@ def setup_test_env():
                 run('rm -rf /tmp/pip-build-root')
                 if detect_ostype() in ['centos', 'redhat', 'centoslinux']:
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources==0.2.7 discover \
-                        testrepository junitxml pytun requests==2.3.0'
+                        testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0'
                 elif 'ubuntu' == detect_ostype():
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources==0.2.7 \
-                           testrepository junitxml pytun requests==2.3.0'
+                           testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
                 if ui_browser:
@@ -366,6 +375,9 @@ def setup_test_env():
                 if detect_ostype() in ['redhat', 'centos', 'centoslinux']:
                     pkg_install(['libxslt-devel', 'libxml2-devel'], disablerepo=False)
                 sudo('pip install junos-eznc==1.2.2')
+               
+                #Restart DM. This is because of #1490860
+                sudo('service contrail-device-manager restart')
 
         for host_string in env.roledefs['compute']:
             with settings(host_string=host_string):
@@ -388,8 +400,6 @@ def get_test_features(feature=None):
     with settings(hide('everything'), host_string=cfgm_host):
         remote_test_dir = get_remote_path(env.test_repo_dir)
         if not exists(remote_test_dir):
-            print "Setting up test enviroinment in the first cfgm..."
-            print "Will take maximum of 2 minutes"
             execute(setup_test_env)
         with cd('%s/tools/' % remote_test_dir):
             features = sudo(cmd)
@@ -409,8 +419,6 @@ def run_sanity(feature='sanity', test=None):
 
     if os.environ.has_key('GUESTVM_IMAGE'):
         env_vars = env_vars + ' ci_image=%s' %(os.environ['GUESTVM_IMAGE'])
-    elif env.has_key('guestvm_image'):
-        env_vars = env_vars + ' ci_image=%s' % env.get('guestvm_image')
 
     if image_web_server:
         env_vars = env_vars + ' IMAGE_WEB_SERVER=%s ' % (image_web_server)

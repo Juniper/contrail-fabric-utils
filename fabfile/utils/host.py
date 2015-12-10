@@ -88,6 +88,24 @@ def get_region_name_opt():
     return '--region_name %s' %(region_name)
 
 
+def get_vcenter_ip():
+    return get_from_testbed_dict('vcenter', 'server', None)
+
+def get_vcenter_port():
+    return get_from_testbed_dict('vcenter', 'port', None)
+
+def get_vcenter_username():
+    return get_from_testbed_dict('vcenter', 'username', None)
+
+def get_vcenter_password():
+    return get_from_testbed_dict('vcenter', 'password', None)
+
+def get_vcenter_datacenter():
+    return get_from_testbed_dict('vcenter', 'datacenter', None)
+
+def get_vcenter_compute():
+    return get_from_testbed_dict('vcenter', 'vcenter_compute', None)
+
 def get_authserver_ip(ignore_vip=False, openstack_node=None):
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
@@ -192,6 +210,12 @@ def get_openstack_internal_vip():
 def get_openstack_external_vip():
     return get_from_testbed_dict('ha', 'external_vip', None)
 
+def get_openstack_internal_virtual_router_id():
+    return get_from_testbed_dict('ha', 'internal_virtual_router_id', 100)
+
+def get_openstack_external_virtual_router_id():
+    return get_from_testbed_dict('ha', 'external_virtual_router_id', get_openstack_internal_virtual_router_id())
+
 def get_contrail_internal_vip():
     vip = get_from_testbed_dict('ha', 'internal_vip', None)
     return get_from_testbed_dict('ha', 'contrail_internal_vip', vip)
@@ -199,6 +223,12 @@ def get_contrail_internal_vip():
 def get_contrail_external_vip():
     vip = get_from_testbed_dict('ha', 'external_vip', None)
     return get_from_testbed_dict('ha', 'contrail_external_vip', vip)
+
+def get_contrail_internal_virtual_router_id():
+    return get_from_testbed_dict('ha', 'contrail_internal_virtual_router_id', get_openstack_internal_virtual_router_id())
+
+def get_contrail_external_virtual_router_id():
+    return get_from_testbed_dict('ha', 'contrail_external_virtual_router_id', get_contrail_internal_virtual_router_id())
 
 def get_openstack_amqp_server():
     amqp_in_role = 'cfgm'
