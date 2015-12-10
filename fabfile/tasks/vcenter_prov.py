@@ -9,6 +9,209 @@ import os
 from fabfile.config import *
 from fabric.contrib.files import exists
 
+class sr_iov_fab(object):
+    def __init__(self, sr_iov_params):
+        self.pyVmomi =  __import__("pyVmomi")
+
+        self.dvs_name = sr_iov_params['dvs_name']
+        self.dvportgroup_name = sr_iov_params['dvportgroup_name']
+        self.dvportgroup_num_ports = sr_iov_params['dvportgroup_num_ports']
+
+        self.vcenter_server = sr_iov_params['vcenter_server']
+        self.vcenter_username = sr_iov_params['vcenter_username']
+        self.vcenter_password = sr_iov_params['vcenter_password']
+
+        self.cluster_name = sr_iov_params['cluster_name']
+        self.datacenter_name = sr_iov_params['datacenter_name']
+
+        self.esxi_info = sr_iov_params['esxi_info']
+        self.host_list = sr_iov_params['host_list']
+
+        try:
+            self.connect_to_vcenter()
+            dvs = self.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], self.dvs_name)
+            self.add_dvPort_group(self.service_instance, dvs, self.dvportgroup_name)
+            for host in self.host_list:
+                if ('sr_iov_nics' in self.esxi_info[host]['contrail_vm']):
+                    vm_name = "ContrailVM" + "-" + self.datacenter_name + "-" + self.esxi_info[host]['ip']
+                    ret = self.add_sr_iov_nics(self.service_instance, self.esxi_info, host, self.dvportgroup_name, vm_name)
+                    if (ret == False):
+                        print "Fatal Error. Cannot proceed further!"
+                        return
+        except self.pyVmomi.vmodl.MethodFault as error:
+            print "Caught vmodl fault : " + error.msg
+            return
+
+    def add_sr_iov_nics(self, si, esxi_info, host, dv_port_name, vm_name):
+        vm = self.get_obj([self.pyVmomi.vim.VirtualMachine], vm_name)
+        sr_iov_nic_list = esxi_info[host]['contrail_vm']['sr_iov_nics']
+        if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOn:
+            print "VM:%s is powered ON. Cannot do hot pci add now. Shutting it down" %(vm_name)
+            self.poweroff(si, vm);
+        for sr_iov_nic in sr_iov_nic_list:
+            user = esxi_info[host]['username']
+            ip = esxi_info[host]['ip']
+            password = esxi_info[host]['password']
+            host_string = '%s@%s' %(user, ip)
+            cmd = "vmkchdev -l | grep %s" %sr_iov_nic
+            with settings(host_string = host_string, password = password,
+                          warn_only = True, shell = '/bin/sh -l -c'):
+                out = run(cmd)
+            if out.failed:
+                raise Exception("Unable to add sriov interface for physical nic %s on esxi host %s" %(sr_iov_nic, ip))
+            nic_info = str(out)
+            if len(nic_info) == 0:
+                raise Exception("Unable to add sriov interface for physical nic %s on esxi host %s" %(sr_iov_nic, ip))
+            devices = []
+            pci_id = nic_info.split()[0]
+            pci_id = pci_id[5:]
+            nicspec = self.pyVmomi.vim.vm.device.VirtualDeviceSpec()
+            nicspec.device = self.pyVmomi.vim.vm.device.VirtualSriovEthernetCard()
+            nicspec.operation = self.pyVmomi.vim.vm.device.VirtualDeviceSpec.Operation.add
+            nicspec.device.wakeOnLanEnabled = True
+            nicspec.device.deviceInfo = self.pyVmomi.vim.Description()
+            pg_obj = self.get_obj([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name)
+            dvs_port_connection = self.pyVmomi.vim.dvs.PortConnection()
+            dvs_port_connection.portgroupKey = pg_obj.key
+            dvs_port_connection.switchUuid = pg_obj.config.distributedVirtualSwitch.uuid
+            nicspec.device.backing = self.pyVmomi.vim.vm.device.VirtualEthernetCard.DistributedVirtualPortBackingInfo()
+            nicspec.device.backing.port = dvs_port_connection
+            nicspec.device.sriovBacking = self.pyVmomi.vim.vm.device.VirtualSriovEthernetCard.SriovBackingInfo()
+            nicspec.device.sriovBacking.physicalFunctionBacking = self.pyVmomi.vim.vm.device.VirtualPCIPassthrough.DeviceBackingInfo()
+            nicspec.device.sriovBacking.physicalFunctionBacking.id = pci_id
+            devices.append(nicspec)
+            vmconf = self.pyVmomi.vim.vm.ConfigSpec(deviceChange=devices)
+            task=vm.ReconfigVM_Task(vmconf)
+            self.wait_for_task(task, si)
+        if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOff:
+            print "Turning VM: %s On" %(vm_name)
+            self.poweron(si, vm)
+        return True
+
+    def add_dvPort_group(self, si, dv_switch, dv_port_name):
+        dv_pg = self.get_dvs_portgroup([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name, dv_switch.name)
+        if dv_pg is not None:
+            print("dv port group already exists")
+            return dv_pg
+        else:
+            dv_pg_spec = self.pyVmomi.vim.dvs.DistributedVirtualPortgroup.ConfigSpec()
+            dv_pg_spec.name = dv_port_name
+            dv_pg_spec.numPorts = int(self.dvportgroup_num_ports)
+            dv_pg_spec.type = self.pyVmomi.vim.dvs.DistributedVirtualPortgroup.PortgroupType.earlyBinding
+            dv_pg_spec.defaultPortConfig = self.pyVmomi.vim.dvs.VmwareDistributedVirtualSwitch.VmwarePortConfigPolicy()
+            dv_pg_spec.defaultPortConfig.securityPolicy = self.pyVmomi.vim.dvs.VmwareDistributedVirtualSwitch.SecurityPolicy()
+            dv_pg_spec.defaultPortConfig.securityPolicy.allowPromiscuous = self.pyVmomi.vim.BoolPolicy(value=False)
+            dv_pg_spec.defaultPortConfig.securityPolicy.macChanges = self.pyVmomi.vim.BoolPolicy(value=True)
+            dv_pg_spec.defaultPortConfig.securityPolicy.forgedTransmits = self.pyVmomi.vim.BoolPolicy(value=True)
+            dv_pg_spec.defaultPortConfig.securityPolicy.inherited = False
+            dv_pg_spec.defaultPortConfig.uplinkTeamingPolicy = self.pyVmomi.vim.VmwareUplinkPortTeamingPolicy()
+            dv_pg_spec.defaultPortConfig.uplinkTeamingPolicy.uplinkPortOrder = self.pyVmomi.vim.VMwareUplinkPortOrderPolicy()
+            dv_pg_spec.defaultPortConfig.uplinkTeamingPolicy.uplinkPortOrder.activeUplinkPort = None
+            task = dv_switch.AddDVPortgroup_Task([dv_pg_spec])
+            self.wait_for_task(task, si)
+            print "Successfully created DV Port Group ", dv_port_name
+
+    def get_dvs_portgroup(self, vimtype, portgroup_name, dvs_name):
+        """
+        Get the vsphere object associated with a given text name
+        """
+        obj = None
+        container = self.content.viewManager.CreateContainerView(self.content.rootFolder, vimtype, True)
+        for c in container.view:
+            if c.name == portgroup_name:
+                if c.config.distributedVirtualSwitch.name == dvs_name:
+                    obj = c
+                    break
+        return obj
+
+    def get_obj(self, vimtype, name):
+        """
+        Get the vsphere object associated with a given text name
+        """
+        obj = None
+        container = self.content.viewManager.CreateContainerView(self.content.rootFolder, vimtype, True)
+        for c in container.view:
+            if c.name == name:
+                obj = c
+                break
+        return obj
+
+    def connect_to_vcenter(self):
+        from pyVim import connect
+        self.service_instance = connect.SmartConnect(host=self.vcenter_server,
+                                        user=self.vcenter_username,
+                                        pwd=self.vcenter_password,
+                                        port=443)
+        self.content = self.service_instance.RetrieveContent()
+        atexit.register(connect.Disconnect, self.service_instance)
+
+    def wait_for_task(self, task, actionName='job', hideResult=False):
+         while task.info.state == (self.pyVmomi.vim.TaskInfo.State.running or self.pyVmomi.vim.TaskInfo.State.queued):
+             time.sleep(2)
+         if task.info.state == self.pyVmomi.vim.TaskInfo.State.success:
+             if task.info.result is not None and not hideResult:
+                 out = '%s completed successfully, result: %s' % (actionName, task.info.result)
+                 print out
+             else:
+                 out = '%s completed successfully.' % actionName
+                 print out
+         elif task.info.state == self.pyVmomi.vim.TaskInfo.State.error:
+             out = 'Error - %s did not complete successfully: %s' % (actionName, task.info.error)
+             raise ValueError(out)
+         return task.info.result
+
+    def answer_vm_question(vm):
+        choices = vm.runtime.question.choice.choiceInfo
+        default_option = None
+        choice = ""
+        if vm.runtime.question.choice.defaultIndex is not None:
+            ii = vm.runtime.question.choice.defaultIndex
+            default_option = choices[ii]
+            choice = None
+        while choice not in [o.key for o in choices]:
+            print "VM power on is paused by this question:\n\n"
+            print "\n".join(textwrap.wrap(vm.runtime.question.text, 60))
+            for option in choices:
+                print "\t %s: %s " % (option.key, option.label)
+            if default_option is not None:
+                print "default (%s): %s\n" % (default_option.label,
+                                              default_option.key)
+            choice = raw_input("\nchoice number: ").strip()
+            print "..."
+        return choice
+
+    def poweroff(self, si, vm):
+        task = vm.PowerOff()
+        actionName = 'job'
+        while task.info.state not in [self.pyVmomi.vim.TaskInfo.State.success or self.pyVmomi.vim.TaskInfo.State.error]:
+            time.sleep(2)
+        if task.info.state == self.pyVmomi.vim.TaskInfo.State.success:
+            out = '%s completed successfully.' % actionName
+            print out
+        elif task.info.state == self.pyVmomi.vim.TaskInfo.State.error:
+            out = 'Error - %s did not complete successfully: %s' % (actionName, task.info.error)
+            raise ValueError(out)
+        return
+
+    def poweron(self, si, vm):
+        task = vm.PowerOn()
+        actionName = 'job'
+        answers = {}
+        while task.info.state not in [self.pyVmomi.vim.TaskInfo.State.success or self.pyVmomi.vim.TaskInfo.State.error]:
+            if vm.runtime.question is not None:
+                question_id = vm.runtime.question.id
+                if question_id not in answers.keys():
+                    answers[question_id] = answer_vm_question(vm)
+                    vm.AnswerVM(question_id, answers[question_id])
+            time.sleep(2)
+        if task.info.state == self.pyVmomi.vim.TaskInfo.State.success:
+            out = '%s completed successfully.' % actionName
+            print out
+        elif task.info.state == self.pyVmomi.vim.TaskInfo.State.error:
+            out = 'Error - %s did not complete successfully: %s' % (actionName, task.info.error)
+            raise ValueError(out)
+        return
+
 class pci_fab(object):
     def __init__(self, pci_params):
         self.pyVmomi =  __import__("pyVmomi")
