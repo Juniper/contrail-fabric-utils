@@ -14,7 +14,7 @@ host10 = 'root@1.1.1.10'
 
 
 #External routers if any
-#for eg. 
+#for eg.
 #ext_routers = [('mx1', '10.204.216.253')]
 ext_routers = []
 
@@ -38,6 +38,7 @@ env.roledefs = {
     'build': [host_build],
     'storage-master': [host1],
     'storage-compute': [host4, host5, host6, host7, host8, host9, host10],
+    #'rally': [host11], # Optional, to enable/setup rally, it can be a seprate node from contrail cluster
     # 'vgw': [host4, host5], # Optional, Only to enable VGW. Only compute can support vgw
     # 'tsn': [host1], # Optional, Only to enable TSN. Only compute can support TSN
     # 'toragent': [host1], Optional, Only to enable Tor Agent. Only compute can
@@ -131,7 +132,7 @@ env.ostypes = {
 #
 # analytics_data_dir is the directory where cassandra data for analytics
 # is stored. This is used to seperate cassandra's main data storage [internal
-# use and config data] with analytics data. That way critical cassandra's 
+# use and config data] with analytics data. That way critical cassandra's
 # system data and config data are not overrun by analytis data
 #
 # If it is not passed, we will use cassandra's default
@@ -242,9 +243,9 @@ env.ostypes = {
 #env.ca_cert_file = '/root/file.pem'
 
 #In environments where keystone is deployed outside of Contrail provisioning
-#scripts , you can use the below options 
+#scripts , you can use the below options
 #
-# Note : 
+# Note :
 # "insecure" is applicable only when protocol is https
 # The entries in env.keystone overrides the below options which used
 # to be supported earlier :
@@ -298,8 +299,8 @@ env.ostypes = {
 #    'nfs_glance_path' : '/var/tmp/images/',       #NFS Server path to save images, Defaults to /var/tmp/glance-images/
 #}
 
-# In environments where openstack services are deployed independently 
-# from contrail, you can use the below options 
+# In environments where openstack services are deployed independently
+# from contrail, you can use the below options
 # service_token : Common service token for for all services like nova,
 #                 neutron, glance, cinder etc
 # amqp_host     : IP of AMQP Server to be used in openstack
@@ -337,7 +338,7 @@ env.ostypes = {
 #To Enable prallel execution of task in multiple nodes
 #do_parallel = True
 
-# To configure the encapsulation priority. Default: MPLSoGRE 
+# To configure the encapsulation priority. Default: MPLSoGRE
 #env.encap_priority =  "'MPLSoUDP','MPLSoGRE','VXLAN'"
 
 # Optional proxy settings.
@@ -378,7 +379,7 @@ env.ostypes = {
 #OPTIONAL Virtual gateway CONFIGURATION
 #=======================================
 
-#Section vgw is only relevant when you want to use virtual gateway feature. 
+#Section vgw is only relevant when you want to use virtual gateway feature.
 #You can use one of your compute node as  gateway .
 
 #Definition for the Key used
@@ -396,7 +397,7 @@ env.ostypes = {
 
 #OPTIONAL optional tor agent and tsn CONFIGURATION
 #==================================================
-#Section tor agent is only relevant when you want to use Tor Agent feature. 
+#Section tor agent is only relevant when you want to use Tor Agent feature.
 #You can use one of your compute node as  Tor Agent . Same or diffrent compute
 #node should be enable as tsn
 
@@ -410,7 +411,7 @@ env.ostypes = {
 # tor_ovs_port: Port number to be used by ovs. If any redundant TOR Agent is
 #               specified for this tor-agent, it should have the same 'tor_ovs_port'
 # tor_ovs_protocol: Connection protocol between TOR Agent and TOR (tcp / pssl)
-# tor_tsn_ip: TSN node ip 
+# tor_tsn_ip: TSN node ip
 # tor_tsn_name: Name of the TSN node
 # tor_name: Name of the tor switch. If any redundant TOR Agent is specified for
 #           this tor-agent, it should have the same 'tor_name'
@@ -555,3 +556,18 @@ env.ostypes = {
 #     host3: 'juniper',
 #  }
 # 'juniper' is the md5 key that will be configured on the nodes.
+############################################################################################
+
+
+# OPTIONAL RALLY CONFIGURATION
+# =======================================
+# Rally is installed from github source, with default to be github.com/openstack/rally.git.
+# There are two params can be added here to control any different repo to be used,
+# rally_git_url - the git url from which source can be cloned (git or https url can be provided)
+# rally_git_branch - branch name to be used, default to master.
+#        Since we customized couple of rally plugin code, we should provide these parameters with appropriate git repo
+# rally_task_args - rally task arguments  - a hash of arguments taken by scenarios.yaml jinja2 template
+##
+#rally_git_url = 'https://github.com/hkumarmk/rally'
+#rally_git_branch = 'network_plus'
+#rally_task_args = {'cxt_tenants': 1, 'cxt_users_per_tenant': 4, 'cxt_network': True, 'base_network_load_objects': 20000, 'load_type': 'constant', 'times': 2}

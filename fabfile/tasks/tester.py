@@ -4,6 +4,7 @@ import json
 import string
 import socket
 import tempfile
+import yaml
 from random import randrange
 from datetime import datetime as dt
 from fabfile.config import *
@@ -540,3 +541,18 @@ def export_testbed_details(filename='testbed_vars'):
         fh.write('export IMAGE_WEB_SERVER=%s\n' % (image_web_server))
     fh.close()
 # end export_testbed_details
+
+@roles('rally')
+@task
+def run_rally(task_args_file=None):
+    if task_args_file:
+        if os.path.isfile(task_args_file):
+            put(task_args_file, '/tmp')
+            with cd('/usr/share/rally/samples/tasks/scenarios/custom'):
+                run('python run_rally.py --task-args-file /tmp/' + os.path.basename(task_args_file))
+        else:
+            raise IOError("%s: No such file or directory" % task_args_file)
+    elif testbed.rally_task_args:
+        with cd('/usr/share/rally/samples/tasks/scenarios/custom'):
+            run("python run_rally.py --task-args '" + yaml.dump(testbed.rally_task_args).rstrip('\n') + "'")
+# end run_rally

@@ -65,6 +65,16 @@ def fix_cfgm_config_node(*args):
             cmd = frame_vnc_config_cmd(host_string, "update-cfgm-config")
             sudo(cmd)
 
+@roles('rally')
+@task
+def setup_rally():
+    if env.roledefs['rally']:
+        sudo('mkdir -p /etc/contrail/')
+        copy_openstackrc()
+        sudo('source /etc/contrail/openstackrc; rally deployment create --name contrail --fromenv')
+#end setup_rally
+
+
 @roles('collector')
 @task
 def fix_collector_config():

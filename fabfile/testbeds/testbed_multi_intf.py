@@ -30,6 +30,7 @@ env.roledefs = {
     'collector': [host2, host3],
     'database': [host8],
     'build': [host_build],
+    #'rally': [host11], # Optional, to enable/setup rally, it can be a seprate node from contrail cluster
 }
 
 env.hostnames = {
@@ -70,4 +71,17 @@ env.mail_from='chhandak@juniper.net'
 env.mail_to='chhandak@juniper.net'
 env.log_scenario='Multiple Interface CentOS Sanity'
 multi_tenancy=True
+
+# OPTIONAL RALLY CONFIGURATION
+# =======================================
+# Rally is installed from github source, with default to be github.com/openstack/rally.git.
+# There are two params can be added here to control any different repo to be used,
+# rally_git_url - the git url from which source can be cloned (git or https url can be provided)
+# rally_git_branch - branch name to be used, default to master.
+#        Since we customized couple of rally plugin code, we should provide these parameters with appropriate git repo
+# rally_task_args - rally task arguments  - a hash of arguments taken by scenarios.yaml jinja2 template
+##
+#rally_git_url = 'https://github.com/hkumarmk/rally'
+#rally_git_branch = 'network_plus'
+#rally_task_args = {'cxt_tenants': 1, 'cxt_users_per_tenant': 4, 'cxt_network': True, 'base_network_load_objects': 20000, 'load_type': 'constant', 'times': 2}
 

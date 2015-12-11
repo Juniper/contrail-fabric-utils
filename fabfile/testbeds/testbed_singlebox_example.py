@@ -29,6 +29,7 @@ env.roledefs = {
     'build': [host_build],
     'storage-master': [host1],
     'storage-compute': [host1],
+    # 'rally': [host1], # Optional, to enable/setup rally, it can be a seprate node from contrail cluster
     # 'vgw': [host1], # Optional, Only to enable VGW. Only compute can support vgw
     # 'tsn': [host1], # Optional, Only to enable TSN. Only compute can support TSN
     # 'toragent': [host1], Optional, Only to enable Tor Agent. Only compute can
@@ -351,3 +352,16 @@ env.ostypes = {
 #     host1: 'juniper',
 #  }
 # 'juniper' is the md5 key that will be configured on the node.
+
+# OPTIONAL RALLY CONFIGURATION
+# =======================================
+# Rally is installed from github source, with default to be github.com/openstack/rally.git.
+# There are two params can be added here to control any different repo to be used,
+# rally_git_url - the git url from which source can be cloned (git or https url can be provided)
+# rally_git_branch - branch name to be used, default to master.
+#        Since we customized couple of rally plugin code, we should provide these parameters with appropriate git repo
+# rally_task_args - rally task arguments  - a hash of arguments taken by scenarios.yaml jinja2 template
+##
+#rally_git_url = 'https://github.com/hkumarmk/rally'
+#rally_git_branch = 'network_plus'
+#rally_task_args = {'cxt_tenants': 1, 'cxt_users_per_tenant': 4, 'cxt_network': True, 'base_network_load_objects': 20000, 'load_type': 'constant', 'times': 2}
