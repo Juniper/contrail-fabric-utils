@@ -234,6 +234,13 @@ def pkg_install(pkgs,disablerepo = False):
     elif detect_ostype() in ['centos', 'fedora', 'redhat', 'centoslinux']:
         yum_install(pkgs , disablerepo = disablerepo)
 
+def pkg_cache_update():
+    """ Update package metadata cache """
+    if detect_ostype() in ['ubuntu']:
+        sudo('DEBIAN_FRONTEND=noninteractive apt-get -y --force-yes --allow-unauthenticated update')
+    elif detect_ostype() in ['centos', 'fedora', 'redhat', 'centoslinux']:
+        sudo('yum -y --nogpgcheck makecache')
+
 @task
 @parallel(pool_size=20)
 @roles('compute')
@@ -1013,6 +1020,24 @@ def install_webui_packages(source_dir):
         sudo('sudo mv firefox /opt/firefox')
         sudo('sudo ln -sf /opt/firefox/firefox /usr/bin/firefox')
 #end install_webui_packages
+
+
+@roles('rally')
+@task
+def install_rally():
+    """install rally"""
+    if env.roledefs['rally']:
+        execute(pkg_cache_update)
+        install_rally='wget -q -O /tmp/install_rally.sh https://raw.githubusercontent.com/openstack/rally/master/install_rally.sh && bash /tmp/install_rally.sh -y '
+
+        if testbed.rally_git_url:
+            install_rally += ' --url ' + testbed.rally_git_url
+
+        if testbed.rally_git_branch:
+            install_rally += ' --branch ' + testbed.rally_git_branch
+
+        sudo(install_rally)
+#end install_rally
 
 @task
 def update_config_option(role, file_path, section, option, value, service):
