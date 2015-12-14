@@ -135,7 +135,7 @@ def upgrade_storage(from_rel, pkg):
                     %(pkg)).split('-')[1].split('~')[0]
     if (LooseVersion(to_rel) > LooseVersion(from_rel)) or \
         (LooseVersion(to_rel) == LooseVersion(from_rel) and \
-        LooseVersion(to_build) > LooseVersion(from_build)):
+        LooseVersion(to_build) >= LooseVersion(from_build)):
         execute('install_storage_pkg_all', pkg)
         execute('install_storage')
         execute('setup_upgrade_storage')
