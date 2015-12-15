@@ -32,6 +32,7 @@ ethernet0.addressType = "static"
 ethernet0.address = "$__vm_mac__"
 chipset.onlineStandby = "FALSE"
 guestOS = "ubuntu-64"
+keyboard.typematicMinDelay = "2000000"
 $__extension_params__
 ''')
 
