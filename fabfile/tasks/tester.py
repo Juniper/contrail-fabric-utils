@@ -14,7 +14,7 @@ from fabfile.utils.multitenancy import *
 from fabfile.utils.fabos import detect_ostype
 from fabric.contrib.files import exists
 
-from fabfile.tasks.install import pkg_install
+from fabfile.tasks.install import pkg_install, pip_install
 
 devstack_flag = False
 
@@ -348,10 +348,14 @@ def setup_test_env():
                 else:
                     # Avoid installing linecache2 as dependency on unittest2
                     # Avoid "TypeError: dist must be a Distribution instance"
-                    sudo("pip install linecache2")
-
-                    sudo("pip install --upgrade unittest2")
-                    sudo("pip install --upgrade %s" %pkg)
+                    retry=3
+                    delay=2
+                    param = "linecache2"
+                    pip_install(param, retry, delay)
+                    param = "--upgrade unittest2"
+                    pip_install(param, retry, delay)
+                    param = "--upgrade %s" %pkg
+                    pip_install(param, retry, delay)
                 if not exists('/usr/bin/ant'):
                     pkg_install(['ant'],disablerepo = False)
                     ant_version = sudo('ant -version')

@@ -234,6 +234,22 @@ def pkg_install(pkgs,disablerepo = False):
     elif detect_ostype() in ['centos', 'fedora', 'redhat', 'centoslinux']:
         yum_install(pkgs , disablerepo = disablerepo)
 
+def pip_install(param=None, retry=0, delay=0):
+    if param is None:
+        print "Failed to run pip package installation. Need a parameter to be supplied"
+        return False
+    for index in range(retry+1):
+        ret=sudo("pip install %s" %param)
+        if (("Could not find any downloads" in ret) or
+            ("Cannot fetch index base URL" in ret)):
+            sleep(delay)
+        else:
+            return True
+    if index == retry:
+        return False
+#end pip_install_retry
+
+
 @task
 @parallel(pool_size=20)
 @roles('compute')
