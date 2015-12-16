@@ -1019,10 +1019,17 @@ def update_config_option(role, file_path, section, option, value, service):
     """Task to update config option of any section in a conf file
        USAGE:fab update_config_option:openstack,/etc/keystone/keystone.conf,token,expiration,86400,keystone
     """
+    fileloc = '/etc/contrail/config.global.js'
+    with open(fileloc, 'a') as fo:
+        fo.write('config.session = {};\n')
+        fo.write('config.session.timeout = 24 * 60 * 60 * 1000;\n')
+        fo.close()
     cmd1 = "openstack-config --set " + file_path + " " +  section + " " + option + " " + value
     cmd2= "service " + service + " restart"
+    cmd3 = "service contrail-webui restart"
     for host in env.roledefs[role]:
         with settings(host_string=host, password=get_env_passwords(host)):
             sudo(cmd1)
             sudo(cmd2)
+            sudo(cmd3)
 # end update_config_option
