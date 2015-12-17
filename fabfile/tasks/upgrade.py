@@ -148,6 +148,20 @@ def upgrade_webui_node(from_rel, pkg, *args):
 
 @task
 @EXECUTE_TASK
+@roles('vcenter_compute')
+def upgrade_vcenter_compute(from_rel, pkg):
+    execute("upgrade_vcenter_compute_node", from_rel, pkg, env.host_string)
+
+@task
+def upgrade_vcenter_compute_node(from_rel, pkg, *args):
+    for host_string in args:
+        with settings(host_string=host_string):
+             if detect_ostype() == 'ubuntu':
+                with settings(warn_only=True):
+                    upgrade_compute(from_rel, pkg) 
+
+@task
+@EXECUTE_TASK
 @roles('compute')
 def upgrade_compute(from_rel, pkg):
     """Upgrades the contrail compute pkgs in all nodes defined in compute."""
@@ -237,6 +251,8 @@ def upgrade_contrail(from_rel, pkg, orch='yes'):
     execute('upgrade_collector', from_rel, pkg)
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
+    if 'vcenter_compute' in env.roledefs:
+        execute('upgrade_vcenter_compute', from_rel, pkg)
     execute('upgrade_compute', from_rel, pkg)
     # Adding config, database and analytics nodes to api-server
     if LooseVersion(from_rel) < LooseVersion('2.20'):
