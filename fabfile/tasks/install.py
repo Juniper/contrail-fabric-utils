@@ -62,6 +62,10 @@ def install_contrail_vcenter_plugin(pkg):
 def install_contrail_vcenter_plugin_node( *args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
+            depend_pkgs = ['libxml-commons-external-java', 'libxml-commons-resolver1.1-java', 'libxerces2-java',
+                   'libslf4j-java', 'libnetty-java', 'libjline-java', 'libzookeeper-java']
+            apt_install(depend_pkgs)
+
             sudo('cd /opt/contrail/contrail_vcenter_plugin_install_repo/; dpkg -i *')
 
 @task
