@@ -880,7 +880,6 @@ def install_contrail(*tgzs, **kwargs):
     if 'vcenter_compute' in env.roledefs:
         execute(install_vcenter_compute)
     execute(install_vrouter)
-    execute(upgrade_pkgs)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
@@ -913,7 +912,6 @@ def install_without_openstack(*tgzs, **kwargs):
     execute(install_collector)
     execute(install_webui)
     execute('install_vrouter', manage_nova_compute)
-    execute(upgrade_pkgs_without_openstack)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)

@@ -40,8 +40,8 @@ def install_rhosp6_repo():
 def update_all_node(reboot='True'):
     with settings(warn_only=True):
         sudo("yum -y install yum-utils")
-        sudo("yum -y install kernel-headers")
-        sudo("yum update -y")
+        sudo("yum -y install kernel-headers-3.10.0-229.el7")
+        sudo("yum update -y --exclude=kernel*")
         print "[%s]: Disable NeworkManager and reboot" % env.host_string
         sudo("systemctl stop NetworkManager")
         sudo("systemctl disable NetworkManager")
