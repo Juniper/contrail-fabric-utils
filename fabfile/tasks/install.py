@@ -439,6 +439,10 @@ def install_cfgm_node(*args):
             else:
                 yum_install(pkg)
 
+            if get_orchestrator() is 'vcenter' or 'vcenter_compute' in env.roledefs:
+                pkg = get_vcenter_plugin_pkg()
+                install_contrail_vcenter_plugin(pkg)
+
 @task
 @EXECUTE_TASK
 @roles('control')
