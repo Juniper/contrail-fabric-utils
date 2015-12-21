@@ -1447,7 +1447,8 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
         vm_nodes = getattr(testbed, 'vm_node_details', None)
         if vm_nodes:
             for vm_node in vm_nodes.keys():
-                nodes.remove(vm_node)
+                if vm_node in nodes:
+                    nodes.remove(vm_node)
 
     count = 0
     node_status = {}
