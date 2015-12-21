@@ -420,7 +420,7 @@ def run_sanity(feature='sanity', test=None):
                 if not files.exists("/tmp/temp/%s" % os.path.basename(test)):
                     sudo("mkdir /tmp/temp")
                     put(test,"/tmp/temp/", use_sudo=True)
-        env_vars = "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
+        env_vars = env_vars + "PARAMS_FILE=sanity_params.ini PYTHONPATH='../scripts:../fixtures'"
 
     cmds = {'sanity'       : './run_tests.sh --sanity --send-mail -U',
             'quick_sanity' : './run_tests.sh -T quick_sanity --send-mail -t',
