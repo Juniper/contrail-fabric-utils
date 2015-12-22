@@ -27,6 +27,7 @@ def get_address_family():
 @roles('build')
 @task
 def setup_test_env():
+    test_host = env.roledefs['test'][0]
     cfgm_host = env.roledefs['cfgm'][0]
     cfgm_ip = hstr_to_ip(cfgm_host)
     with settings(warn_only=True):
@@ -36,7 +37,7 @@ def setup_test_env():
             build_id = sudo('cat /opt/contrail/contrail_packages/VERSION')
         fab_revision = build_id
         revision = build_id
-        print "Testing from the CFGM."
+        print "Testing from the TEST Node."
     else:
         with settings(warn_only=True):
             fab_revision = local('git log --format="%H" -n 1', capture=True)
@@ -45,9 +46,8 @@ def setup_test_env():
             else:
                 with lcd(env.test_repo_dir):
                     revision = local('git log --format="%H" -n 1', capture=True)
-
-    if not env.roledefs['build'][0] == cfgm_host:
-        execute(copy_dir, env.test_repo_dir, cfgm_host)
+    if not env.roledefs['build'][0] == test_host:
+        execute(copy_dir, env.test_repo_dir, test_host)
 
     sanity_testbed_dict = {
         'hosts': [],
@@ -86,6 +86,8 @@ def setup_test_env():
 
     internal_vip = get_openstack_internal_vip()
     for host_string in env.roledefs['all']:
+        if host_string in env.roledefs['test']:
+            continue
         host_ip = host_string.split('@')[1]
         with settings(host_string = host_string):
             host_name = sudo("hostname")
@@ -203,7 +205,7 @@ def setup_test_env():
         sanity_testbed_dict['hosts_ipmi'].append(env.hosts_ipmi)
 
     # for every host_string
-    with settings(host_string = cfgm_host):
+    with settings(host_string = test_host):
         repo_dir_name = env.test_repo_dir.split('/')[-1]
         repo_path= get_remote_path(env.test_repo_dir)
 
@@ -213,14 +215,14 @@ def setup_test_env():
         stop_on_fail = env.get('stop_on_fail', False)
         mail_to = env.get('mail_to', '')
         log_scenario = env.get('log_scenario', 'Sanity')
-        if CONTROLLER_TYPE == 'Cloudstack': 
+        if CONTROLLER_TYPE == 'Cloudstack':
             stack_password= 'password'
             stack_tenant= 'default-project'
             stack_user= 'admin'
         else:
             stack_user, stack_password = get_authserver_credentials()
             stack_tenant = get_admin_tenant_name()
-        # Few hardcoded variables for sanity environment 
+        # Few hardcoded variables for sanity environment
         # can be removed once we move to python3 and configparser
         stack_domain = 'default-domain'
         webserver_host = '10.204.216.50'
@@ -342,10 +344,10 @@ def setup_test_env():
                 run('rm -rf /tmp/pip-build-root')
                 if detect_ostype() in ['centos', 'redhat', 'centoslinux']:
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources==0.2.7 discover \
-                        testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0'
+                        testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0 xmltodict'
                 elif 'ubuntu' == detect_ostype():
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources==0.2.7 \
-                           testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0'
+                           testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0 xmltodict'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
                 if ui_browser:
@@ -369,7 +371,7 @@ def setup_test_env():
                     if ('1.9' in ant_version):
                         pkg_install(['ant-junit'] , disablerepo = False)
 
-                pkg_install(['patch', 'python-heatclient', 'python-ceilometerclient', 'python-setuptools'],disablerepo = False)
+                pkg_install(['python-dev','python-novaclient', 'python-neutronclient', 'python-cinderclient','python-contrail','patch', 'python-heatclient', 'python-ceilometerclient', 'python-setuptools'],disablerepo = False)
 
                 # On centos, junos-eznc install requires devel pkgs of libxml2 and libxslt
                 if detect_ostype() in ['redhat', 'centos', 'centoslinux']:
@@ -379,12 +381,12 @@ def setup_test_env():
                 #Restart DM. This is because of #1490860
                 sudo('service contrail-device-manager restart')
 
-        for host_string in env.roledefs['compute']:
-            with settings(host_string=host_string):
-                #pkg_install(['python-setuptools', 'python-pkg-resources', 'python-ncclient'],disablerepo = False)
-                pkg_install(['python-setuptools', 'python-ncclient'],disablerepo = False)
-                if detect_ostype() in ['centos', 'centoslinux', 'redhat']:
-                    sudo("yum -y install tcpdump")
+# NOTE: Installing python-ncclient on compute should be moved to standard contrail provisioning/setup code
+    for host_string in env.roledefs['compute']:
+        with settings(host_string=host_string):
+            pkg_install(['python-ncclient'],disablerepo = False)
+            if detect_ostype() in ['centos', 'centoslinux', 'redhat']:
+                sudo("yum -y install tcpdump")
 #end setup_test_env
 
 def get_remote_path(path):
