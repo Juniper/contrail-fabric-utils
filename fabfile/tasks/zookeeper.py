@@ -43,6 +43,13 @@ def stop_zookeeper():
         if sudo("service zookeeper stop").failed:
             sudo(stop_cmd)
 
+@task
+@roles('database')
+def cleanup_zookeeper():
+    if (os.path.exists("/var/lib/zookeeper/version-2")):
+        cmd = "mv /var/lib/zookeeper/version-2 /var/lib/zookeeper/version-2.old"
+        sudo(cmd)
+
 def upgrade_package(pkgs, ostype):
     if ostype in ['centos', 'fedora']:
         run('yum clean all')
