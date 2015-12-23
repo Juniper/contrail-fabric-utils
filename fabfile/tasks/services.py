@@ -2,6 +2,7 @@ from fabfile.config import *
 from misc import zoolink
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.cluster import get_orchestrator
+from fabric.contrib.files import exists
 
 @task
 @roles('cfgm')
@@ -270,6 +271,19 @@ def start_contrail_control_services():
     execute('start_collector')
     execute('start_control')
     execute('start_webui')
+
+@task
+@roles('database')
+def backup_cassandra_zk():
+    """take backup of cassandra db"""
+    if exists('/var/lib/cassandra.old'):
+        sudo('rm -rf /var/lib/cassandra.old')
+    if exists('/var/lib/zookeeper/version-2.old'):
+        sudo('rm -rf /var/lib/zookeeper/version-2.old')
+    if exists('/var/lib/cassandra'):
+        sudo('mv /var/lib/cassandra /var/lib/cassandra.old')
+    if exists('/var/lib/zookeeper/version-2'):
+        sudo('mv /var/lib/zookeeper/version-2 /var/lib/zookeeper/version-2.old')
 
 @task
 @roles('build')
