@@ -226,9 +226,9 @@ def provision_sr_iov_fab(vcenter_info, esxi_info, host_list):
     apt_install(['contrail-vmware-utils'])
     sr_iov_params = {}
 
-    sr_iov_params['dvs_name'] = vcenter_info['sr_iov_dv_switch']['dv_switch_name']
-    sr_iov_params['dvportgroup_name'] = vcenter_info['sr_iov_dv_port_group']['dv_portgroup_name']
-    sr_iov_params['dvportgroup_num_ports'] = vcenter_info['sr_iov_dv_port_group']['number_of_ports']
+    sr_iov_params['dvs_name'] = vcenter_info['dv_switch_sr_iov']['dv_switch_name']
+    sr_iov_params['dvportgroup_name'] = vcenter_info['dv_port_group_sr_iov']['dv_portgroup_name']
+    sr_iov_params['dvportgroup_num_ports'] = vcenter_info['dv_port_group_sr_iov']['number_of_ports']
 
     sr_iov_params['vcenter_server'] = vcenter_info['server']
     sr_iov_params['vcenter_username'] = vcenter_info['username']
