@@ -22,6 +22,8 @@ from fabfile.tasks.helpers import *
 from fabfile.utils.commandline import *
 from fabfile.tasks.tester import setup_test_env
 from fabfile.tasks.rabbitmq import setup_rabbitmq_cluster
+from fabfile.tasks.zookeeper import *
+from fabfile.tasks.services import *
 from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
         configure_esxi_network, create_esxi_compute_vm, deprovision_vcenter,\
         provision_vcenter_features, provision_pci_fab, provision_sr_iov_fab
@@ -2616,9 +2618,11 @@ def reset_config():
     from fabfile.tasks.misc import run_cmd
     from fabfile.tasks.services import stop_cfgm, start_cfgm,\
           stop_database, start_database,\
-          stop_contrail_control_services, restart_collector
+          stop_contrail_control_services, restart_collector, backup_cassandra_zk
     try:
         execute(stop_contrail_control_services)
+        execute(stop_zookeeper)
+        execute(backup_cassandra_zk)
         execute(cleanup_os_config)
         execute(setup_rabbitmq_cluster)
         execute(increase_limits)
@@ -2636,23 +2640,11 @@ def reset_config():
         execute(verify_collector)
         execute(setup_webui)
         execute(verify_webui)
-        execute(stop_database)
-        execute(delete_cassandra_db_files)
-        execute(start_database)
-        execute(stop_cfgm)
-        execute(config_server_reset, 'add', [env.roledefs['cfgm'][0]])
-        execute(run_cmd, env.roledefs['cfgm'][0], "service supervisor-config restart")
-        execute(start_cfgm)
-        execute(restart_collector)
-        execute(add_tsn)
-        execute(add_tor_agent)
-        execute('increase_vrouter_limit')
-        sleep(120)
+        execute(start_zookeeper)
+
+
     except SystemExit:
-        execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
         raise SystemExit("\nReset config Failed.... Aborting")
-    else:
-        execute(config_server_reset, 'delete', [env.roledefs['cfgm'][0]])
     sleep(60)
     execute(prov_database)
     execute(prov_analytics)
@@ -2662,6 +2654,7 @@ def reset_config():
     execute(prov_encap_type)
     execute(setup_remote_syslog)
     execute(setup_vrouter)
+    execute(restart_openstack)
     execute(compute_reboot)
 #end reset_config
 
