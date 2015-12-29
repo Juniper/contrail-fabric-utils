@@ -2042,19 +2042,19 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
         compute_mgmt_ip= host_string.split('@')[1]
         compute_control_ip= hstr_to_ip(compute_host)
-        admin_tenant_name = get_keystone_admin_tenant_name()
+        admin_tenant_name = get_admin_tenant_name()
         orch = get_orchestrator()
         if orch is 'openstack':
-            admin_user, admin_password = get_openstack_credentials()
+            admin_user, admin_password = get_authserver_credentials()
         elif orch is 'vcenter':
             admin_user, admin_password = get_vcenter_credentials()
-        keystone_ip = get_keystone_ip()
+        authserver_ip = get_authserver_ip()
         prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                     "--admin_user %s --admin_password %s --admin_tenant_name %s\
                      --openstack_ip %s --router_type tor-agent" \
                      %(tor_agent_name, compute_control_ip, cfgm_ip,
                        admin_user, admin_password,
-                       admin_tenant_name, keystone_ip)
+                       admin_tenant_name, authserver_ip)
         pr_args = "--device_name %s --vendor_name %s --device_mgmt_ip %s\
                    --device_tunnel_ip %s --device_tor_agent %s\
                    --device_tsn %s --api_server_ip %s --oper add\
@@ -2062,7 +2062,7 @@ def add_tor_agent_by_index(index, node_info, restart=True):
                    --admin_tenant_name %s --openstack_ip %s"\
             %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
               tor_agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
-              admin_tenant_name, keystone_ip)
+              admin_tenant_name, authserver_ip)
         if tor_product_name:
             pr_args += " --product_name %s" %(tor_product_name)
         with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
@@ -2195,23 +2195,23 @@ def delete_tor_agent_by_index(index, node_info, restart=True, remove_cacert=Fals
         (tgt_ip, tgt_gw) = get_data_ip(host_string)
         compute_mgmt_ip= host_string.split('@')[1]
         compute_control_ip= hstr_to_ip(compute_host)
-        admin_tenant_name = get_keystone_admin_tenant_name()
+        admin_tenant_name = get_admin_tenant_name()
         orch = get_orchestrator()
         if orch is 'openstack':
-            admin_user, admin_password = get_openstack_credentials()
+            admin_user, admin_password = get_authserver_credentials ()
         elif orch is 'vcenter':
             admin_user, admin_password = get_vcenter_credentials()
-        keystone_ip = get_keystone_ip()
+        authserver_ip = get_authserver_ip()
         prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper del " \
                     "--admin_user %s --admin_password %s --admin_tenant_name %s\
                      --openstack_ip %s" \
                      %(tor_agent_name, compute_control_ip, cfgm_ip, admin_user,
-                       admin_password, admin_tenant_name, keystone_ip)
+                       admin_password, admin_tenant_name, authserver_ip)
         pr_args = "--device_name %s --vendor_name %s --api_server_ip %s\
                    --oper del --admin_user %s --admin_password %s\
                    --admin_tenant_name %s --openstack_ip %s"\
             %(tor_name, tor_vendor_name, cfgm_ip, admin_user, admin_password,
-              admin_tenant_name, keystone_ip)
+              admin_tenant_name, authserver_ip)
         with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
             sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
             sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
