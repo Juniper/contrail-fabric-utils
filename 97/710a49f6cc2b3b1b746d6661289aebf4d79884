@@ -1,0 +1,8 @@
+Verified+2: Zuul <zuul@lists.opencontrail.org>
+Approved+1: Ashok Singh <ashoksr@juniper.net>
+Code-Review+2: Ashok Singh <ashoksr@juniper.net>
+Submitted-by: Zuul <zuul@lists.opencontrail.org>
+Submitted-at: Wed, 30 Dec 2015 03:15:21 -0800
+Reviewed-on: https://review.opencontrail.org/16033
+Project: Juniper/contrail-fabric-utils
+Branch: refs/heads/master
