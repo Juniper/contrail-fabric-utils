@@ -342,10 +342,10 @@ def setup_test_env():
                 run('rm -rf /tmp/pip-build-root')
                 if detect_ostype() in ['centos', 'redhat', 'centoslinux']:
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources==0.2.7 discover \
-                        testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0'
+                        testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0 eventlet'
                 elif 'ubuntu' == detect_ostype():
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources==0.2.7 \
-                           testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0'
+                           testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0 eventlet'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
                 if ui_browser:
