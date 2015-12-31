@@ -257,8 +257,11 @@ def setup_test_env():
 
         vcenter_dc = ''
         if orch == 'vcenter':
-            vcenter_dc = env.vcenter['datacenter']
             public_tenant_name='vCenter'
+
+        if env.has_key('vcenter'):
+            if env.vcenter:
+                vcenter_dc = env.vcenter['datacenter']
 
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__testbed_json_file__'   : 'sanity_testbed.json',
@@ -306,6 +309,12 @@ def setup_test_env():
              '__ipmi_username__'       : getattr(testbed, 'ipmi_username', ''),
              '__ipmi_password__'       : getattr(testbed, 'ipmi_password', ''),
              '__vcenter_dc__'          : vcenter_dc,
+             '__vcenter_server__'      : get_vcenter_ip(),
+             '__vcenter_port__'        : get_vcenter_port(),
+             '__vcenter_username__'    : get_vcenter_username(),
+             '__vcenter_password__'    : get_vcenter_password(),
+             '__vcenter_datacenter__'  : get_vcenter_datacenter(),
+             '__vcenter_compute__'     : get_vcenter_compute(),
              '__use_devicemanager_for_md5__'       : use_devicemanager_for_md5,
             })
 
