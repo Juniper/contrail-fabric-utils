@@ -451,6 +451,10 @@ env.ostypes = {
 #       dv_switch_name
 #dv_port_group_fab section contains distributed port group params for fab network
 #       dv_portgroup_name and the number of ports the group has
+#dv_switch_sr_iov section contains distributed switch related params for sr-iov based fab network
+#       dv_switch_name
+#dv_port_group_sr_iov section contains distributed port group params for sr-iov based fab network
+#       dv_portgroup_name and the number of ports the group has
 #dvswitch section contains distributed switch related params for overlay network
 #       dv_switch_name
 #dvportgroup section contains distributed port group info for overlay network
@@ -468,6 +472,11 @@ env.ostypes = {
 #        'dv_port_group_fab': {
 #                'dv_portgroup_name': 'fab-pg',
 #                'number_of_ports': '3',
+#         },
+#        'dv_switch_sr_iov': {'dv_switch_name': 'dvs-sr-iov'},
+#        'dv_port_group_sr_iov': {
+#                'dv_portgroup_name': 'sr-iov-pg',
+#                'number_of_ports': '2',
 #         },
 #        'dv_switch': { 'dv_switch_name': 'kd_dvswitch'},
 #        'dv_port_group': {
@@ -499,6 +508,7 @@ env.ostypes = {
 #        host: the contrail_vm ip in the form of 'user@contrailvm_ip'
 #        pci_devices: pci_devices information
 #            nic: pci_id of the pass-through interfaces
+#        sr_iov_nics: virtual functions enabled physical interface's name
 #        vmdk: the absolute path of the contrail-vmdk used to spawn vm
 #              optional, if vmdk_download_path is specified
 #        vmdk_download_path: download path of the contrail-vmdk.vmdk used to spawn vm
@@ -518,6 +528,7 @@ env.ostypes = {
 #                   'pci_devices': {
 #                        nic: ["04:00.0", "04:00.1"],
 #                    },
+#                   'sr_iov_nics': ["vmnic0"],
 #                   'vmdk_download_path': "http://10.84.5.100/vmware/vmdk/ContrailVM-disk1.vmdk",
 #             }
 #       }
