@@ -66,7 +66,7 @@ class StdErrLogger(Logger):
 
 
 fabtasks = [fabtask.split(':')[0] for fabtask in env.tasks]
-ts = datetime.datetime.now().strftime("%Y_%m_%H_%M_%S_%f")
+ts = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S_%f")
 sys.stdout = Logger('_'.join(fabtasks) + '_' + ts + '.log')
 sys.stderr = StdErrLogger('_'.join(fabtasks) + '_' + ts + '.log')
 
