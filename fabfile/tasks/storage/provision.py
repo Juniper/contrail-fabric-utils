@@ -79,8 +79,7 @@ def create_storage_setup_cmd(mode):
                 orig_hostnames.append(sthostname)
                 storage_host_password=get_env_passwords(entry)
                 storage_pass_list.append(storage_host_password)
-                storage_host = get_control_host_string(entry)
-                storage_data_ip=get_storage_data_ip(storage_host)[0]
+                storage_data_ip=get_storage_data_ip(entry)[0]
                 storage_host_list.append(storage_data_ip)
                 if index != 0:
                     storage_os_pass_list.append(storage_host_password)
@@ -104,8 +103,7 @@ def create_storage_setup_cmd(mode):
                 orig_hostnames.append(sthostname)
                 storage_host_password=get_env_passwords(entry)
                 storage_pass_list.append(storage_host_password)
-                storage_host = get_control_host_string(entry)
-                storage_data_ip=get_storage_data_ip(storage_host)[0]
+                storage_data_ip=get_storage_data_ip(entry)[0]
                 storage_host_list.append(storage_data_ip)
     for entry in env.roledefs['collector']:
         for sthostname, sthostentry in zip(env.hostnames['all'],
