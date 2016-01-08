@@ -764,6 +764,13 @@ class Vcenter(object):
             print "Question  : ", summary.runtime.question.text
         print ""
 
+def _wait_for_task (task):
+    from pyVmomi import vim
+    while (task.info.state == vim.TaskInfo.State.running or
+           task.info.state == vim.TaskInfo.State.queued):
+        time.sleep(2)
+    return task.info.state == vim.TaskInfo.State.success
+
 def cleanup_vcenter(vcenter_info):
     from pyVim import connect
     from pyVmomi import vim

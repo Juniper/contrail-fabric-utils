@@ -2857,7 +2857,7 @@ def add_esxi_to_vcenter(*args):
     provision_vcenter(vcenter_info, hosts, clusters, vms, 'True')
     update_esxi_vrouter_map()
 
-@roles('build')
+@hosts(env.roledefs['cfgm'][0])
 @task
 def setup_vcenter():
     vcenter_info = getattr(env, 'vcenter', None)
