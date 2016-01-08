@@ -8,6 +8,7 @@ from multitenancy import *
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
 def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
+    parent_cmd = cmd
     database_host = host_string
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
     cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
@@ -17,8 +18,10 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     database_host=get_control_host_string(host_string)
     database_host_password=get_env_passwords(host_string)
     tgt_ip = hstr_to_ip(database_host)
-    #derive kafka broker id from the list of servers specified
-    broker_id = sorted(database_ip_list).index(tgt_ip)
+
+    if parent_cmd != "remove-cassandra-node" and parent_cmd != 'decommission-cassandra-node':
+        #derive kafka broker id from the list of servers specified
+        broker_id = sorted(database_ip_list).index(tgt_ip)
     cassandra_user = get_cassandra_user()
     cassandra_password = get_cassandra_password()
 
@@ -39,11 +42,16 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
         cmd += " --seed_list %s" % (hstr_to_ip(get_control_host_string(
                                        env.roledefs['database'][0])))
     cmd += " --zookeeper_ip_list %s" % ' '.join(database_ip_list)
-    cmd += " --database_index %d" % (database_host_list.index(database_host) + 1)
+    if parent_cmd == "setup-vnc-database" or parent_cmd == "update-zoo-servers":
+        cmd += " --database_index %d" % (database_host_list.index(database_host) + 1)
     minimum_diskGB = get_minimum_diskGB()
     if minimum_diskGB is not None:
         cmd += " --minimum_diskGB %s" % minimum_diskGB
-    cmd += " --kafka_broker_id %d" % broker_id
+    if parent_cmd == "setup-vnc-database" and get_kafka_enabled() is not None:
+        cmd += " --kafka_broker_id %d" % broker_id
+    if parent_cmd == "remove-cassandra-node":
+        cmd += " --node_to_delete %s" % hstr_to_ip(host_string)
+
     if cassandra_user is not None:
         cmd += " --cassandra_user %s" % cassandra_user
         cmd += " --cassandra_password %s" % cassandra_password
@@ -57,7 +65,7 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     mgmt_self_ip = hstr_to_ip(host_string)
     openstack_host_password = get_env_passwords(host_string)
     authserver_ip = get_authserver_ip(ignore_vip=True,
-                                  openstack_node=env.host_string)
+                                  openstack_node=host_string)
     (_, openstack_admin_password) = get_authserver_credentials()
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
     cfgm_ip = hstr_to_ip(cfgm_host)
@@ -112,18 +120,24 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
                      for entry in env.roledefs['cfgm']]
     collector_host_list = [get_control_host_string(entry)\
                           for entry in env.roledefs['collector']]
-    if cfgm_host in collector_host_list:
-        collector_ip = tgt_ip
-    else:
-        # Select based on index
-        hindex = cfgm_host_list.index(cfgm_host)
-        hindex = hindex % len(env.roledefs['collector'])
-        collector_host = get_control_host_string(
-                             env.roledefs['collector'][hindex])
-        collector_ip = hstr_to_ip(collector_host)
+    collector_ip = None
+    if cmd != 'update-ifmap-users':
+        if cfgm_host in collector_host_list:
+            collector_ip = tgt_ip
+        else:
+            # Select based on index
+            hindex = cfgm_host_list.index(cfgm_host)
+            hindex = hindex % len(env.roledefs['collector'])
+            collector_host = get_control_host_string(
+                                 env.roledefs['collector'][hindex])
+            collector_ip = hstr_to_ip(collector_host)
+ 
     mt_opt = '--multi_tenancy' if get_mt_enable() else ''
     cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host))\
                          for cassandra_host in env.roledefs['database']]
+    control_ip_list = [hstr_to_ip(get_control_host_string(control_host))\
+                         for control_host in env.roledefs['control']]
+
     orch = get_orchestrator()
     cassandra_user = get_cassandra_user()
     cassandra_password = get_cassandra_password()
@@ -132,6 +146,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cmd += " --collector_ip %s %s" % (collector_ip, mt_opt)
     cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
     cmd += " --zookeeper_ip_list %s" % ' '.join(cassandra_ip_list)
+    cmd += " --control_ip_list %s" % ' '.join(control_ip_list)
     cmd += " --quantum_port %s" % quantum_port
     cmd += " --nworkers %d" % nworkers
     cmd += " --service_token %s" % get_service_token()
