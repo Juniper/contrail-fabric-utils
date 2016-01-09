@@ -929,9 +929,9 @@ def setup_ceilometer():
     """Provisions ceilometer services in all nodes defined in openstack role."""
     if env.roledefs['openstack'] and env.host_string == env.roledefs['openstack'][0]:
         execute("setup_ceilometer_node", env.host_string)
+        execute("setup_network_service") #Provisions in cfgm node
 
     execute("setup_image_service_node", env.host_string)
-    execute("setup_network_service_node", env.host_string)
     execute("setup_identity_service_node", env.host_string)
 
 @task
@@ -988,6 +988,13 @@ def setup_ceilometer_node(*args):
             for svc in ceilometer_services:
                 sudo("service %s restart" %(svc))
 #end setup_ceilometer_node
+
+@roles('cfgm')
+@task
+def setup_network_service():
+    """Provisions ceilometer related network services in all nodes defined in cfgm role."""
+    if env.roledefs['cfgm']:
+        execute("setup_network_service_node", env.host_string)
 
 @task
 def setup_network_service_node(*args):
@@ -1063,7 +1070,11 @@ def setup_openstack():
         if is_package_installed('contrail-openstack-dashboard'):
             execute('setup_contrail_horizon_node', env.host_string)
         if is_ceilometer_provision_supported():
-            setup_ceilometer()
+            if env.host_string == env.roledefs['openstack'][0]:
+                execute("setup_ceilometer_node", env.host_string)
+                execute("setup_network_service") #Provisions in cfgm node
+            execute("setup_image_service_node", env.host_string)
+            execute("setup_identity_service_node", env.host_string)
 
 @task
 @roles('openstack')
