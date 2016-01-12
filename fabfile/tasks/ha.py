@@ -685,6 +685,13 @@ def setup_cmon_schema_node(*args):
 @EXECUTE_TASK
 @roles('openstack')
 def setup_cmon_param_zkonupgrade():
+    execute('setup_cmon_param_zkonupgrade_node', env.host_string)
+
+@task
+def setup_cmon_param_zkonupgrade_node(*args):
+    if len(env.roledefs['openstack']) <= 1:
+        print "Single Openstack cluster, skipping cmon zookeeper setup."
+        return
     cmon_param = '/etc/contrail/ha/cmon_param'
     zoo_ip_list = [hstr_to_ip(get_control_host_string(\
                     cassandra_host)) for cassandra_host in env.roledefs['database']]
