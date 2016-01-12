@@ -685,26 +685,34 @@ def setup_cmon_schema_node(*args):
 @EXECUTE_TASK
 @roles('openstack')
 def setup_cmon_param_zkonupgrade():
-    cmon_param = '/etc/contrail/ha/cmon_param'
-    zoo_ip_list = [hstr_to_ip(get_control_host_string(\
-                    cassandra_host)) for cassandra_host in env.roledefs['database']]
-    zk_servers_ports = ','.join(['%s:2181' %(s) for s in zoo_ip_list])
-    zks = 'ZK_SERVER_IP="%s"' % (zk_servers_ports)
-    monitor_galera="False"
-    if get_contrail_internal_vip():
-       monitor_galera="True"
-    # Assuming that keystone is the user and pass
-    # if changed we need to fetch and update these fields
-    keystone_db_user="keystone"
-    keystone_db_pass="keystone"
-    cmon_db_user="cmon"
-    cmon_db_pass="cmon"
-    sudo("grep -q 'ZK_SERVER_IP' %s || echo '%s' >> %s" % (cmon_param, zks, cmon_param))
-    sudo("grep -q 'OS_KS_USER' %s || echo 'OS_KS_USER=%s' >> %s" % (cmon_param, keystone_db_user, cmon_param))
-    sudo("grep -q 'OS_KS_PASS' %s || echo 'OS_KS_PASS=%s' >> %s" % (cmon_param, keystone_db_pass, cmon_param))
-    sudo("grep -q 'CMON_USER' %s || echo 'CMON_USER=%s' >> %s" % (cmon_param, cmon_db_user, cmon_param))
-    sudo("grep -q 'CMON_PASS' %s || echo 'CMON_PASS=%s' >> %s" % (cmon_param, cmon_db_pass, cmon_param))
-    sudo("grep -q 'MONITOR_GALERA' %s || echo 'MONITOR_GALERA=%s' >> %s" % (cmon_param, monitor_galera, cmon_param))
+    execute('setup_cmon_param_zkonupgrade_node', env.host_string)
+
+@task
+def setup_cmon_param_zkonupgrade_node(*args):
+    if len(env.roledefs['openstack']) <= 1:
+        print "Single Openstack cluster, skipping cmon zookeeper setup."
+        return
+    for host_string in args:
+        cmon_param = '/etc/contrail/ha/cmon_param'
+        zoo_ip_list = [hstr_to_ip(get_control_host_string(\
+                        cassandra_host)) for cassandra_host in env.roledefs['database']]
+        zk_servers_ports = ','.join(['%s:2181' %(s) for s in zoo_ip_list])
+        zks = 'ZK_SERVER_IP="%s"' % (zk_servers_ports)
+        monitor_galera="False"
+        if get_contrail_internal_vip():
+           monitor_galera="True"
+        # Assuming that keystone is the user and pass
+        # if changed we need to fetch and update these fields
+        keystone_db_user="keystone"
+        keystone_db_pass="keystone"
+        cmon_db_user="cmon"
+        cmon_db_pass="cmon"
+        sudo("grep -q 'ZK_SERVER_IP' %s || echo '%s' >> %s" % (cmon_param, zks, cmon_param))
+        sudo("grep -q 'OS_KS_USER' %s || echo 'OS_KS_USER=%s' >> %s" % (cmon_param, keystone_db_user, cmon_param))
+        sudo("grep -q 'OS_KS_PASS' %s || echo 'OS_KS_PASS=%s' >> %s" % (cmon_param, keystone_db_pass, cmon_param))
+        sudo("grep -q 'CMON_USER' %s || echo 'CMON_USER=%s' >> %s" % (cmon_param, cmon_db_user, cmon_param))
+        sudo("grep -q 'CMON_PASS' %s || echo 'CMON_PASS=%s' >> %s" % (cmon_param, cmon_db_pass, cmon_param))
+        sudo("grep -q 'MONITOR_GALERA' %s || echo 'MONITOR_GALERA=%s' >> %s" % (cmon_param, monitor_galera, cmon_param))
 
 @task
 @roles('openstack')
