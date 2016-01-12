@@ -4,7 +4,6 @@ import json
 import string
 import socket
 import tempfile
-import yaml
 from random import randrange
 from datetime import datetime as dt
 from fabfile.config import *
@@ -545,6 +544,7 @@ def export_testbed_details(filename='testbed_vars'):
 @roles('rally')
 @task
 def run_rally(task_args_file=None):
+    import yaml
     if task_args_file:
         if os.path.isfile(task_args_file):
             put(task_args_file, '/tmp')
