@@ -512,6 +512,13 @@ def export_testbed_details(filename='testbed_vars'):
     api_server_host_ip = testbed.env.roledefs['cfgm'][0].split('@')[1]
     api_server_host_user = testbed.env.roledefs['cfgm'][0].split('@')[0]
     api_server_host_password = get_env_passwords(api_server_host_string)
+
+    if testbed.env.roledefs.get('test', False):
+        test_host_string = testbed.env.roledefs['test'][0]
+        test_host_ip = testbed.env.roledefs['test'][0].split('@')[1]
+        test_host_user = testbed.env.roledefs['test'][0].split('@')[0]
+        test_host_password = get_env_passwords(test_host_string)
+
     public_network_rt = getattr(testbed, 'public_vn_rtgt', None)
     public_network_subnet = getattr(testbed, 'public_vn_subnet', None)
     router_asn = getattr(testbed, 'router_asn', '64512')
@@ -538,6 +545,11 @@ def export_testbed_details(filename='testbed_vars'):
         fh.write('export TESTBED_LOCATION=%s\n' % (testbed_location))
     if image_web_server:
         fh.write('export IMAGE_WEB_SERVER=%s\n' % (image_web_server))
+    if test_host_string:
+        fh.write('export TEST_HOST_STRING=%s\n' % (test_host_string))
+        fh.write('export TEST_HOST_IP=%s\n' % (test_host_ip))
+        fh.write('export TEST_HOST_USER=%s\n' % (test_host_user))
+        fh.write('export TEST_HOST_PASSWORD=%s\n' % (test_host_password))
     fh.close()
 # end export_testbed_details
 
