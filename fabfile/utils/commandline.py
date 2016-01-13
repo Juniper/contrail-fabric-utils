@@ -361,6 +361,10 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
         if gateway_routes:
             cmd += " --vgw_gateway_routes %s" % str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
 
+    sriov_string = get_sriov_details(host_string)
+    if sriov_string:
+        cmd += " --sriov %s" % sriov_string
+
     if 'vcenter_compute' in env.roledefs:
         compute_host = 'root' + '@' + compute_mgmt_ip
         if compute_host in env.roledefs['vcenter_compute'][:]:
