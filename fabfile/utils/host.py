@@ -75,6 +75,16 @@ def get_haproxy():
         return False
     return getattr(testbed, 'haproxy', False)
 
+def get_sriov_enabled():
+    if 'sriov' not in env.keys():
+        return False
+
+    for compute in env.roledefs['compute']:
+        if compute in env.sriov:
+            return True
+
+    return False
+
 def get_haproxy_opt():
     haproxy_opt = '--haproxy' if get_haproxy() else ''
     return haproxy_opt

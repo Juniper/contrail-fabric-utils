@@ -88,6 +88,14 @@ env.ostypes = {
     host9: 'centos',
     host10: 'centos',
 }
+
+#Following section contains the SRIO configuration. For a given host, it
+#is a list {interface, number of Virtual functions on the interface, and
+#the allowed provider networks on that interface
+#env.sriov = {
+#     host2 :[ {'interface' : 'eth0', 'VF' : 7, 'physnets' : ['physnet1', 'physnet2']}, { 'interface' : 'eth1', 'VF' : 5, 'physnets' : ['physnet3', 'physnet4']}]
+#}
+
 #env.orchestrator = 'openstack' #other values are 'vcenter', 'none' default:openstack
 
 #ntp server the servers should point to

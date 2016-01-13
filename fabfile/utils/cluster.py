@@ -35,6 +35,34 @@ def is_lbaas_enabled():
     else:
         return env.enable_lbaas
 
+def get_sriov_details(compute_host_string):
+
+    sriov_string = ""
+    if 'sriov' not in env.keys():
+        return sriov_string
+
+    if compute_host_string not in env.sriov:
+        return sriov_string
+
+    intf_list = env.sriov[compute_host_string]
+    for intf in intf_list:
+        if 'interface' in intf:
+            if not intf.get('VF'):
+                continue
+            if not intf.get('physnets'):
+                continue
+            if not len(intf['physnets']):
+                continue
+            if sriov_string:
+                sriov_string += ","
+            sriov_string += intf['interface'] + ":" + str(intf['VF']) + ":"
+            for phynet in intf['physnets']:
+                sriov_string += phynet
+                if intf['physnets'][-1] != phynet:
+                    sriov_string += "%"
+            
+    return sriov_string
+
 def get_vgw_details(compute_host_string):
     # Check and collect the VGW details for given compute host
     set_vgw = False
@@ -238,3 +266,6 @@ def is_contrail_node(node):
     with settings(host_string=node, warn_only=True):
         package_info = get_build('contrail-setup')
     return True if package_info else False
+
+
+

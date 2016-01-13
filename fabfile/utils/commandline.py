@@ -99,6 +99,10 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     if conductor_workers:
         cmd += ' --conductor_workers %s' % conductor_workers
 
+    sriov_enabled = get_sriov_enabled()
+    if sriov_enabled:
+        cmd += ' --sriov 1'
+
     return cmd
 
 def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
@@ -361,6 +365,10 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
         if gateway_routes:
             cmd += " --vgw_gateway_routes %s" % str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
 
+    sriov_string = get_sriov_details(host_string)
+    if sriov_string:
+        cmd += " --sriov %s" % sriov_string
+        
     if 'vcenter_compute' in env.roledefs:
         compute_host = 'root' + '@' + compute_mgmt_ip
         if compute_host in env.roledefs['vcenter_compute'][:]:
