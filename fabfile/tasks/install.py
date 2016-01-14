@@ -178,41 +178,6 @@ def install_and_setup_all():
     connections.clear()
     execute('setup_all')
 
-@task
-@EXECUTE_TASK
-@roles('all')
-def upgrade_pkgs():
-    """Upgrades the pramiko and pycrypto packages in all nodes."""
-    execute("upgrade_pkgs_node", env.host_string)
-
-@task
-@roles('build')
-def upgrade_pkgs_without_openstack():
-    """Upgrades the pramiko and pycrypto packages in all nodes excluding openstack node."""
-    host_strings = copy.deepcopy(env.roledefs['all'])
-    dummy = [host_strings.remove(openstack_node)
-             for openstack_node in env.roledefs['openstack']]
-    for host_string in host_strings:
-        with settings(host_string=host_string):
-            execute("upgrade_pkgs_node", host_string)
-
-@task
-def upgrade_pkgs_node(*args):
-    """Upgrades the pramiko/pcrypto packages in single or list of nodes. USAGE:fab upgrade_pkgs_node:user@1.1.1.1,user@2.2.2.2"""
-    for host_string in args:
-        with settings(host_string=host_string):
-            # This step is required in customer env, becasue they used to call fab
-            # commands from one of the node in the cluster(cfgm).
-            # Installing packages(python-nova, python-cinder) brings in lower version
-            # of python-paramiko(1.7.5), fabric-utils requires 1.9.0 or above.
-            # ubuntu does not need this, as pycrypto and paramiko are installed as debian packages.
-            cmd = "sudo easy_install \
-                  /opt/contrail/python_packages/pycrypto-2.6.tar.gz;\
-                  sudo easy_install \
-                  /opt/contrail/python_packages/paramiko-1.11.0.tar.gz"
-            if detect_ostype() in ['centos', 'fedora', 'redhat', 'centoslinux']:
-                sudo(cmd)
-
 def yum_install(rpms, disablerepo = False):
     if disablerepo:
         cmd = "yum -y --nogpgcheck --disablerepo=* --enablerepo=contrail* install "
@@ -860,7 +825,6 @@ def install_new_contrail(**kwargs):
     if new_host in env.roledefs['webui']:
         execute(install_webui_node, new_host)
 
-    execute(upgrade_pkgs_node, new_host)
 
 @roles('build')
 @task
@@ -887,7 +851,6 @@ def install_contrail(*tgzs, **kwargs):
     if 'vcenter_compute' in env.roledefs:
         execute(install_vcenter_compute)
     execute(install_vrouter)
-    execute(upgrade_pkgs)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
@@ -920,7 +883,6 @@ def install_without_openstack(*tgzs, **kwargs):
     execute(install_collector)
     execute(install_webui)
     execute('install_vrouter', manage_nova_compute)
-    execute(upgrade_pkgs_without_openstack)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
