@@ -148,3 +148,16 @@ def rhel7_kilo_test_repo(action='create'):
     else:
         print "WARNING: Unknown Action (%s)" % action
     sudo('yum clean all')
+
+@task
+@EXECUTE_TASK
+@roles('all')
+def subscribe_rhel_repos(username, password, rhosp_version='7.0'):
+    repo_list = ['rhel-7-server-extras-rpms', 'rhel-7-server-optional-rpms',
+                 'rhel-7-server-rpms', 'rhel-7-server-openstack-%s-rpms' % rhosp_version]
+    sudo('subscription-manager register --force \
+                                        --username %s \
+                                        --password %s' % (username, password))
+    sudo('subscription-manager attach --auto')
+    for reponame in repo_list:
+        sudo('subscription-manager repos --enable=%s' % reponame)
