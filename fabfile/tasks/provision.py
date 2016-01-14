@@ -2778,8 +2778,6 @@ def prov_esxi(*args):
         provision_pci_fab(vcenter_info, esxi_info, host_list)
     if (sr_iov_fab == True):
         provision_sr_iov_fab(vcenter_info, esxi_info, host_list)
-    if orch == 'vcenter' or 'vcenter_compute' in env.roledefs:
-         provision_vcenter_features(vcenter_info, esxi_info, host_list)
 
 @task
 def update_esxi_vrouter_map():
@@ -2856,6 +2854,7 @@ def add_esxi_to_vcenter(*args):
     (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, password_list)
     provision_vcenter(vcenter_info, hosts, clusters, vms, 'True')
     update_esxi_vrouter_map()
+    provision_vcenter_features(vcenter_info, esxi_info, host_list)
 
 @hosts(env.roledefs['cfgm'][0])
 @task
@@ -2874,6 +2873,7 @@ def setup_vcenter():
     password_list = getattr(env, 'passwords', None)
     (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, password_list)
     provision_vcenter(vcenter_info, hosts, clusters, vms, 'False')
+    provision_vcenter_features(vcenter_info, esxi_info, host_list)
 
 @task
 @roles('build')
