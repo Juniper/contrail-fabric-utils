@@ -318,10 +318,10 @@ class vcenter_fab(object):
 
         try:
             self.vcenter_base.connect_to_vcenter()
+            sleep(20)
             for host in self.host_list:
                 vm_name = "ContrailVM" + "-" + self.datacenter_name + "-" + self.esxi_info[host]['ip']
                 self.configure_auto_restart(self.esxi_info[host]['ip'], vm_name)
-            sleep(20)
         except self.pyVmomi.vmodl.MethodFault as error:
             print "Caught vmodl fault : " + error.msg
             return
