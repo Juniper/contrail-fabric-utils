@@ -101,7 +101,7 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
 
     sriov_enabled = get_sriov_enabled()
     if sriov_enabled:
-        cmd += ' --sriov 1'
+        cmd += ' --sriov'
 
     return cmd
 
