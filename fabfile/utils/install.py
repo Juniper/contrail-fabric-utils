@@ -187,6 +187,7 @@ def create_yum_repo_from_tgz_node(tgz, *args, **kwargs):
 
     for host_string in args:
         with settings(host_string=host_string):
+            tempdir = ''
             tgz_file_name = os.path.basename(tgz)
             tgz_name = os.path.splitext(tgz_file_name)
             repo_dir_name = os.path.join(os.path.sep, 'opt', 'contrail', tgz_name[0])
