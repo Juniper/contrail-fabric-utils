@@ -219,6 +219,7 @@ env.ostypes = {
 # manage_amqp   : Default = 'no', if set to 'yes' provision's amqp in openstack nodes and
 #                 openstack services uses the amqp in openstack nodes instead of config nodes.
 #                 amqp_host is neglected if manage_amqp is set
+# service_dbpass: Default = 'c0ntrail123'; DB password of all openstack service users
 #
 #env.openstack = {
 #    'service_token' : '33c57636fbc2c5552fd2', #Common service token for for all openstack services
@@ -226,6 +227,7 @@ env.ostypes = {
 #    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
 #    'osapi_compute_workers' : 40,             #Default 40, For low memory system reduce the osapi compute workers thread.
 #    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
+#    'service_dbpass' : 'c0ntrail123',         #DB password of all openstack service users
 #}
 
 #Config node related config knobs
