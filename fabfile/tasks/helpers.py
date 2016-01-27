@@ -537,7 +537,7 @@ def preload_image_to_esx(url, glance_id, sizes, version):
         if esxi['contrail_vm']['host'] in env.roledefs['compute']:
             apply_esxi_defaults(esxi)
             # for havana(2013.2), images are stored under datastore/vmware_base/
-            base = esxi['datastore'] + 'vmware_base/'
+            base = esxi['datastore'] + '/' + 'vmware_base/'
             # for icehouse, images are stored under datstore/<ip>_base/<glanceid>/
             if '2014.1' in version:
                 ip = esxi['contrail_vm']['host'].split('@')[-1]
