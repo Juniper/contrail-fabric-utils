@@ -51,6 +51,11 @@ def get_service_token():
             service_token = sudo("sudo cat /etc/contrail/service.token")
     return service_token
 
+
+def get_service_dbpass():
+    return get_from_testbed_dict('openstack','service_dbpass', 'c0ntrail123')
+
+
 def copy_openstackrc(role='compute'):
     openstackrc = "/etc/contrail/openstackrc"
     temprc = "/tmp/openstackrc"
