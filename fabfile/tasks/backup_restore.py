@@ -175,7 +175,7 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
             msg = "Processing the Cassandra DB Backup and puting DB dabckup data into remote host:({HOST}) and default path is ~/contrail_bkup_data/hostname/data/ or backup path is defined  as per testbed.py file  \n "
             remote_host = env.roledefs['backup'][0]
             print (msg.format(HOST=remote_host))
-        OS= sudo("cat /etc/issue  | awk 'FNR == 1 {print $1 }'")
+        OS= sudo("cat /etc/os-release  | awk 'FNR == 1 {print $1 }'| awk  -F '\"' '{print $2}'") 
         if OS == 'Ubuntu' :
            snap_path = sudo(
                            "grep  -A 1  'data_file_directories:' --after-context=1  /etc/cassandra/cassandra.yaml")
@@ -705,7 +705,7 @@ def restore_cassandra(backup_data_path='', store_db='local'):
             snapshot_dir = '~/contrail-data/data/'
         snapshot_list = snapshot_list.split('\r\n')
         snapshot_list = snapshot_list[0]
-        OS= sudo("cat /etc/issue  | awk 'FNR == 1 {print $1 }'")
+        OS= sudo("cat /etc/os-release  | awk 'FNR == 1 {print $1 }'| awk  -F '\"' '{print $2}'") 
         if OS == 'Ubuntu' :
            snap_path = sudo(
                            "grep  -A 1  'data_file_directories:' --after-context=1  /etc/cassandra/cassandra.yaml")
