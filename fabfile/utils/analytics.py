@@ -73,14 +73,13 @@ def is_ceilometer_supported(use_install_repo=False):
     orchestrator = get_orchestrator()
     if orchestrator != 'openstack':
         return False
-    # Currently supported only on ubuntu icehouse
     os_type = detect_ostype()
     openstack_sku = get_openstack_sku(use_install_repo)
     if os_type in ['redhat'] and \
-            openstack_sku in ['juno']:
+            openstack_sku in ['juno', 'kilo', 'liberty']:
         return True
     elif os_type in ['ubuntu'] and \
-            openstack_sku in ['juno']:
+            openstack_sku in ['juno', 'kilo', 'liberty']:
         return True
     else:
         return False
