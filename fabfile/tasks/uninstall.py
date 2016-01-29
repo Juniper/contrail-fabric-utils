@@ -11,6 +11,7 @@ from fabfile.utils.analytics import is_ceilometer_install_supported,\
 from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_compute_pkgs, get_ceilometer_plugin_pkgs,\
      get_openstack_ceilometer_pkgs
+from fabfile.tasks.helpers import *
 
 def get_pkg_list():
     output = sudo('yum list installed | grep @contrail_install_repo | cut -d" " -f1')
@@ -341,6 +342,7 @@ def uninstall_only_vrouter_node(manage_nova_compute='yes', *args):
                 sudo('sudo rm -rf tmp')
             with cd('/var/log'):
                 sudo('sudo rm -rf contrail/*')
+            undo_setup_hugepages()
 
 
 @roles('build')
