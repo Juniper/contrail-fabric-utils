@@ -251,7 +251,7 @@ def uninstall_collector_node(*args):
     """Uninstalls analytics pkgs in one or list of nodes. USAGE:fab uninstall_collector_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
-            pkg = ['contrail-openstack-analytics']
+            pkg = ['contrail-openstack-analytics', 'contrail-docs']
             if detect_ostype() == 'ubuntu':
                 apt_uninstall(pkg)
             else:
