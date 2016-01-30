@@ -99,7 +99,7 @@ def upgrade_collector_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             pkg_install(['contrail-setup'])
             cmd = frame_vnc_collector_cmd(host_string, 'upgrade-vnc-collector')
-            cmd += ' -P contrail-openstack-analytics'
+            cmd += ' -P contrail-openstack-analytics contrail-docs'
             cmd += ' -F %s' % from_rel
             cmd += ' -T %s' % get_release()
             sudo(cmd)
