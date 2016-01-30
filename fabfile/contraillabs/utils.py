@@ -21,7 +21,9 @@ def install_test_repo_node(*args):
             if os_type in ['ubuntu']:
                 print 'No test-repo availabe'
             if os_type in ['centos']:
-                print 'No test-repo availabe'
+                put('fabfile/contraillabs/repo/centos_el7_test.repo',
+                    '/etc/yum.repos.d/contrail_test.repo')
+                run('yum clean all')
             if os_type in ['redhat']:
                 put('fabfile/contraillabs/repo/el7_test.repo',
                     '/etc/yum.repos.d/contrail_test.repo')
