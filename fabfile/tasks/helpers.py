@@ -401,7 +401,7 @@ def schema_restart():
 @roles('database')
 @task
 def database_restart():
-   sudo("service contrail-database restart")
+    sudo("service contrail-database restart")
 #end database_restart
 
 @roles('database')
@@ -889,15 +889,14 @@ def setup_hugepages_node(*args):
     DPDK_HUGEPAGES_INIT_TIMES = 2
 
     for host_string in args:
-        # get required size of hugetlbfs
-        dpdk = getattr(env, 'dpdk', None)
-        if dpdk:
-            if env.host_string in dpdk:
-                factor = int(dpdk[env.host_string]['huge_pages'])
-            else:
-                return
-        else:
+        dpdk = getattr(env, "dpdk", {})
+        if host_string not in dpdk:
+            print "Host %s is not dpdk enabled, not configuring hugepages" \
+                % host_string
             return
+
+        # get required size of hugetlbfs
+        factor = int(dpdk[host_string]['huge_pages'])
 
         if factor == 0:
             factor = 1
@@ -949,6 +948,32 @@ def setup_hugepages():
     setup_hugepages_node(env.host_string)
 
 @task
+def undo_setup_hugepages_node(*args):
+    """Unmounts hugepages and deletes related config made by 'setup_hugepages'
+    It can be executed ONLY on the dpdk enabled hosts (as stated in testbed.py
+    file).
+    Usage: fab undo_setup_hugepages_node:user@1.1.1.1,user@2.2.2.2
+    """
+    for host_string in args:
+        if host_string not in getattr(env, "dpdk", {}):
+            print "Host %s is not dpdk enabled, not touching hugepages setup" \
+                % host_string
+            return
+
+        with settings(host_string=host_string):
+            if sudo("mount | grep hugetlbfs", warn_only=True):
+                sudo("umount /hugepages")
+            remove_pattern_from_file("^\s*hugetlbfs.*hugetlbfs.*$",
+                                     "/etc/fstab")
+            remove_pattern_from_file("^\s*vm\.max_map_count\s*=.*$",
+                                     "/etc/sysctl.conf")
+
+@roles('compute')
+@task
+def undo_setup_hugepages():
+    undo_setup_hugepages_node(env.host_string)
+
+@task
 def setup_coremask_node(*args):
     """Setup core mask on one or list of nodes
     USAGE: fab setup_coremask_node:user@host1,user@host2,...
@@ -958,18 +983,18 @@ def setup_coremask_node(*args):
     for host_string in args:
         dpdk = getattr(env, 'dpdk', None)
         if dpdk:
-            if env.host_string in dpdk:
+            if host_string in dpdk:
                 try:
-                    coremask = dpdk[env.host_string]['coremask']
+                    coremask = dpdk[host_string]['coremask']
                 except KeyError:
                     raise RuntimeError("Core mask for host %s is not defined." \
                         %(host_string))
             else:
                 print "No %s in the dpdk section in testbed file." \
-                    %(env.host_string)
+                    %(host_string)
                 return
         else:
-            print "No dpdk section in testbed file on host %s." %(env.host_string)
+            print "No dpdk section in testbed file on host %s." %(host_string)
             return
 
         if not coremask:
@@ -1144,6 +1169,10 @@ def insert_line_to_file(line,file_name,pattern=None):
             sudo('sed -i \'/%s/d\' %s' %(pattern,file_name))
         sudo('printf "%s\n" >> %s' %(line, file_name))
 #end insert_line_to_file
+
+def remove_pattern_from_file(pattern, file_name):
+    with settings(warn_only = True):
+        sudo('sed -i \'/%s/d\' %s' % (pattern, file_name))
 
 @roles('build')
 @task
