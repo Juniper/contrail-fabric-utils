@@ -2738,7 +2738,7 @@ def prov_esxi_task(host_list, esxi_info, vcenter_info):
 #end prov_esxi_task
 
 @task
-@roles('build')
+@hosts(env.roledefs['cfgm'][0])
 def prov_esxi(*args):
     esxi_info = getattr(testbed, 'esxi_hosts', None)
     if not esxi_info:
@@ -2810,6 +2810,7 @@ def update_esxi_vrouter_map():
             sudo("service contrail-vcenter-plugin restart")
 
 @task
+@hosts(env.roledefs['cfgm'][0])
 def prov_vcenter_datastores():
     vcenter_info = getattr(env, 'vcenter', None)
     if not vcenter_info:
