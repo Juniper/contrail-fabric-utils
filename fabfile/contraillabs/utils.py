@@ -20,7 +20,7 @@ def install_test_repo_node(*args):
             os_type = detect_ostype().lower()
             if os_type in ['ubuntu']:
                 print 'No test-repo availabe'
-            if os_type in ['centos']:
+            if os_type in ['centos', 'centoslinux71']:
                 put('fabfile/contraillabs/repo/centos_el7_test.repo',
                     '/etc/yum.repos.d/contrail_test.repo')
                 run('yum clean all')
