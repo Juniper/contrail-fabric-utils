@@ -1,0 +1,5 @@
+[test_repo]
+name=test_repo
+baseurl=http://10.84.5.120/cs-shared/test_repo/el7-centos
+priority=1
+gpgcheck=0
