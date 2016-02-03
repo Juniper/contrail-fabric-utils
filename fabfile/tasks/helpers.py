@@ -657,7 +657,7 @@ def cleanup_os_config():
     '''
     This has to be run from reset_config() task only
     '''
-    dbs=['nova', 'mysql', 'keystone', 'glance', 'cinder']
+    dbs=['nova', 'mysql', 'keystone', 'glance', 'cinder','heat']
     services =['mysqld', 'openstack-nova-novncproxy', 'rabbitmq-server', 'openstack-cinder-volume', 'openstack-cinder-scheduler', 'openstack-cinder-api', 'openstack-glance-registry', 'openstack-glance-api', 'openstack-nova-xvpvncproxy', 'openstack-nova-scheduler', 'openstack-nova-objectstore', 'openstack-nova-metadata-api', 'openstack-nova-consoleauth', 'openstack-nova-console', 'openstack-nova-compute', 'openstack-nova-cert', 'openstack-nova-api', 'openstack-keystone']
     ubuntu_services =['mysql', 'nova-novncproxy', 'rabbitmq-server', 'cinder-volume', 'cinder-scheduler', 'cinder-api', 'glance-registry', 'glance-api', 'nova-xvpvncproxy', 'nova-scheduler', 'nova-objectstore', 'nova-metadata-api', 'nova-consoleauth', 'nova-console', 'nova-compute', 'nova-cert', 'nova-api', 'contrail-vncserver', 'keystone', ]
     # Drop all dbs
@@ -681,7 +681,7 @@ def cleanup_os_config():
         # Until we have a clean way of clearing glance image-data in sqlite,
         # just skip removing the images on Ubuntu
         if not detect_ostype() in ['ubuntu']:
-            sudo('sudo rm -f /var/lib/glance/images/*')
+            sudo('sudo rm -rf /var/lib/glance/images/*')
 
         sudo('sudo rm -rf /var/lib/nova/tmp/nova-iptables')
         sudo('sudo rm -rf /var/lib/libvirt/qemu/instance*')
