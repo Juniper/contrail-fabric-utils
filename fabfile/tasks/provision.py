@@ -614,7 +614,7 @@ def setup_cfgm_node(*args):
                 cassandra_ip_list = [hstr_to_ip(get_control_host_string(\
                     cassandra_host)) for cassandra_host in env.roledefs['database']]
                 cfgm_ip = get_contrail_internal_vip() or\
-                    hstr_to_ip(host_string);
+                    hstr_to_ip(get_control_host_string(host_string));
                 cmd = "setup-vcenter-plugin"
                 cmd += " --vcenter_url %s" % vcenter_info['server']
                 cmd += " --vcenter_username %s" % vcenter_info['username']
