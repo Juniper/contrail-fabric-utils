@@ -1,7 +1,9 @@
+import os
 from fabfile.config import *
 from misc import zoolink
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.cluster import get_orchestrator
+from fabric.contrib.files import exists
 
 @task
 @roles('cfgm')
@@ -270,6 +272,35 @@ def start_contrail_control_services():
     execute('start_collector')
     execute('start_control')
     execute('start_webui')
+
+@task
+@roles('database')
+def backup_cassandra_zk():
+    """take backup of cassandra db"""
+    data_dir = None
+    out = ''
+    cmd = "sed -n '/data_file_directories/{n;p;}'"
+    # If Ubuntu
+    if exists('/etc/cassandra/cassandra.yaml', use_sudo=True):
+        yaml_file = '/etc/cassandra/cassandra.yaml'
+        out = sudo("%s %s" % (cmd, yaml_file))
+    # If redhat distros
+    elif exists('/etc/cassandra/conf/cassandra.yaml', use_sudo=True):
+        yaml_file = '/etc/cassandra/conf/cassandra.yaml'
+        out = sudo("%s %s" % (cmd, yaml_file))
+    data_dir = out[2:]
+    if data_dir is None:
+        cassandra_dir = '/var/lib/cassandra'
+    else:
+        cassandra_dir = os.path.abspath(os.path.join(data_dir,os.pardir))
+    if exists(cassandra_dir+'.old'):
+        sudo('rm -rf '+cassandra_dir+'.old')
+    if exists(cassandra_dir):
+        sudo('mv '+ cassandra_dir+' '+ cassandra_dir+'.old')
+    if exists('/var/lib/zookeeper/version-2.old'):
+        sudo('rm -rf /var/lib/zookeeper/version-2.old')
+    if exists('/var/lib/zookeeper/version-2'):
+        sudo('mv /var/lib/zookeeper/version-2 /var/lib/zookeeper/version-2.old')
 
 @task
 @roles('build')

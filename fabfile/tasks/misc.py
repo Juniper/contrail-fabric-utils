@@ -10,7 +10,6 @@ from fabfile.utils.host import get_control_host_string, hstr_to_ip,\
     get_env_passwords, get_authserver_credentials
 from fabfile.utils.cluster import get_nodes_to_upgrade_pkg, reboot_nodes
 from fabfile.tasks.helpers import reboot_node
-from fabfile.tasks.provision import setup_vrouter_node
 from fabfile.tasks.install import create_install_repo_node,\
          install_interface_name_node, install_vrouter_node, apt_install
 from fabfile.utils.multitenancy import get_mt_opts
