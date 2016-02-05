@@ -6,7 +6,7 @@ from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 from fabfile.utils.cluster import get_toragent_nodes, get_tsn_nodes
 from fabfile.utils.commandline import *
 from fabfile.utils.fabos import get_release, detect_ostype, get_linux_distro
-from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs
+from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs, get_vcenter_compute_pkgs
 from fabfile.tasks.vmware import provision_vcenter_features
 
 @task
@@ -147,6 +147,21 @@ def upgrade_webui_node(from_rel, pkg, *args):
             sudo(cmd)
 
 @task
+@roles('vcenter_compute')
+def upgrade_vcenter_compute(from_rel, pkg):
+    execute("upgrade_vcenter_compute_node", from_rel, pkg, env.host_string)
+
+@task
+@EXECUTE_TASK
+@roles('vcenter_compute')
+def upgrade_vcenter_compute_node(from_rel, pkg, *args):
+    for host_string in args:
+        with settings(host_string=host_string):
+             if detect_ostype() == 'ubuntu':
+                with settings(warn_only=True):
+                    upgrade_compute(from_rel, pkg) 
+
+@task
 @EXECUTE_TASK
 @roles('compute')
 def upgrade_compute(from_rel, pkg):
@@ -169,21 +184,27 @@ def upgrade_compute_node(from_rel, pkg, *args):
                 manage_nova_compute='no'
 
             # Identify packages to upgrade
-            pkgs = get_compute_pkgs(manage_nova_compute=manage_nova_compute)
-            if (getattr(env, 'interface_rename', True) and
-                detect_ostype() not in ['ubuntu', 'redhat']):
-               pkgs.append('contrail-interface-name')
-            if LooseVersion(from_rel) < LooseVersion('2.10'):
-                dist, version, extra = get_linux_distro()
-                if version == '14.04' and 'contrail-vrouter-3.13.0-35-generic' in pkgs:
-                    pkgs.remove('contrail-vrouter-3.13.0-35-generic')
-                    pkgs.append('contrail-vrouter-3.13.0-40-generic')
-            # Identify roles of this node.
-            roles = ['compute']
-            if env.host_string in get_tsn_nodes():
-                roles.append('tsn')
-            if env.host_string in get_toragent_nodes():
-                roles.append('toragent')
+            if (env.host_string in env.roledefs['vcenter_compute']):
+                pkgs = get_vcenter_compute_pkgs() 
+            else:
+                pkgs = get_compute_pkgs(manage_nova_compute=manage_nova_compute)
+                if (getattr(env, 'interface_rename', True) and
+                    detect_ostype() not in ['ubuntu', 'redhat']):
+                    pkgs.append('contrail-interface-name')
+                if LooseVersion(from_rel) < LooseVersion('2.10'):
+                    dist, version, extra = get_linux_distro()
+                    if version == '14.04' and 'contrail-vrouter-3.13.0-35-generic' in pkgs:
+                       pkgs.remove('contrail-vrouter-3.13.0-35-generic')
+                       pkgs.append('contrail-vrouter-3.13.0-40-generic')
+            if (env.host_string in env.roledefs['vcenter_compute']):
+                roles = ['vcenter_compute']
+            else:
+                # Identify roles of this node.
+                roles = ['compute']
+                if env.host_string in get_tsn_nodes():
+                   roles.append('tsn')
+                if env.host_string in get_toragent_nodes():
+                   roles.append('toragent')
 
             cmd += ' -P %s' % ' '.join(pkgs)
             cmd += ' -F %s' % from_rel
