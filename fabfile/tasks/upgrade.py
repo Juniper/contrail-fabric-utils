@@ -199,13 +199,13 @@ def upgrade_orchestrator(from_rel, pkg):
         execute('setup_cmon_schema')
         execute('setup_cluster_monitors')
         execute('setup_cmon_param_zkonupgrade')
-    if get_orchestrator() is 'vcenter':
+    if get_orchestrator() is 'vcenter' or 'vcenter_compute' in env.roledefs:
         execute('upgrade_vcenter')
 
 @roles('build')
 @task
 def upgrade_vcenter():
-    apt_install(['contrail-vmware-utils'])
+    pkg_install(['contrail-vmware-utils'])
     vcenter_info = getattr(env, 'vcenter', None)
     if not vcenter_info:
         print 'Info: vcenter block is not defined in testbed file.Exiting'
