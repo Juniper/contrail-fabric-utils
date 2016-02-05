@@ -362,6 +362,7 @@ def setup_test_env():
 
                     sudo("pip install --upgrade unittest2")
                     sudo("pip install --upgrade %s" %pkg)
+                    sudo ("pip install --upgrade easyprocess")
                 if not exists('/usr/bin/ant'):
                     pkg_install(['ant'],disablerepo = False)
                     ant_version = sudo('ant -version')
