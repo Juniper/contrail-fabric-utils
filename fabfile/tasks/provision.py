@@ -1495,7 +1495,7 @@ def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
        Even when we are no managing nova-compute (manage_nova_compute = no) still we execute few required config on
        nova.conf. If configure_nova = no; No nova config related configuration will executed on nova.conf file.
     """
-    if env.roledefs['compute'] or 'vcenter_compute' in env.roledefs:
+    if 'compute' in env.roledefs or 'vcenter_compute' in env.roledefs:
        # Launching of VM is not surrently supported in TSN node.
        # Not proviosning nova_compute incase the compute node is TSN.
        if env.host_string in get_tsn_nodes():
