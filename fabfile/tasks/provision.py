@@ -847,7 +847,7 @@ def setup_ceilometer_mongodb(ip, mongodb_ip_list):
 #end setup_ceilometer_mongodb
 
 @task
-@roles('compute')
+@roles('compute', 'vcenter_compute')
 def setup_ceilometer_compute():
     """Provisions ceilometer compute services in all nodes defined in compute role."""
     if env.roledefs['compute']:
@@ -861,22 +861,23 @@ def setup_ceilometer_compute_node(*args):
         with settings(host_string=host_string):
             os_type = detect_ostype()
             with settings(warn_only=True):
-                compute_ceilometer_present = sudo("grep '^instance_usage_audit =' /etc/nova/nova.conf").succeeded
-            if not compute_ceilometer_present:
-                config_cmd = "openstack-config --set /etc/nova/nova.conf DEFAULT"
-                sudo("%s notification_driver ceilometer.compute.nova_notifier" % config_cmd)
-                sudo("%s notification_driver nova.openstack.common.notifier.rpc_notifier" % config_cmd)
-                sudo("%s notify_on_state_change vm_and_task_state" % config_cmd)
-                sudo("%s instance_usage_audit_period hour" % config_cmd)
-                sudo("%s instance_usage_audit True" % config_cmd)
-                if os_type == 'ubuntu':
-                    nova_services = ['nova-compute']
-                elif os_type in ['redhat']:
-                    nova_services = ['openstack-nova-compute']
-                else:
-                    raise RuntimeError("Unsupported OS Type (%s)", os_type)
-                for svc in nova_services:
-                    sudo("service %s restart" % (svc))
+                 if get_mode(env.host_string) is not 'vcenter':
+                    compute_ceilometer_present = sudo("grep '^instance_usage_audit =' /etc/nova/nova.conf").succeeded
+                    if not compute_ceilometer_present:
+                      config_cmd = "openstack-config --set /etc/nova/nova.conf DEFAULT"
+                      sudo("%s notification_driver ceilometer.compute.nova_notifier" % config_cmd)
+                      sudo("%s notification_driver nova.openstack.common.notifier.rpc_notifier" % config_cmd)
+                      sudo("%s notify_on_state_change vm_and_task_state" % config_cmd)
+                      sudo("%s instance_usage_audit_period hour" % config_cmd)
+                      sudo("%s instance_usage_audit True" % config_cmd)
+                      if os_type == 'ubuntu':
+                         nova_services = ['nova-compute']
+                      elif os_type in ['redhat']:
+                         nova_services = ['openstack-nova-compute']
+                      else:
+                         raise RuntimeError("Unsupported OS Type (%s)", os_type)
+                      for svc in nova_services:
+                          sudo("service %s restart" % (svc))
 
             if host_string != openstack_host:
                 # copy over ceilometer.conf from the first openstack node
@@ -1488,7 +1489,7 @@ def setup_agent_config_in_node(*args):
 
 @task
 @EXECUTE_TASK
-@roles('compute')
+@roles('compute', 'vcenter_compute')
 def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
     """Provisions vrouter services in all nodes defined in vrouter role.
        If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute provisioning will be skipped.

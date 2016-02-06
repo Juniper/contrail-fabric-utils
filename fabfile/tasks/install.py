@@ -264,7 +264,7 @@ def install_database_node(install_mongodb, *args):
 
 @task
 @EXECUTE_TASK
-@roles('compute')
+@roles('compute', 'vcenter_compute')
 def install_ceilometer_compute():
     """Installs ceilometer compute pkgs in all nodes defined in compute role."""
     if env.roledefs['compute']:
@@ -502,6 +502,7 @@ def install_vcenter_compute_node(*args):
                  apt_install(pkgs)
               else:
                  yum_install(pkgs)
+              install_ceilometer_compute_node(host_string)
 
 @task
 @EXECUTE_TASK
