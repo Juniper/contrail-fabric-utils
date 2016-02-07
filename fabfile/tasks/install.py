@@ -46,15 +46,13 @@ def install_pkg_all(pkg):
 
 @task
 @parallel(pool_size=20)
-@roles('cfgm')
-def install_contrail_vcenter_plugin(pkg):
+@roles('cfgm', 'vcenter_compute')
+def install_contrail_vcenter_plugin(pkg, *args):
     """Installs any rpm/deb package in all nodes."""
-    if not hasattr(env, 'vcenter'):
-        print "No vcenter block in testbed file, nothing to do"
-        return
     if not pkg:
         print "Error:No vcenter plugin pkg, aborting"
         exit(1)
+
     execute('install_pkg_node', pkg, env.host_string)
     execute('install_contrail_vcenter_plugin_node', env.host_string)
 
@@ -502,6 +500,8 @@ def install_vcenter_compute_node(*args):
                  apt_install(pkgs)
               else:
                  yum_install(pkgs)
+
+              install_contrail_vcenter_plugin_node(env.host_string)
 
 @task
 @EXECUTE_TASK
