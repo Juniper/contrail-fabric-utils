@@ -596,7 +596,7 @@ def setup_cfgm_node(*args):
                 sudo(cmd)
 
             orch = get_orchestrator()
-            if orch == 'vcenter' or 'vcenter_compute' in env.roledefs:
+            if orch == 'vcenter':
                 #create the static esxi:vrouter map file
                 esxi_info = getattr(testbed, 'esxi_hosts', None)
                 tmp_fname = "/tmp/ESXiToVRouterIp-%s" %(host_string)
@@ -632,19 +632,7 @@ def setup_cfgm_node(*args):
                 cmd += " --api_port 8082"
                 zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
                 cmd += " --zookeeper_serverlist %s" % zk_servers_ports
-                if 'vcenter_compute' in env.roledefs:
-                    cmd += " --vcenter_mode vcenter-as-compute"
-                    # Pass keystone arguments in case of vcenter-as-compute mode
-                    authserver_ip = get_authserver_ip()
-                    ks_admin_user, ks_admin_password = get_authserver_credentials()
-                    cmd += " --keystone_ip %s" % authserver_ip
-                    cmd += " --keystone_admin_user %s" % ks_admin_user
-                    cmd += " --keystone_admin_passwd %s" % ks_admin_password
-                    cmd += " --keystone_admin_tenant_name %s" % get_admin_tenant_name()
-                    cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
-                    cmd += " --keystone_auth_port %s" % get_authserver_port()
-                else:
-                    cmd += " --vcenter_mode vcenter-only"
+                cmd += " --vcenter_mode vcenter-only"
 
                 # Execute the provision vcenter-plugin script
                 with cd(INSTALLER_DIR):
@@ -1272,7 +1260,61 @@ def setup_vcenter_compute_node(*args):
         with settings(host_string=host_string):
              if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
-                     setup_vrouter('yes', 'yes')
+                   setup_vrouter('yes', 'yes')
+
+                   #create the static esxi:vrouter map file
+                   esxi_info = getattr(testbed, 'esxi_hosts', None)
+                   tmp_fname = "/tmp/ESXiToVRouterIp-%s" %(host_string)
+                   for esxi_host in esxi_info:
+                       esxi_ip = esxi_info[esxi_host]['ip']
+                       vrouter_ip_string = esxi_info[esxi_host]['contrail_vm']['host']
+                       vrouter_ip = hstr_to_ip(vrouter_ip_string)
+                       local("echo '%s:%s' >> %s" %(esxi_ip, vrouter_ip, tmp_fname))
+                   put(tmp_fname, "/etc/contrail/ESXiToVRouterIp.map", use_sudo=True)
+                   local("rm %s" %(tmp_fname))
+
+                   # Frame the command  to provision vcenter-plugin
+                   vcenter_info = getattr(env, 'vcenter_servers', None)
+                   host_ip = host_string.split('@')[1]
+                   if not vcenter_info:
+                       print 'Error: vcenter_servers block is not defined in testbed file.Exiting'
+                       return
+                   for v in vcenter_info:
+                        if vcenter_info[v]['vcenter_compute'] == host_ip:
+                            vcenter_server = vcenter_info[v]
+                            break
+                   cassandra_ip_list = [hstr_to_ip(get_control_host_string(\
+                       cassandra_host)) for cassandra_host in env.roledefs['database']]
+                   cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+                   cmd = "setup-vcenter-plugin"
+                   cmd += " --vcenter_url %s" % vcenter_server['server']
+                   cmd += " --vcenter_username %s" % vcenter_server['username']
+                   cmd += " --vcenter_password %s" % vcenter_server['password']
+                   cmd += " --vcenter_datacenter %s" % vcenter_server['datacenter']
+                   cmd += " --vcenter_dvswitch %s" % vcenter_server['dv_switch']['dv_switch_name']
+                   if 'ipfabricpg' in vcenter_server.keys():
+                       cmd += " --vcenter_ipfabricpg %s" % vcenter_server['ipfabricpg']
+                   else:
+                       # If unspecified, set it to default value
+                       cmd += " --vcenter_ipfabricpg contrail-fab-pg"
+                   cmd += " --api_hostname %s" % cfgm_ip
+                   cmd += " --api_port 8082"
+                   zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
+                   cmd += " --zookeeper_serverlist %s" % zk_servers_ports
+                   cmd += " --vcenter_compute vcenter-as-compute"
+                   # Pass keystone arguments in case of vcenter-as-compute mode
+                   authserver_ip = get_authserver_ip()
+                   ks_admin_user, ks_admin_password = get_authserver_credentials()
+                   cmd += " --keystone_ip %s" % authserver_ip
+                   cmd += " --keystone_admin_user %s" % ks_admin_user
+                   cmd += " --keystone_admin_passwd %s" % ks_admin_password
+                   cmd += " --keystone_admin_tenant_name %s" % get_admin_tenant_name()
+                   cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
+                   cmd += " --keystone_auth_port %s" % get_authserver_port()
+
+                   # Execute the provision vcenter-plugin script
+                   with cd(INSTALLER_DIR):
+                       sudo(cmd)
 
 @task
 def setup_collector_node(*args):
@@ -2685,9 +2727,21 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
     for x in host_list:
         if esxi_info[x]['ip'] == host_string:
             host = x
+            if 'vcenter_compute' in env.roledefs:
+               for v in vcenter_info:
+                   if esxi_info[x]['vcenter_server'] == vcenter_info[v]['server']:
+                      vcenter_server = vcenter_info[v]
+                      break
+            else:
+               vcenter_server = vcenter_info
+
     if not host:
         print "No op for esxi host -- %s" %env.host_string
         return
+
+    std_switch = False
+    dv_switch_fab = False
+    power_on = False
 
     if host in esxi_info.keys():
          mode = get_mode(esxi_info[host]['contrail_vm']['host'])
@@ -2717,7 +2771,7 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
          else:
              apply_esxi_defaults(esxi_info[host])
              esxi_info[host]['fabric_vswitch'] = None
-         create_esxi_compute_vm(esxi_info[host], vcenter_info, power_on)
+         create_esxi_compute_vm(esxi_info[host], vcenter_server, power_on)
     else:
          print 'Info: esxi_hosts block does not have the esxi host.Exiting'
 # end create_contrailvm
@@ -2742,13 +2796,16 @@ def prov_esxi(*args):
         host_list = esxi_info.keys()
 
     orch = get_orchestrator()
-    if orch == 'vcenter' or 'vcenter_compute' in env.roledefs:
-        vcenter_info = getattr(env, 'vcenter', None)
-        if not vcenter_info:
-            print 'Info: vcenter_server block is not defined in testbed file.Exiting'
-            return
+    if orch == 'vcenter':
+       vcenter_info = getattr(env, 'vcenter', None) 
+    elif 'vcenter_compute' in env.roledefs:
+       vcenter_info = getattr(env, 'vcenter_servers', None)
     else:
         vcenter_info = None
+
+    if not vcenter_info:
+           print 'Info: vcenter_server block is not defined in testbed file.Exiting'
+           return
 
     execute(prov_esxi_task, host_list, esxi_info, vcenter_info)
 
@@ -2758,10 +2815,6 @@ def prov_esxi(*args):
     for h in host_list:
         mode = get_mode(esxi_info[h]['contrail_vm']['host'])
         if mode == 'vcenter':
-            vcenter_info = getattr(env, 'vcenter', None)
-            if not vcenter_info:
-                print 'Info: vcenter block is not defined in testbed file.Exiting'
-                return
             if ('pci_devices' in esxi_info[h]['contrail_vm']) and \
                  ('nic' in esxi_info[h]['contrail_vm']['pci_devices']):
                 pci_fab = True
@@ -2803,9 +2856,6 @@ def update_esxi_vrouter_map():
 
 @task
 def prov_vcenter_datastores():
-    vcenter_info = getattr(env, 'vcenter', None)
-    if not vcenter_info:
-        return
     esxi_info = getattr(testbed, 'esxi_hosts', None)
     if not esxi_info:
         print 'Error: esxi_hosts block is not defined in testbed file.Exiting'
@@ -2830,19 +2880,38 @@ def prov_vcenter_datastores():
 @hosts(env.roledefs['cfgm'][0])
 @task
 def cleanup_vcenter():
-    vcenter_info = getattr(env, 'vcenter', None)
+    if get_orchestrator() == 'vcenter':
+       vcenter_info = getattr(env, 'vcenter', None)
+    elif 'vcenter_compute' in env.roledefs:
+       vcenter_info = getattr(env, 'vcenter_servers', None)
+    else:
+       vcenter_info = None
+
     if not vcenter_info:
         print 'Error: vcenter block is not defined in testbed file.Exiting'
         return
-    deprovision_vcenter(vcenter_info)
+
+    if get_orchestrator() == 'vcenter':
+       deprovision_vcenter(vcenter_info)
+    else:
+       for v in vcenter_info:
+           vcenter_server = vcenter_info[v]
+           deprovision_vcenter(vcenter_server)
 
 @hosts(env.roledefs['cfgm'][0])
 @task
 def add_esxi_to_vcenter(*args):
-    vcenter_info = getattr(env, 'vcenter', None)
+    if get_orchestrator() == 'vcenter':
+       vcenter_info = getattr(env, 'vcenter', None)
+    elif 'vcenter_compute' in env.roledefs:
+       vcenter_info = getattr(env, 'vcenter_servers', None)
+    else:
+       vcenter_info = None
+
     if not vcenter_info:
         print 'Error: vcenter block is not defined in testbed file.Exiting'
         return
+
     esxi_info = getattr(testbed, 'esxi_hosts', None)
     if not esxi_info:
         print 'Error: esxi_hosts block is not defined in testbed file.Exiting'
@@ -2854,29 +2923,58 @@ def add_esxi_to_vcenter(*args):
     role_info = getattr(env, 'roledefs', None)
     compute_list = role_info['compute']
     password_list = getattr(env, 'passwords', None)
-    (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, password_list)
-    provision_vcenter(vcenter_info, hosts, clusters, vms, 'True')
+
+    if 'vcenter_compute' in env.roledefs:
+        for host in host_list:
+            if host in esxi_info.keys():
+               esxi_data = esxi_info[host]
+               for v in vcenter_info.keys():
+                   if esxi_data['vcenter_server'] == vcenter_info['server']:
+                      vcenter_server = vcenter_info[v]
+                      break
+    else:
+        vcenter_server = vcenter_info
+
+    (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list)
+    provision_vcenter(vcenter_server, hosts, clusters, vms, 'True')
     update_esxi_vrouter_map()
-    provision_vcenter_features(vcenter_info, esxi_info, host_list)
+    provision_vcenter_features(vcenter_server, esxi_info, host_list)
 
 @hosts(env.roledefs['cfgm'][0])
 @task
 def setup_vcenter():
-    vcenter_info = getattr(env, 'vcenter', None)
+    if get_orchestrator() == 'vcenter':
+       vcenter_info = getattr(env, 'vcenter', None)
+    elif 'vcenter_compute' in env.roledefs:
+       vcenter_info = getattr(env, 'vcenter_servers', None)
+    else:
+       vcenter_info = None
+
     if not vcenter_info:
         print 'Error: vcenter block is not defined in testbed file.Exiting'
         return
+
     esxi_info = getattr(testbed, 'esxi_hosts', None)
     if not esxi_info:
         print 'Error: esxi_hosts block is not defined in testbed file.Exiting'
         return
+
     host_list = esxi_info.keys()
     role_info = getattr(env, 'roledefs', None)
     compute_list = role_info['compute']
     password_list = getattr(env, 'passwords', None)
-    (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, password_list)
-    provision_vcenter(vcenter_info, hosts, clusters, vms, 'False')
-    provision_vcenter_features(vcenter_info, esxi_info, host_list)
+
+    if get_orchestrator() == 'vcenter':
+       vcenter_server = vcenter_info
+       (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list)
+       provision_vcenter(vcenter_server, hosts, clusters, vms, 'False')
+       provision_vcenter_features(vcenter_server, esxi_info, host_list)
+    else:
+       for v in vcenter_info.keys():
+           vcenter_server = vcenter_info[v]
+           (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list)
+           provision_vcenter(vcenter_server, hosts, clusters, vms, 'False')
+           provision_vcenter_features(vcenter_server, esxi_info, host_list)
 
 @task
 @roles('build')

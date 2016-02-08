@@ -227,16 +227,32 @@ def upgrade_orchestrator(from_rel, pkg):
 @task
 def upgrade_vcenter():
     pkg_install(['contrail-vmware-utils'])
+
     vcenter_info = getattr(env, 'vcenter', None)
+    if get_orchestrator() == 'vcenter':
+       vcenter_info = getattr(env, 'vcenter', None)
+    elif 'vcenter_compute' in env.roledefs:
+       vcenter_info = getattr(env, 'vcenter_servers', None)
+    else:
+       vcenter_info = None
+
     if not vcenter_info:
         print 'Info: vcenter block is not defined in testbed file.Exiting'
         return
+
     esxi_info = getattr(testbed, 'esxi_hosts', None)
     if not esxi_info:
         print 'Info: esxi_hosts block is not defined in testbed file. Exiting'
         return
     host_list = esxi_info.keys()
-    provision_vcenter_features(vcenter_info, esxi_info, host_list)
+
+    if get_orchestrator() == 'vcenter':
+       vcenter_server = vcenter_info
+       provision_vcenter_features(vcenter_server, esxi_info, host_list) 
+    else:
+       for v in vcenter_info.keys():
+           vcenter_server = vcenter_info[v]
+           provision_vcenter_features(vcenter_server, esxi_info, host_list)
 
 @task
 @roles('build')
