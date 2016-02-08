@@ -7,7 +7,9 @@ from fabfile.utils.fabos import detect_ostype, get_as_sudo, is_package_installed
 from fabfile.utils.host import get_authserver_ip, get_control_host_string,\
     hstr_to_ip, get_from_testbed_dict, get_service_token, get_env_passwords,\
     get_openstack_internal_vip, get_openstack_external_vip,\
-    get_contrail_internal_vip, get_contrail_external_vip
+    get_contrail_internal_vip, get_contrail_external_vip, \
+    get_openstack_internal_virtual_router_id, get_contrail_internal_virtual_router_id, \
+    get_openstack_external_virtual_router_id, get_contrail_external_virtual_router_id
 from fabfile.utils.cluster import get_orchestrator
 
 @task
@@ -338,9 +340,15 @@ def setup_keepalived_node(role):
 
     internal_vip = get_openstack_internal_vip()
     external_vip = get_openstack_external_vip()
+    internal_virtual_router_id = get_openstack_internal_virtual_router_id()
+    external_virtual_router_id = get_openstack_external_virtual_router_id()
+
     if role == 'cfgm':
         internal_vip = get_contrail_internal_vip()
         external_vip = get_contrail_external_vip()
+        internal_virtual_router_id = get_contrail_internal_virtual_router_id()
+        external_virtual_router_id = get_contrail_external_virtual_router_id()
+
     keepalived_host_list = [get_control_host_string(keepalived_host)\
                            for keepalived_host in env.roledefs[role]]
     myindex = keepalived_host_list.index(self_host)

@@ -298,6 +298,10 @@ env.ostypes = {
 # nfs_server            : NFS server to be used to store the glance images.
 # nfs_glance_path       : NFS server image path, which will be mounted on the Openstack Nodes and
 #                         the glance images will be placed/accesed in/from this location.
+# internal_virtual_router_id : Virtual router ID for the Openstack HA nodes in control/data(internal) network.
+# external_virtual_router_id : Virtual router ID for the Openstack HA nodes in management(external) network.
+# contrail_internal_virtual_router_id : Virtual router ID for the Contrail HA nodes in control/data(internal) network.
+# contrail_external_virtual_router_id : Virtual router ID for the Contrail HA nodes in  management(external) network.
 #env.ha = {
 #    'internal_vip'   : '1.1.1.100',               #Internal Virtual IP of the openstack HA Nodes.
 #    'external_vip'   : '2.2.2.200',               #External Virtual IP of the openstack HA Nodes.
@@ -305,6 +309,11 @@ env.ostypes = {
 #    'contrail_external_vip'   : '2.2.2.20',       #External Virtual IP of the contrail HA Nodes.
 #    'nfs_server'      : '3.3.3.3',                #IP address of the NFS Server which will be mounted to /var/lib/glance/images of openstack Node, Defaults to env.roledefs['compute'][0]
 #    'nfs_glance_path' : '/var/tmp/images/',       #NFS Server path to save images, Defaults to /var/tmp/glance-images/
+#    'internal_virtual_router_id' :  180,                   #Default = 100
+#    'external_virtual_router_id' :  190,          #Default = 100
+#    'contrail_internal_virtual_router_id' :  200, #Default = 100
+#    'contrail_external_virtual_router_id' :  210, #Default = 100
+
 #}
 
 # In environments where openstack services are deployed independently
