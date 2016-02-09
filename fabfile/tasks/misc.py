@@ -47,7 +47,7 @@ def detach_vrouter_node(*args):
         nova_compute = "nova-compute"
 
     for host_string in args:
-        compute_hostname = socket.gethostbyaddr(hstr_to_ip(host_string))[0].split('.')[0]
+        compute_hostname = socket.gethostbyaddr(hstr_to_ip(host_string))[0]
         with settings(host_string=host_string, warn_only=True):
             sudo("service supervisor-vrouter stop")
             sudo("service %s stop" % nova_compute)
