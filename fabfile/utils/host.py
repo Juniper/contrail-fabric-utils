@@ -197,7 +197,10 @@ def get_authserver_protocol():
        for k in env.vcenter_servers.keys():
            return get_from_vcenter_dict(k, 'auth', 'https')
     # openstack
-    return get_from_testbed_dict('keystone', 'auth_protocol','http')
+    auth_protocol = 'http'
+    if keystone_ssl_enabled():
+        auth_protocol = 'https'
+    return get_from_testbed_dict('keystone', 'auth_protocol', auth_protocol)
 
 def get_keystone_version():
     return get_from_testbed_dict('keystone', 'version', 'v2.0')
@@ -389,3 +392,41 @@ def get_bgp_md5(host = env.host_string):
     """
     return get_from_testbed_dict('md5', host, None)
 #end get_bgp_md5
+
+def get_keystone_certfile():
+    default = '/etc/keystone/ssl/certs/keystone.pem'
+    return get_from_testbed_dict('keystone','certfile', default)
+
+
+def get_keystone_keyfile():
+    default = '/etc/keystone/ssl/private/keystone_key.pem'
+    return get_from_testbed_dict('keystone','keyfile', default)
+
+
+def get_keystone_cafile():
+    default = '/etc/keystone/ssl/certs/keystone_ca.pem'
+    return get_from_testbed_dict('keystone','cafile', default)
+
+
+def get_apiserver_certfile():
+    default = '/etc/contrail/ssl/certs/apiserver.pem'
+    return get_from_testbed_dict('cfgm','certfile', default)
+
+
+def get_apiserver_keyfile():
+    default = '/etc/contrail/ssl/private/apiserver_key.pem'
+    return get_from_testbed_dict('cfgm','keyfile', default)
+
+
+def get_apiserver_cafile():
+    default = '/etc/contrail/ssl/certs/apiserver_ca.pem'
+    return get_from_testbed_dict('cfgm','cafile', default)
+
+def keystone_ssl_enabled():
+    return get_from_testbed_dict('keystone', 'ssl', False)
+
+def apiserver_ssl_enabled():
+    return get_from_testbed_dict('apiserver', 'ssl', False)
+
+def get_apiserver_insecure_flag():
+    return get_from_testbed_dict('cfgm', 'insecure', 'False')
