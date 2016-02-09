@@ -186,6 +186,7 @@ class sr_iov_fab(object):
             nicspec.device = self.pyVmomi.vim.vm.device.VirtualSriovEthernetCard()
             nicspec.operation = self.pyVmomi.vim.vm.device.VirtualDeviceSpec.Operation.add
             nicspec.device.wakeOnLanEnabled = True
+            nicspec.device.allowGuestOSMtuChange = True
             nicspec.device.deviceInfo = self.pyVmomi.vim.Description()
             pg_obj = self.vcenter_base.get_obj([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name)
             dvs_port_connection = self.pyVmomi.vim.dvs.PortConnection()
