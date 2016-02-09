@@ -32,6 +32,9 @@ from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_esxi_vms_and_hosts, get_mode, is_contrail_node,\
         create_esxi_vrouter_map_file
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
+from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
+        setup_apiserver_ssl_certs_node)
+
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
 
@@ -52,6 +55,10 @@ def bash_autocomplete_systemd():
 def setup_cfgm():
     """Provisions config services in all nodes defined in cfgm role."""
     if env.roledefs['cfgm']:
+        if apiserver_ssl_enabled():
+            execute("setup_apiserver_ssl_certs_node", env.host_string)
+        if keystone_ssl_enabled():
+            execute("copy_keystone_ssl_certs_to_config_node", env.host_string)
         execute("setup_cfgm_node", env.host_string)
 
 @roles('cfgm')
@@ -1053,6 +1060,8 @@ def setup_image_service_node(*args):
 def setup_openstack():
     """Provisions openstack services in all nodes defined in openstack role."""
     if env.roledefs['openstack']:
+        if keystone_ssl_enabled():
+            execute("setup_keystone_ssl_certs_node", env.host_string)
         execute("setup_openstack_node", env.host_string)
         # Blindly run setup_openstack twice for Ubuntu
         #TODO Need to remove this finally

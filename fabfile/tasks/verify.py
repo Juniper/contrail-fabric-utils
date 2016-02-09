@@ -3,6 +3,8 @@ from time import sleep
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype, get_openstack_services
 from fabfile.utils.cluster import get_orchestrator
+from fabfile.utils.host import (keystone_ssl_enabled,
+        get_keystone_insecure_flag)
 import re
 
 class OpenStackSetupError(Exception):
@@ -43,9 +45,12 @@ def verify_webui():
 def verify_openstack():
     openstack_services = get_openstack_services()
     verify_service(openstack_services["keystone"])
+    insecure_flag = ''
+    if keystone_ssl_enabled() and get_keystone_insecure_flag():
+        insecure_flag = '--insecure'
     for x in xrange(10):
         with settings(warn_only=True):
-            output = sudo("source /etc/contrail/openstackrc; keystone tenant-list")
+            output = sudo("source /etc/contrail/openstackrc; keystone %s tenant-list" % insecure_flag)
         if output.failed:
             sleep(10)
         else:
