@@ -32,6 +32,10 @@ from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_esxi_vms_and_hosts, get_mode, is_contrail_node,\
         create_esxi_vrouter_map_file
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
+from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
+        setup_apiserver_ssl_certs_node, copy_keystone_ssl_certs_to_node,
+        copy_apiserver_ssl_certs_to_node)
+
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
 
@@ -52,6 +56,10 @@ def bash_autocomplete_systemd():
 def setup_cfgm():
     """Provisions config services in all nodes defined in cfgm role."""
     if env.roledefs['cfgm']:
+        if apiserver_ssl_enabled():
+            execute("setup_apiserver_ssl_certs_node", env.host_string)
+        if keystone_ssl_enabled():
+            execute("copy_keystone_ssl_certs_to_node", env.host_string)
         execute("setup_cfgm_node", env.host_string)
 
 @roles('cfgm')
@@ -119,10 +127,10 @@ listen contrail-config-stats :5937
    stats uri /
    stats auth $__contrail_hap_user__:$__contrail_hap_passwd__
 
-frontend quantum-server *:9696
+$__quantum_server_frontend__
     default_backend    quantum-server-backend
 
-frontend  contrail-api *:8082
+$__contrail_api_frontend__
     default_backend    contrail-api-backend
     timeout client 3m
 
@@ -132,6 +140,7 @@ frontend  contrail-discovery *:5998
 backend quantum-server-backend
     option nolinger
     balance     roundrobin
+$__quantum_ssl_forwarding__
 $__contrail_quantum_servers__
     #server  10.84.14.2 10.84.14.2:9697 check
 
@@ -139,6 +148,7 @@ backend contrail-api-backend
     option nolinger
     timeout server 3m
     balance     roundrobin
+$__contrail_api_ssl_forwarding__
 $__contrail_api_backend_servers__
     #server  10.84.14.2 10.84.14.2:9100 check
     #server  10.84.14.2 10.84.14.2:9101 check
@@ -158,7 +168,11 @@ $__rabbitmq_config__
 
     q_listen_port = 9697
     q_server_lines = ''
+    q_frontend = 'frontend  quantum-server *:9696'
+    q_ssl_forwarding = ''
     api_listen_port = 9100
+    api_frontend = 'frontend  contrail-api *:8082'
+    api_ssl_forwarding = ''
     api_server_lines = ''
     disc_listen_port = 9110
     disc_server_lines = ''
@@ -207,9 +221,27 @@ listen  rabbitmq 0.0.0.0:5673
     if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():
         tor_agent_ha_config = get_all_tor_agent_haproxy_config()
 
+    # contail-api SSL termination
+    if apiserver_ssl_enabled():
+        q_frontend = """frontend  quantum-server
+    bind *:9696 ssl crt /etc/contrail/ssl/certs/contrailcertbundle.pem"""
+        q_ssl_forwarding = """    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }"""
+        api_frontend = """frontend  contrail-api
+    bind *:8082 ssl crt /etc/contrail/ssl/certs/contrailcertbundle.pem"""
+        api_ssl_forwarding = """    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }"""
+
+
     for host_string in env.roledefs['cfgm']:
         haproxy_config = template.safe_substitute({
             '__contrail_quantum_servers__': q_server_lines,
+            '__quantum_server_frontend__': q_frontend,
+            '__quantum_ssl_forwarding__': q_ssl_forwarding,
+            '__contrail_api_frontend__': api_frontend,
+            '__contrail_api_ssl_forwarding__': api_ssl_forwarding,
             '__contrail_api_backend_servers__': api_server_lines,
             '__contrail_disc_backend_servers__': disc_server_lines,
             '__contrail_hap_user__': 'haproxy',
@@ -1053,6 +1085,8 @@ def setup_image_service_node(*args):
 def setup_openstack():
     """Provisions openstack services in all nodes defined in openstack role."""
     if env.roledefs['openstack']:
+        if keystone_ssl_enabled():
+            execute("setup_keystone_ssl_certs_node", env.host_string)
         execute("setup_openstack_node", env.host_string)
         # Blindly run setup_openstack twice for Ubuntu
         #TODO Need to remove this finally
@@ -1196,6 +1230,10 @@ def setup_collector():
     """Provisions collector services in all nodes defined in collector role."""
     if env.roledefs['collector']:
         execute("setup_collector_node", env.host_string)
+        if keystone_ssl_enabled():
+            execute("copy_keystone_ssl_certs_to_node", env.host_string)
+        if apiserver_ssl_enabled():
+            execute("copy_apiserver_ssl_certs_to_node", env.host_string)
 
 @task
 def setup_redis_server_node(*args):
@@ -2466,7 +2504,6 @@ def setup_vm_coremask_node(q_coremask, *args):
 @task
 def setup_all(reboot='True'):
     """Provisions required contrail services in all nodes as per the role definition.
-    """
     execute('setup_common')
     execute('setup_ha')
     execute('setup_rabbitmq_cluster')
@@ -2476,6 +2513,7 @@ def setup_all(reboot='True'):
     execute('fixup_mongodb_conf')
     execute('setup_mongodb_ceilometer_cluster')
     execute('setup_orchestrator')
+    """
     execute('setup_cfgm')
     execute('verify_cfgm')
     execute('setup_control')
