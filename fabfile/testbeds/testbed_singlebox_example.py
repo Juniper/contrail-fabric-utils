@@ -197,6 +197,9 @@ env.ostypes = {
 #    'admin_tenant'    : 'admin',                 #Default is admin
 #    'region_name'     : 'RegionOne',             #Default is RegionOne
 #    'insecure'        : 'True',                  #Default = False
+#    'certfile'        : '/etc/keystone/ssl/keystone.pem',    #Default is '/etc/keystone.pem'
+#    'keyfile'         : '/etc/keystone/ssl/keystone.key',    #Default is '/etc/keystone.key'
+#    'cafile'          : '/etc/keystone/ssl/keystone_ca.pem', #Default is '/etc/keystone_ca.pem'
 #    'manage_neutron'  : 'no',                    #Default = 'yes' , Does configure neutron user/role in keystone required.
 #}
 #
@@ -240,6 +243,10 @@ env.ostypes = {
 #env.cfgm = {
 #    'amqp_hosts' : ['10.10.10.1', '10.10.10.2']
 #    'amqp_port' : '5672'
+#    'insecure'        : 'True',                               #Default = False
+#    'certfile'        : '/etc/contrail/ssl/apiserver.pem',    #Default is '/etc/contrail/ssl/apiserver.pem'
+#    'keyfile'         : '/etc/contrail/ssl/apiserver.key',    #Default is '/etc/contrail/ssl/apiserver.key'
+#    'cafile'          : '/etc/contrail/ssl/apiserver_ca.pem', #Default is '/etc/contrail/ssl/apiserver_ca.pem'
 #}
 
 # Neutron specific configuration 

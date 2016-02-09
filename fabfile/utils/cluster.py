@@ -290,4 +290,31 @@ def is_contrail_node(node):
     return True if package_info else False
 
 
+def get_keystone_certfile():
+    default = '/etc/keystone/ssl/keystone.pem'
+    return get_from_testbed_dict('keystone','certfile', default)
 
+
+def get_keystone_keyfile():
+    default = '/etc/keystone/ssl/keystone.key'
+    return get_from_testbed_dict('keystone','keyfile', default)
+
+
+def get_keystone_cafile():
+    default = '/etc/keystone/ssl/keystone_ca.pem'
+    return get_from_testbed_dict('keystone','cafile', default)
+
+
+def get_api_certfile():
+    default = '/etc/contrail/ssl/apiserver.pem'
+    return get_from_testbed_dict('cfgm','certfile', default)
+
+
+def get_api_keyfile():
+    default = '/etc/contrail/ssl/apiserver.key'
+    return get_from_testbed_dict('cfgm','keyfile', default)
+
+
+def get_api_cafile():
+    default = '/etc/contrail/ssl/apiserver_ca.pem'
+    return get_from_testbed_dict('cfgm','cafile', default)
