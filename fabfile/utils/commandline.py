@@ -77,8 +77,13 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     cmd += " --region_name %s" % get_region_name()
     cmd += " --neutron_password %s" % get_neutron_password()
     cmd += " --nova_password %s" % get_nova_password()
-    cmd += ' --openstack_index %s' % (env.roledefs['openstack'].index(
+    cmd += " --openstack_index %s" % (env.roledefs['openstack'].index(
                                           host_string) + 1)
+    if keystone_ssl_enabled():
+        cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
+        cmd += " --keystone_certfile %s" % get_keystone_certfile()
+        cmd += " --keystone_keyfile %s" % get_keystone_keyfile()
+        cmd += " --keystone_cafile %s" % get_keystone_cafile()
     haproxy = get_haproxy()
     if haproxy:
         cmd += " --haproxy %s" % haproxy
@@ -145,6 +150,11 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cmd += " --service_token %s" % get_service_token()
     cmd += " --amqp_ip_list %s" % ' '.join(get_amqp_servers())
     cmd += " --amqp_port %s" % get_amqp_port()
+    if apiserver_ssl_enabled():
+        cmd += " --apiserver_insecure %s" % get_apiserver_insecure_flag()
+        cmd += " --apiserver_certfile %s" % get_apiserver_certfile()
+        cmd += " --apiserver_keyfile %s" % get_apiserver_keyfile()
+        cmd += " --apiserver_cafile %s" % get_apiserver_cafile()
     cmd += " --orchestrator %s" % orch
     haproxy = get_haproxy()
     if haproxy:
@@ -160,6 +170,10 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
         cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
         cmd += " --keystone_auth_port %s" % get_authserver_port()
         cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
+        if keystone_ssl_enabled():
+            cmd += " --keystone_certfile %s" % get_keystone_certfile()
+            cmd += " --keystone_keyfile %s" % get_keystone_keyfile()
+            cmd += " --keystone_cafile %s" % get_keystone_cafile()
         cmd += " --region_name %s" % get_region_name()
         manage_neutron = get_manage_neutron()
         if manage_neutron == 'no':

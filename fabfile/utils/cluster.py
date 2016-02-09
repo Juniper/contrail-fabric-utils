@@ -125,7 +125,7 @@ def get_esxi_ssl_thumbprint(esxi_data):
     host_string = '%s@%s' %(esxi_data['username'], esxi_data['ip'])
     with settings(host_string = host_string, password = esxi_data['password'],
                     warn_only = True, shell = '/bin/sh -l -c'):
-          out = run('openssl x509 -in /etc/vmware/ssl/rui.crt -fingerprint -sha1 -noout')
+          out = sudo('openssl x509 -in /etc/vmware/ssl/rui.crt -fingerprint -sha1 -noout')
           out = out.split()
           out = out[7].split('=')
           ssl_thumbprint = out[1]
@@ -290,4 +290,40 @@ def is_contrail_node(node):
     return True if package_info else False
 
 
+def get_keystone_certfile():
+    default = '/etc/keystone/ssl/certs/keystone.pem'
+    return get_from_testbed_dict('keystone','certfile', default)
 
+
+def get_keystone_keyfile():
+    default = '/etc/keystone/ssl/private/keystone_key.pem'
+    return get_from_testbed_dict('keystone','keyfile', default)
+
+
+def get_keystone_cafile():
+    default = '/etc/keystone/ssl/certs/keystone_ca.pem'
+    return get_from_testbed_dict('keystone','cafile', default)
+
+
+def get_apiserver_certfile():
+    default = '/etc/contrail/ssl/certs/apiserver.pem'
+    return get_from_testbed_dict('cfgm','certfile', default)
+
+
+def get_apiserver_keyfile():
+    default = '/etc/contrail/ssl/private/apiserver_key.pem'
+    return get_from_testbed_dict('cfgm','keyfile', default)
+
+
+def get_apiserver_cafile():
+    default = '/etc/contrail/ssl/certs/apiserver_ca.pem'
+    return get_from_testbed_dict('cfgm','cafile', default)
+
+def keystone_ssl_enabled():
+    return get_from_testbed_dict('keystone', 'ssl', False)
+
+def apiserver_ssl_enabled():
+    return get_from_testbed_dict('apiserver', 'ssl', False)
+
+def get_apiserver_insecure_flag():
+    return get_from_testbed_dict('cfgm', 'insecure', 'False')

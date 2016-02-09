@@ -184,6 +184,16 @@ env.ostypes = {
 #  keystone_admin_password
 #  region_name
 #
+#  certfile # Specify local remote(openstack node) path to certificate file
+            # If local path specifed, it will be copied to openstack node(/etc/keystone/ssl/certs/keystone.pem)
+            # If remote path in openstack node specified, Keystone.conf will point to the specified location
+#  keyfile # Specify local remote(openstack node) path to key file
+            # If local path specifed, it will be copied to openstack node(/etc/keystone/ssl/private/keystone_key.pem)
+            # If remote path in openstack node specified, Keystone.conf will point to the specified location
+#  cafile # Specify local remote(openstack node) path to ca certificate file
+            # If local path specifed, it will be copied to openstack node(/etc/keystone/ssl/certs/keystone_ca.pem)
+            # If remote path in openstack node specified, Keystone.conf will point to the specified location
+#
 #env.keystone = {
 #    'keystone_ip'     : 'x.y.z.a',
 #    'auth_protocol'   : 'http',                  #Default is http
@@ -196,7 +206,11 @@ env.ostypes = {
 #    'service_tenant'  : 'service',               #Default is service
 #    'admin_tenant'    : 'admin',                 #Default is admin
 #    'region_name'     : 'RegionOne',             #Default is RegionOne
+#    'ssl'             : 'True',                  #Default is False
 #    'insecure'        : 'True',                  #Default = False
+#    'certfile'        : '/root/keystone.pem',    #Default /etc/keystone/ssl/certs/keystone.pem
+#    'keyfile'         : '/root/keystone_key.pem',#Default /etc/keystone/ssl/private/keystone_key.pem
+#    'cafile'          : '/root/keystone_ca.pem', #Default /etc/keystone/ssl/certs/keystone_ca.pem
 #    'manage_neutron'  : 'no',                    #Default = 'yes' , Does configure neutron user/role in keystone required.
 #}
 #
@@ -237,9 +251,23 @@ env.ostypes = {
 #Config node related config knobs
 #amqp_hosts : List of customer deployed AMQP servers to be used by config services.
 #amqp_port : Port of the customer deployed AMQP servers.
+#certfile # Specify local remote(cfgm node) path to certificate file
+          # If local path specifed, it will be copied to cfgm node(/etc/contrail/ssl/certs/apiserver.pem)
+          # If remote path in cfgm node specified, contrail-api.conf will point to the specified location
+#keyfile  # Specify local remote(cfgm node) path to key file
+          # If local path specifed, it will be copied to cfgm node(/etc/contrail/ssl/private/apiserver_key.pem)
+          # If remote path in cfgm node specified, contrail-api.conf will point to the specified location
+#cafile   # Specify local remote(cfgm node) path to key file
+          # If local path specifed, it will be copied to cfgm node(/etc/contrail/ssl/certs/apiserver_ca.pem)
+          # If remote path in cfgm node specified, contrail-api.conf will point to the specified location
 #env.cfgm = {
 #    'amqp_hosts' : ['10.10.10.1', '10.10.10.2']
 #    'amqp_port' : '5672'
+#    'ssl'             : 'True',                   #Default is False
+#    'insecure'        : 'True',                   #Default is False
+#    'certfile'        : '/root/apiserver.pem',    #Default is '/etc/contrail/ssl/certs/apiserver.pem'
+#    'keyfile'         : '/root/apiserver_key.pem',#Default is '/etc/contrail/ssl/private/apiserver_key.pem'
+#    'cafile'          : '/root/apiserver_ca.pem', #Default is '/etc/contrail/ssl/certs/apiserver_ca.pem'
 #}
 
 # Neutron specific configuration 

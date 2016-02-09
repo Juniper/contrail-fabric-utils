@@ -161,7 +161,10 @@ def get_authserver_protocol():
     if orch == 'vcenter':
        return get_from_testbed_dict('vcenter', 'auth', 'https')
     # openstack
-    return get_from_testbed_dict('keystone', 'auth_protocol','http')
+    auth_protocol = 'http'
+    if keystone_ssl_enabled():
+        auth_protocol = 'https'
+    return get_from_testbed_dict('keystone', 'auth_protocol', auth_protocol)
 
 def get_keystone_insecure_flag():
     return get_from_testbed_dict('keystone', 'insecure', 'False')
