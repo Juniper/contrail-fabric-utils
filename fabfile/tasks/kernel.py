@@ -100,6 +100,7 @@ def upgrade_kernel_node(*args):
     """upgrades the kernel image in given nodes."""
     for host_string in args:
         with settings(host_string=host_string):
+            execute('create_install_repo_node', host_string)
             dist, version, extra = get_linux_distro()
             if version == '12.04':
                 print "upgrading apparmor before upgrading kernel"
