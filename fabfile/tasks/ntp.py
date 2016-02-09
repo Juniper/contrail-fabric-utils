@@ -1,4 +1,7 @@
+from fabric.contrib.files import exists
+
 from fabfile.config import *
+from fabfile.utils.cluster import get_ntp_server
 
 @task
 @roles('all')
@@ -37,3 +40,24 @@ def verify_time_all():
                            (result, all_time[-1], all_time[0]))
 
     print "Time synced in the nodes, Proceeding to install/provision."
+
+
+@task
+@EXECUTE_TASK
+@roles('all')
+def setup_ntp():
+    execute("setup_ntp_node", env.host_string)
+
+@task
+def setup_ntp_node(*args):
+    ntp_file = '/etc/ntp.conf'
+    for host_string in args:
+        with settings(host_string=host_string):
+            ntp_server = get_ntp_server()
+            if (ntp_server and exists(ntp_file)):
+                ntp_chk_cmd = 'grep "server ' + ntp_server + '" ' + ntp_file
+                with settings(warn_only=True):
+                    ntp_chk_cmd_out = sudo(ntp_chk_cmd)
+                if not ntp_chk_cmd_out:
+                    ntp_cmd = 'echo "server ' + ntp_server + '" >> ' + ntp_file
+                    sudo(ntp_cmd)

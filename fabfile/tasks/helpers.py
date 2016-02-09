@@ -15,9 +15,9 @@ from fabfile.utils.fabos import *
 from fabric.contrib.files import exists
 import datetime
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
-from fabfile.utils.cluster import get_ntp_server, get_orchestrator
-from fabfile.utils.cluster import get_ntp_server
+from fabfile.utils.cluster import get_orchestrator
 from fabfile.utils.analytics import get_analytics_data_dir, get_minimum_diskGB
+from fabfile.tasks.ntp import setup_ntp, setup_ntp_node
 
 @task
 @parallel
@@ -1318,6 +1318,7 @@ def pre_check():
         print "\nERROR: \n\tRecommended to deploy odd number of zookeeper(database) nodes."
         print "\tAdd/remove a node to/from the existing clusters testbed.py and continue."
         exit(1)
+    execute('setup_ntp')
     execute('verify_time_all')
     if len(env.roledefs['openstack']) > 1 and not get_openstack_internal_vip():
         print "\nERROR: \n\tkeystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
@@ -1402,6 +1403,7 @@ def set_allow_unsupported_sfp():
         sudo('rmmod ixgbe; modprobe ixgbe')
 
 @task
+@EXECUTE_TASK
 @roles('all')
 def setup_common():
     execute("setup_common_node", env.host_string)
@@ -1409,15 +1411,7 @@ def setup_common():
 @task
 def setup_common_node(*args):
     for host_string in args:
-        with settings(host_string=host_string, warn_only=True):
-            ntp_server = get_ntp_server()
-            if ntp_server is not None and\
-                exists('/etc/ntp.conf'):
-                    ntp_chk_cmd = 'grep "server ' + ntp_server + '" /etc/ntp.conf'
-                    ntp_chk_cmd_out = sudo(ntp_chk_cmd)
-                    if ntp_chk_cmd_out == "":
-                        ntp_cmd = 'echo "server ' + ntp_server + '" >> /etc/ntp.conf'
-                        sudo(ntp_cmd)
+        execute("setup_ntp_node", host_string)
 
 @task
 @roles('build')
