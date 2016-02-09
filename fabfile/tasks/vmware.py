@@ -65,6 +65,19 @@ def create_vmx (esxi_host, vm_name):
     vm_mac = esxi_host['contrail_vm']['mac']
     assert vm_mac, "MAC address for contrail-compute-vm must be specified"
 
+    cmd = "vmware -v"
+    out = run(cmd)
+    if out.failed:
+        raise Exception("Unable to get the vmware version")
+    esxi_version_info = str(out)
+    esxi_version = esxi_version_info.split()[2][:3]
+    if (esxi_version == '5.5'):
+         hw_version = 10
+    elif (esxi_version == '6.0'):
+         hw_version = 11
+    else:
+        hw_version = 9
+
     if mode is 'vcenter':
         eth0_type = "vmxnet3"
         ext_params = compute_vmx_template.vcenter_ext_template
@@ -77,6 +90,7 @@ def create_vmx (esxi_host, vm_name):
         ext_params += data_intf
 
     template_vals = { '__vm_name__' : vm_name,
+                      '__hw_version__' : hw_version,
                       '__vm_mac__' : vm_mac,
                       '__fab_pg__' : fab_pg,
                       '__eth0_type__' : eth0_type,
