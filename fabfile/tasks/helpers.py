@@ -5,6 +5,7 @@ import time
 import tempfile
 from copy import deepcopy
 import collections
+from os.path import expanduser, normpath, basename
 
 from fabfile.config import *
 import fabfile.common as common
@@ -18,6 +19,26 @@ from fabfile.utils.cluster import get_orchestrator, get_all_hostnames, get_hostn
 from fabfile.utils.analytics import get_analytics_data_dir, get_minimum_diskGB
 from fabfile.tasks.ntp import setup_ntp, setup_ntp_node
 from fabfile.utils.fabos import detect_ostype, is_package_installed
+
+@task
+def copydir(src_path, dst_path=None, src_host='localhost', dst_host=None):
+    if not dst_host:
+        raise RuntimeError("Please specify destination host")
+    if not dst_path:
+        dst_path = src_path
+    src_path = (normpath(expanduser(src_path)))
+    dst_path = normpath(expanduser(dst_path))
+    if not src_host == 'localhost':
+        with settings(host_string=src_host,
+                      password=get_env_passwords(src_host)):
+            tmpdir = tempfile.mkdtemp()
+            get_as_sudo(src_path, tmpdir)
+            src_path = os.path.join(tmpdir, basename(src_path))
+    with settings(host_string=dst_host,
+                  password=get_env_passwords(dst_host)):
+        sudo('mkdir -p %s' % dst_path)
+        put('%s/*' % src_path, dst_path, use_sudo=True)
+
 
 @task
 @parallel
@@ -493,12 +514,12 @@ def add_images(image=None):
 
             if openstack_sku in ['liberty']:
                 cmd = "source /etc/contrail/openstackrc; {PRECMD}"\
-                      " glance image-create --name {IMGNAME}"\
+                      " glance --insecure image-create --name {IMGNAME}"\
                       " --visibility public --container-format {IMGFORMAT}"\
                       " --disk-format {DISKFORMAT} {IMGFILE_OPT}"
             else:
                 cmd = "source /etc/contrail/openstackrc; {PRECMD}"\
-                      " glance image-create --name {IMGNAME}"\
+                      " glance --insecure image-create --name {IMGNAME}"\
                       " --is-public True --container-format {IMGFORMAT}"\
                       " --disk-format {DISKFORMAT} {IMGFILE_OPT}"
             if ".vmdk" in loc:
@@ -596,23 +617,23 @@ def add_basic_images(image=None):
         if openstack_sku in ['liberty']:
             if ".vmdk" in loc:
                 if 'converts' in loc:
-                    glance_id = run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --visibility public --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                    glance_id = run("(source /etc/contrail/openstackrc; glance --insecure image-create --name '"+name+"' --visibility public --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
                 else:
-                    glance_id = run("(source /etc/contrail/openstackrc; glance add name='"+name+"' --visibility public container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                    glance_id = run("(source /etc/contrail/openstackrc; glance --insecure add name='"+name+"' --visibility public container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
                 if glance_id.succeeded:
                     preload_image_to_esx('http://%s/%s' % (mount,local), glance_id, sizes, openstack_version)
             else:
-                run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --visibility public --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
+                run("(source /etc/contrail/openstackrc; glance --insecure image-create --name '"+name+"' --visibility public --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
         else:
             if ".vmdk" in loc:
                 if 'converts' in loc:
-                    glance_id = run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                    glance_id = run("(source /etc/contrail/openstackrc; glance --insecure image-create --name '"+name+"' --is-public True --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
                 else:
-                    glance_id = run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                    glance_id = run("(source /etc/contrail/openstackrc; glance --insecure add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
                 if glance_id.succeeded:
                     preload_image_to_esx('http://%s/%s' % (mount,local), glance_id, sizes, openstack_version)
             else:
-                run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
+                run("(source /etc/contrail/openstackrc; glance --insecure image-create --name '"+name+"' --is-public True --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
         run("rm "+remote)
 
 #end add_basic_images

@@ -33,6 +33,7 @@ from tasks.ha import *
 from tasks.zookeeper import *
 from tasks.backup_restore import *
 from tasks.kernel import *
+from tasks.ssl import *
 
 # For contrail use
 try:
