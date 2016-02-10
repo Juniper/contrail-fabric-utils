@@ -13,7 +13,7 @@ from fabfile.tasks.helpers import reboot_node
 from fabfile.tasks.install import create_install_repo_node,\
          install_interface_name_node, install_vrouter_node, apt_install
 from fabfile.utils.multitenancy import get_mt_opts
-from fabfile.utils.cluster import get_orchestrator
+from fabfile.utils.cluster import get_orchestrator, get_mode
 
 @task
 def add_vrouter_node(*args):
@@ -43,14 +43,18 @@ def detach_vrouter_node(*args):
     cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
     cfgm_ip = hstr_to_ip(cfgm_host)
     nova_compute = "openstack-nova-compute"
-    if detect_ostype() in ['ubuntu']:
-        nova_compute = "nova-compute"
 
     for host_string in args:
-        compute_hostname = socket.gethostbyaddr(hstr_to_ip(host_string))[0].split('.')[0]
         with settings(host_string=host_string, warn_only=True):
             sudo("service supervisor-vrouter stop")
-            sudo("service %s stop" % nova_compute)
+            if detect_ostype() in ['ubuntu']:
+                nova_compute = "nova-compute"
+            mode = get_mode(host_string)
+            if (mode == 'vcenter'):
+                nova_compute = ""
+            if (nova_compute != ""):
+                sudo("service %s stop" % nova_compute)
+            compute_hostname = sudo("hostname")
         with settings(host_string=cfgm_host, pasword=cfgm_host_password):
             sudo("python /opt/contrail/utils/provision_vrouter.py --host_name %s --host_ip %s --api_server_ip %s --oper del %s" %
                 (compute_hostname, host_string.split('@')[1], cfgm_ip, get_mt_opts()))
