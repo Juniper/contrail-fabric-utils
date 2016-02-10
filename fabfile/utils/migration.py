@@ -2,6 +2,7 @@ import os
 from fabric.api import *
 from fabfile.config import testbed
 from fabfile.utils.host import *
+from fabfile.utils.cluster import get_all_hostnames
 
 # reads and returns nova live-migration config from testbed.py
 def get_live_migration_enable():
@@ -32,7 +33,7 @@ def get_ceph_nfs_migration_image():
 # The host should be part of the compute nodes
 def get_ceph_nfs_migration_host():
     entry = getattr(testbed, 'ceph_nfs_livem_host', None)
-    for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+    for sthostname, sthostentry in zip(get_all_hostnames(), env.roledefs['all']):
         if entry == sthostentry:
             return sthostname
 #end get_ceph_nfs_migration_host

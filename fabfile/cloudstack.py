@@ -19,6 +19,7 @@ import socket
 import os
 
 from common import *
+from fabfile.utils.cluster import get_hostname
 
 # Don't add any new testbeds here. Create new files under fabfile/testbeds
 # and copy/link the testbed.py file from/to the one you want to use.
@@ -226,7 +227,7 @@ def install_contrail_packages(pkg=None):
     for host in hosts:
          compute_ip = host_string_to_ip(host)
          try:
-             compute_hostname = socket.gethostbyaddr(compute_ip)
+             compute_hostname = get_hostname(compute_ip)
          except:
              print "Could not get hostname, using ipaddr"
              compute_hostname = compute_ip
