@@ -15,7 +15,7 @@ from fabfile.utils.fabos import *
 from fabric.contrib.files import exists
 import datetime
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
-from fabfile.utils.cluster import get_orchestrator
+from fabfile.utils.cluster import get_orchestrator, get_all_hostnames, get_hostname
 from fabfile.utils.analytics import get_analytics_data_dir, get_minimum_diskGB
 from fabfile.tasks.ntp import setup_ntp, setup_ntp_node
 
@@ -74,11 +74,11 @@ def reimage_virtual_nodes(host, count):
         for i in range(10):
             status = run(
                 "nova %s delete %s" %
-                (common_agrs, env.hostnames['all'][count]))
+                (common_agrs, get_hostname(host)))
             sleep(5)
             check = run(
                 "nova %s show %s | grep 'status'" %
-                (common_agrs, env.hostnames['all'][count]))
+                (common_agrs, get_hostname(host)))
             if 'status' in check:
                 if i > 5:
                     print 'Timed out waiting for vm to get deleted aborting'
@@ -95,7 +95,7 @@ def reimage_virtual_nodes(host, count):
                          env.virtual_nodes_info[host]['tenant_id'],
                          env.virtual_nodes_info[host]['mac-address'],
                          host.split('@')[1],
-                         env.hostnames['all'][count],
+                         get_hostname(host),
                          env.virtual_nodes_info[host]['vn_id']))
         m = re.search('\|\sid(.*)\|\s([\w-]+)(.*)\|', status)
         port_id = m.group(2)
@@ -105,12 +105,12 @@ def reimage_virtual_nodes(host, count):
                          env.virtual_nodes_info[host]['flavor'],
                          env.virtual_nodes_info[host]['image_name'],
                          port_id,
-                         env.hostnames['all'][count]))
+                         get_hostname(host))
 
         for i in range(10):
             check = run(
                 "nova %s show %s | grep 'status'" %
-                (common_agrs, env.hostnames['all'][count]))
+                (common_agrs, get_hostname(host)))
             if 'ACTIVE' not in check:
                 if i > 5:
                     print 'Timed out waiting for vm to become Active'
@@ -132,17 +132,7 @@ def all_reimage(build_param="@LATEST"):
               count = count + 1
 
         else:
-
-            for i in range(5):
-                try:
-                    hostname = socket.gethostbyaddr(
-                        hstr_to_ip(host))[0].split('.')[0]
-                except socket.herror:
-                    sleep(5)
-                    continue
-                else:
-                    break
-
+            hostname = get_hostname(hstr_to_ip(host))
             if 'ostypes' in env.keys():
                 if 'xen' in env.ostypes[host]:
                     pass
@@ -215,18 +205,7 @@ def all_sm_reimage(build_param=None,smgr_client='/cs-shared/server-manager/clien
             for esxi in esxi_hosts:
                 hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
         for host in hosts:
-            hostname = None
-            for i in range(5):
-                try:
-                    hostname = socket.gethostbyaddr( hstr_to_ip(host))[0].split('.')[0]
-                except socket.herror:
-                    sleep(5)
-                    continue
-                else:
-                    break
-            if not hostname:
-                print "Unable to resolve %s" % (host)
-                sys.exit(1)
+            hostname = get_hostname(hstr_to_ip(host))
             if build_param is not None:
                 with settings(warn_only=True):
                     local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (hostname,build_param))
@@ -301,7 +280,7 @@ def all_command(command):
 @roles('all')
 @task
 def all_ping():
-    for host in env.hostnames["all"]:
+    for host in get_all_hostnames():
         local("ping -c 1 -q %s " %(host))
 #end all_ping
 
@@ -315,7 +294,7 @@ def all_version():
 @task
 def check_reimage_state():
     failed_host = []
-    hosts = env.hostnames['all'][:]
+    hosts = get_all_hostnames()[:]
     esxi_hosts = getattr(testbed, 'esxi_hosts', None)
     if esxi_hosts:
         for esxi in esxi_hosts:
@@ -1179,7 +1158,7 @@ def remove_pattern_from_file(pattern, file_name):
 def full_mesh_ping_by_name():
     for host in env.roledefs['all']:
         with settings(host_string = host, warn_only = True):
-            for hostname in env.hostnames['all']:
+            for hostname in get_all_hostnames():
                 result = sudo('ping -c 1 %s' %(hostname))
                 if not result.succeeded:
                     print '!!! Ping from %s to %s failed !!!' %( host, hostname)
@@ -1190,7 +1169,7 @@ def full_mesh_ping_by_name():
 @roles('build')
 @task
 def validate_hosts():
-    all_hostnames = env.hostnames['all']
+    all_hostnames = get_all_hostnames()
     current_hostlist = {}
     current_hosttimes = {}
 
@@ -1210,11 +1189,11 @@ def validate_hosts():
                 print "Please fix them before continuing!! "
                 exit(1)
 
-    #Check if env.hostnames['all'] has any spurious entries
-    if set(current_hostlist.keys()) != set(env.hostnames['all']):
+    #Check if env.hostnames has any spurious entries
+    if set(current_hostlist.keys()) != set(get_all_hostnames()):
         print "hostnames['all'] in testbed file does not seem to be correct"
         print "Expected : %s" %(current_hostlist)
-        print "Seen : %s" %(env.hostnames['all'])
+        print "Seen : %s" %(get_all_hostnames())
         exit(1)
     print "All hostnames are unique and defined in testbed correctly..OK"
 
