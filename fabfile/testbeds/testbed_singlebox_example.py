@@ -41,8 +41,12 @@ env.roledefs = {
 env.openstack_admin_password = 'secret123'
 
 #Hostnames
+# Deprecated 'all' key from release 3.0; Consider specifying the hostname for each host seperately as below
+#env.hostnames = {
+#    'all': ['a0s1']
+#}
 env.hostnames = {
-    'all': ['a0s1']
+    host1: 'a0s1',
 }
 
 # Passwords of each host
