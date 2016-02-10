@@ -7,8 +7,30 @@ from fabfile.config import *
 from fabfile.utils.config import get_value
 
 
+def get_all_hostnames():
+    if isinstance(env.hostnames.get('all', None), list):
+        # Maintaining backward compatability with old testbed.py
+        hostnames = env.hostnames['all']
+    else:
+        for host in env.roledefs['all']:
+            # Return hostnames in the same order in which the 'all'
+            # role is defined.
+            hostnames.append(env.hostnames[host])
+    return hostnames
+
+
+def get_hostname(host_ip):
+    if isinstance(env.hostnames.get('all', None), list):
+        # Maintaining backward compatability with old testbed.py
+        hostnames = dict(zip(env.roledefs['all'], env.hostnames['all']))
+    else:
+        hostnames = env.hostnames
+    return hostnames[host_ip]
+
+
 def get_orchestrator():
     return getattr(env, 'orchestrator', 'openstack')
+
 
 def get_mode(compute_host):
     mode = None

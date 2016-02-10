@@ -46,8 +46,22 @@ env.roledefs = {
     #   'backup':[backup_node],  # only if the backup_node is defined
 }
 
+#Hostnames
+# Deprecated 'all' key from release 3.0; Consider specifying the hostname for each host seperately as below
+#env.hostnames = {
+#    'all': ['a0s1', 'a0s2', 'a0s3','a0s4', 'a0s5', 'a0s6', 'a0s7', 'a0s8', 'a0s9', 'a0s10','backup_node']
+#}
 env.hostnames = {
-    'all': ['a0s1', 'a0s2', 'a0s3','a0s4', 'a0s5', 'a0s6', 'a0s7', 'a0s8', 'a0s9', 'a0s10','backup_node']
+    host1: 'a0s1',
+    host2: 'a0s2',
+    host3: 'a0s3',
+    host4: 'a0s4',
+    host5: 'a0s5',
+    host6: 'a0s6',
+    host7: 'a0s7',
+    host8: 'a0s8',
+    host9: 'a0s9',
+    host10: 'a0s10',
 }
 
 #Openstack admin password
