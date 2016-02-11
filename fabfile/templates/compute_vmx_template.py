@@ -3,7 +3,7 @@ import string
 template = string.Template(
 '''.encoding = "UTF-8"
 config.version = "8"
-virtualHW.version = "10"
+virtualHW.version = "$__hw_version__"
 vmci0.present = "TRUE"
 hpet0.present = "TRUE"
 nvram = "$__vm_name__.nvram"

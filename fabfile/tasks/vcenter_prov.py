@@ -170,7 +170,7 @@ class sr_iov_fab(object):
                 if out.failed:
                     raise Exception("Unable to add sriov interface for physical nic %s on esxi host %s" %(sr_iov_nic, ip))
                 esxi_version_info = str(out)
-                esxi_version = esxi_version_info.split()[2]
+                esxi_version = esxi_version_info.split()[2][:3]
                 cmd = "vmkchdev -l | grep %s" %sr_iov_nic
                 out = run(cmd)
                 if out.failed:
@@ -179,7 +179,7 @@ class sr_iov_fab(object):
                 if len(nic_info) == 0:
                     raise Exception("Unable to add sriov interface for physical nic %s on esxi host %s" %(sr_iov_nic, ip))
                 pci_id = nic_info.split()[0]
-                if (esxi_version == '5.5.0'):
+                if (esxi_version == '5.5'):
                     pci_id = pci_id[5:]
             devices = []
             nicspec = self.pyVmomi.vim.vm.device.VirtualDeviceSpec()
