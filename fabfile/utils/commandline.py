@@ -71,6 +71,7 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     cmd += " --amqp_server_ip %s" % amqp_server_ip
     cmd += " --quantum_service_protocol %s" % get_quantum_service_protocol()
     cmd += " --service_token %s" % get_service_token()
+    cmd += " --service-dbpass %s" % get_service_dbpass()
     cmd += " --keystone_service_tenant_name %s" % get_keystone_service_tenant_name()
     cmd += " --neutron_password %s" % get_neutron_password()
     cmd += " --nova_password %s" % get_nova_password()
