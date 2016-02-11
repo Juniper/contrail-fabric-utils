@@ -363,11 +363,12 @@ def setup_keepalived_node(role):
     with cd(INSTALLER_DIR):
         cmd = "setup-vnc-keepalived\
                --self_ip %s --internal_vip %s --mgmt_self_ip %s\
-               --self_index %d --num_nodes %d --role %s" % ( self_ip,
+               --self_index %d --num_nodes %d --role %s --internal_virtual_router_id %d" % ( self_ip,
                 internal_vip, mgmt_ip, (keepalived_host_list.index(self_host) + 1),
-                len(env.roledefs[role]), role)
+                len(env.roledefs[role]), role, internal_virtual_router_id)
         if external_vip:
-             cmd += ' --external_vip %s' % external_vip
+             cmd += ' --external_vip %s --external_virtual_router_id %d' % (external_vip,
+                                           external_virtual_router_id)
         sudo(cmd)
 
 @task
