@@ -184,8 +184,10 @@ def upgrade_compute_node(from_rel, pkg, *args):
                 manage_nova_compute='no'
 
             # Identify packages to upgrade
-            if (env.host_string in env.roledefs['vcenter_compute']):
+            if 'vcenter_compute' in env.roledefs and 
+                  host_string in env.roledefs['vcenter_compute'):
                 pkgs = get_vcenter_compute_pkgs() 
+                roles = ['vcenter_compute']
             else:
                 pkgs = get_compute_pkgs(manage_nova_compute=manage_nova_compute)
                 if (getattr(env, 'interface_rename', True) and
@@ -196,9 +198,6 @@ def upgrade_compute_node(from_rel, pkg, *args):
                     if version == '14.04' and 'contrail-vrouter-3.13.0-35-generic' in pkgs:
                        pkgs.remove('contrail-vrouter-3.13.0-35-generic')
                        pkgs.append('contrail-vrouter-3.13.0-40-generic')
-            if (env.host_string in env.roledefs['vcenter_compute']):
-                roles = ['vcenter_compute']
-            else:
                 # Identify roles of this node.
                 roles = ['compute']
                 if env.host_string in get_tsn_nodes():
