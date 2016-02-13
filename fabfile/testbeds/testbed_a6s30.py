@@ -36,3 +36,8 @@ env.passwords = {
     host1: 'c0ntrail123',
     host_build: 'c0ntrail123',
 }
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

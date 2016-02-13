@@ -97,3 +97,8 @@ env.test_repo_dir='/home/ddivakar/test'
 env.mail_from='ddivakar@juniper.net'
 env.mail_to='ddivakar@juniper.net'
 
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

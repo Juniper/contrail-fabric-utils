@@ -32,3 +32,8 @@ env.roledefs = {
 env.hostnames = {
     'all': ['a2s8', 'a2s18', 'a3s44','a3s45', 'a6s2', 'a6s3', 'a6s16', 'a6s34', 'a6s39', 'a6s42']
 }
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

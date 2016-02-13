@@ -56,3 +56,8 @@ env.passwords = {
 env.test_repo_dir=os.path.expanduser('~/test')
 env.mail_from='roque@juniper.net'
 env.mail_to='roque@juniper.net'
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

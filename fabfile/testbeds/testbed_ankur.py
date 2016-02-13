@@ -66,3 +66,8 @@ data = {
     host4 : { 'ip': '10.84.20.37/24', 'gw' : '10.84.20.254', 'device' : 'p4p0p0'},
     host5 : { 'ip': '10.84.20.38/24', 'gw' : '10.84.20.254', 'device' : 'p4p0p0'},
 }
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

@@ -73,3 +73,8 @@ config = {
     }
 }
 env.config = config
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

@@ -102,3 +102,8 @@ env.test_repo_dir='/home/stack/cloudstack_sanity/test'
 env.mail_to='contrail-cloudstack-dev@juniper.net'
 env.log_scenario='Cloudstack Multi-node Sanity'
 
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

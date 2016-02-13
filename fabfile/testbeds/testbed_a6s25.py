@@ -33,3 +33,8 @@ env.passwords = {
 
     host_build: 'miriyala123',
 }
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}
