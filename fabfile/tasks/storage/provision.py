@@ -1,4 +1,5 @@
 import json
+
 from fabfile.config import *
 from fabfile.utils.fabos import *
 from fabfile.utils.host import *
@@ -7,6 +8,7 @@ from fabfile.utils.multitenancy import *
 from fabfile.utils.migration import *
 from fabfile.utils.storage import *
 from fabfile.utils.analytics import *
+from fabfile.utils.cluster import get_all_hostnames
 
 @task
 @EXECUTE_TASK
@@ -69,7 +71,7 @@ def create_storage_setup_cmd(mode):
     if data_ip_info != None:
         storage_network = True
     for entry in env.roledefs['storage-master']:
-        for sthostname, sthostentry in zip(env.hostnames['all'],
+        for sthostname, sthostentry in zip(get_all_hostnames(),
                                                 env.roledefs['all']):
             if entry == sthostentry:
                 if storage_network == True:
@@ -86,7 +88,7 @@ def create_storage_setup_cmd(mode):
                     storage_os_host_list.append(storage_data_ip)
                 index = index + 1
     for entry in env.roledefs['storage-compute']:
-        for sthostname, sthostentry in zip(env.hostnames['all'],
+        for sthostname, sthostentry in zip(get_all_hostnames(),
                                                 env.roledefs['all']):
             if entry == sthostentry:
                 if storage_network == True:
@@ -106,7 +108,7 @@ def create_storage_setup_cmd(mode):
                 storage_data_ip=get_storage_data_ip(entry)[0]
                 storage_host_list.append(storage_data_ip)
     for entry in env.roledefs['collector']:
-        for sthostname, sthostentry in zip(env.hostnames['all'],
+        for sthostname, sthostentry in zip(get_all_hostnames(),
                                                 env.roledefs['all']):
             if entry == sthostentry:
                 collector_pass_list.append(get_env_passwords(entry))
@@ -115,7 +117,7 @@ def create_storage_setup_cmd(mode):
                 collector_host_list.append(collector_data_ip)
     index = 0
     for entry in env.roledefs['cfgm']:
-        for sthostname, sthostentry in zip(env.hostnames['all'],
+        for sthostname, sthostentry in zip(get_all_hostnames(),
                                                 env.roledefs['all']):
             if entry == sthostentry:
                 if index != 0:
@@ -208,7 +210,7 @@ def setup_nfs_live_migration(mode):
         storage_os_host_list=[]
         index = 0
         for entry in env.roledefs['compute']:
-            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+            for sthostname, sthostentry in zip(get_all_hostnames(), env.roledefs['all']):
                 if entry == sthostentry:
                     #Add only for qemu-kvm hypervisor
                     hypervisor = get_hypervisor(entry)
@@ -238,7 +240,7 @@ def setup_nfs_live_migration(mode):
             no_nfs = 0
 
         for entry in env.roledefs['openstack']:
-            for sthostname, sthostentry in zip(env.hostnames['all'],
+            for sthostname, sthostentry in zip(get_all_hostnames(),
                                                     env.roledefs['all']):
                 if entry == sthostentry:
                     storage_host_password=get_env_passwords(entry)

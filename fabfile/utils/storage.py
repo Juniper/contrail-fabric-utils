@@ -6,6 +6,7 @@ from fabric.api import *
 
 from fabfile.config import testbed
 from fabfile.utils.host import *
+from fabfile.utils.cluster import get_all_hostnames
 
 def get_storage_data_ip(host_str):
     tgt_ip = None
@@ -42,7 +43,7 @@ def get_storage_disk_config():
     if storage_info:
         for entry in storage_info.keys():
             storage_host = get_control_host_string(entry)
-            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+            for sthostname, sthostentry in zip(get_all_hostnames(), env.roledefs['all']):
                 if entry == sthostentry:
                     if 'disks' in storage_info[entry].keys():
                         for disk_entry in storage_info[entry]['disks']:
@@ -64,7 +65,7 @@ def get_storage_ssd_disk_config():
     if storage_info:
         for entry in storage_info.keys():
             storage_host = get_control_host_string(entry)
-            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+            for sthostname, sthostentry in zip(get_all_hostnames(), env.roledefs['all']):
                 if entry == sthostentry:
                     if 'ssd-disks' in storage_info[entry].keys():
                         for ssd_disk_entry in storage_info[entry]['ssd-disks']:
@@ -86,7 +87,7 @@ def get_storage_local_disk_config():
     if storage_info:
         for entry in storage_info.keys():
             storage_host = get_control_host_string(entry)
-            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+            for sthostname, sthostentry in zip(get_all_hostnames(), env.roledefs['all']):
                 if entry == sthostentry:
                     if 'local-disks' in storage_info[entry].keys():
                         for local_disk_entry in storage_info[entry]['local-disks']:
@@ -108,7 +109,7 @@ def get_storage_local_ssd_disk_config():
     if storage_info:
         for entry in storage_info.keys():
             storage_host = get_control_host_string(entry)
-            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+            for sthostname, sthostentry in zip(get_all_hostnames(), env.roledefs['all']):
                 if entry == sthostentry:
                     if 'local-ssd-disks' in storage_info[entry].keys():
                         for local_ssd_disk_entry in storage_info[entry]['local-ssd-disks']:
@@ -142,7 +143,7 @@ def get_storage_nfs_disk_config():
     if storage_info:
         for entry in storage_info.keys():
             storage_host = get_control_host_string(entry)
-            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+            for sthostname, sthostentry in zip(get_all_hostnames(), env.roledefs['all']):
                 if entry == sthostentry:
                     if 'nfs' in storage_info[entry].keys():
                         for nfs_disk_entry in storage_info[entry]['nfs']:
@@ -159,7 +160,7 @@ def get_storage_journal_config():
     if storage_info:
         for entry in storage_info.keys():
             storage_host = get_control_host_string(entry)
-            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+            for sthostname, sthostentry in zip(get_all_hostnames(), env.roledefs['all']):
                 if entry == sthostentry:
                     if 'journal' in storage_info[entry].keys():
                         for journal_entry in storage_info[entry]['journal']:
@@ -181,7 +182,7 @@ def get_storage_directory_config():
     if storage_info:
         for entry in storage_info.keys():
             storage_host = get_control_host_string(entry)
-            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+            for sthostname, sthostentry in zip(get_all_hostnames(), env.roledefs['all']):
                 if entry == sthostentry:
                     if 'directories' in storage_info[entry].keys():
                         for directory_entry in storage_info[entry]['directories']:
@@ -218,7 +219,7 @@ def get_storage_chassis_config():
         for entry in storage_info.keys():
             storage_host = get_control_host_string(entry)
             added_chassis = 0
-            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+            for sthostname, sthostentry in zip(get_all_hostnames(), env.roledefs['all']):
                 if entry == sthostentry:
                     if 'chassis' in storage_info[entry].keys():
                         for chassis_entry in storage_info[entry]['chassis']:
@@ -261,7 +262,7 @@ def get_storage_mon_hosts():
     if storage_mon_info:
         for entry in storage_mon_info:
             storage_host = get_control_host_string(entry)
-            for sthostname, sthostentry in zip(env.hostnames['all'], env.roledefs['all']):
+            for sthostname, sthostentry in zip(get_all_hostnames(), env.roledefs['all']):
                 if entry == sthostentry:
                     data_ip_info = getattr(testbed, 'storage_data', None)
                     if data_ip_info == None:
