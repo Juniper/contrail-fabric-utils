@@ -1,12 +1,13 @@
 from fabfile.config import *
 from distutils.version import LooseVersion
 
-from fabfile.tasks.install import pkg_install
+from fabfile.tasks.install import pkg_install, install_contrail_vcenter_plugin
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 from fabfile.utils.cluster import get_toragent_nodes, get_tsn_nodes
 from fabfile.utils.commandline import *
 from fabfile.utils.fabos import get_release, detect_ostype, get_linux_distro
-from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs, get_vcenter_compute_pkgs
+from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs,\
+      get_vcenter_compute_pkgs, get_config_pkgs, get_vcenter_plugin_pkg
 from fabfile.tasks.vmware import provision_vcenter_features
 
 @task
@@ -67,6 +68,10 @@ def upgrade_config_node(from_rel, pkg, *args):
             execute('create_install_repo_node', host_string)
             pkg_install(['contrail-setup'])
 
+            if get_orchestrator() is 'vcenter':
+                pkg = get_vcenter_plugin_pkg()
+                install_contrail_vcenter_plugin(pkg)
+
             #Downgrading keepalived as we are packaging lower version of keepalivd in R2.20
             if (LooseVersion(from_rel) == LooseVersion('2.20') and
                 LooseVersion(get_release()) >= LooseVersion('2.20')):
@@ -77,8 +82,9 @@ def upgrade_config_node(from_rel, pkg, *args):
                     cmd += ' -o Dpkg::Options::="--force-confold" install keepalived=1.2.13-0~276~ubuntu14.04.1'
                     sudo(cmd)
 
+            pkgs = get_config_pkgs()
             cmd = frame_vnc_config_cmd(host_string, 'upgrade-vnc-config')
-            cmd += ' -P contrail-openstack-config'
+            cmd += ' -P %s' % ' '.join(pkgs)
             cmd += ' -F %s' % from_rel
             cmd += ' -T %s' % get_release()
             sudo(cmd)
@@ -185,7 +191,7 @@ def upgrade_compute_node(from_rel, pkg, *args):
 
             # Identify packages to upgrade
             if ('vcenter_compute' in env.roledefs and 
-                  host_string in env.roledefs['vcenter_compute']):
+                env.host_string in env.roledefs['vcenter_compute']):
                 pkgs = get_vcenter_compute_pkgs() 
                 roles = ['vcenter_compute']
             else:
@@ -258,6 +264,8 @@ def upgrade_contrail(from_rel, pkg, orch='yes'):
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
     execute('upgrade_compute', from_rel, pkg)
+    if 'vcenter_compute' in env.roledefs:
+        execute('upgrade_vcenter_compute', from_rel, pkg)
     # Adding config, database and analytics nodes to api-server
     if LooseVersion(from_rel) < LooseVersion('2.20'):
         execute('prov_config')

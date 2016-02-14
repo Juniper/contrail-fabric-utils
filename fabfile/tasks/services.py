@@ -163,6 +163,8 @@ def restart_openstack_compute():
     """Restarts the contrail openstack compute service."""
     if 'tsn' in env.roledefs.keys() and env.host_string in env.roledefs['tsn']:
         return
+    if get_orchestrator() == 'vcenter':
+        return
     if detect_ostype() in ['ubuntu']:
         sudo('service nova-compute restart')
         return
@@ -182,7 +184,8 @@ def restart_cfgm_node(*args):
         with  settings(host_string=host_string):
             sudo('service supervisor-support-service restart')
             sudo('service supervisor-config restart')
-            sudo('service neutron-server restart')
+            if get_orchestrator() == 'openstack':
+                sudo('service neutron-server restart')
 
 @task
 @roles('control')
