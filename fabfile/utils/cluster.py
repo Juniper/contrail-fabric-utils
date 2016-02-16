@@ -19,13 +19,13 @@ def get_all_hostnames():
     return hostnames
 
 
-def get_hostname(host_ip):
+def get_hostname(host_string):
     if isinstance(env.hostnames.get('all', None), list):
         # Maintaining backward compatability with old testbed.py
         hostnames = dict(zip(env.roledefs['all'], env.hostnames['all']))
     else:
         hostnames = env.hostnames
-    return hostnames[host_ip]
+    return hostnames[host_string]
 
 
 def get_orchestrator():
