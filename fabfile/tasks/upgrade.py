@@ -175,21 +175,22 @@ def upgrade_compute(from_rel, pkg):
     execute("upgrade_compute_node", from_rel, pkg, env.host_string)
 
 @task
-def upgrade_compute_node(from_rel, pkg, *args):
+def upgrade_compute_node(from_rel, pkg, *args, **kwargs):
     """Upgrades compute pkgs in one or list of nodes. USAGE:fab upgrade_compute_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             pkg_install(['contrail-setup'])
-            cmd = frame_vnc_compute_cmd(host_string, 'upgrade-vnc-compute')
+            configure_nova = kwargs.get('configure_nova', 'yes')
+            manage_nova_compute = kwargs.get('manage_nova_compute', 'yes')
 
-            manage_nova_compute='yes'
             if (env.host_string in get_tsn_nodes() or
                 get_orchestrator() == 'vcenter'):
                 manage_nova_compute='no'
 
             # Identify packages to upgrade
+            cmd = frame_vnc_compute_cmd(host_string, 'upgrade-vnc-compute', configure_nova=configure_nova, manage_nova_compute=manage_nova_compute)
             if ('vcenter_compute' in env.roledefs and 
                 env.host_string in env.roledefs['vcenter_compute']):
                 pkgs = get_vcenter_compute_pkgs() 
