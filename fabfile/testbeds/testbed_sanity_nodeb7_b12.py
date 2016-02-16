@@ -41,3 +41,8 @@ os_password='contrail123'
 os_tenant_name='admin'
 multi_tenancy='True'
 env.interface_rename = True
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

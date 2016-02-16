@@ -53,3 +53,8 @@ env.log_scenario='Fedora Openstack Five-Node Sanity'
 multi_tenancy=True
 
 env.interface_rename = True
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

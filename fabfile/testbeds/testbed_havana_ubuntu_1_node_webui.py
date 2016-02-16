@@ -42,3 +42,8 @@ env.test_repo_dir='/home/stack/webui_ubuntu_single_node/havana/contrail-test'
 env.mail_from='ankitja@juniper.net'
 env.mail_to='dl-contrail-sw@juniper.net'
 env.log_scenario='Ubuntu-Havana Single-Node Webui Sanity'
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

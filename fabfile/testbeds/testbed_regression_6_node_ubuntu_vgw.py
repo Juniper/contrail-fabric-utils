@@ -66,3 +66,8 @@ env.vgw = {host4: {'vgw1':{'vn':'default-domain:admin:public:public', 'ipam-subn
                    'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}},
            host5: {'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}}
           }
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

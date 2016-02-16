@@ -36,3 +36,8 @@ env.passwords = {
 env.test_repo_dir='/home/cdmishra/test'
 env.mail_from='cdmishra@juniper.net'
 env.mail_to='cdmishra@juniper.net'
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

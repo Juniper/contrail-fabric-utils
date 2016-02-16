@@ -53,3 +53,8 @@ env.log_scenario='CentOS Openstack Six-Node Sanity[mgmt= ctrl= data]'
 multi_tenancy=True
 env.interface_rename = False 
 env.encap_priority =  "'MPLSoUDP','MPLSoGRE','VXLAN'"
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

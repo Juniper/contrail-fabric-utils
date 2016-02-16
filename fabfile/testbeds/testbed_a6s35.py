@@ -37,3 +37,8 @@ env.test_repo_dir='/home/praneetb/build/test'
 env.mail_from='praneetb@juniper.net'
 env.mail_to='praneetb@juniper.net'
 multi_tenancy=True
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

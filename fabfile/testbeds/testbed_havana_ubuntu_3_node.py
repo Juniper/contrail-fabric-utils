@@ -93,3 +93,8 @@ env.passwords = {
 env.test_repo_dir='/home/stack/github_ubuntu_multi_node/havana/contrail-test'
 env.mail_to='dl-contrail-sw@juniper.net'
 env.log_scenario='Ubuntu-Havana Three-Node Sanity'
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

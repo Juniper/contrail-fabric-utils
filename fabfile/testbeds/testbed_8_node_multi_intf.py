@@ -71,3 +71,8 @@ env.mail_to='chhandak@juniper.net'
 env.log_scenario='Multiple Interface CentOS Sanity'
 env.interface_rename = True
 
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

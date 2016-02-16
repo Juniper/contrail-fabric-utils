@@ -49,3 +49,8 @@ env.test_repo_dir='/home/sandipd/multinode/test'
 env.mail_from='sandipd@juniper.net'
 env.mail_to='sandipd@juniper.net'
 multi_tenancy=True
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

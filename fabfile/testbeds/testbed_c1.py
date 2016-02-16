@@ -232,3 +232,8 @@ ha_setup = True
 env.ca_cert_file='/homes/vjoshi/github/mine/tor/contrail-test-verify-on-setup/tools/tor/cacert.pem'
 env.test_repo_dir='/homes/vjoshi/github/mine/tor/contrail-test-verify-on-setup/'
 minimum_diskGB='200'
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}

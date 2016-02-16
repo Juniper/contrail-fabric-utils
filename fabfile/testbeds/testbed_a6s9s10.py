@@ -41,3 +41,8 @@ env.passwords = {
 #}
 
 env.test_repo_dir='/home/rajreddy/test'
+
+#env.optional_services = {
+#    'collector': ['snmp-collector', 'topology'],
+#    'cfgm'     : ['device-manager'],
+#}
