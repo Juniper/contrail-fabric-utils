@@ -55,6 +55,7 @@ def setup_test_env():
         'esxi_vms':[],
         'hosts_ipmi': [],
         'tor':[],
+        'vcenter':[],
     }
 
     sample_ini_file = env.test_repo_dir + '/' + 'sanity_params.ini.sample'
@@ -201,6 +202,9 @@ def setup_test_env():
     # get host ipmi list
     if env.has_key('hosts_ipmi'):
         sanity_testbed_dict['hosts_ipmi'].append(env.hosts_ipmi)
+    #get vcenter info
+    if env.has_key('vcenter'):
+        sanity_testbed_dict['vcenter'].append(env.vcenter)
 
     # for every host_string
     with settings(host_string = cfgm_host):
