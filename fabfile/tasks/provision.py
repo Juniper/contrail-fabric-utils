@@ -154,11 +154,14 @@ $__rabbitmq_config__
 listen  rabbitmq 0.0.0.0:5673
     mode tcp
     maxconn 10000
-    balance roundrobin
+    balance leastconn
     option tcpka
-    option redispatch
-    timeout client 48h
-    timeout server 48h\n"""
+    option nolinger
+    option forceclose
+    timeout client 0
+    timeout server 0
+    timeout client-fin 60s
+    timeout server-fin 60s\n"""
     space = ' ' * 3
     for host_string in env.roledefs['cfgm']:
         server_index = env.roledefs['cfgm'].index(host_string) + 1
@@ -173,9 +176,14 @@ listen  rabbitmq 0.0.0.0:5673
             disc_server_lines = disc_server_lines + \
             '    server %s %s:%s check inter 2000 rise 2 fall 3\n' \
                         %(host_ip, host_ip, str(disc_listen_port + i))
-        rabbitmq_config +=\
-            '%s server rabbit%s %s:5672 check inter 2000 rise 2 fall 3 weight 1 maxconn 500\n'\
-             % (space, server_index, host_ip)
+        if server_index == 1:
+           rabbitmq_config +=\
+                '%s server rabbit%s %s:5672 weight 200 check inter 2000 rise 2 fall 3\n'\
+                 % (space, server_index, host_ip)
+        else:
+           rabbitmq_config +=\
+                '%s server rabbit%s %s:5672 weight 100 check inter 2000 rise 2 fall 3 backup\n'\
+                 % (space, server_index, host_ip)
 
     if get_contrail_internal_vip() == get_openstack_internal_vip():
         # Openstack and cfgm are same nodes.
