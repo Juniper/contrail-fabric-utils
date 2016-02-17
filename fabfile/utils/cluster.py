@@ -6,7 +6,6 @@ from fabos import detect_ostype, get_release, get_build
 from fabfile.config import *
 from fabfile.utils.config import get_value
 
-
 def get_all_hostnames():
     if isinstance(env.hostnames.get('all', None), list):
         # Maintaining backward compatability with old testbed.py
@@ -30,7 +29,6 @@ def get_hostname(host_string):
 
 def get_orchestrator():
     return getattr(env, 'orchestrator', 'openstack')
-
 
 def get_mode(compute_host):
     mode = None
@@ -132,7 +130,7 @@ def get_esxi_ssl_thumbprint(esxi_data):
           print 'ssl thumbprint of the ESXi host %s is %s' % (esxi_data['ip'], ssl_thumbprint)
     return ssl_thumbprint
 
-def get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, password_list):
+def get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list):
     hosts = []
     vms = []
     clusters = []
@@ -140,21 +138,22 @@ def get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, pas
          with settings(host=host):
                if host in esxi_info.keys():
                    esxi_data = esxi_info[host]
-                   vm_name = "ContrailVM"
-                   ssl_thumbprint = get_esxi_ssl_thumbprint(esxi_data)
-                   esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint,esxi_data['cluster']
-                   hosts.append(esx_list)
-                   modified_vm_name = vm_name+"-"+vcenter_info['datacenter']+"-"+esxi_data['ip']
-                   for host_string in compute_list:
-                       if host_string == esxi_data['contrail_vm']['host']:
-                           break
-                   password  = password_list[host_string]
-                   vm_info_list = modified_vm_name, host_string, password
-                   vms.append(vm_info_list)
+                   if esxi_data['cluster'] in vcenter_server['cluster']:
+                       vm_name = "ContrailVM"
+                       ssl_thumbprint = get_esxi_ssl_thumbprint(esxi_data)
+                       esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint,esxi_data['cluster']
+                       hosts.append(esx_list)
+                       modified_vm_name = vm_name+"-"+vcenter_server['datacenter']+"-"+esxi_data['ip']
+                       for host_string in compute_list:
+                            if host_string == esxi_data['contrail_vm']['host']:
+                                break
+                       password  = password_list[host_string]
+                       vm_info_list = modified_vm_name, host_string, password
+                       vms.append(vm_info_list)
                else:
                    print 'Info: esxi_hosts block does not have the esxi host.Exiting'
                    return
-    clusters = vcenter_info['cluster']
+    clusters = vcenter_server['cluster']
     return (hosts,clusters,vms)
 
 def get_nodes_to_upgrade_pkg(package, os_type, *args, **kwargs):
