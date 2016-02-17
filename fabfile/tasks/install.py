@@ -46,26 +46,34 @@ def install_pkg_all(pkg):
 
 @task
 @parallel(pool_size=20)
-@roles('cfgm')
-def install_contrail_vcenter_plugin(pkg):
+@roles('cfgm', 'vcenter_compute')
+def install_contrail_vcenter_plugin(pkg, *args):
     """Installs any rpm/deb package in all nodes."""
-    if not hasattr(env, 'vcenter'):
-        print "No vcenter block in testbed file, nothing to do"
-        return
     if not pkg:
         print "Error:No vcenter plugin pkg, aborting"
         exit(1)
-    execute('install_pkg_node', pkg, env.host_string)
-    execute('install_contrail_vcenter_plugin_node', env.host_string)
+
+    if args:
+        for host_string in args:
+            with settings(host_string=host_string, warn_only=True):
+                 depend_pkgs = ['libxml-commons-external-java', 'libxml-commons-resolver1.1-java',
+                   'libxerces2-java', 'libslf4j-java',
+                   'libnetty-java', 'libjline-java', 'libzookeeper-java']
+                 apt_install(depend_pkgs)
+                 execute('install_pkg_node', pkg, env.host_string)
+                 execute('install_contrail_vcenter_plugin_node', env.host_string)
+    else:
+        depend_pkgs = ['libxml-commons-external-java', 'libxml-commons-resolver1.1-java',
+          'libxerces2-java', 'libslf4j-java',
+          'libnetty-java', 'libjline-java', 'libzookeeper-java']
+        apt_install(depend_pkgs)
+        execute('install_pkg_node', pkg, env.host_string)
+        execute('install_contrail_vcenter_plugin_node', env.host_string)
 
 @task
-def install_contrail_vcenter_plugin_node( *args):
+def install_contrail_vcenter_plugin_node(*args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            depend_pkgs = ['libxml-commons-external-java', 'libxml-commons-resolver1.1-java', 'libxerces2-java',
-                   'libslf4j-java', 'libnetty-java', 'libjline-java', 'libzookeeper-java']
-            apt_install(depend_pkgs)
-
             sudo('cd /opt/contrail/contrail_vcenter_plugin_install_repo/; dpkg -i *')
 
 @task
@@ -502,7 +510,7 @@ def install_vcenter_compute_node(*args):
                  apt_install(pkgs)
               else:
                  yum_install(pkgs)
-
+              
 @task
 @EXECUTE_TASK
 @roles('compute')

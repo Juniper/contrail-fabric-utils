@@ -233,16 +233,21 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
         cmd += " --admin_password %s" % ks_admin_password
         cmd += " --admin_tenant_name %s" % get_admin_tenant_name()
     elif orch == 'vcenter':
-        vcenter_info = getattr(env, 'vcenter', None)
+        vcenter_info = getattr(env, 'vcenter_servers', None)
         if not vcenter_info:
             print 'Error: vcenter block is not defined in testbed file.Exiting'
             return
+        else:
+            for v in vcenter_info:
+                 vcenter_server = vcenter_info[v]
+                 break
         # vcenter provisioning parameters
-        cmd += " --vcenter_ip %s" % vcenter_info['server']
-        cmd += " --vcenter_port %s" % vcenter_info['port']
-        cmd += " --vcenter_auth %s" % vcenter_info['auth']
-        cmd += " --vcenter_datacenter %s" % vcenter_info['datacenter']
-        cmd += " --vcenter_dvswitch %s" % vcenter_info['dv_switch']['dv_switch_name']
+        cmd += " --vcenter_ip %s" % vcenter_server['server']
+        cmd += " --vcenter_port %s" % vcenter_server['port']
+        cmd += " --vcenter_auth %s" % vcenter_server['auth']
+        cmd += " --vcenter_datacenter %s" % vcenter_server['datacenter']
+        cmd += " --vcenter_dvswitch %s" % vcenter_server['dv_switch']['dv_switch_name']
+
     cmd += optional_services('webui')
 
     return cmd
@@ -374,23 +379,26 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
     sriov_string = get_sriov_details(host_string)
     if sriov_string:
         cmd += " --sriov %s" % sriov_string
-        
+
     if 'vcenter_compute' in env.roledefs:
         compute_host = 'root' + '@' + compute_mgmt_ip
         if compute_host in env.roledefs['vcenter_compute'][:]:
-            vcenter_info = getattr(env, 'vcenter', None)
-            if compute_mgmt_ip == vcenter_info['vcenter_compute']:
-                cmd += " --vcenter_server %s" % vcenter_info['server']
-                cmd += " --vcenter_username %s" % vcenter_info['username']
-                cmd += " --vcenter_password %s" % vcenter_info['password']
-                cluster_list = vcenter_info['cluster']
-                cluster_list_now = "" 
-                for cluster in cluster_list:
-                     cluster_list_now += cluster
-                     cluster_list_now += ","
-                cluster_list_now = cluster_list_now.rstrip(',')
-                cmd += " --vcenter_cluster %s" % cluster_list_now 
-                cmd += " --vcenter_dvswitch %s" % vcenter_info['dv_switch']['dv_switch_name']    
+            vcenter_info = getattr(env, 'vcenter_servers', None)
+            for v in vcenter_info.keys():
+                 vcenter_server = vcenter_info[v]
+                 if compute_mgmt_ip == vcenter_server['vcenter_compute']:
+                     cmd += " --vcenter_server %s" % vcenter_server['server']
+                     cmd += " --vcenter_username %s" % vcenter_server['username']
+                     cmd += " --vcenter_password %s" % vcenter_server['password']
+                     cluster_list = vcenter_server['cluster']
+                     cluster_list_now = ""
+                     for cluster in cluster_list:
+                          cluster_list_now += cluster
+                          cluster_list_now += ","
+                     cluster_list_now = cluster_list_now.rstrip(',')
+                     cmd += " --vcenter_cluster %s" % cluster_list_now
+                     cmd += " --vcenter_dvswitch %s" % vcenter_server['dv_switch']['dv_switch_name']
+                     break
 
     # Contrail with vmware as orchestrator
     esxi_data = get_vmware_details(host_string)
