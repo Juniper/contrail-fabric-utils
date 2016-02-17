@@ -125,7 +125,7 @@ def get_openstack_ceilometer_pkgs():
     """ Returns the list of ceilometer packages used in a
         openstack node.
     """
-    pkg_juno_ubuntu = ['ceilometer-api',
+    pkg_ubuntu = ['ceilometer-api',
         'ceilometer-collector',
         'ceilometer-agent-central',
         'ceilometer-agent-notification',
@@ -134,22 +134,15 @@ def get_openstack_ceilometer_pkgs():
         'ceilometer-plugin-contrail',
         'mongodb-clients',
         'python-pymongo']
-    pkg_kilo_ubuntu = copy.deepcopy(pkg_juno_ubuntu)
-    pkg_kilo_ubuntu.remove('ceilometer-plugin-contrail')
-
     pkg_redhat = ['ceilometer-plugin-contrail']
 
     ceilometer_pkgs = {
-        'ubuntu' : {
-                    'juno' : pkg_juno_ubuntu,
-                    'kilo' : pkg_kilo_ubuntu
-                   },
-        'redhat' : {'juno' : pkg_redhat},
+        'ubuntu' : pkg_ubuntu,
+        'redhat' : pkg_redhat,
     }
 
     act_os_type = detect_ostype()
-    openstack_sku = get_openstack_sku()
-    return ceilometer_pkgs.get(act_os_type, {}).get(openstack_sku, [])
+    return ceilometer_pkgs.get(act_os_type, [])
 
 def get_ceilometer_plugin_pkgs():
     """ Returns the list of ceilometer plugin packages used in a
@@ -157,13 +150,12 @@ def get_ceilometer_plugin_pkgs():
     """
     pkg_contrail_ceilometer = ['ceilometer-plugin-contrail']
     ceilometer_plugin_pkgs = {
-        'ubuntu' : {'juno' : pkg_contrail_ceilometer},
-        'redhat' : {'juno' : pkg_contrail_ceilometer},
+        'ubuntu' : {pkg_contrail_ceilometer},
+        'redhat' : {pkg_contrail_ceilometer},
     }
         
     act_os_type = detect_ostype()
-    openstack_sku = get_openstack_sku()
-    return ceilometer_plugin_pkgs.get(act_os_type, {}).get(openstack_sku, [])
+    return ceilometer_plugin_pkgs.get(act_os_type, [])
 
 def get_compute_ceilometer_pkgs():
     """ Returns the list of ceilometer packages used in a
