@@ -131,7 +131,7 @@ def all_reimage(build_param="@LATEST"):
               count = count + 1
 
         else:
-            hostname = get_hostname(hstr_to_ip(host))
+            hostname = get_hostname(host)
             if 'ostypes' in env.keys():
                 if 'xen' in env.ostypes[host]:
                     pass
@@ -204,7 +204,7 @@ def all_sm_reimage(build_param=None,smgr_client='/cs-shared/server-manager/clien
             for esxi in esxi_hosts:
                 hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
         for host in hosts:
-            hostname = get_hostname(hstr_to_ip(host))
+            hostname = get_hostname(host)
             if build_param is not None:
                 with settings(warn_only=True):
                     local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (hostname,build_param))
