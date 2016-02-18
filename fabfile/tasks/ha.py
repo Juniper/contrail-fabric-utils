@@ -634,7 +634,7 @@ def fix_cmon_param_and_add_keys_to_compute():
     amqp_host_list = []
     for host_string in env.roledefs[amqp_in_role]:
         with settings(host_string=host_string, password=get_env_passwords(host_string)):
-            host_name = sudo('hostname')
+            host_name = sudo('hostname -s')
         amqp_host_list.append(host_name)
 
     computes = 'COMPUTES=("' + '" "'.join(compute_host_list) + '")'
