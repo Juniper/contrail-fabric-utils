@@ -883,7 +883,7 @@ def setup_hugepages_node(*args):
             # set number of huge pages
             memsize = sudo("grep MemTotal /proc/meminfo | tr -s ' ' | cut -d' ' -f 2")
             pagesize = sudo("grep Hugepagesize /proc/meminfo | tr -s ' ' | cut -d' ' -f 2")
-            reserved = sudo("grep HugePages_total /proc/meminfo | tr -s ' ' | cut -d' ' -f 2")
+            reserved = sudo("grep HugePages_Total /proc/meminfo | tr -s ' ' | cut -d' ' -f 2")
 
             if (reserved == ""):
                 reserved = "0"
