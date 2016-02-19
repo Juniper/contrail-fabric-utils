@@ -33,6 +33,7 @@ ethernet0.address = "$__vm_mac__"
 chipset.onlineStandby = "FALSE"
 guestOS = "ubuntu-64"
 keyboard.typematicMinDelay = "2000000"
+tools.upgrade.policy = "upgradeatpowercycle"
 $__extension_params__
 ''')
 
