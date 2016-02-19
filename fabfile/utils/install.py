@@ -150,8 +150,8 @@ def get_ceilometer_plugin_pkgs():
     """
     pkg_contrail_ceilometer = ['ceilometer-plugin-contrail']
     ceilometer_plugin_pkgs = {
-        'ubuntu' : {pkg_contrail_ceilometer},
-        'redhat' : {pkg_contrail_ceilometer},
+        'ubuntu' : pkg_contrail_ceilometer,
+        'redhat' : pkg_contrail_ceilometer,
     }
         
     act_os_type = detect_ostype()
