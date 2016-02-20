@@ -90,25 +90,46 @@ def zoolink_node(*args):
             sleep(3)
             sudo('ls -lrt /usr/etc/zookeeper')
 
+def replace_vrouterko(distro):
+    """Removes the vrouter kernal module."""
+    if distro in ['ubuntu']:
+        rmmod = 'modprobe -r vrouter || rmmod vrouter'
+        insmod = 'modprobe vrouter; service supervisor-vrouter start'
+    else:
+        rmmod = 'rmmod vrouter'
+        insmod = 'service supervisor-vrouter start'
+    cmds = ["service supervisor-vrouter stop", rmmod, insmod]
+    sudo('; '.join(cmds))
 
+
+@task
+@roles('compute')
+def replace_vrouter_ko():
+    """Replaces the vrouter kernal module with upgraded version."""
+    execute('replace_vrouter_ko_node', env.host_string)
+
+@task
+def replace_vrouter_ko_node(*args):
+    """Replaces the vrouter kernal module in one compute node."""
+    for host_string in args:
+        with settings(host_string=host_string):
+            replace_vrouterko(detect_ostype())
+
+# Deprecated from Release 3.00; Consider using replace_vrouter_ko
 @task
 @roles('compute')
 def rmmod_vrouter():
     """Removes the vrouter kernal module."""
     execute('rmmod_vrouter_node', env.host_string)
 
+# Deprecated from Release 3.00; Consider using replace_vrouter_ko_node
 @task
 def rmmod_vrouter_node(*args):
-    """Removes the vrouter kernal module in one compoute node."""
+    """Removes the vrouter kernal module in one compute node."""
     for host_string in args:
-        if getattr(testbed, 'data', None) and host_string in testbed.data.keys():
-            with settings(host_string=host_string):
-                sudo("service supervisor-vrouter stop")
-                sudo("rmmod vrouter")
-                sudo("modprobe -r vrouter")
-                sudo("service supervisor-vrouter start")
-        else:
-            print "Managment and data interface are the same."
+        with settings(host_string=host_string):
+            replace_vrouterko(detect_ostype())
+
 
 @task
 def run_cmd(host_string,cmd):

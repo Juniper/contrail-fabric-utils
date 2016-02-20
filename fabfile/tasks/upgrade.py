@@ -190,9 +190,12 @@ def upgrade_compute_node(from_rel, pkg, *args, **kwargs):
                 manage_nova_compute='no'
 
             # Identify packages to upgrade
-            cmd = frame_vnc_compute_cmd(host_string, 'upgrade-vnc-compute', configure_nova=configure_nova, manage_nova_compute=manage_nova_compute)
+            cmd = frame_vnc_compute_cmd(
+                      host_string, 'upgrade-vnc-compute',
+                      configure_nova=configure_nova,
+                      manage_nova_compute=manage_nova_compute)
             if ('vcenter_compute' in env.roledefs and 
-                env.host_string in env.roledefs['vcenter_compute']):
+                    env.host_string in env.roledefs['vcenter_compute']):
                 pkgs = get_vcenter_compute_pkgs() 
                 roles = ['vcenter_compute']
             else:
@@ -272,7 +275,7 @@ def upgrade_contrail(from_rel, pkg, orch='yes'):
         execute('prov_config')
         execute('prov_database')
         execute('prov_analytics')
-    execute('compute_reboot')
+    execute('replace_vrouter_ko')
     #Clear the connections cache
     connections.clear()
     execute('restart_openstack_compute')
