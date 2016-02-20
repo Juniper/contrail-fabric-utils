@@ -74,6 +74,7 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     cmd += " --service_token %s" % get_service_token()
     cmd += " --service-dbpass %s" % get_service_dbpass()
     cmd += " --keystone_service_tenant_name %s" % get_keystone_service_tenant_name()
+    cmd += " --region_name %s" % get_region_name()
     cmd += " --neutron_password %s" % get_neutron_password()
     cmd += " --nova_password %s" % get_nova_password()
     cmd += ' --openstack_index %s' % (env.roledefs['openstack'].index(
