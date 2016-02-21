@@ -117,7 +117,17 @@ def get_vcenter_compute_pkgs():
     pkgs = ['contrail-nova-vif', 'nova-compute',
             'python-novaclient', 'nova-compute-kvm',
             'contrail-utils', 'python-bitstring',
-            'python-contrail-vrouter-api']
+            'python-contrail-vrouter-api',
+            'openjdk-7-jre-headless']
+
+    return pkgs
+
+def get_vcenter_plugin_depend_pkgs():
+    pkgs = ['libxml-commons-external-java', 
+            'libxml-commons-resolver1.1-java', 
+            'libxerces2-java', 'libslf4j-java',
+            'libnetty-java', 'libjline-java', 
+            'libzookeeper-java']
 
     return pkgs
 
@@ -150,8 +160,8 @@ def get_ceilometer_plugin_pkgs():
     """
     pkg_contrail_ceilometer = ['ceilometer-plugin-contrail']
     ceilometer_plugin_pkgs = {
-        'ubuntu' : pkg_contrail_ceilometer,
-        'redhat' : pkg_contrail_ceilometer,
+        'ubuntu' : {pkg_contrail_ceilometer},
+        'redhat' : {pkg_contrail_ceilometer},
     }
         
     act_os_type = detect_ostype()
