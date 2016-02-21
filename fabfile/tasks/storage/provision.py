@@ -41,8 +41,15 @@ def setup_webui_storage(mode):
              # storage-setup-mode - setup/unconfigure/reconfigure
              # storage-webui-ip - Storage WebUI IP
              # storage-master-ip - storage master node where ceph-rest-api server is running
-             cmd= "PASSWORD=%s setup-vnc-storage-webui --storage-setup-mode %s --storage-webui-ip %s  --storage-rest-ip %s --storage-disk-config %s --storage-ssd-disk-config %s"\
-                     %(storage_webui_host_password, mode, storage_webui_ip, storage_rest_ip, ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), )
+             cmds = ["PASSWORD=%s" % storage_webui_host_password,
+                     "setup-vnc-storage-webui",
+                     "--storage-setup-mode %s" % mode,
+                     "--storage-webui-ip %s" % storage_webui_ip,
+                     "--storage-rest-ip %s" % storage_rest_ip,
+                     "--storage-disk-config %s" % ' '.join(get_storage_disk_config()),
+                     "--storage-ssd-disk-config %s" % ' '.join(get_storage_ssd_disk_config()),
+                     "--region-name %s" % get_region_name()]
+             cmd = ' '.join(cmds)
              print cmd
              sudo(cmd)
 #end setup_webui_storage
