@@ -47,8 +47,7 @@ def setup_webui_storage(mode):
                      "--storage-webui-ip %s" % storage_webui_ip,
                      "--storage-rest-ip %s" % storage_rest_ip,
                      "--storage-disk-config %s" % ' '.join(get_storage_disk_config()),
-                     "--storage-ssd-disk-config %s" % ' '.join(get_storage_ssd_disk_config()),
-                     "--region-name %s" % get_region_name()]
+                     "--storage-ssd-disk-config %s" % ' '.join(get_storage_ssd_disk_config())]
              cmd = ' '.join(cmds)
              print cmd
              sudo(cmd)
@@ -182,8 +181,37 @@ def create_storage_setup_cmd(mode):
     # service-dbpass - DB password for cinder(and all service) db user
     # WARNING: If anything is added in the arguments, make sure it
     # doesn't break add_storage_node task.
-    cmd = "PASSWORD=%s setup-vnc-storage --storage-setup-mode %s --storage-master %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-ssd-disk-config %s --storage-journal-config %s --storage-local-disk-config %s --storage-local-ssd-disk-config %s --storage-nfs-disk-config %s --storage-directory-config %s --storage-chassis-config %s --live-migration %s --collector-hosts %s --collector-host-tokens %s --cfg-host %s --cinder-vip %s --config-hosts %s --storage-os-hosts %s --storage-os-host-tokens %s --storage-mon-hosts %s --cfg-vip %s --storage-compute-hostnames %s --storage-replica-size %s --openstack-ip %s --orig-hostnames %s --service-dbpass %s" \
-            %(storage_master_password, mode, storage_master_ip, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_ssd_disk_config()), ' '.join(get_storage_journal_config()), ' '.join(get_storage_local_disk_config()), ' '.join(get_storage_local_ssd_disk_config()), ' '.join(get_storage_nfs_disk_config()), ' '.join(get_storage_directory_config()), ' '.join(get_storage_chassis_config()), get_live_migration_opts(), ' '.join(collector_host_list), ' '.join(collector_pass_list), cfm_ip, get_cinder_ha_vip(), ' '.join(cfg_host_list), ' '.join(storage_os_host_list), ' '.join(storage_os_pass_list), ' '.join(get_storage_mon_hosts()), get_cfg_ha_vip(), ' '.join(storage_compute_hostnames), get_storage_replica_size(), openstack_ip, ' '.join(orig_hostnames), get_service_dbpass())
+    cmds = ["PASSWORD=%s" % storage_master_password, "setup-vnc-storage",
+            "--storage-setup-mode %s" % mode,
+            "--storage-master %s" % storage_master_ip,
+            "--storage-hostnames %s" % ' '.join(storage_hostnames),
+            "--storage-hosts %s" % ' '.join(storage_host_list),
+            "--storage-host-tokens %s" % ' '.join(storage_pass_list),
+            "--storage-disk-config %s" % ' '.join(get_storage_disk_config()),
+            "--storage-ssd-disk-config %s" % ' '.join(get_storage_ssd_disk_config(),
+            "--storage-journal-config %s" % ' '.join(get_storage_journal_config()),
+            "--storage-local-disk-config %s" % ' '.join(get_storage_local_disk_config()),
+            "--storage-local-ssd-disk-config %s" % ' '.join(get_storage_local_ssd_disk_config()),
+            "--storage-nfs-disk-config %s" % ' '.join(get_storage_nfs_disk_config()),
+            "--storage-directory-config %s" % ' '.join(get_storage_directory_config()),
+            "--storage-chassis-config %s" % ' '.join(get_storage_chassis_config()),
+            "--live-migration %s" % get_live_migration_opts(),
+            "--collector-hosts %s" % ' '.join(collector_host_list),
+            "--collector-host-tokens %s" % ' '.join(collector_pass_list),
+            "--cfg-host %s" % cfm_ip,
+            "--cinder-vip %s" % get_cinder_ha_vip(),
+            "--config-hosts %s" % ' '.join(cfg_host_list),
+            "--storage-os-hosts %s" % ' '.join(storage_os_host_list),
+            "--storage-os-host-tokens %s" % ' '.join(storage_os_pass_list),
+            "--storage-mon-hosts %s" % ' '.join(get_storage_mon_hosts()),
+            "--cfg-vip %s" % get_cfg_ha_vip(),
+            "--storage-compute-hostnames %s" % ' '.join(storage_compute_hostnames),
+            "--storage-replica-size %s" % get_storage_replica_size(),
+            "--openstack-ip %s" % openstack_ip,
+            "--orig-hostnames %s" % ' '.join(orig_hostnames),
+            "--service-dbpass %s" % get_service_dbpass(),
+            "--region-name %s" % get_region_name()]
+    cmd = ' '.join(cmds)
     return cmd
 
 
