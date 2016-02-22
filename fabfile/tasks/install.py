@@ -277,6 +277,9 @@ def install_ceilometer_compute_node(*args):
         with settings(host_string=host_string):
             if not is_ceilometer_compute_install_supported():
                 continue
+            #Ceilometer not needed on vcenter ContraiVM
+            if get_mode(env.host_string) == 'vcenter':
+                continue
             pkgs = get_compute_ceilometer_pkgs()
             if pkgs:
                 pkg_install(pkgs)
