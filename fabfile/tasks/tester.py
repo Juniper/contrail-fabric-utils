@@ -56,6 +56,7 @@ def setup_test_env():
         'hosts_ipmi': [],
         'tor':[],
         'vcenter':[],
+        'sriov':[],
     }
 
     sample_ini_file = env.test_repo_dir + '/' + 'sanity_params.ini.sample'
@@ -205,6 +206,9 @@ def setup_test_env():
     #get vcenter info
     if env.has_key('vcenter'):
         sanity_testbed_dict['vcenter'].append(env.vcenter)
+    #get sriov info
+    if env.has_key('sriov'):
+        sanity_testbed_dict['sriov'].append(env.sriov)
 
     # for every host_string
     with settings(host_string = cfgm_host):
