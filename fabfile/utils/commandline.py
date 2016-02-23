@@ -421,17 +421,19 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     else:
         is_redis_master = False
     tgt_ip = hstr_to_ip(collector_host)
-    cassandra_host_list = [get_control_host_string(cassandra_host) for cassandra_host in env.roledefs['database']]
-    if collector_host in cassandra_host_list:
-        cassandra_host_list.remove(collector_host)
-        cassandra_host_list.insert(0, collector_host)
-    cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in cassandra_host_list]
+    database_host_list = [get_control_host_string(database_host) for database_host in env.roledefs['database']]
+    if collector_host in database_host_list:
+        database_host_list.remove(collector_host)
+        database_host_list.insert(0, collector_host)
+    cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in database_host_list]
+    zookeeper_ip_list = [hstr_to_ip(zookeeper_host) for zookeeper_host in database_host_list]
     redis_master_ip = hstr_to_ip(redis_master_host)
     cassandra_user = get_cassandra_user()
     cassandra_password = get_cassandra_password()
 
     # Frame the command line to provision collector
     cmd += " --cassandra_ip_list %s" % (' '.join(cassandra_ip_list))
+    cmd += " --zookeeper_ip_list %s" % (' '.join(zookeeper_ip_list))
     cmd += " --cfgm_ip %s" % cfgm_ip
     cmd += " --self_collector_ip %s" % tgt_ip
     cmd += " --num_nodes %d " % ncollectors
