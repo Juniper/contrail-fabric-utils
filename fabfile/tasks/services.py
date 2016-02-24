@@ -4,6 +4,7 @@ from misc import zoolink
 from fabfile.utils.fabos import detect_ostype
 from fabfile.utils.cluster import get_orchestrator
 from fabric.contrib.files import exists
+from fabfile.utils.host import hstr_to_ip
 
 @task
 @roles('cfgm')
@@ -404,4 +405,25 @@ def reboot_nova_instance():
         sudo(
             "source /etc/contrail/openstackrc;nova  list --all_tenants  | awk '{print $2}' | grep -v ID | xargs -L1 nova reboot --hard $2")
 
+@task
+def drop_analytics_keyspace_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string):
+            CASSANDRA_CMD = 'cqlsh %s 9160 -f ' % hstr_to_ip(host_string)
+            print "Dropping analytics keyspace.. this may take a while.."
+            sudo("echo 'drop keyspace \"ContrailAnalytics\";' > /tmp/cassandra_commands_file")
+            if not sudo(CASSANDRA_CMD + '/tmp/cassandra_commands_file').succeeded:
+                print "WARN: Drop analytics keyspace failed.."
+
+@task
+@roles('build')
+def drop_analytics_keyspace(confirm=False):
+    if not confirm:
+        print "WARN: Dropping analytics keyspace will cause analytics data to be lost permanently..."
+        if raw_input("Continue? Yes/No: ") != "Yes":
+            print "INFO: Not confirmed. Exiting..."
+            return
+
+    execute('stop_collector')
+    execute("drop_analytics_keyspace_node", env.roledefs['database'][0])
 
