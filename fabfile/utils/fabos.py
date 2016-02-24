@@ -51,6 +51,8 @@ def get_openstack_sku(use_install_repo=False):
         openstack_sku = 'juno'
     elif pkg_ver.find('2015.1') != -1:
         openstack_sku = 'kilo'
+    elif pkg_ver.find('12.0') != -1:
+        openstack_sku = 'liberty'
     else:
         print "OpenStack distribution unknown.. assuming icehouse.."
         openstack_sku = 'icehouse'
