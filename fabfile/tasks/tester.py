@@ -4,6 +4,7 @@ import json
 import string
 import socket
 import tempfile
+from string import whitespace
 from random import randrange
 from datetime import datetime as dt
 from fabfile.config import *
@@ -354,7 +355,13 @@ def setup_test_env():
                         testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0 eventlet'
                 elif 'ubuntu' == detect_ostype():
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources==0.2.7 \
-                           testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0 eventlet'
+                           testrepository junitxml pytun pyvmomi==5.5.0 eventlet'
+                    output = sudo('pip show requests | grep Version')
+                    if output.succeeded:
+                        version = output.split(':')[1].translate(None, whitespace)
+                        if version <= 2.3:
+                            if (LooseVersion(version) < LooseVersion('2.3.0')):
+                                pkg += ' requests==2.3.0'
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
                 if ui_browser:
