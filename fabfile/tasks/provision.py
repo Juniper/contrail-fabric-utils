@@ -1513,15 +1513,27 @@ def setup_vrouter(manage_nova_compute='yes', configure_nova='yes'):
            manage_nova_compute='no'
            configure_nova='no'
        execute("setup_only_vrouter_node", manage_nova_compute, configure_nova,  env.host_string)
-       if is_ceilometer_compute_provision_supported():
-           execute("setup_ceilometer_compute_node", env.host_string)
+       #Disabling ceilometer on vcenter-compute nova nodes
+       #Needs to be enabled once vcenter support for ceilometer is done
+       if 'vcenter_compute' in env.roledefs:
+           if env.host_string in env.roledefs['vcenter_compute'][:]:
+              pass
+       else:
+           if is_ceilometer_compute_provision_supported():
+               execute("setup_ceilometer_compute_node", env.host_string)
 
 @task
 def setup_vrouter_node(*args):
     """Provisions nova-compute and vrouter services in one or list of nodes. USAGE: fab setup_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
     execute("setup_only_vrouter_node", 'yes', 'yes', *args)
-    if is_ceilometer_compute_provision_supported():
-        execute("setup_ceilometer_compute_node", *args)
+    #Disabling ceilometer on vcenter-compute nova nodes
+    #Needs to be enabled once vcenter support for ceilometer is done
+    if 'vcenter_compute' in env.roledefs:
+        if env.host_string in env.roledefs['vcenter_compute'][:]:
+            pass 
+    else:
+        if is_ceilometer_compute_provision_supported():
+            execute("setup_ceilometer_compute_node", *args)
 
 @task
 def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *args):

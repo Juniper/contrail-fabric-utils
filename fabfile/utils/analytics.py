@@ -114,6 +114,10 @@ def is_ceilometer_compute_install_supported():
     supported = is_ceilometer_supported()
     if not supported:
         return False
+    # Orchestrator should be openstack
+    orchestrator = get_orchestrator()
+    if orchestrator != 'openstack':
+        return False
     # Not supported on redhat
     os_type = detect_ostype()
     if os_type == 'redhat':
@@ -124,6 +128,10 @@ def is_ceilometer_compute_install_supported():
 def is_ceilometer_compute_provision_supported():
     supported = is_ceilometer_supported()
     if not supported:
+        return False
+    # Orchestrator should be openstack
+    orchestrator = get_orchestrator()
+    if orchestrator != 'openstack':
         return False
     # Not supported on redhat
     os_type = detect_ostype()
