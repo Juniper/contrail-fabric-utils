@@ -54,18 +54,14 @@ def install_contrail_vcenter_plugin(pkg, *args):
 
     depend_pkgs = get_vcenter_plugin_depend_pkgs()
 
-    if get_orchestrator() is 'vcenter':
-       with settings (host_string=env.roledefs['cfgm'][0]):
-          apt_install(depend_pkgs)
-          execute('install_pkg_node', pkg, env.host_string)
-          execute('install_contrail_vcenter_plugin_node', env.host_string)
-          return
-
-    if 'vcenter_compute' in env.roledefs:
-        if args:
-            host_list = args
+    if args:
+        host_list = args
+    else:
+       if get_orchestrator() is 'vcenter':
+            host_list = env.roledefs['cfgm'][:]
         else:
-            host_list = env.roledefs['vcenter_compute'][:]
+	    if 'vcenter_compute' in env.roledefs: 
+                host_list = env.roledefs['vcenter_compute'][:]
 
     for host_string in host_list:
          with settings (host_string=host_string, warn_only=True):
