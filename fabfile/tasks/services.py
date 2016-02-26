@@ -99,16 +99,20 @@ def stop_control():
 def stop_control_node(*args):
     """Stops the contrail control services in once control node. USAGE:fab stop_control_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        with  settings(host_string=host_string):
+        with  settings(host_string=host_string, warn_only=True):
             sudo('service supervisor-control stop')
 
 @task
 @roles('collector')
 def stop_collector():
     """stops the contrail collector services."""
-    with settings(warn_only=True):
-        sudo('service supervisor-analytics stop')
+    execute('stop_collector_node', env.host_string)
 
+@task
+def stop_collector_node(*args):
+    for host_string in args:
+        with  settings(host_string=host_string, warn_only=True):
+            sudo('service supervisor-analytics stop')
 @task
 @roles('compute')
 def stop_vrouter():
@@ -119,7 +123,13 @@ def stop_vrouter():
 @roles('webui')
 def stop_webui():
     """stops the contrail webui services."""
-    sudo('service supervisor-webui stop')
+    execute('stop_webui_node', env.host_string)
+
+@task
+def stop_webui_node(*args):
+    for host_string in args:
+        with  settings(host_string=host_string, warn_only=True):
+            sudo('service supervisor-webui stop')
 
 @task
 @roles('database')

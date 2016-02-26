@@ -1587,19 +1587,22 @@ def prov_config():
     execute("prov_config_node", env.host_string)
 
 @task
-def prov_config_node(*args):
+def prov_config_node(*args, **kwargs):
+    oper = kwargs.get('oper', 'add')
+    cfgm_host = env.roledefs['cfgm'][0]
+    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+    cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
-            cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
             tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
             tgt_hostname = sudo("hostname")
-
-            with cd(UTILS_DIR):
+            with settings(cd(UTILS_DIR), host_string=cfgm_host,
+                    password=cfgm_host_password):
                 cmd = "python provision_config_node.py"
                 cmd += " --api_server_ip %s" % cfgm_ip
                 cmd += " --host_name %s" % tgt_hostname
                 cmd += " --host_ip %s" % tgt_ip
-                cmd += " --oper add"
+                cmd += " --oper %s" % oper
                 cmd += " %s" % get_mt_opts()
                 sudo(cmd)
 #end prov_config_node
@@ -1611,12 +1614,13 @@ def prov_database():
     execute("prov_database_node", env.host_string)
 
 @task
-def prov_database_node(*args):
+def prov_database_node(*args, **kwargs):
+    oper = kwargs.get('oper', 'add')
+    cfgm_host = env.roledefs['cfgm'][0]
+    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+    cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
-            cfgm_host = env.roledefs['cfgm'][0]
-            cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
-            cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
             tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
             tgt_hostname = sudo("hostname")
 
@@ -1626,7 +1630,7 @@ def prov_database_node(*args):
                 cmd += " --api_server_ip %s" % cfgm_ip
                 cmd += " --host_name %s" % tgt_hostname
                 cmd += " --host_ip %s" % tgt_ip
-                cmd += " --oper add"
+                cmd += " --oper %s" %oper
                 cmd += " %s" % get_mt_opts()
                 sudo(cmd)
 #end prov_database_node
@@ -1638,22 +1642,22 @@ def prov_analytics():
     execute("prov_analytics_node", env.host_string)
 
 @task
-def prov_analytics_node(*args):
+def prov_analytics_node(*args, **kwargs):
+    oper = kwargs.get('oper', 'add')
+    cfgm_host = env.roledefs['cfgm'][0]
+    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+    cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
-            cfgm_host = env.roledefs['cfgm'][0]
-            cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
-            cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-            tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+            tgt_ip = hstr_to_ip(get_control_host_string(host_string))
             tgt_hostname = sudo("hostname")
-
             with settings(cd(UTILS_DIR), host_string=cfgm_host,
                           password=cfgm_host_password):
                 cmd = "python provision_analytics_node.py"
                 cmd += " --api_server_ip %s" % cfgm_ip
                 cmd += " --host_name %s" % tgt_hostname
                 cmd += " --host_ip %s" % tgt_ip
-                cmd += " --oper add"
+                cmd += " --oper %s " % oper
                 cmd += " %s" % get_mt_opts()
                 sudo(cmd)
 #end prov_analytics_node
@@ -1665,12 +1669,13 @@ def prov_control_bgp():
     execute("prov_control_bgp_node", env.host_string)
 
 @task
-def prov_control_bgp_node(*args):
+def prov_control_bgp_node(*args, **kwargs):
+    oper = kwargs.get('oper', 'add')
+    cfgm_host = kwargs.get('cfgm_host', env.roledefs['cfgm'][0])
+    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+    cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
-            cfgm_host = env.roledefs['cfgm'][0]
-            cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
-            cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
             tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
             tgt_hostname = sudo("hostname")
 
@@ -1690,7 +1695,7 @@ def prov_control_bgp_node(*args):
                 print "Adding control node as bgp router"
                 cmd += " --host_name %s" % tgt_hostname
                 cmd += " --host_ip %s" % tgt_ip
-                cmd += " --oper add"
+                cmd += " --oper %s" % oper
                 sudo(cmd)
 #end prov_control_bgp
 
