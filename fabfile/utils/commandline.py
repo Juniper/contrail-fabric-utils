@@ -199,8 +199,12 @@ def frame_vnc_vcenter_plugin_cmd(host_string, cmd="setup-vcenter-plugin"):
 
     cassandra_ip_list = [hstr_to_ip(get_control_host_string(\
         cassandra_host)) for cassandra_host in env.roledefs['database']]
-    cfgm_ip = get_contrail_internal_vip() or\
-        hstr_to_ip(get_control_host_string(host_string));
+    if get_orchestrator() == 'vcenter':
+        cfgm_ip = get_contrail_internal_vip() or\
+          hstr_to_ip(get_control_host_string(host_string));
+    else:
+        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
     cmd += " --vcenter_url %s" % vcenter_server['server']
     cmd += " --vcenter_username %s" % vcenter_server['username']
     cmd += " --vcenter_password %s" % vcenter_server['password']
