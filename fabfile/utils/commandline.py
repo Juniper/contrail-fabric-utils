@@ -47,7 +47,6 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     if cassandra_user is not None:
         cmd += " --cassandra_user %s" % cassandra_user
         cmd += " --cassandra_password %s" % cassandra_password
-    cmd += optional_services('database')
 
     return cmd
 
@@ -105,7 +104,6 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     sriov_enabled = get_sriov_enabled()
     if sriov_enabled:
         cmd += ' --sriov'
-    cmd += optional_services('openstack')
 
     return cmd
 
@@ -178,7 +176,6 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     if cassandra_user is not None:
         cmd += ' --cassandra_user %s' % (cassandra_user)
         cmd += ' --cassandra_password %s' % (cassandra_password)
-    cmd += optional_services('cfgm')
     return cmd
 
 def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
@@ -244,7 +241,6 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
         cmd += " --vcenter_auth %s" % vcenter_info['auth']
         cmd += " --vcenter_datacenter %s" % vcenter_info['datacenter']
         cmd += " --vcenter_dvswitch %s" % vcenter_info['dv_switch']['dv_switch_name']
-    cmd += optional_services('webui')
 
     return cmd
 
@@ -271,7 +267,6 @@ def frame_vnc_control_cmd(host_string, cmd='setup-vnc-control'):
     cmd += ' --self_ip %s' % tgt_ip
     cmd += ' --cfgm_ip %s' % cfgm_ip
     cmd += ' --collector_ip %s' % collector_ip
-    cmd += optional_services('control')
 
     return cmd
 
@@ -413,7 +408,6 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
     if dpdk:
         if host_string in dpdk:
             cmd += " --dpdk"
-    cmd += optional_services('compute')
 
     return cmd
 
@@ -482,7 +476,6 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     if cassandra_user is not None:
         cmd += " --cassandra_user %s" % cassandra_user
         cmd += " --cassandra_password %s" % cassandra_password
-    cmd += optional_services('collector')
 
     return cmd
 

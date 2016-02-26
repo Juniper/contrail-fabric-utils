@@ -54,8 +54,3 @@ env.ostypes = {
 }
 
 env.test_repo_dir='/users/rajreddy/test/mainline/contrail-test'
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

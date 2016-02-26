@@ -112,8 +112,3 @@ env.test_repo_dir='/homes/vjoshi/node22-17/test'
 env.mail_from='vjoshi@juniper.net'
 env.mail_to='vjoshi@juniper.net'
 env.log_scenario='Single-Node Sanity'
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

@@ -47,8 +47,3 @@ env.mail_from='smusuvathi@juniper.net'
 env.mail_to='smusuvathi@juniper.net'
 env.log_scenario='Regression'
 multi_tenancy=True
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

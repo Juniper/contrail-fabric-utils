@@ -44,8 +44,3 @@ env.test_repo_dir='/home/dsetia/test'
 env.pkg_dir='/home/dsetia/rpmbuild/RPMS'
 env.mail_from='dsetia@juniper.net'
 env.mail_to='dsetia@juniper.net'
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

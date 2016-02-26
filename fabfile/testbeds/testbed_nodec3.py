@@ -37,8 +37,3 @@ env.log_scenario='Vedus single node'
 multi_tenancy=True
 env.interface_rename = False 
 env.encap_priority =  "'MPLSoUDP','MPLSoGRE','VXLAN'"
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

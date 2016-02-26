@@ -29,8 +29,3 @@ env.passwords = {
 env.hostnames = {
     'all': ['a5s2']
 }
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

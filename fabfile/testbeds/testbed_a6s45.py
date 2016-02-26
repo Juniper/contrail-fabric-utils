@@ -42,8 +42,3 @@ env.test_repo_dir='/users/rajreddy/test/git-test/'
 env.mail_from='rajreddy@juniper.net'
 env.mail_to='rajreddy@juniper.net'
 
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

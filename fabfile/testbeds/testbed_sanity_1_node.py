@@ -43,8 +43,3 @@ env.log_scenario = 'Openstack Single-Node Sanity'
 multi_tenancy=False
 
 env.interface_rename = True
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

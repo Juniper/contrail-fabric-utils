@@ -60,8 +60,3 @@ env.ostypes = {
 }
 
 env.test_repo_dir='/root/contrail-sanity/contrail-test'
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}
