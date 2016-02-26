@@ -347,12 +347,3 @@ def get_bgp_md5(host = env.host_string):
     """
     return get_from_testbed_dict('md5', host, None)
 #end get_bgp_md5
-
-def get_optional_svc_list(role):
-    return get_from_testbed_dict('optional_services', role, [])
-
-def optional_services(role):
-    os = get_optional_svc_list(role)
-    if os:
-        return ' --optional_services ' + ','.join(os)
-    return ''

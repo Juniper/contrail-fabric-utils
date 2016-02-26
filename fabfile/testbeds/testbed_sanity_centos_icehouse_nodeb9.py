@@ -37,8 +37,3 @@ env.log_scenario='CentOS-Icehouse Single-Node Sanity'
 multi_tenancy=True
 env.interface_rename=True 
 env.encap_priority="'MPLSoUDP','MPLSoGRE','VXLAN'"
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

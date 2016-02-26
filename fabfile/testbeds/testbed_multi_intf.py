@@ -85,8 +85,3 @@ multi_tenancy=True
 #rally_git_branch = 'network_plus'
 #rally_task_args = {'cxt_tenants': 1, 'cxt_users_per_tenant': 4, 'cxt_network': True, 'base_network_load_objects': 20000, 'load_type': 'constant', 'times': 2}
 
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

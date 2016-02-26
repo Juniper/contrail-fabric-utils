@@ -70,8 +70,3 @@ env.test_repo_dir="/home/stack/upgrade_sanity/contrail-test"
 env.log_scenario='Centos-Upgrade Sanity'
 env.mail_from='ijohnson@juniper.net'
 env.mail_to='dl-contrail-sw@juniper.net'
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

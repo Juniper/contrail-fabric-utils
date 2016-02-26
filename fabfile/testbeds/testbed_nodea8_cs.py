@@ -91,8 +91,3 @@ env.test_repo_dir='/homes/vjoshi/cs/test'
 env.mail_to='vjoshi@juniper.net'
 
 
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}
