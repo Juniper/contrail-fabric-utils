@@ -29,6 +29,10 @@ env.roledefs = {
     'build': [host_build],
     'storage-master': [host1],
     'storage-compute': [host1],
+    #'oldcfgm': [host2] old cfgm for ISSU
+    #'oldcontrol':[host2] old control for ISSU
+    #'olddatabase':[host2] old database for ISSU
+    #'oldcollector':[host2] old collector for ISSU
     # 'rally': [host1], # Optional, to enable/setup rally, it can be a seprate node from contrail cluster
     # 'vgw': [host1], # Optional, Only to enable VGW. Only compute can support vgw
     # 'tsn': [host1], # Optional, Only to enable TSN. Only compute can support TSN
