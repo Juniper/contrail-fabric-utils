@@ -93,8 +93,3 @@ env.passwords = {
 env.test_repo_dir='/home/stack/github_ubuntu_multi_node/grizzly/contrail-test'
 env.mail_to='dl-contrail-sw@juniper.net'
 env.log_scenario='Ubuntu-Grizzly Three-Node Sanity'
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

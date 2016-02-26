@@ -65,8 +65,3 @@ env.log_scenario='Multiple Interface CentOS Sanity[mgmt= ctrl, data]'
 multi_tenancy=True
 env.interface_rename = True 
 env.encap_priority =  "'MPLSoUDP','MPLSoGRE','VXLAN'"
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

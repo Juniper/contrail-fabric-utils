@@ -38,8 +38,3 @@ env.test_repo_dir='/home/stack/webui_centos_single_node/havana/contrail-test'
 env.mail_from='ankitja@juniper.net'
 env.mail_to='dl-contrail-sw@juniper.net'
 env.log_scenario='CentOS-Havana Single-Node Webui Sanity'
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

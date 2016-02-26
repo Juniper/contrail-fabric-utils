@@ -40,8 +40,3 @@ env.passwords = {
 }
 
 env.test_repo_dir = '/users/meghb/build/test-github'
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

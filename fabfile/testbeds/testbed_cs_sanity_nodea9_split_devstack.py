@@ -104,8 +104,3 @@ env.mail_to='dl-contrail-sw@juniper.net'
 env.log_scenario='ACS split setup'
 
 
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

@@ -47,8 +47,3 @@ env.test_repo_dir='/homes/vjoshi/test'
 env.mail_from='vjoshi@juniper.net'
 env.mail_to='vjoshi@juniper.net'
 env.interface_rename = True
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}

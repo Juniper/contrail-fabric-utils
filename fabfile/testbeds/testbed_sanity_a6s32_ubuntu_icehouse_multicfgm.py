@@ -58,8 +58,3 @@ env.encap_priority="'MPLSoUDP','MPLSoGRE','VXLAN'"
 env.mail_server='10.84.24.64'
 env.mail_port='4000'
 env.log_scenario='Ubuntu-Icehouse Five-Node Sanity[Multi CFGM]'
-
-#env.optional_services = {
-#    'collector': ['snmp-collector', 'topology'],
-#    'cfgm'     : ['device-manager'],
-#}
