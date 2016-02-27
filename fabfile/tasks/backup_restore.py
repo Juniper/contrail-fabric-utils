@@ -165,6 +165,7 @@ def backup_nova_instance_data():
 def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
     """Backup cassandra data in all databases  """
     global backup_path, final_dir
+    snapshot_list=[]
     host = env.host_string
     msg = "Processing the Cassandra DB backup and default path for backup DB data is ~/contrail_bkup_data/hostname/data/ in ({HOST})  \n"
     with settings(host_string=host):
@@ -203,27 +204,30 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
             else:
                 nodetool_cmd = 'nodetool -h localhost -p 7199 snapshot'
         sudo(nodetool_cmd)
-        snapshot_list = sudo("find %s/  -name 'snapshots' " % db_path)
-        snapshot_list = snapshot_list.split('\r\n')
-        snapshot_list = snapshot_list[0]
-        with cd(snapshot_list):
+        snapshot_dirs = sudo("find %s/  -name 'snapshots' " % db_path)
+        snapshot_dirs = snapshot_dirs.split('\r\n')
+        trim_dirs_path = '/var/lib/cassandra/'
+        snapshot_list_name = snapshot_dirs[0]
+        for snapshot_dir in snapshot_dirs:
+            snapshot_list.append(snapshot_dir.replace('/var/lib/cassandra/',''))
+        with cd(snapshot_list_name):
             snapshot_name = sudo('ls -t | head -n1')
         print "Cassandra DB Snapshot Name: %s" % (snapshot_name)
         if store_db == 'local':
-            sudo('cp -R  %s  %s ' % (db_path, dir_name))
+            with cd(trim_dirs_path):
+                for snapshot in snapshot_list:
+                    sudo('cp --parents -R %s/%s  %s ' % (snapshot,snapshot_name,dir_name))      
         execute(backup_info_file, dir_name, backup_type='Cassandra')
         if store_db == 'local':
             sudo('cp backup_info.txt %s' % dir_name)
         if store_db == 'remote':
             execute(ssh_key_gen)
-            source_path = '%s   backup_info.txt' % (db_path)
-            remote_path = '%s' % (dir_name)
-            remote_cmd = 'scp -o "StrictHostKeyChecking no" -r  %s  %s:%s' % (
-                source_path,
-                remote_host,
-                remote_path)
-            sudo(remote_cmd)
-
+            with cd(trim_dirs_path):
+                for snapshot in snapshot_list:
+                    remote_path = '%s' % (dir_name)
+                    remote_cmd = 'rsync -avzR %s/%s %s:%s' %(snapshot,snapshot_name,remote_host,remote_path)
+                    sudo(remote_cmd)
+    
 # end backup_cassandra
 
 
