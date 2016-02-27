@@ -35,6 +35,13 @@ def add_vrouter_node(*args):
             execute("setup_vrouter_node", env.host_string)
             execute("reboot_node", 'yes', env.host_string)
 
+@task
+def add_vcenter_compute_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string):
+            execute("create_install_repo_node", env.host_string)
+            execute("install_vcenter_compute_node", env.host_string)
+            execute("setup_vcenter_compute_node", env.host_string)
 
 @task
 def detach_vrouter_node(*args):

@@ -15,7 +15,7 @@ from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_compute_pkgs, get_ceilometer_plugin_pkgs, get_openstack_pkgs, \
      get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz_node, \
      create_apt_repo_from_tgz_node, get_config_pkgs, get_vcenter_plugin_pkg, \
-     get_vcenter_compute_pkgs
+     get_vcenter_compute_pkgs, get_vcenter_plugin_depend_pkgs
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
@@ -46,26 +46,33 @@ def install_pkg_all(pkg):
 
 @task
 @parallel(pool_size=20)
-@roles('cfgm')
-def install_contrail_vcenter_plugin(pkg):
+def install_contrail_vcenter_plugin(pkg, *args):
     """Installs any rpm/deb package in all nodes."""
-    if not hasattr(env, 'vcenter'):
-        print "No vcenter block in testbed file, nothing to do"
-        return
     if not pkg:
         print "Error:No vcenter plugin pkg, aborting"
         exit(1)
-    execute('install_pkg_node', pkg, env.host_string)
-    execute('install_contrail_vcenter_plugin_node', env.host_string)
+
+    depend_pkgs = get_vcenter_plugin_depend_pkgs()
+
+    if args:
+        host_list = args
+    else:
+       if get_orchestrator() is 'vcenter':
+            host_list = env.roledefs['cfgm'][:]
+       else:
+            if 'vcenter_compute' in env.roledefs:
+                host_list = env.roledefs['vcenter_compute'][:]
+
+    for host_string in host_list:
+         with settings (host_string=host_string, warn_only=True):
+             apt_install(depend_pkgs)
+             execute('install_pkg_node', pkg, env.host_string)
+             execute('install_contrail_vcenter_plugin_node', env.host_string)
 
 @task
 def install_contrail_vcenter_plugin_node( *args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            depend_pkgs = ['libxml-commons-external-java', 'libxml-commons-resolver1.1-java', 'libxerces2-java',
-                   'libslf4j-java', 'libnetty-java', 'libjline-java', 'libzookeeper-java']
-            apt_install(depend_pkgs)
-
             sudo('cd /opt/contrail/contrail_vcenter_plugin_install_repo/; dpkg -i *')
 
 @task

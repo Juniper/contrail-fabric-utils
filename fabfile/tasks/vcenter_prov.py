@@ -454,7 +454,6 @@ class Vcenter(object):
         self.dvswitch_name = vcenter_params['dvswitch_name']
         self.dvportgroup_name = vcenter_params['dvportgroup_name']
         self.dvportgroup_num_ports = vcenter_params['dvportgroup_num_ports']
-        self.update_dvs = vcenter_params['update_dvs']
 
         self.hosts = vcenter_params['hosts']
         self.vms = vcenter_params['vms']
@@ -468,7 +467,8 @@ class Vcenter(object):
             network_folder = datacenter.networkFolder
 	    for host_info in self.hosts:
                 self.add_host(host_info[4],host_info[0],host_info[3],host_info[1],host_info[2])
-            if self.update_dvs is 'True':
+            dvs = self.vcenter_base.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], self.dvswitch_name)
+            if dvs:
                 dvs = self.reconfigure_dvSwitch(self.vcenter_base.service_instance, self.clusters, self.dvswitch_name)
             else:
                 dvs=self.create_dvSwitch(self.vcenter_base.service_instance, network_folder, self.clusters, self.dvswitch_name)
