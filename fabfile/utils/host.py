@@ -190,7 +190,9 @@ def get_keystone_admin_token():
 def get_authserver_admin_user():
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
-       return get_from_testbed_dict('vcenter', 'username', None)
+        vcenter_servers = getattr(env, 'vcenter_servers', None)
+        vcenter_name = vcenter_servers.keys()[0]
+        return vcenter_servers[vcenter_name]['username']
     # openstack
     ks_admin_user = getattr(testbed, 'keystone_admin_user','admin')
     return get_from_testbed_dict('keystone', 'admin_user', ks_admin_user) 
@@ -198,7 +200,9 @@ def get_authserver_admin_user():
 def get_authserver_admin_password():
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
-       return get_from_testbed_dict('vcenter', 'password', None)
+        vcenter_servers = getattr(env, 'vcenter_servers', None)
+        vcenter_name = vcenter_servers.keys()[0]
+        return vcenter_servers[vcenter_name]['password']
     # openstack
     os_admin_password = getattr(env,'openstack_admin_password', 'contrail123')
     ks_admin_password = getattr(testbed, 
