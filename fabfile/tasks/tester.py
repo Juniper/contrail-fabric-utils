@@ -225,10 +225,10 @@ def setup_test_env():
         if CONTROLLER_TYPE == 'Cloudstack': 
             stack_password= 'password'
             stack_tenant= 'default-project'
-            stack_user= 'admin'
+            admin_user= 'admin'
         else:
-            stack_user, stack_password = get_authserver_credentials()
-            stack_tenant = get_admin_tenant_name()
+            admin_user, admin_password = get_authserver_credentials()
+            admin_tenant = get_admin_tenant_name()
         # Few hardcoded variables for sanity environment 
         # can be removed once we move to python3 and configparser
         stack_domain = 'default-domain'
@@ -256,6 +256,14 @@ def setup_test_env():
         ext_routers = getattr(testbed, 'ext_routers', '')
         router_info = str(ext_routers)
         test_verify_on_setup = getattr(env, 'test_verify_on_setup', True)
+
+        if not getattr(env, 'test', None):
+            env.test={}
+        stack_user = env.test.get('stack_user', None)
+        stack_password = env.test.get('stack_password', None)
+        stack_tenant = env.test.get('stack_tenant', None)
+        tenant_isolation = env.test.get('tenant_isolation', None)
+
         webui = getattr(testbed, 'webui', False)
         horizon = getattr(testbed, 'horizon', False)
         ui_config = getattr(testbed, 'ui_config', False)
@@ -276,11 +284,11 @@ def setup_test_env():
             {'__testbed_json_file__'   : 'sanity_testbed.json',
              '__nova_keypair_name__'   : key,
              '__orch__'                : orch,
-             '__stack_user__'          : stack_user,
-             '__stack_password__'      : stack_password,
+             '__admin_user__'          : admin_user,
+             '__admin_password__'      : admin_password,
              '__auth_ip__'             : get_authserver_ip(),
              '__auth_port__'           : get_authserver_port(),
-             '__stack_tenant__'        : stack_tenant,
+             '__admin_tenant__'        : admin_tenant,
              '__stack_domain__'        : stack_domain,
              '__multi_tenancy__'       : get_mt_enable(),
              '__address_family__'      : get_address_family(),
@@ -325,6 +333,10 @@ def setup_test_env():
              '__vcenter_datacenter__'  : get_vcenter_datacenter(),
              '__vcenter_compute__'     : get_vcenter_compute(),
              '__use_devicemanager_for_md5__'       : use_devicemanager_for_md5,
+             '__stack_user__'          : stack_user,
+             '__stack_password__'      : stack_password,
+             '__stack_tenant__'        : stack_tenant,
+             '__tenant_isolation__'    : tenant_isolation,
             })
 
         fd, fname = tempfile.mkstemp()
