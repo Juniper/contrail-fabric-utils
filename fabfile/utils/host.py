@@ -104,27 +104,40 @@ def get_region_name_opt():
 
 
 def get_vcenter_ip():
-    return get_from_testbed_dict('vcenter', 'server', None)
+    if env.has_key('vcenter_servers'):
+        for k in env.vcenter_servers.keys():
+            return get_from_vcenter_dict(k,'server', None)
 
 def get_vcenter_port():
-    return get_from_testbed_dict('vcenter', 'port', None)
+    if env.has_key('vcenter_servers'):
+        for k in env.vcenter_servers.keys():
+            return get_from_vcenter_dict(k,'port', None)
 
 def get_vcenter_username():
-    return get_from_testbed_dict('vcenter', 'username', None)
+    if env.has_key('vcenter_servers'):
+        for k in env.vcenter_servers.keys():
+            return get_from_vcenter_dict(k, 'username', None)
 
 def get_vcenter_password():
-    return get_from_testbed_dict('vcenter', 'password', None)
+    if env.has_key('vcenter_servers'):
+        for k in env.vcenter_servers.keys():
+            return get_from_vcenter_dict(k, 'password', None)
 
 def get_vcenter_datacenter():
-    return get_from_testbed_dict('vcenter', 'datacenter', None)
+    if env.has_key('vcenter_servers'):
+        for k in env.vcenter_servers.keys():
+            return get_from_vcenter_dict(k, 'datacenter', None)
 
 def get_vcenter_compute():
-    return get_from_testbed_dict('vcenter', 'vcenter_compute', None)
+    if env.has_key('vcenter_servers'):
+        for k in env.vcenter_servers.keys():
+            return get_from_vcenter_dict(k, 'vcenter_compute', None)
 
 def get_authserver_ip(ignore_vip=False, openstack_node=None):
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
-       return get_from_testbed_dict('vcenter', 'server', None)
+       for k in env.vcenter_servers.keys():
+           return get_from_vcenter_dict(k, 'server', None)
     # openstack
     if openstack_node:
         openstack_host = get_control_host_string(openstack_node)
@@ -149,6 +162,15 @@ def get_authserver_ip(ignore_vip=False, openstack_node=None):
             return internal_vip
         return openstack_ip
 
+def get_from_vcenter_dict(dictionary, key, default_value):
+    
+    try:
+        val = env['vcenter_servers'][dictionary][key]
+    except KeyError:
+        val = default_value
+    return val
+
+
 def get_from_testbed_dict( dictionary, key,default_value):
     try:
         val = env[dictionary][key]
@@ -159,7 +181,8 @@ def get_from_testbed_dict( dictionary, key,default_value):
 def get_authserver_protocol():
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
-       return get_from_testbed_dict('vcenter', 'auth', 'https')
+       for k in env.vcenter_servers.keys():
+           return get_from_vcenter_dict(k, 'auth', 'https')
     # openstack
     return get_from_testbed_dict('keystone', 'auth_protocol','http')
 
@@ -169,7 +192,8 @@ def get_keystone_insecure_flag():
 def get_authserver_port():
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
-       return get_from_testbed_dict('vcenter', 'port', 443)
+       for k in env.vcenter_servers.keys():
+           return get_from_vcenter_dict(k, 'port', 443)
     # openstack
     return get_from_testbed_dict('keystone', 'auth_port','35357')
 
@@ -190,9 +214,10 @@ def get_keystone_admin_token():
 def get_authserver_admin_user():
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
-        vcenter_servers = getattr(env, 'vcenter_servers', None)
-        vcenter_name = vcenter_servers.keys()[0]
-        return vcenter_servers[vcenter_name]['username']
+       for k in env.vcenter_servers.keys():
+           vcenter_servers = getattr(env['vcenter_servers'], k , None)
+           vcenter_name = vcenter_servers.keys()[0]
+       return vcenter_servers[vcenter_name]['username']
     # openstack
     ks_admin_user = getattr(testbed, 'keystone_admin_user','admin')
     return get_from_testbed_dict('keystone', 'admin_user', ks_admin_user) 
@@ -200,9 +225,10 @@ def get_authserver_admin_user():
 def get_authserver_admin_password():
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
-        vcenter_servers = getattr(env, 'vcenter_servers', None)
-        vcenter_name = vcenter_servers.keys()[0]
-        return vcenter_servers[vcenter_name]['password']
+       for k in env.vcenter_servers.keys():
+           vcenter_servers = getattr(env['vcenter_servers'], k , None)
+           vcenter_name = vcenter_servers.keys()[0]
+       return vcenter_servers[vcenter_name]['password']
     # openstack
     os_admin_password = getattr(env,'openstack_admin_password', 'contrail123')
     ks_admin_password = getattr(testbed, 
