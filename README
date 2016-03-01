@@ -220,7 +220,7 @@ The following fab command upgrades the live system, should be run from the confi
 
 Adding a new compute node to existing cluster
 ---------------------------------------------
-    Add all the irequired infromation about the new nodes to testbed.py
+    Add all the required information about the new nodes to testbed.py
     cd /opt/contrail/utils
     fab install_pkg_node:/path/to/contrail-install-packages.rpm | /path/to/contrail-install-packages.deb,<user@newnode1ip>,<user@newnode2ip>
     fab add_vrouter_node:<user@newnode1ip>,<user@newnode2ip>
