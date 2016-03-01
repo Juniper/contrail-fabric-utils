@@ -1564,8 +1564,10 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
         # Setup hugepages if necessary
         setup_hugepages_node(host_string)
 
-        # Setup affinity mask if necessary
+        # Setup affinity masks for vRouter and qemu if necessary
         setup_coremask_node(host_string)
+        setup_vm_coremask_node(False, host_string)
+
         # Setup vr_mpls_labels, vr_nexthops, vr_vrfs, vr_bridge_entries
         # if necessary
         dpdk_increase_vrouter_limit()
@@ -2351,18 +2353,18 @@ def setup_vm_coremask_node(q_coremask, *args):
     for host_string in args:
         dpdk = getattr(env, 'dpdk', None)
         if dpdk:
-            if env.host_string in dpdk:
+            if host_string in dpdk:
                 try:
-                    vr_coremask = dpdk[env.host_string]['coremask']
+                    vr_coremask = dpdk[host_string]['coremask']
                 except KeyError:
                     raise RuntimeError("vRouter core mask for host %s is not defined." \
                         %(host_string))
             else:
                 print "No %s in the dpdk section in testbed file." \
-                    %(env.host_string)
+                    %(host_string)
                 return
         else:
-            print "No dpdk section in testbed file on host %s." %(env.host_string)
+            print "No dpdk section in testbed file on host %s." %(host_string)
             return
 
         if not vr_coremask:
@@ -2374,12 +2376,12 @@ def setup_vm_coremask_node(q_coremask, *args):
                 cpu_count = int(run('grep -c processor /proc/cpuinfo'))
             except ValueError:
                 print "Cannot count CPUs on host %s. VM core mask cannot be computed." \
-                    %(env.host_string)
+                    %(host_string)
                 raise
 
             if not cpu_count or cpu_count == -1:
                 raise ValueError("Cannot count CPUs on host %s. VM core mask cannot be computed." \
-                    %(env.host_string))
+                    %(host_string))
 
             all_cores = [x for x in xrange(cpu_count)]
 
@@ -2430,7 +2432,7 @@ def setup_vm_coremask_node(q_coremask, *args):
             if sudo("openstack-config --set /etc/nova/nova.conf DEFAULT vcpu_pin_set %s" \
                 % q_coremask).succeeded:
                 print "QEMU coremask on host %s set to %s." \
-                    %(env.host_string, q_coremask)
+                    %(host_string, q_coremask)
             else:
                 raise RuntimeError("Error: setting QEMU core mask %s for host %s failed." \
                     %(vr_coremask, host_string))
