@@ -55,7 +55,7 @@ def setup_test_env():
         'esxi_vms':[],
         'hosts_ipmi': [],
         'tor':[],
-        'vcenter':[],
+        'vcenter_servers':[],
         'sriov':[],
     }
 
@@ -204,8 +204,13 @@ def setup_test_env():
     if env.has_key('hosts_ipmi'):
         sanity_testbed_dict['hosts_ipmi'].append(env.hosts_ipmi)
     #get vcenter info
-    if env.has_key('vcenter'):
-        sanity_testbed_dict['vcenter'].append(env.vcenter)
+    if env.has_key('vcenter_servers'):
+        vcenter_info = {}
+        for k in env.vcenter_servers.keys():
+            vcenter_info[k] = env.vcenter_servers[k]
+            server = {}
+            server[k] = env.vcenter_servers[k]
+            sanity_testbed_dict['vcenter_servers'].append(server)
     #get sriov info
     if env.has_key('sriov'):
         sanity_testbed_dict['sriov'].append(env.sriov)
@@ -267,9 +272,10 @@ def setup_test_env():
         if orch == 'vcenter':
             public_tenant_name='vCenter'
 
-        if env.has_key('vcenter'):
-            if env.vcenter:
-                vcenter_dc = env.vcenter['datacenter']
+        if env.has_key('vcenter_servers'):
+            if env.vcenter_servers:
+                for k in env.vcenter_servers: 
+                    vcenter_dc = env.vcenter_servers[k]['datacenter']
 
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__testbed_json_file__'   : 'sanity_testbed.json',
@@ -317,12 +323,12 @@ def setup_test_env():
              '__ipmi_username__'       : getattr(testbed, 'ipmi_username', ''),
              '__ipmi_password__'       : getattr(testbed, 'ipmi_password', ''),
              '__vcenter_dc__'          : vcenter_dc,
-             '__vcenter_server__'      : get_vcenter_ip(),
-             '__vcenter_port__'        : get_vcenter_port(),
-             '__vcenter_username__'    : get_vcenter_username(),
-             '__vcenter_password__'    : get_vcenter_password(),
-             '__vcenter_datacenter__'  : get_vcenter_datacenter(),
-             '__vcenter_compute__'     : get_vcenter_compute(),
+             '__vcenter_server__'      : get_vcenter_ip(vcenter_info),
+             '__vcenter_port__'        : get_vcenter_port(vcenter_info),
+             '__vcenter_username__'    : get_vcenter_username(vcenter_info),
+             '__vcenter_password__'    : get_vcenter_password(vcenter_info),
+             '__vcenter_datacenter__'  : get_vcenter_datacenter(vcenter_info),
+             '__vcenter_compute__'     : get_vcenter_compute(vcenter_info),
              '__use_devicemanager_for_md5__'       : use_devicemanager_for_md5,
             })
 
