@@ -102,29 +102,38 @@ def get_region_name_opt():
     region_name = get_region_name()
     return '--region_name %s' %(region_name)
 
+def get_vcenter_item(key, default_value):
+    # For sanity purpose use first vcenter, multiple servers not supported
+    # in sanity
+    vc_server = env.vcenter_servers.values()[0]
+    try:
+        val = vc_server[key]
+    except KeyError:
+        val = default_value
+    return val
 
 def get_vcenter_ip():
-    return get_from_testbed_dict('vcenter', 'server', None)
+    return get_vcenter_item('server', None)
 
 def get_vcenter_port():
-    return get_from_testbed_dict('vcenter', 'port', None)
+    return get_vcenter_item('port', None)
 
 def get_vcenter_username():
-    return get_from_testbed_dict('vcenter', 'username', None)
+    return get_vcenter_item('username', None)
 
 def get_vcenter_password():
-    return get_from_testbed_dict('vcenter', 'password', None)
+    return get_vcenter_item('password', None)
 
 def get_vcenter_datacenter():
-    return get_from_testbed_dict('vcenter', 'datacenter', None)
+    return get_vcenter_item('datacenter', None)
 
 def get_vcenter_compute():
-    return get_from_testbed_dict('vcenter', 'vcenter_compute', None)
+    return get_vcenter_item('vcenter_compute', None)
 
 def get_authserver_ip(ignore_vip=False, openstack_node=None):
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
-       return get_from_testbed_dict('vcenter', 'server', None)
+       return get_vcenter_item('server', None)
     # openstack
     if openstack_node:
         openstack_host = get_control_host_string(openstack_node)
@@ -190,7 +199,8 @@ def get_keystone_admin_token():
 def get_authserver_admin_user():
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
-       return get_from_testbed_dict('vcenter', 'username', None)
+        # for vcenter orch case, only one vcenter is supported
+        return get_vcenter_item('username', None)
     # openstack
     ks_admin_user = getattr(testbed, 'keystone_admin_user','admin')
     return get_from_testbed_dict('keystone', 'admin_user', ks_admin_user) 
@@ -198,7 +208,8 @@ def get_authserver_admin_user():
 def get_authserver_admin_password():
     orch = getattr(env, 'orchestrator', 'openstack')
     if orch == 'vcenter':
-       return get_from_testbed_dict('vcenter', 'password', None)
+        # for vcenter orch case, only one vcenter is supported
+        return get_vcenter_item('password', None)
     # openstack
     os_admin_password = getattr(env,'openstack_admin_password', 'contrail123')
     ks_admin_password = getattr(testbed, 
