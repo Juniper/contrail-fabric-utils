@@ -204,8 +204,12 @@ def setup_test_env():
     if env.has_key('hosts_ipmi'):
         sanity_testbed_dict['hosts_ipmi'].append(env.hosts_ipmi)
     #get vcenter info
-    if env.has_key('vcenter'):
-        sanity_testbed_dict['vcenter'].append(env.vcenter)
+    vcenter_dc = ''
+    if env.has_key('vcenter_servers'):
+        # for sanity always use the first, multiple server not supported
+        vc_server = env.vcenter_servers.values()[0]
+        sanity_testbed_dict['vcenter'].append(vc_server)
+        vcenter_dc = vc_server['datacenter']
     #get sriov info
     if env.has_key('sriov'):
         sanity_testbed_dict['sriov'].append(env.sriov)
@@ -263,13 +267,9 @@ def setup_test_env():
             mail_server = env.mail_server
             mail_port = env.mail_port
 
-        vcenter_dc = ''
         if orch == 'vcenter':
             public_tenant_name='vCenter'
 
-        if env.has_key('vcenter'):
-            if env.vcenter:
-                vcenter_dc = env.vcenter['datacenter']
 
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__testbed_json_file__'   : 'sanity_testbed.json',
