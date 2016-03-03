@@ -2,6 +2,7 @@ from fabric.contrib.files import exists
 
 from fabfile.config import *
 from fabfile.utils.cluster import get_ntp_server
+from fabfile.utils.fabos import detect_ostype
 
 @task
 @roles('all')
@@ -10,9 +11,17 @@ def get_all_time():
     return tuple(date.split('\r\n'))
 
 @task
+def restart_ntp_node():
+    ostype = detect_ostype()
+    if ostype in ['ubuntu']:
+        sudo("service ntp restart", warn_only=True)
+    else:
+        sudo("service ntpd restart", warn_only=True)
+
+@task
 @roles('all')
 def restart_ntp():
-    sudo("service ntp restart", warn_only=True)
+    execute('restart_ntp_node')
 
 @task
 @parallel
@@ -61,3 +70,4 @@ def setup_ntp_node(*args):
                 if not ntp_chk_cmd_out:
                     ntp_cmd = 'echo "server ' + ntp_server + '" >> ' + ntp_file
                     sudo(ntp_cmd)
+                    execute('restart_ntp_node')
