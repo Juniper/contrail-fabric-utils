@@ -416,6 +416,10 @@ env.ostypes = {
 #auth is the autentication type used to talk to vcenter, http or https
 #datacenter is the datacenter name we are operating on
 #cluster is the list of clusters we are operating on
+#dv_switch_fab section contains distributed switch related params for fab network
+#       dv_switch_name
+#dv_port_group_fab section contains distributed port group params for fab network
+#       dv_portgroup_name and the number of ports the group has
 #dvswitch section contains distributed switch related para,s
 #       dv_switch_name 
 #dvportgroup section contains the distributed port group info
@@ -429,6 +433,11 @@ env.ostypes = {
 #        'auth': 'https',
 #        'datacenter': 'kd_dc',
 #        'cluster': ['kd_cluster_1','kd_cluster_2'],
+#        'dv_switch_fab': {'dv_switch_name': 'dvs-lag'},
+#        'dv_port_group_fab': {
+#                'dv_portgroup_name': 'fab-pg',
+#                'number_of_ports': '3',
+#         },
 #        'dv_switch': { 'dv_switch_name': 'kd_dvswitch',
 #                     },
 #        'dv_port_group': { 'dv_portgroup_name': 'kd_dvportgroup',
