@@ -132,7 +132,7 @@ def get_esxi_ssl_thumbprint(esxi_data):
           print 'ssl thumbprint of the ESXi host %s is %s' % (esxi_data['ip'], ssl_thumbprint)
     return ssl_thumbprint
 
-def get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, password_list):
+def get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list):
     hosts = []
     vms = []
     clusters = []
@@ -144,7 +144,7 @@ def get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, pas
                    ssl_thumbprint = get_esxi_ssl_thumbprint(esxi_data)
                    esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint,esxi_data['cluster']
                    hosts.append(esx_list)
-                   modified_vm_name = vm_name+"-"+vcenter_info['datacenter']+"-"+esxi_data['ip']
+                   modified_vm_name = vm_name+"-"+vcenter_server['datacenter']+"-"+esxi_data['ip']
                    for host_string in compute_list:
                        if host_string == esxi_data['contrail_vm']['host']:
                            break
@@ -154,8 +154,31 @@ def get_esxi_vms_and_hosts(esxi_info, vcenter_info, host_list, compute_list, pas
                else:
                    print 'Info: esxi_hosts block does not have the esxi host.Exiting'
                    return
-    clusters = vcenter_info['cluster']
+    clusters = vcenter_server['cluster']
     return (hosts,clusters,vms)
+
+def create_esxi_vrouter_map_file(vcenter_server_name, vcenter_server, host_string):
+    #create the static esxi:vrouter map file
+    esxi_info = getattr(testbed, 'esxi_hosts', None)
+    if not esxi_info:
+        print 'Info: esxi_hosts block is not defined in testbed file. Exiting'
+        return
+
+    esxi_hosts = []
+    for host in esxi_info.keys():
+        if esxi_info[host]['vcenter_server'] is vcenter_server_name:
+           esxi_hosts.append(host)
+
+    with settings(host_string=host_string, warn_only=True):
+         tmp_fname = "/tmp/ESXiToVRouterIp-%s" %(host_string)
+         for esxi_host in esxi_hosts:
+             if esxi_info[esxi_host]['cluster'] in vcenter_server['cluster']:
+                esxi_ip = esxi_info[esxi_host]['ip']
+                vrouter_ip_string = esxi_info[esxi_host]['contrail_vm']['host']
+                vrouter_ip = vrouter_ip_string.split('@')[1]
+                local("echo '%s:%s' >> %s" %(esxi_ip, vrouter_ip, tmp_fname))
+         put(tmp_fname, "/etc/contrail/ESXiToVRouterIp.map", use_sudo=True)
+         local("rm %s" %(tmp_fname))
 
 def get_nodes_to_upgrade_pkg(package, os_type, *args, **kwargs):
     """get the list of nodes in which th given package needs to be upgraded"""
