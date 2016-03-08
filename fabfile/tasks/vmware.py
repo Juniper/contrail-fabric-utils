@@ -71,9 +71,10 @@ def create_vmx (esxi_host, vm_name):
         raise Exception("Unable to get the vmware version")
     esxi_version_info = str(out)
     esxi_version = esxi_version_info.split()[2][:3]
-    if (esxi_version == '5.5'):
+    version = float(esxi_version)
+    if (version == 5.5):
          hw_version = 10
-    elif (esxi_version == '6.0'):
+    elif (version >= 6.0):
          hw_version = 11
     else:
         hw_version = 9
