@@ -217,8 +217,8 @@ def upgrade_orchestrator(from_rel, pkg):
     if get_orchestrator() is 'openstack':
         execute('upgrade_openstack', from_rel, pkg)
         if (get_openstack_internal_vip() and
-            float(from_rel) <= 2.2 and
-            get_release() >= 2.2):
+                LooseVersion(from_rel) <= LooseVersion('2.20') and
+                LooseVersion(get_release()) >= LooseVersion('2.20')):
              execute('setup_cmon_schema')
              execute('setup_cluster_monitors')
              execute('setup_cmon_param_zkonupgrade')
