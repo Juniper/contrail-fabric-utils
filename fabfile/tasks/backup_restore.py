@@ -201,10 +201,15 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
                 cs_key = cs_key.translate(string.maketrans("\n\t\r", "   "))
                 custom_key = replace_key(cs_key, skip_key)
                 nodetool_cmd = 'nodetool -h localhost -p 7199 snapshot %s ' % custom_key
+                skip_key = ','.join(skip_key)
             else:
                 nodetool_cmd = 'nodetool -h localhost -p 7199 snapshot'
         sudo(nodetool_cmd)
-        snapshot_dirs = sudo("find %s/  -name 'snapshots' " % db_path)
+        #skip snapshots of skipped_keyspaces if already present
+        if skip_key:
+            snapshot_dirs = sudo("find %s/  -name 'snapshots' | egrep -v $(echo %s | sed -r 's/,/|/g')" %(db_path,skip_key))
+        else:
+            snapshot_dirs = sudo("find %s/  -name 'snapshots' " % db_path)
         snapshot_dirs = snapshot_dirs.split('\r\n')
         #get relative path to cassandra from db_path 
         path_to_cassandra = re.search('.*/cassandra/',db_path).group(0)
