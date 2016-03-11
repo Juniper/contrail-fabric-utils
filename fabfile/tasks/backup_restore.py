@@ -200,30 +200,38 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
                 cs_key = cs_key.translate(string.maketrans("\n\t\r", "   "))
                 custom_key = replace_key(cs_key, skip_key)
                 nodetool_cmd = 'nodetool -h localhost -p 7199 snapshot %s ' % custom_key
+                skip_key = ','.join(skip_key)
             else:
                 nodetool_cmd = 'nodetool -h localhost -p 7199 snapshot'
         sudo(nodetool_cmd)
-        snapshot_list = sudo("find %s/  -name 'snapshots' " % db_path)
-        snapshot_list = snapshot_list.split('\r\n')
-        snapshot_list = snapshot_list[0]
-        with cd(snapshot_list):
+        if skip_key:
+            snapshot_dirs = sudo("find %s/  -name 'snapshots' | egrep -v $(echo %s | sed -r 's/,/|/g')" %(db_path,skip_key))
+        else:
+            snapshot_dirs = sudo("find %s/  -name 'snapshots' " % db_path)
+        snapshot_dirs = snapshot_dirs.split('\r\n')
+        #get relative path to cassandra from db_path 
+        path_to_cassandra = re.search('.*/cassandra/',db_path).group(0)
+        for snapshot_dir in snapshot_dirs:
+            snapshot_list.append(snapshot_dir.replace(path_to_cassandra,''))
+        #get current snap_shot name from any snapshots folder created by nodetool
+        snapshot_list_name = snapshot_dirs[0]
+        with cd(snapshot_list_name):
             snapshot_name = sudo('ls -t | head -n1')
         print "Cassandra DB Snapshot Name: %s" % (snapshot_name)
         if store_db == 'local':
-            sudo('cp -R  %s  %s ' % (db_path, dir_name))
+            with cd(path_to_cassandra):
+                for snapshot in snapshot_list:
+                    sudo('cp --parents -R %s/%s  %s ' % (snapshot,snapshot_name,dir_name))      
         execute(backup_info_file, dir_name, backup_type='Cassandra')
         if store_db == 'local':
             sudo('cp backup_info.txt %s' % dir_name)
         if store_db == 'remote':
             execute(ssh_key_gen)
-            source_path = '%s   backup_info.txt' % (db_path)
-            remote_path = '%s' % (dir_name)
-            remote_cmd = 'scp -o "StrictHostKeyChecking no" -r  %s  %s:%s' % (
-                source_path,
-                remote_host,
-                remote_path)
-            sudo(remote_cmd)
-
+            with cd(path_to_cassandra):
+                for snapshot in snapshot_list:
+                    remote_path = '%s' % (dir_name)
+                    remote_cmd = 'rsync -avzR -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" %s/%s %s:%s' %(snapshot,snapshot_name,remote_host,remote_path)
+                    sudo(remote_cmd)
 # end backup_cassandra
 
 
