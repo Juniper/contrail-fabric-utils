@@ -488,11 +488,19 @@ def add_images(image=None):
                 return
             sudo("wget http://%s/%s" % (mount, local))
             sudo("gunzip " + remote_gz)
+            os_type = detect_ostype()
+            openstack_sku = get_openstack_sku()
 
-            cmd = "source /etc/contrail/openstackrc; {PRECMD}"\
-                  " glance image-create --name {IMGNAME}"\
-                  " --is-public True --container-format {IMGFORMAT}"\
-                  " --disk-format {DISKFORMAT} {IMGFILE_OPT}"
+            if os_type in ['ubuntu'] and openstack_sku in ['liberty']:
+                cmd = "source /etc/contrail/openstackrc; {PRECMD}"\
+                      " glance image-create --name {IMGNAME}"\
+                      " --visibility public --container-format {IMGFORMAT}"\
+                      " --disk-format {DISKFORMAT} {IMGFILE_OPT}"
+            else:
+                cmd = "source /etc/contrail/openstackrc; {PRECMD}"\
+                      " glance image-create --name {IMGNAME}"\
+                      " --is-public True --container-format {IMGFORMAT}"\
+                      " --disk-format {DISKFORMAT} {IMGFILE_OPT}"
             if ".vmdk" in loc:
                 glance_kwargs = {'PRECMD': '',
                                  'IMGNAME' : name,
@@ -581,15 +589,30 @@ def add_basic_images(image=None):
         remote_gz = remote+".gz"
         run("wget http://%s/%s" % (mount, local))
         run("gunzip " + remote_gz)
-        if ".vmdk" in loc:
-            if 'converts' in loc:
-                glance_id = run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+
+        os_type = detect_ostype()
+        openstack_sku = get_openstack_sku()
+
+        if os_type in ['ubuntu'] and openstack_sku in ['liberty']:
+            if ".vmdk" in loc:
+                if 'converts' in loc:
+                    glance_id = run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --visibility public --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                else:
+                    glance_id = run("(source /etc/contrail/openstackrc; glance add name='"+name+"' --visibility public container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                if glance_id.succeeded:
+                    preload_image_to_esx('http://%s/%s' % (mount,local), glance_id, sizes, openstack_version)
             else:
-                glance_id = run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
-            if glance_id.succeeded:
-                preload_image_to_esx('http://%s/%s' % (mount,local), glance_id, sizes, openstack_version)
+                run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --visibility public --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
         else:
-           run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
+            if ".vmdk" in loc:
+                if 'converts' in loc:
+                    glance_id = run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                else:
+                    glance_id = run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                if glance_id.succeeded:
+                    preload_image_to_esx('http://%s/%s' % (mount,local), glance_id, sizes, openstack_version)
+            else:
+                run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
         run("rm "+remote)
 
 #end add_basic_images
