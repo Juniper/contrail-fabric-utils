@@ -56,7 +56,7 @@ def setup_test_env():
         'esxi_vms':[],
         'hosts_ipmi': [],
         'tor':[],
-        'vcenter':[],
+        'vcenter_servers':[],
         'sriov':[],
     }
 
@@ -205,12 +205,13 @@ def setup_test_env():
     if env.has_key('hosts_ipmi'):
         sanity_testbed_dict['hosts_ipmi'].append(env.hosts_ipmi)
     #get vcenter info
-    vcenter_dc = ''
     if env.has_key('vcenter_servers'):
-        # for sanity always use the first, multiple server not supported
-        vc_server = env.vcenter_servers.values()[0]
-        sanity_testbed_dict['vcenter'].append(vc_server)
-        vcenter_dc = vc_server['datacenter']
+        vcenter_info = {}
+        for k in env.vcenter_servers.keys():
+            vcenter_info[k] = env.vcenter_servers[k]
+            server = {}
+            server[k] = env.vcenter_servers[k]
+            sanity_testbed_dict['vcenter_servers'].append(server)
     #get sriov info
     if env.has_key('sriov'):
         sanity_testbed_dict['sriov'].append(env.sriov)
@@ -268,9 +269,14 @@ def setup_test_env():
             mail_server = env.mail_server
             mail_port = env.mail_port
 
+        vcenter_dc = ''
         if orch == 'vcenter':
             public_tenant_name='vCenter'
 
+        if env.has_key('vcenter_servers'):
+            if env.vcenter_servers:
+                for k in env.vcenter_servers: 
+                    vcenter_dc = env.vcenter_servers[k]['datacenter']
 
         sanity_params = sanity_ini_templ.safe_substitute(
             {'__testbed_json_file__'   : 'sanity_testbed.json',
