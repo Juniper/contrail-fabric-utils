@@ -166,6 +166,7 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
     """Backup cassandra data in all databases  """
     global backup_path, final_dir
     snapshot_list=[]
+    skip_key=None
     host = env.host_string
     msg = "Processing the Cassandra DB backup and default path for backup DB data is ~/contrail_bkup_data/hostname/data/ in ({HOST})  \n"
     with settings(host_string=host):
