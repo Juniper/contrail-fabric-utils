@@ -351,19 +351,21 @@ def start_glance():
 @roles('compute')
 def stop_nova_openstack_compute():
     """Stop the contrail openstack compute service."""
-    if detect_ostype() in ['ubuntu']:
-        sudo('service nova-compute stop')
-        return
-    sudo('service openstack-nova-compute stop')
+    if host not in env.roledefs['tsn'] :
+        if detect_ostype() in ['ubuntu']:
+            sudo('service nova-compute stop')
+            return
+        sudo('service openstack-nova-compute stop')
 
 
 @roles('compute')
 def start_nova_openstack_compute():
     """Start the contrail openstack compute service."""
-    if detect_ostype() in ['ubuntu']:
-        sudo('service nova-compute start')
-        return
-    sudo('service openstack-nova-compute start')
+    if host not in env.roledefs['tsn'] :
+        if detect_ostype() in ['ubuntu']:
+            sudo('service nova-compute start')
+            return
+        sudo('service openstack-nova-compute start')
 
 
 @roles('openstack')
