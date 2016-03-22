@@ -370,10 +370,11 @@ def setup_test_env():
                 if detect_ostype() in ['centos', 'redhat', 'centoslinux']:
                     sudo('yum -y install python-pip')
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources==0.2.7 discover \
-                        testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0 eventlet'
+                        testrepository junitxml pytun requests==2.3.0 pyvmomi==5.5.0 eventlet \
+                        tabulate'
                 elif 'ubuntu' == detect_ostype():
                     pkg = 'fixtures==1.0.0 testtools==1.7.1 testresources==0.2.7 \
-                           testrepository junitxml pytun pyvmomi==5.5.0 eventlet'
+                           testrepository junitxml pytun pyvmomi==5.5.0 eventlet tabulate '
                     output = sudo('pip show requests | grep Version')
                     if output.succeeded:
                         version = output.split(':')[1].translate(None, whitespace)
