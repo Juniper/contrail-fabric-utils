@@ -114,11 +114,9 @@ def get_vcenter_plugin_pkg():
     return pkg
 
 def get_vcenter_compute_pkgs():
-    pkgs = ['contrail-nova-vif', 'nova-compute',
-            'python-novaclient', 'nova-compute-kvm',
-            'contrail-utils', 'python-bitstring',
-            'python-contrail-vrouter-api',
-            'openjdk-7-jre-headless']
+    pkgs = ['nova-compute', 'nova-compute-kvm',
+            'python-novaclient', 'python-bitstring',
+            'contrail-utils', 'openjdk-7-jre-headless'] 
 
     return pkgs
 
