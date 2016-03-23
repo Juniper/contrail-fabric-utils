@@ -73,7 +73,7 @@ def install_contrail_vcenter_plugin(pkg, *args):
 def install_contrail_vcenter_plugin_node( *args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            sudo('cd /opt/contrail/contrail_vcenter_plugin_install_repo/; dpkg -i *')
+            sudo('cd /opt/contrail/contrail_vcenter_plugin_install_repo/; dpkg -i *.deb')
 
 @task
 @roles('build')
