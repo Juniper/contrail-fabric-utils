@@ -234,6 +234,8 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
             with cd(path_to_cassandra):
                 for snapshot in snapshot_list:
                     remote_path = '%s' % (dir_name)
+                    if not exists(os.path.join(path_to_cassandra,snapshot, snapshot_name)):
+                        continue
                     remote_cmd = 'rsync -avzR -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" %s/%s %s:%s' %(snapshot,snapshot_name,remote_host,remote_path)
                     sudo(remote_cmd)
                     
@@ -381,8 +383,14 @@ def backup_instances(db_datas, store_db='local'):
     """Backup instances data to all compute nodes """
     host = env.host_string
     global backup_path, final_dir
+    tsn_nodes = []
+    tor_nodes = []
     msg = "Processing instances backup and default path for backup data is ~/contrail_bkup_data/hostname/instances  in ({HOST}) \n"
-    if host not in env.roledefs['tsn'] :
+    if 'tsn' in env.roledefs:
+        tsn_nodes = env.roledefs['tsn']
+    if 'toragent' in env.roledefs:
+        tor_nodes = env.roledefs['toragent']
+    if host not in (tsn_nodes and tor_nodes) :
         with settings(host_string=host):
             host_name = sudo('hostname')
             if store_db == 'local':
@@ -952,7 +960,13 @@ def restore_instances(backup_data_path, store_db='local'):
     """Restore instances data to all compute nodes  """
     global backup_path
     host = env.host_string
-    if host not in env.roledefs['tsn'] :
+    tsn_nodes = []
+    tor_nodes = []
+    if 'tsn' in env.roledefs:
+        tsn_nodes = env.roledefs['tsn']
+    if 'toragent' in env.roledefs:
+        tor_nodes = env.roledefs['toragent']
+    if host not in (tsn_nodes and tor_nodes) :
         msg = "Restoring backed-up instances data in ({HOST}).\n"
         with settings(host_string=host):
             host_name = sudo('hostname')
