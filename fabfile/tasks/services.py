@@ -388,12 +388,17 @@ def start_glance():
             sudo('service %s start' % svc)
 
 
-
-
 @roles('compute')
 def stop_nova_openstack_compute():
     """Stop the contrail openstack compute service."""
-    if env.host_string not in env.roledefs['tsn'] :
+    tsn_nodes = []
+    tor_nodes = []
+    host = env.host_string
+    if 'tsn' in env.roledefs:
+        tsn_nodes = env.roledefs['tsn']
+    if 'toragent' in env.roledefs:
+        tor_nodes = env.roledefs['toragent']
+    if host not in (tsn_nodes and tor_nodes) :
         if detect_ostype() in ['ubuntu']:
             sudo('service nova-compute stop')
             return
@@ -403,7 +408,14 @@ def stop_nova_openstack_compute():
 @roles('compute')
 def start_nova_openstack_compute():
     """Start the contrail openstack compute service."""
-    if env.host_string not in env.roledefs['tsn'] :
+    tsn_nodes = []
+    tor_nodes = []
+    host = env.host_string
+    if 'tsn' in env.roledefs:
+        tsn_nodes = env.roledefs['tsn']
+    if 'toragent' in env.roledefs:
+        tor_nodes = env.roledefs['toragent']
+    if host not in (tsn_nodes and tor_nodes) :
         if detect_ostype() in ['ubuntu']:
             sudo('service nova-compute start')
             return
