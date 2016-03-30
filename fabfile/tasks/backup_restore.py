@@ -381,8 +381,14 @@ def backup_instances(db_datas, store_db='local'):
     """Backup instances data to all compute nodes """
     host = env.host_string
     global backup_path, final_dir
+    tsn_nodes = []
+    tor_nodes = []
     msg = "Processing instances backup and default path for backup data is ~/contrail_bkup_data/hostname/instances  in ({HOST}) \n"
-    if host not in env.roledefs['tsn'] :
+    if 'tsn' in env.roledefs:
+        tsn_nodes = env.roledefs['tsn']
+    if 'toragent' in env.roledefs:
+        tor_nodes = env.roledefs['toragent']
+    if host not in (tsn_nodes and tor_nodes) :
         with settings(host_string=host):
             host_name = sudo('hostname')
             if store_db == 'local':
@@ -953,7 +959,13 @@ def restore_instances(backup_data_path, store_db='local'):
     """Restore instances data to all compute nodes  """
     global backup_path
     host = env.host_string
-    if host not in env.roledefs['tsn'] :
+    tsn_nodes = []
+    tor_nodes = []
+    if 'tsn' in env.roledefs:
+        tsn_nodes = env.roledefs['tsn']
+    if 'toragent' in env.roledefs:
+        tor_nodes = env.roledefs['toragent']
+    if host not in (tsn_nodes and tor_nodes) :
         msg = "Restoring backed-up instances data in ({HOST}).\n"
         with settings(host_string=host):
             host_name = sudo('hostname')
