@@ -7,8 +7,11 @@ from fabfile.utils.cluster import get_toragent_nodes, get_tsn_nodes
 from fabfile.utils.commandline import *
 from fabfile.utils.fabos import get_release, detect_ostype, get_linux_distro
 from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs,\
-      get_vcenter_compute_pkgs, get_config_pkgs, get_vcenter_plugin_pkg
+      get_vcenter_compute_pkgs, get_config_pkgs, get_vcenter_plugin_pkg, \
+      get_ceilometer_plugin_pkgs
 from fabfile.tasks.vmware import provision_vcenter_features
+from fabfile.utils.analytics import \
+    is_ceilometer_contrail_plugin_install_supported
 
 @task
 @EXECUTE_TASK
