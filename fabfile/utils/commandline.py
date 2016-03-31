@@ -80,7 +80,7 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
                                           host_string) + 1)
     haproxy = get_haproxy()
     if haproxy:
-        cmd += " --haproxy %s" % haproxy
+        cmd += " --haproxy"
     openstack_ip_list = []
     if internal_vip:
         # Highly available setup
@@ -146,7 +146,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cmd += " --orchestrator %s" % orch
     haproxy = get_haproxy()
     if haproxy:
-        cmd += " --haproxy %s" % haproxy
+        cmd += " --haproxy"
     if orch == 'openstack':
         (_, openstack_admin_password) = get_authserver_credentials()
         authserver_ip = get_authserver_ip()
@@ -363,7 +363,7 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
     cmd += " --hypervisor %s" % get_hypervisor(host_string)
     haproxy = get_haproxy()
     if haproxy:
-        cmd += " --haproxy %s" % haproxy
+        cmd += " --haproxy"
 
     if tgt_ip != compute_mgmt_ip:
         cmd += " --non_mgmt_ip %s" % tgt_ip
@@ -428,7 +428,7 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
     sriov_string = get_sriov_details(host_string)
     if sriov_string:
         cmd += " --sriov %s" % sriov_string
-        
+
     if 'vcenter_compute' in env.roledefs:
         compute_host = 'root' + '@' + compute_mgmt_ip
         if compute_host in env.roledefs['vcenter_compute'][:]:
