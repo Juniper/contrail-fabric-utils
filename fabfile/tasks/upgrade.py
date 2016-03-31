@@ -22,11 +22,19 @@ def upgrade_openstack_node(from_rel, pkg, *args):
     """Upgrades openstack pkgs in one or list of nodes. USAGE:fab upgrade_openstack_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string):
+            pkg_contrail_ceilometer = None
+            if env.roledefs['openstack'] and \
+                    host_string == env.roledefs['openstack'][0]:
+                if is_ceilometer_contrail_plugin_install_supported():
+                    pkg_contrail_ceilometer = get_ceilometer_plugin_pkgs()
             execute('install_pkg_node', pkg, host_string)
             execute('create_install_repo_node', host_string)
             pkg_install(['contrail-setup'])
             cmd = frame_vnc_openstack_cmd(host_string, 'upgrade-vnc-openstack')
-            cmd += ' -P %s' % ' '.join(get_openstack_pkgs())
+            openstack_pkgs = get_openstack_pkgs()
+            if pkg_contrail_ceilometer:
+                openstack_pkgs.extend(pkg_contrail_ceilometer)
+            cmd += ' -P %s' % ' '.join(openstack_pkgs)
             cmd += ' -F %s' % from_rel
             cmd += ' -T %s' % get_release()
             sudo(cmd)
