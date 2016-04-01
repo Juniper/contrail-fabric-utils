@@ -2588,6 +2588,65 @@ def setup_interface():
     '''
     execute('setup_interface_node')
 
+def setup_sriov_interfaces(host_string, host_config):
+    '''Setup interfaces from env.sriov stanza in testbed.py
+    Parameters:
+        host_string: Host on which interfaces should be set up (i.e.
+                     root@10.0.0.1)
+        host_config: The configuration dict value of the given host as stated
+                     in the control_data dictionary in testbed.py
+    '''
+    def enable_vf(iface, vf):
+        with settings(host_string=host_string):
+            str = 'echo %s > /sys/class/net/%s/device/sriov_numvfs' % (vf,
+                                                                       iface)
+            sudo(str)
+
+            # Do nothing if the entry already present in /etc/rc.local
+            if sudo('grep -w \'%s\' /etc/rc.local' % str,
+                    quiet=True).succeeded:
+                return
+
+            sed = 'sed -i \'/^\s*exit/i ' + str + '\' /etc/rc.local'
+            sudo(sed)
+
+    def is_iface_vf_of_pf(vf_interface, pf_interface):
+        '''Return True if vf_interface is a VF of pf_interface
+        '''
+        # If interfaces are the same, one can not be a VF of another
+        if vf_interface == pf_interface:
+            return False
+
+        with settings(hide('everything'), host_string=host_string,
+                      warn_only=True):
+            # Check if vf_interface is actually a VF
+            if sudo('test -e /sys/class/net/%s/device/physfn'
+                    % vf_interface).failed:
+                return False
+
+            # Check if vf_interface is a VF of pf_interface
+            parent = sudo('ls /sys/class/net/%s/device/physfn/net/ | head -1'
+                          % vf_interface)
+            if parent == pf_interface:
+                return True
+
+        return False
+
+    if 'sriov' not in env.keys():
+        return
+
+    if host_string not in env.sriov:
+        return
+
+    for iface in env.sriov[host_string]:
+        if 'interface' in iface:
+            vf = iface.get("VF")
+            enable_vf(iface['interface'], vf)
+            if is_iface_vf_of_pf(host_config['device'], iface['interface']):
+                with settings(host_string=host_string):
+                    sudo('setup-vnc-interfaces --device %s --no-ip' %
+                         iface['interface'])
+
 @task
 def setup_interface_node(*args):
     '''
@@ -2612,6 +2671,14 @@ def setup_interface_node(*args):
 
     retries = 5; timeout = 5
     for host in hosts.keys():
+        # Enable requested (in testbed.py) PCI virtual functions and create an
+        # entry in /etc/network/interfaces for the master (physical) interface
+        # to ensure the parent of the VF interfaces is up.
+        # We need all interfaces to be usable for the case when we use DPDK
+        # vRouter on top of a virtual PCI function instead of on top of a
+        # physical interface.
+        setup_sriov_interfaces(host, hosts[host])
+
         cmd = 'setup-vnc-interfaces'
         errmsg = 'WARNING: Host ({HOST}) is defined with device ({DEVICE})'+\
                  ' but its bond info is not available\n'
