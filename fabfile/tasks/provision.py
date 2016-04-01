@@ -2587,6 +2587,38 @@ def setup_interface():
     '''
     execute('setup_interface_node')
 
+def setup_sriov_interfaces(host_string, hosts):
+    def enable_vf(host, iface, vf):
+        with settings(host_string=host_string):
+            str = 'echo %s > /sys/class/net/%s/device/sriov_numvfs' % (vf,
+                                                                       iface)
+            sudo(str)
+            sed = 'sed -i \'/^\s*exit/i ' + str + '\' /etc/rc.local'
+            sudo(sed)
+
+    def interface_in_control_data_host(host, interface):
+        if host not in hosts:
+            return False
+        if interface == hosts[host_string]['device']:
+            return True
+        return False
+
+    if 'sriov' not in env.keys():
+        return
+
+    if host_string not in env.sriov:
+        return
+
+    for iface in env.sriov[host_string]:
+        if 'interface' in iface:
+            vf = iface.get("VF")
+            enable_vf(host_string, iface['interface'], vf)
+            if not interface_in_control_data_host(host_string,
+                                                  iface['interface']):
+                with settings(host_string=host_string):
+                    sudo('setup-vnc-interfaces --device %s --no-ip' %
+                         iface['interface'])
+
 @task
 def setup_interface_node(*args):
     '''
@@ -2611,6 +2643,14 @@ def setup_interface_node(*args):
 
     retries = 5; timeout = 5
     for host in hosts.keys():
+        # Enable requested (in testbed.py) PCI virtual functions and create an
+        # entry in /etc/network/interfaces for the master (physical) interface
+        # to ensure the parent of the VF interfaces is up.
+        # We need all interfaces to be usable for the case when we use DPDK
+        # vRouter on top of a virtual PCI function instead of on top of a
+        # physical interface.
+        setup_sriov_interfaces(host, hosts)
+
         cmd = 'setup-vnc-interfaces'
         errmsg = 'WARNING: Host ({HOST}) is defined with device ({DEVICE})'+\
                  ' but its bond info is not available\n'
