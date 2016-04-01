@@ -47,8 +47,7 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     minimum_diskGB = get_minimum_diskGB()
     if minimum_diskGB is not None:
         cmd += " --minimum_diskGB %s" % minimum_diskGB
-    if parent_cmd == "setup-vnc-database" and get_kafka_enabled() is not None:
-        cmd += " --kafka_broker_id %d" % broker_id
+    cmd += " --kafka_broker_id %d" % broker_id
     if parent_cmd == "remove-cassandra-node":
         cmd += " --node_to_delete %s" % hstr_to_ip(host_string)
 
