@@ -213,7 +213,10 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
             snapshot_dirs = sudo("find %s/  -name 'snapshots' " % db_path)
         snapshot_dirs = snapshot_dirs.split('\r\n')
         #get relative path to cassandra from db_path 
-        path_to_cassandra = re.search('.*/cassandra/',db_path).group(0)
+        path_to_cassandra, data_dir = os.path.split(db_path)
+        while data_dir == '':
+            path_to_cassandra, data_dir = os.path.split(path_to_cassandra)
+        path_to_cassandra += '/'
         for snapshot_dir in snapshot_dirs:
             snapshot_list.append(snapshot_dir.replace(path_to_cassandra,''))
         #get current snap_shot name from any snapshots folder created by nodetool
