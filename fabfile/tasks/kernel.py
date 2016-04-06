@@ -66,8 +66,8 @@ def upgrade_kernel_without_openstack(*tgzs, **kwargs):
     with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
         dist, version, extra = get_linux_distro()
 
-    if 'red hat' in dist.lower() and version == '7.0':
-        (package, os_type) = ('kernel-3.10.0-229.el7.x86_64', 'redhat')
+    if 'red hat' in dist.lower():
+        (package, os_type) = ('kernel-3.10.0-327.10.1.el7.x86_64', 'redhat')
     else:
         raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
                            " kernel upgrade." % (dist, version, extra))
@@ -123,10 +123,10 @@ def upgrade_kernel_node(*args):
                 execute('set_grub_default_node', host_string, value=default_grub)
             elif 'red hat' in dist.lower() and version == '7.0':
                 print "Upgrading kernel to version 3.10.0-229"
-                pkg_install(["kernel-3.10.0-229.el7.x86_64",
-                             "kernel-tools-3.10.0-229.el7.x86_64",
-                             "kernel-tools-libs-3.10.0-229.el7.x86_64",
-                             "kernel-headers-3.10.0-229.el7.x86_64"], disablerepo=False)
+                pkg_install(["kernel-3.10.0-327.10.1.el7.x86_64",
+                             "kernel-tools-3.10.0-327.10.1.el7.x86_64",
+                             "kernel-tools-libs-3.10.0-327.10.1.el7.x86_64",
+                             "kernel-headers-3.10.0-327.10.1.el7.x86_64"], disablerepo=False)
 
 @task
 @EXECUTE_TASK
