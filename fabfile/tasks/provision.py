@@ -2481,10 +2481,11 @@ def setup_all(reboot='True'):
 
 @roles('build')
 @task
-def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
+def setup_without_openstack(manage_nova_compute='yes', config_nova='yes', reboot='True'):
     """Provisions required contrail packages in all nodes as per the role definition except the openstack.
        User has to provision the openstack node with their custom openstack pakckages.
        If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute will be skipped in the compute node.
+       If config_nova = no; No nova config related configuration will executed on nova.conf file.
     """
     execute('setup_common')
     execute('setup_ha')
@@ -2500,7 +2501,7 @@ def setup_without_openstack(manage_nova_compute='yes', reboot='True'):
     execute('verify_collector')
     execute('setup_webui')
     execute('verify_webui')
-    execute('setup_vrouter', manage_nova_compute)
+    execute('setup_vrouter', manage_nova_compute, config_nova)
     execute('prov_config')
     execute('prov_database')
     execute('prov_analytics')
