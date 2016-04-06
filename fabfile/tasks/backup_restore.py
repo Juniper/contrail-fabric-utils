@@ -214,7 +214,12 @@ def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
             snapshot_dirs = sudo("find %s/  -name 'snapshots' " % db_path)
         snapshot_dirs = snapshot_dirs.split('\r\n')
         #get relative path to cassandra from db_path 
-        path_to_cassandra = re.search('.*/cassandra/',db_path).group(0)
+        path_to_cassandra, data_dir = os.path.split(db_path)
+        if data_dir:
+            path_to_cassandra += '/'
+        while data_dir == '':
+            path_to_cassandra, data_dir = os.path.split(path_to_cassandra)
+            path_to_cassandra += '/'
         for snapshot_dir in snapshot_dirs:
             snapshot_list.append(snapshot_dir.replace(path_to_cassandra,''))
         #get current snap_shot name from any snapshots folder created by nodetool
@@ -452,14 +457,15 @@ def verify_disk_space(db_datas, db_path, store_db):
                     free_dk_space = sudo(
                         "df  $PWD | awk '/[0-9]%/{print $(NF-2)}'")
                     free_dk_space = int(free_dk_space)
+            import pdb;pdb.set_trace()
             if db_datas:
-                for get_dir in db_datas:
-                    with cd('%s' % get_dir):
-                        free_dk_space = sudo(
-                            "df  $PWD | awk '/[0-9]%/{print $(NF-2)}'")
-                        free_dk_space = int(free_dk_space)
-                        if free_dk_space >= used_dk_space:
-                            final_bk_dir.append(get_dir)
+                #for get_dir in db_datas:
+                with cd('%s' % get_dir):
+                    free_dk_space = sudo(
+                        "df  $PWD | awk '/[0-9]%/{print $(NF-2)}'")
+                    free_dk_space = int(free_dk_space)
+                    if free_dk_space >= used_dk_space:
+                        final_bk_dir.append(get_dir)
                 with settings(warn_only=True):
                     sudo('mkdir %s%s/ ' % (final_bk_dir[0], host_name))
                 final_dir = final_bk_dir[0]
