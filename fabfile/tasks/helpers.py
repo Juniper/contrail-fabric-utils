@@ -1338,7 +1338,7 @@ def pre_check():
         exit(1)
     else:
         print "\nINFO: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
-    execute('add_openstack_reserverd_ports')
+    execute('add_openstack_reserved_ports')
 
 def role_to_ip_dict(role=None):
     role_to_ip_dict = {}
