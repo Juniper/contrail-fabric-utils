@@ -1041,6 +1041,6 @@ def ssh_key_gen():
 
 def replace_key(text, skip_key):
     for key in skip_key:
-        text = text.replace(key, "")
+        text=re.sub('\\b'+key+'\\b','',text)
     return text
 # end replace_kespace_for_custom_cassandra_snapshot
