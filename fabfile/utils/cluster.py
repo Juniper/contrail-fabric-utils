@@ -12,6 +12,7 @@ def get_all_hostnames():
         # Maintaining backward compatability with old testbed.py
         hostnames = env.hostnames['all']
     else:
+        hostnames = []
         for host in env.roledefs['all']:
             # Return hostnames in the same order in which the 'all'
             # role is defined.
