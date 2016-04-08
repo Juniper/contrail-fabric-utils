@@ -213,7 +213,7 @@ listen  rabbitmq 0.0.0.0:5673
             '__contrail_api_backend_servers__': api_server_lines,
             '__contrail_disc_backend_servers__': disc_server_lines,
             '__contrail_hap_user__': 'haproxy',
-            '__contrail_hap_passwd__': 'contrail123',
+            '__contrail_hap_passwd__': get_haproxy_token('cfgm'),
             '__rabbitmq_config__': rabbitmq_config,
             '__tor_agent_ha_config__': tor_agent_ha_config,
             })

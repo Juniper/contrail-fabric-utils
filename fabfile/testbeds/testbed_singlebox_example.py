@@ -176,8 +176,7 @@ env.ostypes = {
 #To disable installing contrail interface rename package
 #env.interface_rename = False
 
-#In environments where keystone is deployed outside of Contrail provisioning
-#scripts , you can use the below options 
+# In environments where openstack/keystone services are deployed independently
 #
 # Note : 
 # "insecure" is applicable only when protocol is https
@@ -212,16 +211,7 @@ env.ostypes = {
 #    'cpu_model': 'Nehalem',         # relevant only if cpu_mode is 'custom'
 #}
 
-# In High Availability setups.
-#env.ha = {
-#    'internal_vip'   : '1.1.1.1',               #Internal Virtual IP of the HA setup.
-#    'external_vip'   : '2.2.2.2',               #External Virtual IP of the HA setup.
-#    'nfs_server'      : '3.3.3.3',               #IP address of the NFS Server which will be mounted to /var/lib/glance/images of openstack Node, Defaults to env.roledefs['compute'][0]
-#    'nfs_glance_path' : '/var/tmp/images/',      #NFS Server path to save images, Defaults to /var/tmp/glance-images/
-#}
-
-# In environments where openstack services are deployed independently 
-# from contrail, you can use the below options 
+# Openstack specific configuration options
 # service_token : Common service token for for all services like nova,
 #                 neutron, glance, cinder etc
 # amqp_host     : IP of AMQP Server to be used in openstack
@@ -240,11 +230,14 @@ env.ostypes = {
 #}
 
 #Config node related config knobs
-#amqp_hosts : List of customer deployed AMQP servers to be used by config services.
-#amqp_port : Port of the customer deployed AMQP servers.
+# amqp_hosts : List of customer deployed AMQP servers to be used by config services.
+# amqp_port : Port of the customer deployed AMQP servers.
+# haproxy_token : Password of the haproxy user(haproxy) running in cfgm nodes,
+#                 Default is auto generated(/etc/contrail/haproxy.token)
 #env.cfgm = {
 #    'amqp_hosts' : ['10.10.10.1', '10.10.10.2']
 #    'amqp_port' : '5672'
+#    'haproxy_token' : 'secret123'
 #}
 
 # Neutron specific configuration 
