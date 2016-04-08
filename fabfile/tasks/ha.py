@@ -9,7 +9,8 @@ from fabfile.utils.host import get_authserver_ip, get_control_host_string,\
     get_openstack_internal_vip, get_openstack_external_vip,\
     get_contrail_internal_vip, get_contrail_external_vip, \
     get_openstack_internal_virtual_router_id, get_contrail_internal_virtual_router_id, \
-    get_openstack_external_virtual_router_id, get_contrail_external_virtual_router_id
+    get_openstack_external_virtual_router_id, get_contrail_external_virtual_router_id,\
+    get_haproxy_token
 from fabfile.utils.cluster import get_orchestrator
 
 @task
@@ -460,7 +461,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
             '__rabbitmq_servers__' : rabbitmq_server_lines,
             '__mysql_servers__' : mysql_server_lines,
             '__contrail_hap_user__': 'haproxy',
-            '__contrail_hap_passwd__': 'contrail123',
+            '__contrail_hap_passwd__': get_haproxy_token('openstack'),
             })
 
     for host_string in args:
