@@ -269,8 +269,7 @@ env.ostypes = {
 #The certificates on the TOR are based on this CA cert.
 #env.ca_cert_file = '/root/file.pem'
 
-#In environments where keystone is deployed outside of Contrail provisioning
-#scripts , you can use the below options
+# In environments where openstack/keystone services are deployed independently
 #
 # Note :
 # "insecure" is applicable only when protocol is https
@@ -321,6 +320,8 @@ env.ostypes = {
 # external_virtual_router_id : Virtual router ID for the Openstack HA nodes in management(external) network.
 # contrail_internal_virtual_router_id : Virtual router ID for the Contrail HA nodes in control/data(internal) network.
 # contrail_external_virtual_router_id : Virtual router ID for the Contrail HA nodes in  management(external) network.
+# haproxy_token : Password of the haproxy user(haproxy) running in openstack nodes,
+#                 Default is auto generated(/etc/contrail/haproxy.token)
 #env.ha = {
 #    'internal_vip'   : '1.1.1.100',               #Internal Virtual IP of the openstack HA Nodes.
 #    'external_vip'   : '2.2.2.200',               #External Virtual IP of the openstack HA Nodes.
@@ -332,11 +333,10 @@ env.ostypes = {
 #    'external_virtual_router_id' :  190,          #Default = 100
 #    'contrail_internal_virtual_router_id' :  200, #Default = 100
 #    'contrail_external_virtual_router_id' :  210, #Default = 100
-
+#    'haproxy_token' : 'secret123'
 #}
 
-# In environments where openstack services are deployed independently
-# from contrail, you can use the below options
+# Openstack specific configuration options
 # service_token : Common service token for for all services like nova,
 #                 neutron, glance, cinder etc
 # amqp_host     : IP of AMQP Server to be used in openstack
@@ -355,11 +355,14 @@ env.ostypes = {
 #}
 
 #Config node related config knobs
-#amqp_hosts : List of customer deployed AMQP servers to be used by config services.
-#amqp_port : Port of the customer deployed AMQP servers.
+# amqp_hosts : List of customer deployed AMQP servers to be used by config services.
+# amqp_port : Port of the customer deployed AMQP servers.
+# haproxy_token : Password of the haproxy user(haproxy) running in cfgm nodes,
+#                 Default is auto generated(/etc/contrail/haproxy.token)
 #env.cfgm = {
 #    'amqp_hosts' : ['10.10.10.1', '10.10.10.2']
 #    'amqp_port' : '5672'
+#    'haproxy_token' : 'secret123'
 #}
 
 # Link-Local Metadata Service

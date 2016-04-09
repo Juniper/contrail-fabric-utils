@@ -52,6 +52,19 @@ def get_service_token():
     return service_token
 
 
+def get_haproxy_token(role='cfgm'):
+    haproxy_token = get_from_testbed_dict(role, 'haproxy_token', None)
+    if not haproxy_token:
+        hap_token_file = "/etc/contrail/haproxy.token"
+        with settings(host_string=env.roledefs[role][0], warn_only=True):
+            if sudo("sudo ls %s" % hap_token_file).failed:
+                sudo("mkdir -p /etc/contrail/")
+                sudo("openssl rand -hex 10 > %s" % hap_token_file)
+                sudo("chmod 400 %s" % hap_token_file)
+            haproxy_token = sudo("cat %s" % hap_token_file)
+    return haproxy_token
+
+
 def get_service_dbpass():
     return get_from_testbed_dict('openstack','service_dbpass', 'c0ntrail123')
 
