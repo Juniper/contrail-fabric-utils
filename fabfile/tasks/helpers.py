@@ -470,7 +470,7 @@ def add_images(image=None):
                     continue
         with settings(host_string=glance_host):
             mount = None
-            if '10.84' in env.host_string:
+            if '10.84' in env.host_string or '10.87' in env.host_string:
                 mount = '10.84.5.120/cs-shared'
             elif '10.204' in env.host_string:
                 mount = '10.204.217.158'
@@ -550,7 +550,7 @@ def preload_image_to_esx(url, glance_id, sizes, version):
 @task
 def add_basic_images(image=None):
     mount=None
-    if '10.84' in env.host:
+    if '10.84' in env.host or '10.87' in env.host:
         mount= '10.84.5.120/cs-shared'
     elif '10.204' in env.host:
         mount= '10.204.217.158'
