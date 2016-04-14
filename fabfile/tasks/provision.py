@@ -257,7 +257,6 @@ def get_tor_agent_haproxy_config(proxy_name, key, ha_dict):
     tor_agent_ha_config = tor_agent_ha_config + '    server %s %s check inter 2000\n' %(ip1, ip1)
     if ip2 != None:
         tor_agent_ha_config = tor_agent_ha_config + '    server %s %s check inter 2000\n' %(ip2, ip2)
-        tor_agent_ha_config = tor_agent_ha_config + '    balance leastconn\n'
     tor_agent_ha_config = tor_agent_ha_config + '\n'
     return tor_agent_ha_config
 #end get_tor_agent_haproxy_config
