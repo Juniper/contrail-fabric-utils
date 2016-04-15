@@ -27,8 +27,8 @@ if hasattr(env, 'passwords'):
     for key in env.passwords.keys():
         env.passwords.update({key+':22' : env.passwords[key]})
 
-# Set default rabbit role as cfgm.
-env.roledefs['rabbit'] = env.roledefs['cfgm']
+# Set default rabbit role
+env.roledefs['rabbit'] = []
 
 # Set default openstack role to empty list,
 # If env.roledefs['openstack'] is not set in the testbed.py
