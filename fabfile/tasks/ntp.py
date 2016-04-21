@@ -1,4 +1,5 @@
 from fabfile.config import *
+from fabfile.utils.fabos import detect_ostype
 
 @task
 @roles('all')
@@ -6,10 +7,17 @@ def get_all_time():
     date = sudo("DATE=$( date ); DATEMILLISEC=$( date +%s ); echo $DATE; echo $DATEMILLISEC")
     return tuple(date.split('\r\n'))
 
+def restart_ntp_node():
+    ostype = detect_ostype()
+    if ostype in ['ubuntu']:
+        sudo("service ntp restart", warn_only=True)
+    else:
+        sudo("service ntpd restart", warn_only=True)
+
 @task
 @roles('all')
 def restart_ntp():
-    sudo("service ntp restart", warn_only=True)
+    execute('restart_ntp_node')
 
 @task
 @parallel
