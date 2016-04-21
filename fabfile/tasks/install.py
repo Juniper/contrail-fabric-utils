@@ -15,7 +15,7 @@ from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_compute_pkgs, get_ceilometer_plugin_pkgs, get_openstack_pkgs, \
      get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz_node, \
      create_apt_repo_from_tgz_node, get_config_pkgs, get_vcenter_plugin_pkg, \
-     get_vcenter_compute_pkgs, get_vcenter_plugin_depend_pkgs
+     get_vcenter_compute_pkgs, get_vcenter_plugin_depend_pkgs, get_openstack_barbican_pkgs
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
@@ -386,6 +386,49 @@ def install_ceilometer_node(*args):
 @task
 @EXECUTE_TASK
 @roles('openstack')
+def install_barbican():
+    """Installs barbican pkgs in all nodes defined in first node of openstack role."""
+    execute("install_barbican_node", env.host_string)
+
+@task
+def install_barbican_node(*args):
+    """Installs openstack pkgs in one or list of nodes. USAGE:fab install_barbican_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        if env.roledefs['openstack'] and \
+                host_string != env.roledefs['openstack'][0]:
+            continue
+        with settings(host_string=host_string):
+            pkg_barbican = get_openstack_barbican_pkgs()
+            act_os_type = detect_ostype()
+            openstack_sku = get_openstack_sku()
+            if act_os_type == 'ubuntu' and openstack_sku != 'liberty':
+                continue
+
+            if act_os_type == 'ubuntu':
+                apt_install(pkg_barbican)
+            elif act_os_type in ['redhat']:
+                # We need to copy the pkg from the cfgm node
+                # and then install it on the openstack node
+                cfgm_node = env.roledefs['cfgm'][0]
+                if host_string != cfgm_node:
+                    local_tempdir = tempfile.mkdtemp()
+                    with lcd(local_tempdir):
+                        for pkg in pkg_barbican:
+                            with settings(host_string = cfgm_node):
+                                get('/opt/contrail/contrail_install_repo/%s*.rpm' % (pkg), local_tempdir)
+                    output = local("ls %s/*.rpm" % (local_tempdir), capture=True)
+                    pkg_list = output.split('\n')
+                    for pkg in pkg_list:
+                        install_pkg_node(pkg, host_string)
+                    local('rm -rf %s' % (local_tempdir))
+                else:
+                    yum_install(pkg_barbican)
+            else:
+                yum_install(pkg_barbican)
+
+@task
+@EXECUTE_TASK
+@roles('openstack')
 def install_openstack():
     """Installs openstack pkgs in all nodes defined in openstack role."""
     if env.roledefs['openstack']:
@@ -402,6 +445,7 @@ def install_openstack_node(*args):
             else:
                 yum_install(pkgs)
             install_ceilometer_node(host_string)
+            install_barbican_node(host_string)
 
 @task
 @EXECUTE_TASK

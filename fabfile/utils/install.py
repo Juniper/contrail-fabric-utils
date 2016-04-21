@@ -178,6 +178,16 @@ def get_compute_ceilometer_pkgs():
 
     return pkgs
 
+def get_openstack_barbican_pkgs():
+    """ Returns the list of barbican packages used in a
+        openstack node.
+    """
+    barbican_pkgs = ['barbican-api',
+        'barbican-worker',
+        'barbican-keystone-listener']
+
+    return barbican_pkgs
+
 @task
 def create_yum_repo_from_tgz_node(tgz, *args, **kwargs):
     '''Untar given tgz file and create a local yum repo'''
