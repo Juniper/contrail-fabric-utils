@@ -304,7 +304,7 @@ def add_reserved_ports_node(ports, *args):
 @roles('openstack')
 def add_openstack_reserved_ports():
     if env.roledefs['openstack']:
-        ports = '35357,35358,33306'
+        ports = '35357,35358,33306,9322'
         execute('add_reserved_ports_node', ports, env.host_string)
 
 
