@@ -428,6 +428,7 @@ def fixup_restart_haproxy_in_openstack_node(*args):
     memcached_server_lines = ''
     rabbitmq_server_lines = ''
     mysql_server_lines = ''
+    barbican_server_lines = ''
     space = ' ' * 3 
 
     for host_string in env.roledefs['openstack']:
@@ -461,6 +462,9 @@ def fixup_restart_haproxy_in_openstack_node(*args):
         nova_vnc_server_lines  +=\
             '%s server %s %s:6999 check inter 2000 rise 2 fall 3\n'\
              % (space, mgmt_host_ip, mgmt_host_ip)
+        barbican_server_lines +=\
+            '%s server %s %s:9322 check inter 2000 rise 2 fall 1\n'\
+             % (space, host_ip, host_ip)
         if server_index <= 2:
             memcached_server_lines +=\
                 '%s server repcache%s %s:11211 check inter 2000 rise 2 fall 3\n'\
