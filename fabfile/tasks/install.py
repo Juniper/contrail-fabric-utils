@@ -45,6 +45,13 @@ def install_pkg_all(pkg):
     execute('install_pkg_node', pkg, env.host_string)
 
 @task
+@roles('openstack')
+def create_contrail_cloud_install_repo_for_openstack(*tgzs, **kwargs):
+    """Create contrail-cloud-pkg repo on openstack nodes."""
+    if env.roledefs['openstack']:
+        execute("create_install_repo_from_tgz_node", env.host_string, *tgzs, **kwargs)
+
+@task
 @parallel(pool_size=20)
 def install_contrail_vcenter_plugin(pkg, *args):
     """Installs any rpm/deb package in all nodes."""
