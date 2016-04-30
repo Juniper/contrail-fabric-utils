@@ -188,6 +188,32 @@ backend nova-vnc-backend
     balance  roundrobin
     $__nova_vnc_backend_servers__
 
+frontend openstack-barbican *: 9311
+    default_backend    barbican-backend
+
+backend barbican-backend
+    option tcpka
+    option nolinger
+    timeout server 24h
+    balance roundrobin
+
+    option tcp-check
+    tcp-check connect port 3306
+    default-server error-limit 1 on-error mark-down
+
+    option tcp-check
+    option httpchk
+    tcp-check connect port 3337
+    tcp-check send Host:localhost
+    http-check expect ! rstatus ^5
+    default-server error-limit 1 on-error mark-down
+
+    option tcp-check
+    tcp-check connect port 6000
+    default-server error-limit 1 on-error mark-down
+
+$__barbican_backend_servers__
+
 listen memcached 0.0.0.0:11222
    mode tcp
    balance roundrobin
