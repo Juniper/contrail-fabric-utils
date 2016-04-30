@@ -411,7 +411,8 @@ def setup_test_env():
                 if detect_ostype() in ['redhat', 'centos', 'centoslinux']:
                     pkg_install(['libxslt-devel', 'libxml2-devel'], disablerepo=False)
                 sudo('pip install junos-eznc==1.2.2')
-               
+                if os.environ.has_key('GUESTVM_IMAGE'):
+                    sudo('pip install paramiko=1.17.0')
                 #Restart DM. This is because of #1490860
                 sudo('service contrail-device-manager restart')
 
