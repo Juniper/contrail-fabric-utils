@@ -306,9 +306,6 @@ def install_contrail_ceilometer_plugin_node(*args):
     """Installs contrail ceilometer plugin pkgs in one or list of nodes.
        USAGE:fab install_contrail_ceilometer_plugin_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        if env.roledefs['openstack'] and \
-                host_string != env.roledefs['openstack'][0]:
-            continue
         with settings(host_string=host_string):
             if not is_ceilometer_contrail_plugin_install_supported():
                 continue
@@ -352,9 +349,6 @@ def install_ceilometer():
 def install_ceilometer_node(*args):
     """Installs openstack pkgs in one or list of nodes. USAGE:fab install_ceilometer_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        if env.roledefs['openstack'] and \
-                host_string != env.roledefs['openstack'][0]:
-            continue
         with settings(host_string=host_string):
             if not is_ceilometer_install_supported():
                 continue
