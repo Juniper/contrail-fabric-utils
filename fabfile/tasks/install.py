@@ -298,17 +298,15 @@ def install_ceilometer_compute_node(*args):
 @EXECUTE_TASK
 @roles('openstack')
 def install_contrail_ceilometer_plugin():
-    """Installs contrail ceilometer plugin pkgs in the first node of openstack role."""
-    execute("install_contrail_ceilometer_plugin_node", env.host_string)
+    """Installs contrail ceilometer plugin pkgs in all nodes of openstack role."""
+    if env.roledefs['openstack']:
+        execute("install_contrail_ceilometer_plugin_node", env.host_string)
 
 @task
 def install_contrail_ceilometer_plugin_node(*args):
     """Installs contrail ceilometer plugin pkgs in one or list of nodes.
        USAGE:fab install_contrail_ceilometer_plugin_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        if env.roledefs['openstack'] and \
-                host_string != env.roledefs['openstack'][0]:
-            continue
         with settings(host_string=host_string):
             if not is_ceilometer_contrail_plugin_install_supported():
                 continue
@@ -345,16 +343,14 @@ def install_contrail_ceilometer_plugin_node(*args):
 @EXECUTE_TASK
 @roles('openstack')
 def install_ceilometer():
-    """Installs ceilometer pkgs in all nodes defined in first node of openstack role."""
-    execute("install_ceilometer_node", env.host_string)
+    """Installs ceilometer pkgs in all nodes defined in all nodes of openstack role."""
+    if env.roledefs['openstack']:
+        execute("install_ceilometer_node", env.host_string)
 
 @task
 def install_ceilometer_node(*args):
     """Installs openstack pkgs in one or list of nodes. USAGE:fab install_ceilometer_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        if env.roledefs['openstack'] and \
-                host_string != env.roledefs['openstack'][0]:
-            continue
         with settings(host_string=host_string):
             if not is_ceilometer_install_supported():
                 continue
