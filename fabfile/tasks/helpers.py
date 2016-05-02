@@ -1485,6 +1485,8 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
         sleep(int(interval))
         count+=1
         for node in nodes:
+            if node_status_save[node] == "reimage_completed":
+                continue
             user, hostip = node.split('@')
             cmd = smgr_client + " status server --ip %s" %(hostip)
             cmd = cmd + " | grep status"
@@ -1511,6 +1513,8 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
 
         task_complete = 1
         for node in nodes:
+            if node_status_save[node] == "reimage_completed":
+                continue
             if node_status[node] != "reimage_completed":
                 task_complete = 0
                 if node_status[node] != "":
@@ -1518,13 +1522,13 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
                         sys.stdout.write('%s :: %s -> %s\n' % (node, node_status_save[node], node_status[node]))
                         node_status_save[node]=node_status[node]
             else:
-                if (node_status_save[node] != node_status[node] and
-                    node_status_save[node] != "initial_state"):
-                    sys.stdout.write('%s :: %s -> %s\n' % (node, node_status_save[node], node_status[node]))
-                    node_status_save[node]=node_status[node]
-                elif node_status_save[node] != "reimage_completed":
-                    sys.stdout.write('%s :: Reimage status of the node did not move through the reimage states expected.\n' % (node))
-                    sys.exit(1)
+                if node_status_save[node] == 'initial_state':
+                    #Handle cases where SM takes time to restart the nodes
+                    task_complete = 0
+                    sys.stdout.write('Waiting on SM to restart the node %s'%node)
+                    continue
+                node_status_save[node]=node_status[node]
+                sys.stdout.write('%s :: %s -> %s\n' % (node, node_status_save[node], node_status[node]))
 
         if task_complete == 1:
             sys.stdout.write('Reimage Completed\n')
