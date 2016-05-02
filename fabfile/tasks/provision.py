@@ -2587,6 +2587,33 @@ def setup_interface():
     '''
     execute('setup_interface_node')
 
+def setup_sriov_vlans(host_string, host_config, vf_iface_list):
+    if vf_iface_list == "":
+        vf_iface_list = host_config['device']
+    vf_iface_list = vf_iface_list.split(' ')
+    for vf_iface in vf_iface_list:
+        with settings(hide('everything'), host_string=host_string,
+                      warn_only=True):
+            # Check if vf_iface is actually a VF
+            if sudo('test -e /sys/class/net/%s/device/physfn'
+                    % vf_iface).failed:
+                continue
+        # It's a VF interface. Get the PF name and VF number 
+        pf_vf = vf_iface.split('_')
+        with settings(host_string=host_string):
+            str = 'ip link set %s vf %s vlan %s' % (pf_vf[0], 
+                             pf_vf[1], host_config['vlan'])
+            sudo(str)
+
+            # Do nothing if the entry already present in /etc/rc.local
+            if sudo('grep -w \'%s\' /etc/rc.local' % str,
+                    quiet=True).succeeded:
+                return
+
+            sed = 'sed -i \'/^\s*exit/i ' + str + '\' /etc/rc.local'
+            sudo(sed)
+
+
 def setup_sriov_interfaces(host_string, host_config):
     '''Setup interfaces from env.sriov stanza in testbed.py
     Parameters:
@@ -2681,6 +2708,7 @@ def setup_interface_node(*args):
         cmd = 'setup-vnc-interfaces'
         errmsg = 'WARNING: Host ({HOST}) is defined with device ({DEVICE})'+\
                  ' but its bond info is not available\n'
+        bond_members = ""
         if hosts[host].has_key('device') and hosts[host].has_key('ip'):
             cmd += ' --device {device} --ip {ip}'.format(**hosts[host])
             device = hosts[host]['device']
@@ -2699,6 +2727,8 @@ def setup_interface_node(*args):
                                              json.dumps(bondinfo[host]))
             if hosts[host].has_key('vlan'):
                 cmd += ' --vlan %s' %hosts[host]['vlan']
+                setup_sriov_vlans(host, hosts[host], bond_members)
+
             if (get_control_host_string(host) == host) and hosts[host].has_key('gw'):
                 cmd += ' --gw %s' %hosts[host]['gw']
             with settings(host_string= host,
