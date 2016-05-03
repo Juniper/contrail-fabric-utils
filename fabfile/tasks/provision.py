@@ -2678,6 +2678,8 @@ def reset_config():
         execute(verify_collector)
         execute(setup_webui)
         execute(verify_webui)
+        if 'vcenter_compute' in env.roledefs:
+            execute('setup_vcenter_compute')
 
     except SystemExit:
         raise SystemExit("\nReset config Failed.... Aborting")
@@ -2874,7 +2876,7 @@ def add_esxi_to_vcenter(*args):
                       provision_vcenter_features(vcenter_server, esxi_info, host_list)
                       break
 
-@hosts(env.roledefs['cfgm'][0])
+@roles('build')
 @task
 def setup_vcenter():
     vcenter_info = getattr(env, 'vcenter_servers', None)
