@@ -188,7 +188,7 @@ backend nova-vnc-backend
     balance  roundrobin
     $__nova_vnc_backend_servers__
 
-frontend openstack-barbican *: 9311
+frontend openstack-barbican *:9311
     default_backend    barbican-backend
 
 backend barbican-backend
