@@ -1,0 +1,8 @@
+Verified+2: Zuul <zuul@lists.opencontrail.org>
+Code-Review+2: Vedamurthy Joshi <vjoshi@juniper.net>
+Approved+1: Karl Klashinsky <klash@juniper.net>
+Submitted-by: Zuul <zuul@lists.opencontrail.org>
+Submitted-at: Wed, 04 May 2016 08:41:19 -0700
+Reviewed-on: https://review.opencontrail.org/19825
+Project: Juniper/contrail-fabric-utils
+Branch: refs/heads/R3.0
