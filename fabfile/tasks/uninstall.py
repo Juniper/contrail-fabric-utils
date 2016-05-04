@@ -324,6 +324,16 @@ def uninstall_only_vrouter_node(manage_nova_compute='yes', *args):
                     pkgs.append('ceilometer-agent-compute')
                 apt_uninstall(pkgs)
                 sudo("sed -i  's/inet manual/inet dhcp/g' /etc/network/interfaces")
+                # Delete vhost0 interface
+                sudo("""sed -ri.bak '
+                        /^auto vhost0/ d
+                        /^iface vhost0/,/^(\w|$)/ {
+                            /iface vhost0/ d
+                            /^\s/ d
+                        }
+                    ' /etc/network/interfaces""")
+                # Remove SR-IOV configuration
+                sudo("sed -i.bak '/sriov_numvfs/ d' /etc/rc.local")
             else:
                 pkgs = get_pkg_list()
                 yum_uninstall(pkgs)
