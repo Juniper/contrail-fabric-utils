@@ -210,7 +210,8 @@ def create_storage_setup_cmd(mode):
             "--openstack-ip %s" % openstack_ip,
             "--orig-hostnames %s" % ' '.join(orig_hostnames),
             "--service-dbpass %s" % get_service_dbpass(),
-            "--region-name %s" % get_region_name()]
+            "--region-name %s" % get_region_name(),
+            "--ssd-cache-tier %s" % get_storage_cache_tier()]
     cmd = ' '.join(cmds)
     return cmd
 
