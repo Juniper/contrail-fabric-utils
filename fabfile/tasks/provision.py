@@ -649,6 +649,12 @@ def fixup_ceilometer_conf_common():
         sudo("openstack-config --set %s database connection %s" % (conf_file, value))
     amqp_server_ip = get_openstack_amqp_server()
     sudo("openstack-config --set %s DEFAULT rabbit_host %s" % (conf_file, amqp_server_ip))
+    # If HA is enabled, then use the frontend HAProxy Rabbit port
+    rabbit_port = "5672"
+    if get_openstack_internal_vip():
+        rabbit_port = "5673"
+    sudo("openstack-config --set %s DEFAULT rabbit_port %s" % (conf_file,
+	rabbit_port))
     value = "/var/log/ceilometer"
     sudo("openstack-config --set %s DEFAULT log_dir %s" % (conf_file, value))
     value = "a74ca26452848001921c"
@@ -878,7 +884,7 @@ def setup_ceilometer_compute_node(*args):
 @roles('openstack')
 def setup_contrail_ceilometer_plugin():
     """Provisions contrail ceilometer plugin in the first node defined in openstack role."""
-    if env.roledefs['openstack'] and env.host_string == env.roledefs['openstack'][0]:
+    if env.roledefs['openstack']:
         execute("setup_contrail_ceilometer_plugin_node", env.host_string)
 
 @task
@@ -904,7 +910,7 @@ def setup_contrail_ceilometer_plugin_node(*args):
 @roles('openstack')
 def setup_ceilometer():
     """Provisions ceilometer services in all nodes defined in openstack role."""
-    if env.roledefs['openstack'] and env.host_string == env.roledefs['openstack'][0]:
+    if env.roledefs['openstack']:
         execute("setup_ceilometer_node", env.host_string)
         execute("setup_network_service") #Provisions in cfgm node
 
@@ -1047,9 +1053,8 @@ def setup_openstack():
         if is_package_installed('contrail-openstack-dashboard'):
             execute('setup_contrail_horizon_node', env.host_string)
         if is_ceilometer_provision_supported():
-            if env.host_string == env.roledefs['openstack'][0]:
-                execute("setup_ceilometer_node", env.host_string)
-                execute("setup_network_service") #Provisions in cfgm node
+            execute("setup_ceilometer_node", env.host_string)
+            execute("setup_network_service") #Provisions in cfgm node
             execute("setup_image_service_node", env.host_string)
             execute("setup_identity_service_node", env.host_string)
 
