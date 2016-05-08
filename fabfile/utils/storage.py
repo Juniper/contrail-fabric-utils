@@ -292,3 +292,8 @@ def get_storage_replica_size():
             sys.exit(0)
     return (replica_size)
 #end get_storage_replica_size
+
+# Return Storage cache tier
+def get_storage_cache_tier():
+    return getattr(testbed, 'ceph_ssd_cache_tier', False)
+#end get_storage_cache_tier
