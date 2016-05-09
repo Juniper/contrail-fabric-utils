@@ -35,6 +35,12 @@ from tasks.backup_restore import *
 from tasks.kernel import *
 from tasks.issu_process import *
 
+#monitoring system setup
+try:
+    from tasks.monitor import *
+except ImportError:
+    pass
+
 # For contrail use
 try:
     from contraillabs.setup import *
