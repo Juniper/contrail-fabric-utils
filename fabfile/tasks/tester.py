@@ -58,6 +58,7 @@ def setup_test_env():
         'tor':[],
         'vcenter_servers':[],
         'sriov':[],
+        'dpdk':[],
     }
 
     sample_ini_file = env.test_repo_dir + '/' + 'sanity_params.ini.sample'
@@ -216,6 +217,9 @@ def setup_test_env():
     if env.has_key('sriov'):
         sanity_testbed_dict['sriov'].append(env.sriov)
 
+    #get dpdk info
+    if env.has_key('dpdk'):
+        sanity_testbed_dict['dpdk'].append(env.dpdk)
     # for every host_string
     with settings(host_string = cfgm_host):
         repo_dir_name = env.test_repo_dir.split('/')[-1]
