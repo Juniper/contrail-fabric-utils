@@ -122,6 +122,16 @@ def get_vmware_details(compute_host_string):
                  continue
     return None
 
+def get_vmware_datacenter_mtu(vcenter_server_string):
+    vcenter_data = {}
+    datacenter_mtu = 1500
+    vcenter_info = getattr(env, 'vcenter_servers', None)
+    if vcenter_server_string in vcenter_info.keys():
+        vcenter_server = vcenter_info[vcenter_server_string]
+        if 'datacenter_mtu' in vcenter_server.keys():
+            datacenter_mtu = vcenter_server['datacenter_mtu']
+    return datacenter_mtu
+
 def get_esxi_ssl_thumbprint(esxi_data):
     host_string = '%s@%s' %(esxi_data['username'], esxi_data['ip'])
     with settings(host_string = host_string, password = esxi_data['password'],
