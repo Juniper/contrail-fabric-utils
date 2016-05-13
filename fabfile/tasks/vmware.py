@@ -31,6 +31,7 @@ def configure_esxi_network(esxi_info):
     fabric_pg = esxi_info['fabric_port_group']
     fab_switch = esxi_info['fabric_vswitch']
     uplink_nic = esxi_info['uplink_nic']
+    datacenter_mtu = esxi_info.get('datacenter_mtu', None)
 
     host_string = '%s@%s' %(user, ip)
     with settings(host_string = host_string, password = password, 
@@ -39,6 +40,8 @@ def configure_esxi_network(esxi_info):
         run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(fabric_pg, fab_switch))
         if uplink_nic:
             run('esxcli network vswitch standard uplink add --uplink-name=%s --vswitch-name=%s' %(uplink_nic, fab_switch))
+        if datacenter_mtu:
+            run('esxcli network vswitch standard set -v %s -m %s' % (fab_switch, datacenter_mtu))
         if mode == 'openstack':
             run('esxcli network vswitch standard add --vswitch-name=%s' %(vm_switch))
             run('esxcli network vswitch standard portgroup add --portgroup-name=%s --vswitch-name=%s' %(vm_pg, vm_switch))
@@ -204,6 +207,7 @@ def provision_dvs_fab(vcenter_info, esxi_info, host_list):
     dvs_params['dvportgroup_name'] = vcenter_info['dv_port_group_fab']['dv_portgroup_name']
     dvs_params['dvportgroup_num_ports'] = vcenter_info['dv_port_group_fab']['number_of_ports']
     dvs_params['dvportgroup_uplink'] = vcenter_info['dv_port_group_fab']['uplink']
+    dvs_params['datacenter_mtu'] = vcenter_info['datacenter_mtu']
 
     dvs_params['vcenter_server'] = vcenter_info['server']
     dvs_params['vcenter_username'] = vcenter_info['username']
@@ -251,6 +255,7 @@ def provision_sr_iov_fab(vcenter_info, esxi_info, host_list):
 
     sr_iov_params['cluster_name'] = vcenter_info['cluster']
     sr_iov_params['datacenter_name'] = vcenter_info['datacenter']
+    sr_iov_params['datacenter_mtu'] = vcenter_info['datacenter_mtu']
 
     sr_iov_params['esxi_info'] = esxi_info
     sr_iov_params['host_list'] = host_list
@@ -272,6 +277,7 @@ def provision_vcenter(vcenter_info, hosts, clusters, vms):
         vcenter_params['password'] = vcenter_info['password']
 
         vcenter_params['datacenter_name'] = vcenter_info['datacenter']
+        vcenter_params['datacenter_mtu'] = vcenter_info['datacenter_mtu']
         vcenter_params['cluster_name'] = vcenter_info['cluster']
         vcenter_params['dvswitch_name'] = vcenter_info['dv_switch']['dv_switch_name']
         vcenter_params['dvportgroup_name'] = vcenter_info['dv_port_group']['dv_portgroup_name']
