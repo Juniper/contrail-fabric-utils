@@ -92,6 +92,15 @@ class vcenter_base(object):
             raise ValueError(out)
         return
 
+    def set_dvs_mtu(self, dvs, mtu):
+        dvs_config_spec = self.pyVmomi.vim.VmwareDistributedVirtualSwitch.ConfigSpec()
+        dvs_config_spec.configVersion = dvs.config.configVersion
+        dvs_config_spec.maxMtu = int(mtu)
+        task = dvs.ReconfigureDvs_Task(dvs_config_spec)
+        self.wait_for_task(task)
+        print "Successfully reconfigured DVS %s with mtu %s" %(dvs.name, mtu)
+        return dvs
+
     def get_dvs_portgroup(self, vimtype, portgroup_name, dvs_name):
         """
         Get the vsphere object associated with a given text name
@@ -133,6 +142,7 @@ class sr_iov_fab(object):
 
         self.cluster_name = sr_iov_params['cluster_name']
         self.datacenter_name = sr_iov_params['datacenter_name']
+        self.datacenter_mtu = sr_iov_params['datacenter_mtu']
 
         self.esxi_info = sr_iov_params['esxi_info']
         self.host_list = sr_iov_params['host_list']
@@ -140,6 +150,7 @@ class sr_iov_fab(object):
         try:
             self.vcenter_base.connect_to_vcenter()
             dvs = self.vcenter_base.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], self.dvs_name)
+            self.vcenter_base.set_dvs_mtu(dvs, self.datacenter_mtu)
             self.add_dvPort_group(self.vcenter_base.service_instance, dvs, self.dvportgroup_name)
             for host in self.host_list:
                 if ('sr_iov_nics' in self.esxi_info[host]['contrail_vm']):
@@ -370,6 +381,7 @@ class dvs_fab(object):
         self.vcenter_base = vcenter_base(vcenter_base_params)
 
         self.name = dvs_params['name']
+        self.datacenter_mtu = dvs_params['datacenter_mtu']
         self.dvportgroup_name = dvs_params['dvportgroup_name']
         self.dvportgroup_num_ports = dvs_params['dvportgroup_num_ports']
         self.dvportgroup_uplink = dvs_params['dvportgroup_uplink']
@@ -383,6 +395,7 @@ class dvs_fab(object):
         try:
             self.vcenter_base.connect_to_vcenter()
             dvs = self.vcenter_base.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], self.name)
+            self.vcenter_base.set_dvs_mtu(dvs, self.datacenter_mtu)
             self.add_dvPort_group(self.vcenter_base.service_instance, dvs, self.dvportgroup_name, self.dvportgroup_uplink)
             for host in self.host_list:
                 vswitch = self.esxi_info[host]['fabric_vswitch']
@@ -449,6 +462,7 @@ class Vcenter(object):
         self.vcenter_base = vcenter_base(vcenter_base_params)
 
         self.datacenter_name = vcenter_params['datacenter_name']
+        self.datacenter_mtu = vcenter_params['datacenter_mtu']
         self.cluster_name = vcenter_params['cluster_name']
 
         self.dvswitch_name = vcenter_params['dvswitch_name']
@@ -473,6 +487,7 @@ class Vcenter(object):
             else:
                 dvs=self.create_dvSwitch(self.vcenter_base.service_instance, network_folder, self.clusters, self.dvswitch_name)
                 self.configure_hosts_on_dvSwitch(self.vcenter_base.service_instance, network_folder, self.clusters, self.dvswitch_name)
+            self.vcenter_base.set_dvs_mtu(dvs, self.datacenter_mtu)
             self.add_dvPort_group(self.vcenter_base.service_instance,dvs, self.dvportgroup_name)
             for vm_info_list in self.vms:
                 self.add_vm_to_dvpg(self.vcenter_base.service_instance, vm_info_list, dvs, self.dvportgroup_name)

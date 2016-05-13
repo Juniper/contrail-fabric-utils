@@ -480,6 +480,7 @@ env.ostypes = {
 #password is the vcenter password credentials
 #auth is the autentication type used to talk to vcenter, http or https
 #datacenter is the datacenter name we are operating on
+#datacenter_mtu is the mtu size across the datacenter
 #cluster is the clustername we are operating on
 #vcenter_compute is the nova-compute node for this vcenter cluster,
 #         applicable only for vcenter-as-compute mode
@@ -504,6 +505,7 @@ env.ostypes = {
 #                  'password': 'Contrail123!',
 #                  'auth': 'https',
 #                  'datacenter': 'kd_dc',
+#                  'datacenter_mtu': '9000',
 #                  'cluster': ['kd_cluster_1','kd_cluster_2'],
 #                  'vcenter_compute' : '1.1.1.2',
 #                  'dv_switch_fab': {'dv_switch_name': 'dvs-lag'},
