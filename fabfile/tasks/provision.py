@@ -633,7 +633,7 @@ def setup_cfgm_node(*args):
 #end setup_cfgm_node
 
 
-def fixup_ceilometer_conf_common():
+def fixup_ceilometer_conf_common(analytics_ip):
     conf_file = "/etc/ceilometer/ceilometer.conf"
     openstack_sku = get_openstack_sku()
     database_host_list = [get_control_host_string(entry)\
@@ -653,6 +653,12 @@ def fixup_ceilometer_conf_common():
     rabbit_port = "5672"
     if get_openstack_internal_vip():
         rabbit_port = "5673"
+        sudo("openstack-config --set %s notification workload_partitioning %s" %
+            (conf_file, "True"))
+        sudo("openstack-config --set %s compute workload_partitioning %s" %
+            (conf_file, "True"))
+        sudo("openstack-config --set %s coordination backend_url %s%s%s" %
+            (conf_file, "kazoo://", str(analytics_ip), ":2181"))
     sudo("openstack-config --set %s DEFAULT rabbit_port %s" % (conf_file,
 	rabbit_port))
     value = "/var/log/ceilometer"
@@ -941,7 +947,7 @@ def setup_ceilometer_node(*args):
                     ceilometer_services += ['ceilometer-alarm-evaluator',
                                             'ceilometer-alarm-notifier']
 
-            fixup_ceilometer_conf_common()
+            fixup_ceilometer_conf_common(analytics_ip)
             #keystone auth params
             cmd = "source /etc/contrail/openstackrc;keystone user-get ceilometer"
             with settings(warn_only=True):
