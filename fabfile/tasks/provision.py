@@ -655,6 +655,12 @@ def fixup_ceilometer_conf_common():
         rabbit_port = "5673"
     sudo("openstack-config --set %s DEFAULT rabbit_port %s" % (conf_file,
 	rabbit_port))
+    sudo("openstack-config --set %s notification workload_partitioning %s" %
+            (conf_file, "True"))
+    sudo("openstack-config --set %s compute workload_partitioning %s" %
+            (conf_file, "True"))
+    sudo("openstack-config --set %s coordination backend_url %s" %
+            (conf_file, "kazoo://127.0.0.1:2181"))
     value = "/var/log/ceilometer"
     sudo("openstack-config --set %s DEFAULT log_dir %s" % (conf_file, value))
     value = "a74ca26452848001921c"
