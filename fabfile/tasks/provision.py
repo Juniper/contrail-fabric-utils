@@ -1343,7 +1343,7 @@ def setup_database_node(*args):
         # Frame the command line to provision database
         cmd = frame_vnc_database_cmd(host_string)
         # Execute the provision database script
-        with  settings(host_string=host_string):
+        with settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     sudo('rm /etc/init/supervisor-database.override')
@@ -1419,9 +1419,9 @@ def fixup_irond_config(control_host_string):
             sudo("sed -i -e '/%s:/d' -e '/%s.dns:/d' %s" \
                       %(control_ip, control_ip, pfl))
             sudo("echo '%s:%s' >> %s" \
-                         %(control_ip, control_ip, pfl))
+                      %(control_ip, control_ip, pfl))
             sudo("echo '%s.dns:%s.dns' >> %s" \
-                         %(control_ip, control_ip, pfl))
+                      %(control_ip, control_ip, pfl))
 # end fixup_irond_config
 
 @task
@@ -1584,13 +1584,18 @@ def prov_config():
 @task
 def prov_config_node(*args, **kwargs):
     oper = kwargs.get('oper', 'add')
+    tgt_node = kwargs.get('tgt_node', None)
     cfgm_host = env.roledefs['cfgm'][0]
     cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
-            tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
-            tgt_hostname = sudo("hostname")
+            if tgt_node:
+                tgt_ip = hstr_to_ip(get_control_host_string(tgt_node))
+                tgt_hostname = sudo("getent hosts %s | awk \'{print $2}\'" % tgt_ip)
+            else:
+                tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+                tgt_hostname = sudo("hostname")
             with settings(cd(UTILS_DIR), host_string=cfgm_host,
                     password=cfgm_host_password):
                 cmd = "python provision_config_node.py"
@@ -1611,13 +1616,18 @@ def prov_database():
 @task
 def prov_database_node(*args, **kwargs):
     oper = kwargs.get('oper', 'add')
+    tgt_node = kwargs.get('tgt_node', None)
     cfgm_host = env.roledefs['cfgm'][0]
     cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
-            tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
-            tgt_hostname = sudo("hostname")
+            if tgt_node:
+                tgt_ip = hstr_to_ip(get_control_host_string(tgt_node))
+                tgt_hostname = sudo("getent hosts %s | awk \'{print $2}\'" % tgt_ip)
+            else:
+                tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+                tgt_hostname = sudo("hostname")
 
             with settings(cd(UTILS_DIR), host_string=cfgm_host,
                           password=cfgm_host_password):
@@ -1639,13 +1649,18 @@ def prov_analytics():
 @task
 def prov_analytics_node(*args, **kwargs):
     oper = kwargs.get('oper', 'add')
+    tgt_node = kwargs.get('tgt_node', None)
     cfgm_host = env.roledefs['cfgm'][0]
     cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
-            tgt_ip = hstr_to_ip(get_control_host_string(host_string))
-            tgt_hostname = sudo("hostname")
+            if tgt_node:
+                tgt_ip = hstr_to_ip(get_control_host_string(tgt_node))
+                tgt_hostname = sudo("getent hosts %s | awk \'{print $2}\'" % tgt_ip)
+            else:
+                tgt_ip = hstr_to_ip(get_control_host_string(host_string))
+                tgt_hostname = sudo("hostname")
             with settings(cd(UTILS_DIR), host_string=cfgm_host,
                           password=cfgm_host_password):
                 cmd = "python provision_analytics_node.py"
@@ -1666,13 +1681,18 @@ def prov_control_bgp():
 @task
 def prov_control_bgp_node(*args, **kwargs):
     oper = kwargs.get('oper', 'add')
+    tgt_node = kwargs.get('tgt_node', None)
     cfgm_host = kwargs.get('cfgm_host', env.roledefs['cfgm'][0])
     cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
-            tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
-            tgt_hostname = sudo("hostname")
+            if tgt_node:
+                tgt_ip = hstr_to_ip(get_control_host_string(tgt_node))
+                tgt_hostname = sudo("getent hosts %s | awk \'{print $2}\'" % tgt_ip)
+            else:
+                tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+                tgt_hostname = sudo("hostname")
 
             with settings(cd(UTILS_DIR), host_string=cfgm_host,
                           password=cfgm_host_password):
@@ -1721,56 +1741,54 @@ def prov_external_bgp_node(*args):
 @roles('cfgm')
 @task
 def prov_metadata_services():
-    execute("prov_metadata_services_node", env.host_string)
+    execute("prov_metadata_services_node", env.host_string, 'add')
 
 @task
-def prov_metadata_services_node(*args):
-    for host_string in args:
-        with settings(host_string = host_string):
-            cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
-            orch = get_orchestrator()
-            if orch is 'none':
-                return
+def prov_metadata_services_node(host_string, oper = 'add'):
+    with settings(host_string = host_string):
+        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+        orch = get_orchestrator()
+        if orch is 'none':
+            return
 
-            if orch is 'openstack':
-                openstack_host = get_control_host_string(env.roledefs['openstack'][0])
-                ipfabric_service_ip = get_openstack_internal_vip() or hstr_to_ip(openstack_host)
-                ipfabric_service_port = '8775'
-            elif orch is 'vcenter':
-                ipfabric_service_ip = get_authserver_ip()
-                ipfabric_service_port = get_authserver_port()
-            admin_user, admin_password = get_authserver_credentials()
-            metadata_args = "--admin_user %s" % admin_user
-            metadata_args += " --admin_password %s" % admin_password
-            metadata_args += " --ipfabric_service_ip %s" % ipfabric_service_ip
-            metadata_args += " --api_server_ip %s" % cfgm_ip
-            metadata_args += " --linklocal_service_name metadata"
-            metadata_args += " --linklocal_service_ip 169.254.169.254"
-            metadata_args += " --linklocal_service_port 80"
-            metadata_args += " --ipfabric_service_port %s" % ipfabric_service_port
-            metadata_args += " --oper add"
-            sudo("python /opt/contrail/utils/provision_linklocal.py %s" % metadata_args)
+        if orch is 'openstack':
+            openstack_host = get_control_host_string(env.roledefs['openstack'][0])
+            ipfabric_service_ip = get_openstack_internal_vip() or hstr_to_ip(openstack_host)
+            ipfabric_service_port = '8775'
+        elif orch is 'vcenter':
+            ipfabric_service_ip = get_authserver_ip()
+            ipfabric_service_port = get_authserver_port()
+        admin_user, admin_password = get_authserver_credentials()
+        metadata_args = "--admin_user %s" % admin_user
+        metadata_args += " --admin_password %s" % admin_password
+        metadata_args += " --ipfabric_service_ip %s" % ipfabric_service_ip
+        metadata_args += " --api_server_ip %s" % cfgm_ip
+        metadata_args += " --linklocal_service_name metadata"
+        metadata_args += " --linklocal_service_ip 169.254.169.254"
+        metadata_args += " --linklocal_service_port 80"
+        metadata_args += " --ipfabric_service_port %s" % ipfabric_service_port
+        metadata_args += " --oper %s" % oper
+        sudo("python /opt/contrail/utils/provision_linklocal.py %s" % metadata_args)
 #end prov_metadata_services
 
 @roles('cfgm')
 @task
 def prov_encap_type():
-    execute("prov_encap_type_node", env.host_string)
+    execute("prov_encap_type_node", env.host_string, 'add')
 
 @task
-def prov_encap_type_node(*args):
-    for host_string in args:
-        with settings(host_string = host_string):
-            cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
-            admin_user, admin_password = get_authserver_credentials()
-            if 'encap_priority' not in env.keys():
-                env.encap_priority="MPLSoUDP,MPLSoGRE,VXLAN"
-            encap_args = "--admin_user %s" % admin_user
-            encap_args += " --admin_password %s" % admin_password
-            encap_args += " --encap_priority %s" % env.encap_priority
-            encap_args += " --oper add"
-            sudo("python /opt/contrail/utils/provision_encap.py %s" % encap_args)
-            sleep(10)
+def prov_encap_type_node(host_string, oper = 'add'):
+    with settings(host_string = host_string):
+        cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+        admin_user, admin_password = get_authserver_credentials()
+        if 'encap_priority' not in env.keys():
+            env.encap_priority="MPLSoUDP,MPLSoGRE,VXLAN"
+        encap_args = "--admin_user %s" % admin_user
+        encap_args += " --admin_password %s" % admin_password
+        encap_args += " --encap_priority %s" % env.encap_priority
+        encap_args += " --oper %s" % oper
+        sudo("python /opt/contrail/utils/provision_encap.py %s" % encap_args)
+        sleep(10)
 #end prov_encap_type
 
 @task
