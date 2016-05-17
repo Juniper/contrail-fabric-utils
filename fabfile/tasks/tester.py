@@ -596,3 +596,13 @@ def run_rally(task_args_file=None):
         with cd('/usr/share/rally/samples/tasks/scenarios/custom'):
             run("python run_rally.py --task-args '" + yaml.dump(testbed.rally_task_args).rstrip('\n') + "'")
 # end run_rally
+
+@roles('build')
+@task
+def install_pkg_on_role(role_name, package_name, disablerepo=False):
+    ''' Install ubuntu/centos packages on all nodes with specific role
+    '''
+    for host_string in env.roledefs[role_name]:
+        with settings(host_string=host_string):
+            pkg_install([package_name], disablerepo=disablerepo)
+# end install_pkg_on_role
