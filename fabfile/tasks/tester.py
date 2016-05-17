@@ -366,6 +366,7 @@ def setup_test_env():
                 # On centos, junos-eznc install requires devel pkgs of libxml2 and libxslt
                 if detect_ostype() in ['redhat', 'centos', 'centoslinux']:
                     pkg_install(['libxslt-devel', 'libxml2-devel'], disablerepo=False)
+                sudo('pip install paramiko==1.17.0')
                 sudo('pip install junos-eznc==1.2.2')
 
         for host_string in env.roledefs['compute']:
