@@ -214,11 +214,11 @@ def upgrade_compute_node(from_rel, pkg, *args, **kwargs):
                 if (getattr(env, 'interface_rename', True) and
                     detect_ostype() not in ['ubuntu', 'redhat']):
                     pkgs.append('contrail-interface-name')
-                if LooseVersion(from_rel) < LooseVersion('2.10'):
+                if LooseVersion(from_rel) <= LooseVersion('3.0.2.0'):
                     dist, version, extra = get_linux_distro()
-                    if version == '14.04' and 'contrail-vrouter-3.13.0-35-generic' in pkgs:
-                       pkgs.remove('contrail-vrouter-3.13.0-35-generic')
-                       pkgs.append('contrail-vrouter-3.13.0-40-generic')
+                    if version == '14.04' and 'contrail-vrouter-3.13.0-40-generic' in pkgs:
+                       pkgs.remove('contrail-vrouter-3.13.0-40-generic')
+                       pkgs.append('contrail-vrouter-3.13.0-85-generic')
                 # Identify roles of this node.
                 roles = ['compute']
                 if env.host_string in get_tsn_nodes():
