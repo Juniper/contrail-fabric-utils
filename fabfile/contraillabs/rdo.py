@@ -36,6 +36,13 @@ def install_rhosp6_repo():
     sudo('yum clean all')
 
 @task
+@roles('openstack')
+def install_rhosp8_repo():
+    """ copy local rhosp8 repo locations """
+    put('fabfile/contraillabs/repo/rhosp8_local.repo', '/etc/yum.repos.d/rhosp8_local.repo', use_sudo=True)
+    sudo('yum clean all && yum clean expire-cache')
+
+@task
 @roles('all')
 def update_all_node(reboot='True'):
     with settings(warn_only=True):
