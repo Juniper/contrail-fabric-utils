@@ -2800,12 +2800,14 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
                  std_switch = True
                  power_on = False
              elif 'fabric_vswitch' in esxi_info[host].keys():
+                 esxi_info[host]['datacenter_mtu'] = vcenter_info['datacenter_mtu']
                  std_switch = True
                  power_on = True
              elif 'dv_switch_fab' in vcenter_info.keys():
                  std_switch = False
                  power_on = False
              else:
+                 esxi_info[host]['datacenter_mtu'] = vcenter_info['datacenter_mtu']
                  std_switch = True
                  power_on = True
          if (std_switch == True):
@@ -2845,6 +2847,8 @@ def prov_esxi(*args):
 
     for v in vcenter_info.keys():
         vcenter_server = vcenter_info[v]
+        if not 'datacenter_mtu' in vcenter_server.keys():
+            vcenter_server['datacenter_mtu'] = 1500
         esxi_hosts = []
         for host in esxi_host_list:
             if esxi_info[host]['vcenter_server'] is v:
@@ -2941,6 +2945,8 @@ def add_esxi_to_vcenter(*args):
            for v in vcenter_info.keys():
                if esxi_data['vcenter_server'] is v:
                   vcenter_server = vcenter_info[v]
+                  if not 'datacenter_mtu' in vcenter_server.keys():
+                      vcenter_server['datacenter_mtu'] = 1500
                   vcenter_server_name = v
                   if 'vcenter_compute' in env.roledefs:
                       vcenter_compute = vcenter_server['vcenter_compute']
@@ -2975,6 +2981,8 @@ def setup_vcenter():
 
     for v in vcenter_info.keys():
         vcenter_server = vcenter_info[v]
+        if not 'datacenter_mtu' in vcenter_server.keys():
+            vcenter_server['datacenter_mtu'] = 1500
         esxi_hosts = []
         for host in esxi_host_list:
             if esxi_info[host]['vcenter_server'] is v:
