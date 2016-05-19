@@ -518,6 +518,10 @@ def install_vcenter_compute_node(*args):
               else:
                  yum_install(pkgs)
 
+              if 'vcenter_compute' in env.roledefs:
+                 pkg = get_vcenter_plugin_pkg()
+                 install_contrail_vcenter_plugin(pkg)
+
 @task
 @EXECUTE_TASK
 @roles('compute')
