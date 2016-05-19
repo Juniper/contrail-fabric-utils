@@ -2600,7 +2600,9 @@ def setup_sriov_interfaces(host_string, host_config, bondinfo):
     '''
     def enable_vf(iface, vf):
         with settings(host_string=host_string):
-            str = 'echo %s > /sys/class/net/%s/device/sriov_numvfs' % (vf,
+            # Keep this command consistent with 
+            # contrail_provisioning/common/base.py
+            str = 'echo %s > /sys/class/net/%s/device/sriov_numvfs; sleep 2; ifup -a' % (vf,
                                                                        iface)
             sudo(str)
 
