@@ -213,6 +213,7 @@ def apt_install(debs):
         for deb in debs:
             sudo(cmd + deb)
 
+@task
 def pkg_install(pkgs,disablerepo = False):
     if detect_ostype() in ['ubuntu']:
         apt_install(pkgs)
