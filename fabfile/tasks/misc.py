@@ -110,10 +110,17 @@ def replace_vrouterko(distro):
 
 
 @task
+@parallel
 @roles('compute')
 def replace_vrouter_ko():
     """Replaces the vrouter kernal module with upgraded version."""
-    execute('replace_vrouter_ko_node', env.host_string)
+    cmd = "ls /opt/contrail/contrail_install_repo/contrail-vrouter-$(uname -r)*"
+    out = sudo(cmd, warn_only=True)
+    #No change in Kernel version so no need to reboot the box.
+    if out.succeeded:
+        execute('replace_vrouter_ko_node', env.host_string)
+    else:
+        execute("reboot_node", 'yes', env.host_string)
 
 @task
 def replace_vrouter_ko_node(*args):
