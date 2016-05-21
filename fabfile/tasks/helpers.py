@@ -1041,6 +1041,7 @@ def increase_limits():
     Increase limits in /etc/security/limits.conf, sysctl.conf and /etc/contrail/supervisor*.conf files
     '''
     execute('increase_limits_node', env.host_string)
+#end increase_limits
 
 @task
 def increase_limits_node(*args):
@@ -1072,44 +1073,10 @@ def increase_limits_node(*args):
 
             sysctl_conf = '/etc/sysctl.conf'
             insert_line_to_file(pattern = '^fs.file-max.*',
-            line = 'fs.file-max = 65535',file_name = sysctl_conf)
+            line = 'fs.file-max = 165535',file_name = sysctl_conf)
             sudo('sysctl -p')
 
             sudo('sed -i \'s/^minfds.*/minfds=10240/\' /etc/contrail/supervisor*.conf')
-
-
-    limits_conf = '/etc/security/limits.conf'
-    with settings(warn_only = True):
-        pattern='^root\s*soft\s*nproc\s*.*'
-        if detect_ostype() in ['ubuntu']:
-            line = 'root soft nofile 65535\nroot hard nofile 65535'
-        else:
-            line = 'root soft nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nofile\s*.*'
-        line = '* hard nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nofile\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nproc\s*.*'
-        line = '* hard nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nproc\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        sysctl_conf = '/etc/sysctl.conf'
-        insert_line_to_file(pattern = '^fs.file-max.*',
-                line = 'fs.file-max = 65535',file_name = sysctl_conf)
-        sudo('sysctl -p')
-
-        sudo('sed -i \'s/^minfds.*/minfds=10240/\' /etc/contrail/supervisor*.conf')
-
 #end increase_limits
 
 @roles('cfgm','database','collector')
@@ -1118,38 +1085,7 @@ def increase_limits_no_control():
     '''
     Increase limits in /etc/security/limits.conf, sysctl.conf and /etc/contrail/supervisor*.conf files
     '''
-    limits_conf = '/etc/security/limits.conf'
-    with settings(warn_only = True):
-        pattern='^root\s*soft\s*nproc\s*.*'
-        if detect_ostype() in ['ubuntu']:
-            line = 'root soft nofile 65535\nroot hard nofile 65535'
-        else:
-            line = 'root soft nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nofile\s*.*'
-        line = '* hard nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nofile\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*hard\s*nproc\s*.*'
-        line = '* hard nproc 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        pattern='^*\s*soft\s*nproc\s*.*'
-        line = '* soft nofile 65535'
-        insert_line_to_file(pattern = pattern, line = line,file_name = limits_conf)
-
-        sysctl_conf = '/etc/sysctl.conf'
-        insert_line_to_file(pattern = '^fs.file-max.*',
-                line = 'fs.file-max = 65535',file_name = sysctl_conf)
-        sudo('sysctl -p')
-
-        sudo('sed -i \'s/^minfds.*/minfds=10240/\' /etc/contrail/supervisor*.conf')
-
+    execute('increase_limits_node', env.host_string)
 #end increase_limits_no_control
 
 def insert_line_to_file(line,file_name,pattern=None):
