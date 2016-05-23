@@ -1074,7 +1074,7 @@ def increase_limits_node(*args):
 
             sysctl_conf = '/etc/sysctl.conf'
             insert_line_to_file(pattern = '^fs.file-max.*',
-            line = 'fs.file-max = 65535',file_name = sysctl_conf)
+            line = 'fs.file-max = 165535',file_name = sysctl_conf)
             sudo('sysctl -p')
 #end increase_limits_node
 
