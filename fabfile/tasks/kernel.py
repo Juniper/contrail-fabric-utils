@@ -139,6 +139,8 @@ def migrate_compute_kernel():
 def migrate_compute_kernel_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
-            sudo('service supervisor-vrouter stop')
+            out = sudo('service supervisor-vrouter status')
+            if 'stop' not in out:
+                sudo('service supervisor-vrouter stop')
             sudo('apt-get -o Dpkg::Options::="--force-overwrite" -y install contrail-vrouter-3.13.0-85-generic')
             upgrade_kernel_node(host_string)
