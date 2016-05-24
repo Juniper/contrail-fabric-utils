@@ -292,7 +292,9 @@ def get_metadata_secret():
                 # from neutron section in /etc/nova/nova.conf
                 if ostype.lower() in ['centos', 'redhat', 'centoslinux']:
                     api_version = sudo("rpm -q --queryformat='%{VERSION}' openstack-nova-api")
-                    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
+                    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2') or \
+                                        (LooseVersion(api_version) >= LooseVersion('12.0.1') and \
+                                        LooseVersion(api_version) < LooseVersion('2013'))
                 elif ostype.lower() in ['ubuntu']:
                     api_version = sudo("dpkg-query -W -f='${VERSION}' nova-api")
                     is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
