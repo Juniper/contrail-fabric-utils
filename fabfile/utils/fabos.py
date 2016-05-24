@@ -43,15 +43,15 @@ def get_openstack_sku(use_install_repo=False):
     pkg_ver = get_release(pkg=pkg, use_install_repo=use_install_repo)
     if pkg_ver is None:
         return None
-    if pkg_ver.find('2013.2') != -1:
+    if pkg_ver.startswith('2013.2'):
         openstack_sku = 'havana'
-    elif pkg_ver.find('2014.1') != -1:
+    elif pkg_ver.startswith('2014.1'):
         openstack_sku = 'icehouse'
-    elif pkg_ver.find('2014.2') != -1:
+    elif pkg_ver.startswith('2014.2'):
         openstack_sku = 'juno'
-    elif pkg_ver.find('2015.1') != -1:
+    elif pkg_ver.startswith('2015.1'):
         openstack_sku = 'kilo'
-    elif pkg_ver.find('12.0') != -1:
+    elif pkg_ver.startswith('12.0') or pkg_ver.startswith('2:12.0'):
         openstack_sku = 'liberty'
     else:
         print "OpenStack distribution unknown.. assuming icehouse.."
