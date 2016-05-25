@@ -6,7 +6,8 @@ from fabric.contrib.files import exists
 from fabfile.utils.fabos import detect_ostype
 from fabfile.tasks.services import *
 from fabfile.tasks.zookeeper import *
-from fabfile.utils.cluster import get_orchestrator
+from fabfile.utils.cluster import get_orchestrator,get_tsn_nodes,get_toragent_nodes,\
+                                  get_esxi_contrail_vms
 import string
 import time
 import re
@@ -381,7 +382,6 @@ def backup_zookeeper(db_datas, store_db='local'):
             sudo(remote_bk_cmd)
 # end backup_zookeeper
 
-
 @roles('compute')
 def backup_instances(db_datas, store_db='local'):
     """Backup instances data to all compute nodes """
@@ -392,53 +392,53 @@ def backup_instances(db_datas, store_db='local'):
     contrail_vms=[]
     orchestrator = get_orchestrator()
     msg = "Processing instances backup and default path for backup data is ~/contrail_bkup_data/hostname/instances  in ({HOST}) \n"
-    if  orchestrator != 'vcenter':
-        if 'tsn' in env.roledefs:
-            tsn_nodes = env.roledefs['tsn']
-        if 'toragent' in env.roledefs:
-            tor_nodes = env.roledefs['toragent']
-        contrail_vms = get_esxi_contrail_vms()
-        
-        if (host not in tsn_nodes) and (host not in tor_nodes) and (host not in contrail_vms) :
-            with settings(host_string=host):
-                host_name = sudo('hostname')
-                if store_db == 'local':
-                    print (msg.format(HOST=host_name))
-                if store_db == 'remote':
-                    msg = "Processing instances data Backup and puting instances backup data into remote host:({HOST}) and default path is ~/contrail_bkup_data/hostname/instances or backup path is defined as per testbed.py file \n"
-                    remote_host = env.roledefs['backup'][0]
-                    print (msg.format(HOST=remote_host))
-                insta_path = sudo("grep  '^state_path'   /etc/nova/nova.conf")
-                instances_path = insta_path.split('=')
-                instances_path = instances_path[-1]
-                instances_path = instances_path.strip()
-                db_path = instances_path
-                execute(verify_disk_space, db_datas, db_path, store_db)
-                remote_instances_path = '%s%s/' % (backup_path, host_name)
-                if db_datas:
-                    remote_instances_path = final_dir + '%s/' % (host_name)
-                if store_db == 'local':
-                   sudo(
-                        'rsync -az --progress   %s/instances    %s' %
-                        (instances_path, remote_instances_path))
-                execute(
-                    backup_info_file,
-                    remote_instances_path,
-                    backup_type='Instances')
-                if store_db == 'local':
-                    sudo('cp backup_info.txt %s' % remote_instances_path)
-                if store_db == 'remote':
-                    remote_path = '%s' % (remote_instances_path)
-                    source_path = '%s/instances' % (instances_path)
-                    execute(ssh_key_gen)
-                    remote_cmd='rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress    %s   %s:%s' %(  source_path,remote_host,remote_path)
-                    sudo(remote_cmd)
-                    remote_bk_cmd = 'scp -o "StrictHostKeyChecking no" -r  backup_info.txt  %s:%s' % (
-                        remote_host,
-                        remote_path)
-                    sudo(remote_bk_cmd)
-                sudo('rm -rf backup_info.txt')
+    if  orchestrator != 'openstack':
+        print 'Nova instances are not present to backup'
+        return
+    tsn_nodes = get_tsn_nodes()
+    tor_nodes = get_toragent_nodes()
+    contrail_vms = get_esxi_contrail_vms()
+    if (host not in tsn_nodes) and (host not in tor_nodes) and (host not in contrail_vms) :
+        with settings(host_string=host):
+            host_name = sudo('hostname')
+            if store_db == 'local':
+                print (msg.format(HOST=host_name))
+            if store_db == 'remote':
+                msg = "Processing instances data Backup and puting instances backup data into remote host:({HOST}) and default path is ~/contrail_bkup_data/hostname/instances or backup path is defined as per testbed.py file \n"
+                remote_host = env.roledefs['backup'][0]
+                print (msg.format(HOST=remote_host))
+            insta_path = sudo("grep  '^state_path'   /etc/nova/nova.conf")
+            instances_path = insta_path.split('=')
+            instances_path = instances_path[-1]
+            instances_path = instances_path.strip()
+            db_path = instances_path
+            execute(verify_disk_space, db_datas, db_path, store_db)
+            remote_instances_path = '%s%s/' % (backup_path, host_name)
+            if db_datas:
+                remote_instances_path = final_dir + '%s/' % (host_name)
+            if store_db == 'local':
+               sudo(
+                    'rsync -az --progress   %s/instances    %s' %
+                    (instances_path, remote_instances_path))
+            execute(
+                backup_info_file,
+                remote_instances_path,
+                backup_type='Instances')
+            if store_db == 'local':
+                sudo('cp backup_info.txt %s' % remote_instances_path)
+            if store_db == 'remote':
+                remote_path = '%s' % (remote_instances_path)
+                source_path = '%s/instances' % (instances_path)
+                execute(ssh_key_gen)
+                remote_cmd='rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress    %s   %s:%s' %(  source_path,remote_host,remote_path)
+                sudo(remote_cmd)
+                remote_bk_cmd = 'scp -o "StrictHostKeyChecking no" -r  backup_info.txt  %s:%s' % (
+                    remote_host,
+                    remote_path)
+                sudo(remote_bk_cmd)
+            sudo('rm -rf backup_info.txt')
 # end backup_instances
+
 
 def verify_disk_space(db_datas, db_path, store_db):
     host = env.host_string
@@ -908,7 +908,6 @@ def restore_instance_image(backup_data_path, store_db='local'):
 @roles('database')
 def restore_zookeeper(backup_data_path, store_db='local'):
     """Restore zookeeper data to all database nodes  """
-    #import pdb;pdb.set_trace()
     global backup_path
     host = env.host_string
     msg = "Restoring backed-up data in ({HOST}).\n"
@@ -974,60 +973,60 @@ def restore_instances(backup_data_path, store_db='local'):
     tor_nodes = []
     contrail_vms = []
     orchestrator = get_orchestrator()
-    if 'tsn' in env.roledefs:
-        tsn_nodes = env.roledefs['tsn']
-    if 'toragent' in env.roledefs:
-        tor_nodes = env.roledefs['toragent']
+    if  orchestrator != 'openstack':
+        print 'Nova instances are not present to restore'
+        return
+    tsn_nodes = get_tsn_nodes()
+    tor_nodes = get_toragent_nodes()
     contrail_vms = get_esxi_contrail_vms()
-    if orchestrator != 'vcenter' :
-        if (host not in tsn_nodes) and (host not in tor_nodes) and (host not in contrail_vms) :
-            msg = "Restoring backed-up instances data in ({HOST}).\n"
-            with settings(host_string=host):
-                host_name = sudo('hostname')
-                insta_path = sudo("grep  '^state_path'   /etc/nova/nova.conf")
-            instances_path = insta_path.split('=')
-            instances_path = instances_path[-1]
-            instances_path = instances_path.strip()
-            remote_instances_dir_path = '%s%s/' % (backup_path, host_name)
-            if backup_data_path:
-                if store_db == 'local':
-                    with settings(host_string=host):
-                        for bk_path in backup_data_path:
-                            snapshot_path = bk_path + '%s/' % (host_name)
-                            if exists('%sinstances/' % snapshot_path):
-                                remote_instances_dir_path = snapshot_path
-                if store_db == 'remote':
-                    with settings(host_string=env.roledefs['backup'][0]):
-                        for bk_path in backup_data_path:
-                            snapshot_path = bk_path + '%s/' % (host_name)
-                            if exists('%sinstances/' % snapshot_path):
-                                remote_instances_dir_path = snapshot_path
-            if store_db == 'remote':
-                msg = "Restoring instances backed-up  data and getting  backup data from remote host:({HOST}) \n"
-                remote_host = env.roledefs['backup'][0]
-                print (msg.format(HOST=remote_host))
-                remote_path = '%sinstances' % (remote_instances_dir_path)
-                with settings(host_string=env.roledefs['backup'][0]):
-                    if not exists(remote_path):
-                        print "Remote path doesnot exist ... So aborting the restore nova instances data."
-                        execute(start_nova_openstack_compute)
-                        raise SystemExit()
-                execute(ssh_key_gen)
+    if (host not in tsn_nodes) and (host not in tor_nodes) and (host not in contrail_vms) :
+        msg = "Restoring backed-up instances data in ({HOST}).\n"
+        with settings(host_string=host):
+            host_name = sudo('hostname')
+            insta_path = sudo("grep  '^state_path'   /etc/nova/nova.conf")
+        instances_path = insta_path.split('=')
+        instances_path = instances_path[-1]
+        instances_path = instances_path.strip()
+        remote_instances_dir_path = '%s%s/' % (backup_path, host_name)
+        if backup_data_path:
+            if store_db == 'local':
                 with settings(host_string=host):
-                    remote_cmd='rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress   %s:%s    %s/' %(  remote_host,remote_path,instances_path)
-                    sudo(remote_cmd)
+                    for bk_path in backup_data_path:
+                        snapshot_path = bk_path + '%s/' % (host_name)
+                        if exists('%sinstances/' % snapshot_path):
+                            remote_instances_dir_path = snapshot_path
+            if store_db == 'remote':
+                with settings(host_string=env.roledefs['backup'][0]):
+                    for bk_path in backup_data_path:
+                        snapshot_path = bk_path + '%s/' % (host_name)
+                        if exists('%sinstances/' % snapshot_path):
+                            remote_instances_dir_path = snapshot_path
+        if store_db == 'remote':
+            msg = "Restoring instances backed-up  data and getting  backup data from remote host:({HOST}) \n"
+            remote_host = env.roledefs['backup'][0]
+            print (msg.format(HOST=remote_host))
+            remote_path = '%sinstances' % (remote_instances_dir_path)
+            with settings(host_string=env.roledefs['backup'][0]):
+                if not exists(remote_path):
+                    print "Remote path doesnot exist ... So aborting the restore nova instances data."
+                    execute(start_nova_openstack_compute)
+                    raise SystemExit()
+            execute(ssh_key_gen)
             with settings(host_string=host):
-                if store_db == 'local':
-                    print (msg.format(HOST=host_name))
-                    remote_path = '%sinstances' % (remote_instances_dir_path)
-                    if not exists(remote_path):
-                        print "Remote path doesnot exist ... So aborting the restore nova instaces data ."
-                        execute(start_nova_openstack_compute)
-                        raise SystemExit()
-                    sudo('rsync -az --progress  %sinstances  %s/ ' %
-                        (remote_instances_dir_path,instances_path ))
-
+                remote_cmd='rsync -avz -e "ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" --progress   %s:%s    %s/' %(  remote_host,remote_path,instances_path)
+                sudo(remote_cmd)
+        with settings(host_string=host):
+            if store_db == 'local':
+                print (msg.format(HOST=host_name))
+                remote_path = '%sinstances' % (remote_instances_dir_path)
+                if not exists(remote_path):
+                    print "Remote path doesnot exist ... So aborting the restore nova instaces data ."
+                    execute(start_nova_openstack_compute)
+                    raise SystemExit()
+                sudo('rsync -az --progress  %sinstances  %s/ ' %
+                    (remote_instances_dir_path,instances_path ))
   # end restore_instances
+
 
 def ssh_key_gen():
     host = env.host_string
@@ -1045,18 +1044,8 @@ def ssh_key_gen():
             sudo('cat id_rsa.pub >~/.ssh/authorized_keys')
         sudo('chmod 700 ~/.ssh/authorized_keys')
         sudo('rm -rf /pub-key/')
-
 # end ssh_key_gen
 
-def get_esxi_contrail_vms():
-    contrail_vms=[]
-    esxi = getattr(testbed,'esxi_hosts',None)
-    if esxi:
-        esxi_hosts = esxi.keys()
-        for esxi_host in esxi_hosts:
-            contrail_vms.append(esxi[esxi_host]['contrail_vm']['host'])
-        return contrail_vms    
-# end  get_esxi_contrail_vms  
 
 def replace_key(text, skip_key):
     for key in skip_key:

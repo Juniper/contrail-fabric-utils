@@ -324,5 +324,13 @@ def is_contrail_node(node):
         package_info = get_build('contrail-setup')
     return True if package_info else False
 
-
-
+def get_esxi_contrail_vms():
+    '''returns contrail_vms from esxi_hosts'''
+    contrail_vms=[]
+    esxi = getattr(testbed,'esxi_hosts',None)
+    if esxi:
+        esxi_hosts = esxi.keys()
+        for esxi_host in esxi_hosts:
+            contrail_vms.append(esxi[esxi_host]['contrail_vm']['host'])
+    return contrail_vms
+# end  get_esxi_contrail_vms

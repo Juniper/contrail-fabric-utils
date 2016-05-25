@@ -2,10 +2,11 @@ import os
 from fabfile.config import *
 from misc import zoolink
 from fabfile.utils.fabos import detect_ostype
-from fabfile.utils.cluster import get_orchestrator
+from fabfile.utils.cluster import get_orchestrator,get_tsn_nodes,get_toragent_nodes,\
+                                  get_esxi_contrail_vms
 from fabric.contrib.files import exists
 from fabfile.utils.host import hstr_to_ip
-from backup_restore import get_esxi_contrail_vms
+
 @task
 @roles('cfgm')
 def stop_rabbitmq():
@@ -386,17 +387,16 @@ def stop_nova_openstack_compute():
     contrail_vms = []
     host = env.host_string
     orchestrator = get_orchestrator()
-    if orchestrator != 'vcenter':
-        if 'tsn' in env.roledefs:
-            tsn_nodes = env.roledefs['tsn']
-        if 'toragent' in env.roledefs:
-            tor_nodes = env.roledefs['toragent']
-        contrail_vms = get_esxi_contrail_vms()
-        if (host not in tsn_nodes) and (host not in tor_nodes) and (host not in contrail_vms) :
-            if detect_ostype() in ['ubuntu']:
-                sudo('service nova-compute stop')
-                return
-            sudo('service openstack-nova-compute stop')
+    if orchestrator != 'openstack':
+        return
+    tsn_nodes = get_tsn_nodes()
+    tor_nodes = get_toragent_nodes()
+    contrail_vms = get_esxi_contrail_vms()
+    if (host not in tsn_nodes) and (host not in tor_nodes) and (host not in contrail_vms) :
+        if detect_ostype() in ['ubuntu']:
+            sudo('service nova-compute stop')
+            return
+        sudo('service openstack-nova-compute stop')
 
 
 @roles('compute')
@@ -407,17 +407,16 @@ def start_nova_openstack_compute():
     contrail_vms = []
     host = env.host_string
     orchestrator = get_orchestrator()
-    if orchestrator != 'vcenter':
-        if 'tsn' in env.roledefs:
-            tsn_nodes = env.roledefs['tsn']
-        if 'toragent' in env.roledefs:
-            tor_nodes = env.roledefs['toragent']
-        contrail_vms = get_esxi_contrail_vms()
-        if (host not in tsn_nodes) and (host not in tor_nodes) and (host not in contrail_vms) :
-            if detect_ostype() in ['ubuntu']:
-                sudo('service nova-compute start')
-                return
-            sudo('service openstack-nova-compute start')
+    if orchestrator != 'openstack':
+        return
+    tsn_nodes = get_tsn_nodes()
+    tor_nodes = get_toragent_nodes()
+    contrail_vms = get_esxi_contrail_vms()
+    if (host not in tsn_nodes) and (host not in tor_nodes) and (host not in contrail_vms) :
+        if detect_ostype() in ['ubuntu']:
+            sudo('service nova-compute start')
+            return
+        sudo('service openstack-nova-compute start')
 
 
 @roles('openstack')
