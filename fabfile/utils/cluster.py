@@ -288,28 +288,10 @@ def get_metadata_secret():
 
         if not metadata_secret:
             with settings(host_string=openstack_host):
-                ostype = detect_ostype()
-                # For Juno, use service_metadata_proxy metadata_proxy_shared_secret
-                # from neutron section in /etc/nova/nova.conf
-                if ostype.lower() in ['centos', 'redhat', 'centoslinux']:
-                    api_version = sudo("rpm -q --queryformat='%{VERSION}' openstack-nova-api")
-                    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
-                elif ostype.lower() in ['ubuntu']:
-                    api_version = sudo("dpkg-query -W -f='${VERSION}' nova-api")
-                    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
-                else:
-                    raise RuntimeError("Unknown ostype (%s)" % ostype)
-
-                if is_juno_or_higher:
-                    status, secret = get_value('/etc/nova/nova.conf',
-                                               'neutron',
-                                               'service_metadata_proxy',
-                                               'metadata_proxy_shared_secret')
-                else:
-                    status, secret = get_value('/etc/nova/nova.conf',
-                                               'DEFAULT',
-                                               'service_neutron_metadata_proxy',
-                                               'neutron_metadata_proxy_shared_secret')
+                status, secret = get_value('/etc/nova/nova.conf',
+                                           'neutron',
+                                           'service_metadata_proxy',
+                                           'metadata_proxy_shared_secret')
             metadata_secret = secret if status == 'True' else None
     else:
         print "WARNING get_metadata_secret: Orchestrator(%s) is not supported" % orch
