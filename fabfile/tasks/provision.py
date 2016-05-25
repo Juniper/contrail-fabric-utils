@@ -2199,6 +2199,36 @@ def delete_tor_agent_by_index(index, node_info, restart=True, remove_cacert=Fals
         if tor_agent_name == None or not tor_agent_name:
             tor_agent_name = agent_name
 
+        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+        cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
+        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
+        cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
+        cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
+        compute_host = get_control_host_string(host_string)
+        (tgt_ip, tgt_gw) = get_data_ip(host_string)
+        compute_mgmt_ip= host_string.split('@')[1]
+        compute_control_ip= hstr_to_ip(compute_host)
+        admin_tenant_name = get_admin_tenant_name()
+        orch = get_orchestrator()
+        if orch is 'openstack':
+            admin_user, admin_password = get_authserver_credentials ()
+        elif orch is 'vcenter':
+            admin_user, admin_password = get_vcenter_credentials()
+        authserver_ip = get_authserver_ip()
+        prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper del " \
+                    "--admin_user %s --admin_password %s --admin_tenant_name %s\
+                     --openstack_ip %s" \
+                     %(tor_agent_name, compute_control_ip, cfgm_ip, admin_user,
+                       admin_password, admin_tenant_name, authserver_ip)
+        pr_args = "--device_name %s --vendor_name %s --api_server_ip %s\
+                   --oper del --admin_user %s --admin_password %s\
+                   --admin_tenant_name %s --openstack_ip %s"\
+            %(tor_name, tor_vendor_name, cfgm_ip, admin_user, admin_password,
+              admin_tenant_name, authserver_ip)
+        with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
+            sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
+            sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
+
         # Stop tor-agent process
         tor_process_name = 'contrail-tor-agent-' + str(tor_id)
         cmd = 'service ' + tor_process_name + ' stop'
@@ -2229,35 +2259,6 @@ def delete_tor_agent_by_index(index, node_info, restart=True, remove_cacert=Fals
             if exists('/etc/contrail/ssl/certs/cacert.pem', use_sudo=True):
                 remove_file('/etc/contrail/ssl/certs/cacert.pem')
 
-        cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
-        cfgm_host_password = get_env_passwords(env.roledefs['cfgm'][0])
-        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
-        cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
-        cfgm_passwd = get_env_passwords(env.roledefs['cfgm'][0])
-        compute_host = get_control_host_string(host_string)
-        (tgt_ip, tgt_gw) = get_data_ip(host_string)
-        compute_mgmt_ip= host_string.split('@')[1]
-        compute_control_ip= hstr_to_ip(compute_host)
-        admin_tenant_name = get_admin_tenant_name()
-        orch = get_orchestrator()
-        if orch is 'openstack':
-            admin_user, admin_password = get_authserver_credentials ()
-        elif orch is 'vcenter':
-            admin_user, admin_password = get_vcenter_credentials()
-        authserver_ip = get_authserver_ip()
-        prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper del " \
-                    "--admin_user %s --admin_password %s --admin_tenant_name %s\
-                     --openstack_ip %s" \
-                     %(tor_agent_name, compute_control_ip, cfgm_ip, admin_user,
-                       admin_password, admin_tenant_name, authserver_ip)
-        pr_args = "--device_name %s --vendor_name %s --api_server_ip %s\
-                   --oper del --admin_user %s --admin_password %s\
-                   --admin_tenant_name %s --openstack_ip %s"\
-            %(tor_name, tor_vendor_name, cfgm_ip, admin_user, admin_password,
-              admin_tenant_name, authserver_ip)
-        with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
-            sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
-            sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
         if restart:
             sudo("supervisorctl -c /etc/contrail/supervisord_vrouter.conf update")
 
