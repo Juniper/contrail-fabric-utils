@@ -2087,10 +2087,7 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         compute_control_ip= hstr_to_ip(compute_host)
         admin_tenant_name = get_admin_tenant_name()
         orch = get_orchestrator()
-        if orch is 'openstack':
-            admin_user, admin_password = get_authserver_credentials()
-        elif orch is 'vcenter':
-            admin_user, admin_password = get_vcenter_credentials()
+        admin_user, admin_password = get_authserver_credentials()
         authserver_ip = get_authserver_ip()
         prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                     "--admin_user %s --admin_password %s --admin_tenant_name %s\
@@ -2240,10 +2237,7 @@ def delete_tor_agent_by_index(index, node_info, restart=True, remove_cacert=Fals
         compute_control_ip= hstr_to_ip(compute_host)
         admin_tenant_name = get_admin_tenant_name()
         orch = get_orchestrator()
-        if orch is 'openstack':
-            admin_user, admin_password = get_authserver_credentials ()
-        elif orch is 'vcenter':
-            admin_user, admin_password = get_vcenter_credentials()
+        admin_user, admin_password = get_authserver_credentials ()
         authserver_ip = get_authserver_ip()
         prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper del " \
                     "--admin_user %s --admin_password %s --admin_tenant_name %s\
