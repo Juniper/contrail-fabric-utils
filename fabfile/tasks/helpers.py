@@ -481,8 +481,9 @@ def add_images(image=None):
 
             os_type = detect_ostype()
             openstack_sku = get_openstack_sku()
+            liberty_or_above = is_liberty_or_above()
 
-            if os_type in ['ubuntu'] and openstack_sku in ['liberty']:
+            if os_type in ['ubuntu'] and liberty_or_above:
                 cmd = "source /etc/contrail/openstackrc; {PRECMD}"\
                       " glance image-create --name {IMGNAME}"\
                       " --visibility public --container-format {IMGFORMAT}"\
@@ -583,8 +584,9 @@ def add_basic_images(image=None):
 
         os_type = detect_ostype()
         openstack_sku = get_openstack_sku()
+        liberty_or_above = is_liberty_or_above()
 
-        if os_type in ['ubuntu'] and openstack_sku in ['liberty']:
+        if os_type in ['ubuntu'] and liberty_or_above:
             if ".vmdk" in loc:
                 if 'converts' in loc:
                     glance_id = run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --visibility public --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
