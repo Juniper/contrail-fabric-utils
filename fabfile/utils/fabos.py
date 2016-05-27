@@ -61,6 +61,14 @@ def get_openstack_sku(use_install_repo=False):
     return openstack_sku
 #end get_openstack_sku
 
+def is_liberty_or_above():
+    openstack_sku = get_openstack_sku()
+    liberty_or_above = False
+
+    if openstack_sku in ['liberty', 'mitaka']:
+       liberty_or_above = True
+    return liberty_or_above
+
 def get_release(pkg='contrail-install-packages', use_install_repo=False):
     pkg_ver = None
     dist = detect_ostype() 
