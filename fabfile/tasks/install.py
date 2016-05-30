@@ -396,6 +396,7 @@ def install_openstack():
     """Installs openstack pkgs in all nodes defined in openstack role."""
     if env.roledefs['openstack']:
         execute("install_openstack_node", env.host_string)
+        execute('add_reserved_ports_node', '35357,35358,33306,9322', env.host_string)
 
 @task
 def install_openstack_node(*args):

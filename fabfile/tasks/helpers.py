@@ -1269,7 +1269,10 @@ def pre_check():
         exit(1)
     execute('setup_ntp')
     execute('verify_time_all')
-    if len(env.roledefs['openstack']) > 1 and not get_openstack_internal_vip():
+    # Assuming keystone_ip in env.keysone will be set only for external openstack
+    # and is safer to skip this check
+    if len(env.roledefs['openstack']) > 1 and not get_openstack_internal_vip() and \
+       get_from_testbed_dict('keystone', 'keystone_ip', None) is None:
         print "\nERROR: \n\tkeystone_ip(VIP) needs to be set in testbed.py for HA, when more than one openstack node is defined."
         exit(1)
     if (len(env.roledefs['openstack']) > 1 and
@@ -1284,7 +1287,6 @@ def pre_check():
         exit(1)
     else:
         print "\nINFO: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
-    execute('add_openstack_reserved_ports')
 
 def role_to_ip_dict(role=None):
     role_to_ip_dict = {}

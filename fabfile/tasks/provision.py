@@ -1117,7 +1117,6 @@ def setup_contrail_horizon():
 def setup_openstack_node(*args):
     """Provisions openstack services in one or list of nodes. USAGE: fab setup_openstack_node:user@1.1.1.1,user@2.2.2.2"""
     #qpidd_changes_for_ubuntu()
-    execute('add_openstack_reserved_ports')
     for host_string in args:
         # Frame the command line to provision openstack
         cmd = frame_vnc_openstack_cmd(host_string)
