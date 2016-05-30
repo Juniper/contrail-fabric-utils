@@ -75,7 +75,10 @@ def listen_at_supervisor_support_port_node(*args):
         with settings(host_string=host_string, warn_only=True):
             if sudo("service supervisor-support-service status | grep running").failed:
                 sudo("service supervisor-support-service start")
-                sudo("supervisorctl -s unix:///tmp/supervisord_support_service.sock stop all")
+                if files.exists("/tmp/supervisord_support_service.sock"):
+                    sudo("supervisorctl -s unix:///tmp/supervisord_support_service.sock stop all")
+                else:
+                    sudo("supervisorctl -s unix:///var/run/supervisord_support_service.sock stop all")
 
 
 @task
