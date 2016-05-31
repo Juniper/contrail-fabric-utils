@@ -113,7 +113,8 @@ def setup_rhosp_node():
     authserver_ip = get_authserver_ip()
     # For juno, neutron_url is deprecated instead use "url" in neutron section
     api_version = sudo("rpm -q --queryformat='%{VERSION}' openstack-nova-api")
-    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
+    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2') or\
+                        LooseVersion(api_version) < LooseVersion('2013') and LooseVersion(api_version) >= LooseVersion('12.0')
     if is_juno_or_higher:
         sudo("openstack-config --set /etc/nova/nova.conf neutron url http://%s:9696" % cfgm_0_ip)
     else:
