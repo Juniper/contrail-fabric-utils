@@ -17,7 +17,7 @@ from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.utils.cluster import get_orchestrator, get_all_hostnames, get_hostname
 from fabfile.utils.analytics import get_analytics_data_dir, get_minimum_diskGB
 from fabfile.tasks.ntp import setup_ntp, setup_ntp_node
-from fabfile.utils.fabos import detect_ostype, is_package_installed
+from fabfile.utils.fabos import detect_ostype, is_package_installed, is_liberty_or_above
 
 @task
 @parallel
@@ -491,8 +491,9 @@ def add_images(image=None):
 
             os_type = detect_ostype()
             openstack_sku = get_openstack_sku()
+            liberty_or_above = is_liberty_or_above()
 
-            if os_type in ['ubuntu'] and openstack_sku in ['liberty']:
+            if os_type in ['ubuntu'] and liberty_or_above:
                 cmd = "source /etc/contrail/openstackrc; {PRECMD}"\
                       " glance image-create --name {IMGNAME}"\
                       " --visibility public --container-format {IMGFORMAT}"\
@@ -593,8 +594,9 @@ def add_basic_images(image=None):
 
         os_type = detect_ostype()
         openstack_sku = get_openstack_sku()
+        liberty_or_above = is_liberty_or_above()
 
-        if os_type in ['ubuntu'] and openstack_sku in ['liberty']:
+        if os_type in ['ubuntu'] and liberty_or_above:
             if ".vmdk" in loc:
                 if 'converts' in loc:
                     glance_id = run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --visibility public --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
