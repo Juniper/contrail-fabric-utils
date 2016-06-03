@@ -373,9 +373,6 @@ env.ostypes = {
 #To enable multi-tenancy feature
 #multi_tenancy = True
 
-#To enable haproxy feature
-#haproxy = True
-
 #To Enable prallel execution of task in multiple nodes
 #do_parallel = True
 
