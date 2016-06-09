@@ -1569,6 +1569,13 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
                     sudo('rm /etc/init/supervisor-vrouter.override')
+                    # Fix /dev/vhost-net permissions. It is required for
+                    # multiqueue operation
+                    sudo('echo \'KERNEL=="vhost-net", GROUP="kvm", MODE="0660"\' > /etc/udev/rules.d/vhost-net.rules')
+                    # The vhost-net module has to be loaded at startup to
+                    # ensure the correct permissions while the qemu is being
+                    # launched
+                    sudo('echo "vhost-net" >> /etc/modules')
             with cd(INSTALLER_DIR):
                 print cmd
                 sudo(cmd)
