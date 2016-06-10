@@ -1048,12 +1048,12 @@ def update_js_config(role, file_path, service):
     """Task to update config of any section in a js file
        USAGE:fab update_js_config:openstack,/etc/contrail/config.global.js,contrail-webui
     """
-    with open(file_path, 'a') as fo:
-        fo.write('config.session = {};\n')
-        fo.write('config.session.timeout = 24 * 60 * 60 * 1000;\n')
-        fo.close()
-    cmd = "service " + service + " restart"
+    cmd1 = "echo 'config.session = {};' >> " + file_path
+    cmd2 = "echo 'config.session.timeout = 86400 * 1000;' >> " + file_path
+    cmd3 = "service " + service + " restart"
     for host in env.roledefs[role]:
         with settings(host_string=host, password=get_env_passwords(host)):
-            sudo(cmd)
+            sudo(cmd1)
+            sudo(cmd2)
+            sudo(cmd3)
 # end update_js_config
