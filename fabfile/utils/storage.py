@@ -297,3 +297,13 @@ def get_storage_replica_size():
 def get_storage_cache_tier():
     return getattr(testbed, 'ceph_ssd_cache_tier', False)
 #end get_storage_cache_tier
+
+# Return object storage
+def get_object_storage():
+    return getattr(testbed, 'ceph_object_storage', False)
+#end get_object_storage
+
+# Return object storage pool
+def get_object_storage_pool():
+    return getattr(testbed, 'ceph_object_storage_pool', 'volumes')
+#end get_object_storage_pool

@@ -258,6 +258,10 @@ env.ostypes = {
 #ceph_nfs_livem_subnet = '192.168.10.253/24'
 #ceph_nfs_livem_image = '/ubuntu/livemnfs.qcow2'
 #ceph_nfs_livem_host = host4
+#ceph_ssd_cache_tier = True
+#ceph_object_storage = True
+#ceph_object_storage_pool = 'volumes_hdd'
+
 
 #To disable installing contrail interface rename package
 #env.interface_rename = False

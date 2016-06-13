@@ -96,6 +96,11 @@ def create_storage_setup_cmd(mode):
     for entry in env.roledefs['storage-compute']:
         for sthostname, sthostentry in zip(get_all_hostnames(),
                                                 env.roledefs['all']):
+            for exist_name in orig_hostnames:
+                if sthostname == exist_name:
+                    break
+            if exist_name == sthostname:
+                continue
             if entry == sthostentry:
                 if storage_network == True:
                     storage_compute_hostnames.append('%s-storage' %(sthostname))
@@ -179,6 +184,10 @@ def create_storage_setup_cmd(mode):
     # openstack-ip - IP address of the first openstack node
     # orig-hostnames - Original hostnames
     # service-dbpass - DB password for cinder(and all service) db user
+    # region-name - Region name for keystone services
+    # ssd-cache-tier - Enable/Disable SSD cache tier
+    # object-storage - Enable/Disable Ceph Object storage
+    # object-storage-pool - pool to use for object storage.
     # WARNING: If anything is added in the arguments, make sure it
     # doesn't break add_storage_node task.
     cmds = ["PASSWORD=%s" % storage_master_password, "setup-vnc-storage",
@@ -211,7 +220,9 @@ def create_storage_setup_cmd(mode):
             "--orig-hostnames %s" % ' '.join(orig_hostnames),
             "--service-dbpass %s" % get_service_dbpass(),
             "--region-name %s" % get_region_name(),
-            "--ssd-cache-tier %s" % get_storage_cache_tier()]
+            "--ssd-cache-tier %s" % get_storage_cache_tier(),
+            "--object-storage %s" % get_object_storage(),
+            "--object-storage-pool %s" % get_object_storage_pool()]
     cmd = ' '.join(cmds)
     return cmd
 
