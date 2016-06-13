@@ -6,6 +6,7 @@ from fabfile.utils.cluster import get_orchestrator,get_tsn_nodes,get_toragent_no
                                   get_esxi_contrail_vms
 from fabric.contrib.files import exists
 from fabfile.utils.host import hstr_to_ip
+from fabfile.utils.host import get_control_host_string
 
 @task
 @roles('cfgm')
@@ -429,12 +430,24 @@ def reboot_nova_instance():
 @task
 def drop_analytics_keyspace_node(*args):
     for host_string in args:
-        with settings(host_string=host_string):
-            CASSANDRA_CMD = 'cqlsh %s 9160 -f ' % hstr_to_ip(host_string)
+        with settings(host_string=host_string, warn_only=True):
+            CASSANDRA_CMD = 'cqlsh %s -f ' % hstr_to_ip(get_control_host_string(host_string))
             print "Dropping analytics keyspace.. this may take a while.."
-            sudo("echo 'drop keyspace \"ContrailAnalytics\";' > /tmp/cassandra_commands_file")
+
+            sudo("echo 'describe keyspace \"ContrailAnalytics\";' > /tmp/cassandra_commands_file")
+            if sudo(CASSANDRA_CMD + '/tmp/cassandra_commands_file').succeeded:
+                sudo("echo 'drop keyspace \"ContrailAnalytics\";' > /tmp/cassandra_commands_file")
+                if not sudo(CASSANDRA_CMD + '/tmp/cassandra_commands_file').succeeded:
+                    print "WARN: Drop keyspace ContrailAnalytics failed.."
+                else:
+                    print "INFO: keyspace ContrailAnalytics is dropped.."
+                    print "INFO: if snapshots are created, manual deletion may be required to free up disk.."
+            sudo("echo 'drop keyspace \"ContrailAnalyticsCql\";' > /tmp/cassandra_commands_file")
             if not sudo(CASSANDRA_CMD + '/tmp/cassandra_commands_file').succeeded:
-                print "WARN: Drop analytics keyspace failed.."
+                print "WARN: Drop keyspace ContrailAnalyticsCql failed.."
+            else:
+                print "INFO: keyspace ContrailAnalyticsCql is dropped.."
+                print "INFO: if snapshots are created, manual deletion may be required to free up disk.."
 
 @task
 @roles('build')
