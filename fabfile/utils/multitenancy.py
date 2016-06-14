@@ -6,6 +6,13 @@ def get_mt_enable():
     return getattr(testbed, 'multi_tenancy', True)
 #end _get_mt_ena
 
+def get_analytics_aaa_mode():
+    return getattr(testbed, 'analytics_aaa_mode', 'cloud-admin')
+# end get_analytics_mt_enable
+
+def get_cloud_admin_role():
+    return getattr(testbed, 'cloud_admin_role', '')
+
 def get_mt_opts():
     mt_opts = ''
     if get_mt_enable():

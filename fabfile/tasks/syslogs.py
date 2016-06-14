@@ -2,7 +2,7 @@ from datetime import datetime as dt
 
 from fabfile.config import *
 from fabfile.utils.fabos import detect_ostype
-from fabfile.utils.host import get_env_passwords
+from fabfile.utils.host import get_env_passwords, get_authserver_credentials
 from fabric.contrib.files import exists
 
 @roles('all')
@@ -76,6 +76,8 @@ def get_cassandra_logs(duration = None):
         uptime_min=str(duration) + 'm'
         print "Duration value is %s . Collecting Cassandra logs for %s" %(uptime_min,uptime_min)
     cmd = "/usr/bin/contrail-logs --last %s --all" %(uptime_min)
+    admin_user, admin_password = get_authserver_credentials()
+    cmd += " --admin-user %s --admin-password %s" % (admin_user, admin_password)
     with settings(warn_only=True):
         sudo("%s >> /var/log/cassandra_log_%s_%s.log" %(cmd,e,a))
         sudo("gzip /var/log/cassandra_log_*" )
