@@ -166,6 +166,7 @@ class sr_iov_fab(object):
     def add_sr_iov_nics(self, si, esxi_info, host, dv_port_name, vm_name):
         vm = self.vcenter_base.get_obj([self.pyVmomi.vim.VirtualMachine], vm_name)
         sr_iov_nic_list = esxi_info[host]['contrail_vm']['sr_iov_nics']
+        mac_address = None
         if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOn:
             print "VM:%s is powered ON. Cannot do hot pci add now. Shutting it down" %(vm_name)
             self.vcenter_base.poweroff(si, vm);
@@ -208,10 +209,27 @@ class sr_iov_fab(object):
             nicspec.device.sriovBacking = self.pyVmomi.vim.vm.device.VirtualSriovEthernetCard.SriovBackingInfo()
             nicspec.device.sriovBacking.physicalFunctionBacking = self.pyVmomi.vim.vm.device.VirtualPCIPassthrough.DeviceBackingInfo()
             nicspec.device.sriovBacking.physicalFunctionBacking.id = pci_id
+            if (mac_address):
+                nicspec.device.addressType = "Manual"
+                nicspec.device.macAddress = mac_address
             devices.append(nicspec)
             vmconf = self.pyVmomi.vim.vm.ConfigSpec(deviceChange=devices)
-            task=vm.ReconfigVM_Task(vmconf)
+            task = vm.ReconfigVM_Task(vmconf)
             self.vcenter_base.wait_for_task(task, si)
+            if mac_address is None:
+               for device in vm.config.hardware.device:
+                  if isinstance(device, self.pyVmomi.vim.vm.device.VirtualSriovEthernetCard):
+                      devices = []
+                      mac_address = device.macAddress
+                      nicspec = self.pyVmomi.vim.vm.device.VirtualDeviceSpec()
+                      nicspec.operation = self.pyVmomi.vim.vm.device.VirtualDeviceSpec.Operation.edit
+                      nicspec.device = device
+                      nicspec.device.addressType = "Manual"
+                      nicspec.device.macAddress = mac_address
+                      devices.append(nicspec)
+                      vmconf = self.pyVmomi.vim.vm.ConfigSpec(deviceChange=devices)
+                      task = vm.ReconfigVM_Task(vmconf)
+                      self.vcenter_base.wait_for_task(task, si)
         if vm.runtime.powerState == self.pyVmomi.vim.VirtualMachinePowerState.poweredOff:
             print "Turning VM: %s On" %(vm_name)
             self.vcenter_base.poweron(si, vm)
