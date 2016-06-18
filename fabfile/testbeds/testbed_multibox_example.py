@@ -377,6 +377,9 @@ env.ostypes = {
 #To enable multi-tenancy feature
 #multi_tenancy = True
 
+#To enable analytics multi-tenancy feature
+#analytics_multi_tenancy = True
+
 #To enable haproxy feature
 #haproxy = True
 
