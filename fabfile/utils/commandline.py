@@ -509,6 +509,8 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     # Frame the command line to provision collector
     cmd += " --cassandra_ip_list %s" % (' '.join(cassandra_ip_list))
     cmd += " --zookeeper_ip_list %s" % (' '.join(zookeeper_ip_list))
+    cmd += " --amqp_ip_list %s" % ' '.join(get_amqp_servers())
+    cmd += " --amqp_port %s" % get_amqp_port()
     cmd += " --cfgm_ip %s" % cfgm_ip
     cmd += " --self_collector_ip %s" % tgt_ip
     cmd += " --num_nodes %d " % ncollectors
