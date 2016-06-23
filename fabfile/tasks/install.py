@@ -673,12 +673,16 @@ def create_install_repo_dpdk_node(*args):
     """
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            # Install/uprgade dpdk-depends-packages
-            sudo("apt-get install dpdk-depends-packages")
+            # For Liberty and Mitaka dpdk-depends-packages is not available.
+            # All necessary packages for DPDK vRouter are already in
+            # contrail_install_repo
+            if sudo("apt-cache search dpdk-depends-packages"):
+                # Install/uprgade dpdk-depends-packages
+                sudo("apt-get install dpdk-depends-packages")
 
-            # Setup repo. Script handles automatically case when repo is
-            # already in /etc/apt/sources.list
-            sudo("/opt/contrail/contrail_packages_dpdk/setup.sh")
+                # Setup repo. Script handles automatically the case when the
+                # repo is already in /etc/apt/sources.list
+                sudo("/opt/contrail/contrail_packages_dpdk/setup.sh")
 
 @task
 @roles('compute')
