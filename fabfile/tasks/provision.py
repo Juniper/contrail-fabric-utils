@@ -2614,13 +2614,14 @@ def setup_interface():
     '''
     execute('setup_interface_node')
 
-def setup_sriov_interfaces(host_string, host_config):
+def setup_sriov_interfaces(host_string, host_config, bondinfo):
     '''Setup interfaces from env.sriov stanza in testbed.py
     Parameters:
         host_string: Host on which interfaces should be set up (i.e.
                      root@10.0.0.1)
         host_config: The configuration dict value of the given host as stated
                      in the control_data dictionary in testbed.py
+        bondinfo:    Bond configuration in testbed
     '''
     def enable_vf(iface, vf):
         with settings(host_string=host_string):
@@ -2672,6 +2673,18 @@ def setup_sriov_interfaces(host_string, host_config):
                 with settings(host_string=host_string):
                     sudo('setup-vnc-interfaces --device %s --no-ip' %
                          iface['interface'])
+            else:
+                if not bondinfo:
+                    return
+                if not bondinfo.has_key(host_string):
+                    return
+                if not bondinfo[host_string].has_key('member'):
+                    return
+                for member in bondinfo[host_string]['member']:
+                    if is_iface_vf_of_pf(member, iface['interface']):
+                        with settings(host_string=host_string):
+                            sudo('setup-vnc-interfaces --device %s --no-ip' %
+                                iface['interface'])
 
 @task
 def setup_interface_node(*args):
@@ -2703,7 +2716,7 @@ def setup_interface_node(*args):
         # We need all interfaces to be usable for the case when we use DPDK
         # vRouter on top of a virtual PCI function instead of on top of a
         # physical interface.
-        setup_sriov_interfaces(host, hosts[host])
+        setup_sriov_interfaces(host, hosts[host], bondinfo)
 
         cmd = 'setup-vnc-interfaces'
         errmsg = 'WARNING: Host ({HOST}) is defined with device ({DEVICE})'+\
