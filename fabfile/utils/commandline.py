@@ -18,6 +18,7 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     database_host=get_control_host_string(host_string)
     database_host_password=get_env_passwords(host_string)
     tgt_ip = hstr_to_ip(database_host)
+    opscenter_ip = hstr_to_ip(env.roledefs['webui'][0])
 
     if parent_cmd != "remove-cassandra-node" and parent_cmd != 'decommission-cassandra-node':
         #derive kafka broker id from the list of servers specified
@@ -27,6 +28,8 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
 
     cmd += " --self_ip %s" % tgt_ip
     cmd += " --cfgm_ip %s" % cfgm_ip
+    cmd += " --opscenter_ip %s" % opscenter_ip
+
     database_dir = get_database_dir()
     if database_dir is not None:
         cmd += " --data_dir %s" % database_dir
