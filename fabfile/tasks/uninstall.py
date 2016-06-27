@@ -1,6 +1,6 @@
 import os
 import re
-import copy
+from copy import deepcopy
 import tempfile
 
 from fabfile.config import *
@@ -62,7 +62,7 @@ def uninstall_pkg_all(pkg):
 @roles('build')
 def uninstall_pkg_all_without_openstack(pkg):
     """Uninstalls any rpm/deb package in all nodes excluding openstack node."""
-    host_strings = copy.deepcopy(env.roledefs['all'])
+    host_strings = deepcopy(env.roledefs['all'])
     dummy = [host_strings.remove(openstack_node)
              for openstack_node in env.roledefs['openstack']]
     execute('uninstall_pkg_node', pkg, *host_strings)
@@ -422,13 +422,13 @@ def reboot_all_build_atlast():
     """Reboot all nodes, will reboot the node from where fab command is trrigered at last"""
     if env.host_string in env.roledefs['all']:
         #Trrigered from one of the node in cluster
-        node_list_except_build = copy.deepcopy(env.roledefs['all'])
+        node_list_except_build = deepcopy(env.roledefs['all'])
         node_list_except_build.remove(env.host_string)
         execute("reboot_nodes_atlast", *node_list_except_build)
         execute("reboot_nodes_atlast", env.host_string)
     else:
         #Trrigered from external machine
-        nodes = copy.deepcopy(env.roledefs['all'])
+        nodes = deepcopy(env.roledefs['all'])
         execute("reboot_nodes_atlast", *nodes)
 
 
