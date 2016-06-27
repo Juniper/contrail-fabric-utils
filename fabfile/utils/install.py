@@ -6,7 +6,8 @@ from fabric.api import env, settings, sudo
 from fabric.contrib.files import exists
 
 from fabos import detect_ostype, get_release, get_build, get_openstack_sku
-from fabfile.utils.host import get_hypervisor, get_openstack_internal_vip
+from fabfile.utils.host import (get_hypervisor, get_openstack_internal_vip,
+        manage_config_db)
 from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator
 from fabfile.config import *
 
@@ -100,6 +101,8 @@ def get_config_pkgs():
          pkgs = ['contrail-vmware-config']
      else:
          pkgs = ['contrail-openstack-config']
+     if manage_config_db:
+         pkgs.append('contrail-database-common')
 
      return pkgs
 

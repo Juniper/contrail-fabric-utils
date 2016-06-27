@@ -1,5 +1,6 @@
 import paramiko
 from netaddr import *
+from copy import deepcopy
 
 from fabric.api import env, sudo, get, put
 from fabric.context_managers import settings
@@ -373,3 +374,13 @@ def get_bgp_md5(host = env.host_string):
     """
     return get_from_testbed_dict('md5', host, None)
 #end get_bgp_md5
+
+
+def manage_config_db():
+    cfgm_nodes = set(deepcopy(env.roledefs['cfgm']))
+    database_nodes = set(deepcopy(env.roledefs['database']))
+    if (get_from_testbed_dict('cfgm', 'manage_db', 'yes') == 'yes' and
+            database_nodes != cfgm_nodes and
+            not cfgm_nodes.issubset(database_nodes)):
+        return True
+    return False
