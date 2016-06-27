@@ -363,10 +363,13 @@ env.ostypes = {
 # amqp_port : Port of the customer deployed AMQP servers.
 # haproxy_token : Password of the haproxy user(haproxy) running in cfgm nodes,
 #                 Default is auto generated(/etc/contrail/haproxy.token)
+# manage_db : Manage seperate cassandra DB for config objects in config(cfgm) node.
+#              Defaults to 'yes'.
 #env.cfgm = {
-#    'amqp_hosts' : ['10.10.10.1', '10.10.10.2']
-#    'amqp_port' : '5672'
-#    'haproxy_token' : 'secret123'
+#    'amqp_hosts' : [,'10.10.10.1', '10.10.10.2']
+#    'amqp_port' : '5672',
+#    'haproxy_token' : 'secret123',
+#    'manage_db' : 'no',
 #}
 
 # Link-Local Metadata Service
