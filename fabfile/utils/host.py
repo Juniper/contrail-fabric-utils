@@ -1,5 +1,6 @@
 import paramiko
 from netaddr import *
+from copy import deepcopy
 
 from fabric.api import env, sudo, get, put
 from fabric.context_managers import settings

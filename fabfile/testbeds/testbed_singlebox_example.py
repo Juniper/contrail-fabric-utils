@@ -250,6 +250,8 @@ env.ostypes = {
 #Config node related config knobs
 # amqp_hosts : List of customer deployed AMQP servers to be used by config services.
 # amqp_port : Port of the customer deployed AMQP servers.
+# manage_db : Manage seperate cassandra DB for config objects in config(cfgm) node.
+#              Defaults to 'yes'.
 # keyfile  : Specify local remote(cfgm node) path to key file
 #            If local path specifed, it will be copied to cfgm node(/etc/contrail/ssl/private/apiserver_key.pem)
 #            If remote path in cfgm node specified, contrail-api.conf will point to the specified location
@@ -263,6 +265,7 @@ env.ostypes = {
 #    'amqp_hosts' : ['10.10.10.1', '10.10.10.2'],
 #    'amqp_port' : '5672',
 #    'auth_protocol'   : 'http',                  #Default is http
+#    'manage_db' : 'no',
 #    'insecure'        : 'True',                   #Default is False
 #    'certfile'        : '/root/apiserver.pem',    #Default is '/etc/contrail/ssl/certs/apiserver.pem'
 #    'keyfile'         : '/root/apiserver_key.pem',#Default is '/etc/contrail/ssl/private/apiserver_key.pem'
