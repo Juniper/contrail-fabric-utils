@@ -373,3 +373,10 @@ def get_bgp_md5(host = env.host_string):
     """
     return get_from_testbed_dict('md5', host, None)
 #end get_bgp_md5
+
+
+def manage_config_db():
+    if (get_from_testbed_dict('cfgm', 'manage_db', 'yes') == 'yes' and
+            set(env.roledefs['database']) != set(env.roledefs['cfgm'])):
+        return True
+    return False

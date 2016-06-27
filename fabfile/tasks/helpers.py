@@ -470,7 +470,7 @@ def add_images(image=None):
         glance_host = env.roledefs['openstack'][0]
         if 'docker' in loc:
             if env.get('hypervisor', None):
-                docker_nodes = filter(lambda node, hypervisor: hypervisor == 'docker',
+                docker_nodes = filter(lambda (node, hypervisor): hypervisor == 'docker',
                                       env.hypervisor.items())
                 if docker_nodes:
                     # First docker compute
