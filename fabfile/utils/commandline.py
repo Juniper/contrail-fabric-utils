@@ -7,6 +7,13 @@ from interface import *
 from multitenancy import *
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 
+def get_config_db_ip_list():
+    role = 'database'
+    if manage_config_db():
+        role = 'cfgm'
+    return [hstr_to_ip(get_control_host_string(config_db_host))
+            for config_db_host in env.roledefs[role]]
+
 def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     parent_cmd = cmd
     database_host = host_string
@@ -138,7 +145,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
                                  env.roledefs['collector'][hindex])
             collector_ip = hstr_to_ip(collector_host)
  
-    cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host))\
+    zookeeper_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host))\
                          for cassandra_host in env.roledefs['database']]
     control_ip_list = [hstr_to_ip(get_control_host_string(control_host))\
                          for control_host in env.roledefs['control']]
@@ -149,8 +156,8 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
 
     cmd += " --self_ip %s" % tgt_ip
     cmd += " --collector_ip %s" % (collector_ip)
-    cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
-    cmd += " --zookeeper_ip_list %s" % ' '.join(cassandra_ip_list)
+    cmd += " --cassandra_ip_list %s" % ' '.join(get_config_db_ip_list())
+    cmd += " --zookeeper_ip_list %s" % ' '.join(zookeeper_ip_list)
     cmd += " --control_ip_list %s" % ' '.join(control_ip_list)
     cmd += " --quantum_port %s" % quantum_port
     cmd += " --nworkers %d" % nworkers
@@ -158,10 +165,18 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cmd += " --amqp_ip_list %s" % ' '.join(get_amqp_servers())
     cmd += " --amqp_port %s" % get_amqp_port()
     cmd += " --orchestrator %s" % orch
+    if (len(env.roledefs['cfgm'])>2):
+        cmd += " --seed_list %s" % ','.join(get_config_db_ip_list()[:2])
+    else:
+        cmd += " --seed_list %s" % ','.join(get_config_db_ip_list())
+    database_dir = get_database_dir() or '/var/lib/cassandra/data'
+    cmd += " --data_dir %s" % database_dir
     haproxy = get_haproxy()
     if haproxy:
         cmd += " --haproxy %s" % haproxy
     cmd += get_rbac_opts()
+    if manage_config_db():
+        cmd += " --manage_db"
     if orch == 'openstack':
         (_, openstack_admin_password) = get_authserver_credentials()
         authserver_ip = get_authserver_ip()
@@ -213,7 +228,7 @@ def frame_vnc_vcenter_plugin_cmd(host_string, cmd="setup-vcenter-plugin"):
                      vcenter_server = vcenter_info[v]
                      break
 
-    cassandra_ip_list = [hstr_to_ip(get_control_host_string(\
+    zookeeper_ip_list = [hstr_to_ip(get_control_host_string(\
         cassandra_host)) for cassandra_host in env.roledefs['database']]
     if get_orchestrator() == 'vcenter':
         cfgm_ip = get_contrail_internal_vip() or\
@@ -233,7 +248,7 @@ def frame_vnc_vcenter_plugin_cmd(host_string, cmd="setup-vcenter-plugin"):
         cmd += " --vcenter_ipfabricpg contrail-fab-pg"
     cmd += " --api_hostname %s" % cfgm_ip
     cmd += " --api_port 8082"
-    zk_servers_ports = ','.join(['%s:2181' %(s) for s in cassandra_ip_list])
+    zk_servers_ports = ','.join(['%s:2181' %(s) for s in zookeeper_ip_list])
     cmd += " --zookeeper_serverlist %s" % zk_servers_ports
     if 'vcenter_compute' in env.roledefs:
          cmd += " --vcenter_mode vcenter-as-compute"

@@ -350,11 +350,14 @@ env.ostypes = {
 #}
 
 #Config node related config knobs
-#amqp_hosts : List of customer deployed AMQP servers to be used by config services.
-#amqp_port : Port of the customer deployed AMQP servers.
+# amqp_hosts : List of customer deployed AMQP servers to be used by config services.
+# amqp_port : Port of the customer deployed AMQP servers.
+# manage_db : Manage seperate cassandra DB for config objects in config(cfgm) node.
+#              Defaults to 'yes'.
 #env.cfgm = {
-#    'amqp_hosts' : ['10.10.10.1', '10.10.10.2']
-#    'amqp_port' : '5672'
+#    'amqp_hosts' : [,'10.10.10.1', '10.10.10.2']
+#    'amqp_port' : '5672',
+#    'manage_db' : 'no',
 #}
 
 # Link-Local Metadata Service
