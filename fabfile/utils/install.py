@@ -137,11 +137,13 @@ def get_openstack_ceilometer_pkgs():
         'ceilometer-collector',
         'ceilometer-agent-central',
         'ceilometer-agent-notification',
-        'ceilometer-alarm-evaluator',
-        'ceilometer-alarm-notifier',
         'ceilometer-plugin-contrail',
         'mongodb-clients',
         'python-pymongo']
+    if get_openstack_sku() in ['juno', 'kilo', 'liberty']:
+        pkg_ubuntu += [ 'ceilometer-alarm-evaluator',
+                        'ceilometer-alarm-notifier']
+
     pkg_redhat = ['ceilometer-plugin-contrail']
 
     ceilometer_pkgs = {

@@ -936,9 +936,11 @@ def setup_ceilometer_node(*args):
                 ceilometer_services = ['ceilometer-agent-central',
                                        'ceilometer-agent-notification',
                                        'ceilometer-api',
-                                       'ceilometer-collector',
-                                       'ceilometer-alarm-evaluator',
-                                       'ceilometer-alarm-notifier']
+                                       'ceilometer-collector']
+                if openstack_sku in ['juno', 'kilo', 'liberty']:
+                    ceilometer_services += ['ceilometer-alarm-evaluator',
+                                            'ceilometer-alarm-notifier']
+
             fixup_ceilometer_conf_common()
             #keystone auth params
             cmd = "source /etc/contrail/openstackrc;keystone user-get ceilometer"
