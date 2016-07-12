@@ -103,13 +103,13 @@ def get_config_pkgs():
 
      return pkgs
 
+def get_setup_vcenter_pkg():
+     pkgs = ['python-pyvmomi']
+ 
+     return pkgs
+
 def get_vcenter_plugin_pkg():
-    pkg = 'contrail-install-vcenter-plugin'
-    pkg = sudo('ls /opt/contrail/contrail_install_repo | grep %s' %pkg)
-    if pkg:
-        pkg = '/opt/contrail/contrail_install_repo/' + pkg
-    else:
-        pkg = None
+    pkg = ['contrail-install-vcenter-plugin']
 
     return pkg
 

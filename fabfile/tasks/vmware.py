@@ -12,6 +12,7 @@ from vcenter_prov import vcenter_fab as vcenter_fab
 from vcenter_prov import pci_fab as pci_fab
 from vcenter_prov import sr_iov_fab as sr_iov_fab
 from fabfile.utils.cluster import get_mode
+from fabfile.utils.install import get_setup_vcenter_pkg
 
 def configure_esxi_network(esxi_info):
     '''Provision ESXi server'''
@@ -182,7 +183,8 @@ def _template_substitute_write(template, vals, filename):
 
 @task
 def provision_vcenter_features(vcenter_info, esxi_info, host_list):
-    apt_install(['contrail-vmware-utils'])
+    pkgs = get_setup_vcenter_pkg()
+    apt_install(pkgs)
     vcenter_params = {}
 
     vcenter_params['vcenter_server'] = vcenter_info['server']
@@ -200,7 +202,8 @@ def provision_vcenter_features(vcenter_info, esxi_info, host_list):
 
 @task
 def provision_dvs_fab(vcenter_info, esxi_info, host_list):
-    apt_install(['contrail-vmware-utils'])
+    pkgs = get_setup_vcenter_pkg()
+    apt_install(pkgs)
     dvs_params = {}
 
     dvs_params['name'] = vcenter_info['dv_switch_fab']['dv_switch_name']
@@ -224,7 +227,8 @@ def provision_dvs_fab(vcenter_info, esxi_info, host_list):
 
 @task
 def provision_pci_fab(vcenter_info, esxi_info, host_list):
-    apt_install(['contrail-vmware-utils'])
+    pkgs = get_setup_vcenter_pkg()
+    apt_install(pkgs)
     pci_params = {}
 
     pci_params['vcenter_server'] = vcenter_info['server']
@@ -242,7 +246,8 @@ def provision_pci_fab(vcenter_info, esxi_info, host_list):
 
 @task
 def provision_sr_iov_fab(vcenter_info, esxi_info, host_list):
-    apt_install(['contrail-vmware-utils'])
+    pkgs = get_setup_vcenter_pkg()
+    apt_install(pkgs)
     sr_iov_params = {}
 
     sr_iov_params['dvs_name'] = vcenter_info['dv_switch_sr_iov']['dv_switch_name']
@@ -265,12 +270,14 @@ def provision_sr_iov_fab(vcenter_info, esxi_info, host_list):
 
 @task
 def deprovision_vcenter(vcenter_info):
-    apt_install(['contrail-vmware-utils'])
+    pkgs = get_setup_vcenter_pkg()
+    apt_install(pkgs)
     cleanup_vcenter(vcenter_info)
 
 @task
 def provision_vcenter(vcenter_info, hosts, clusters, vms):
-        apt_install(['contrail-vmware-utils'])
+        pkgs = get_setup_vcenter_pkg()
+        apt_install(pkgs)
         vcenter_params = {}
         vcenter_params['server'] = vcenter_info['server']
         vcenter_params['username'] = vcenter_info['username']

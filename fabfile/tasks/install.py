@@ -74,12 +74,19 @@ def install_contrail_vcenter_plugin(pkg, *args):
 
     for host_string in host_list:
          with settings (host_string=host_string, warn_only=True):
-             apt_install(depend_pkgs)
-             execute('install_pkg_node', pkg, env.host_string)
-             execute('install_contrail_vcenter_plugin_node', env.host_string)
+            apt_install(depend_pkgs)
+            if type(pkg) is list:
+                 #Invoked from install_cfgm or install_vcenter_compute
+                 #pkg is passed as a list
+                 apt_install(pkg)
+            else:
+                 #Invoked when 'fab install_contrail_vcenter_plugin'
+                 #is used with the vcenter-plugin deb as argument
+                 execute('install_pkg_node', pkg, env.host_string)
+            execute('install_contrail_vcenter_plugin_node', env.host_string)
 
 @task
-def install_contrail_vcenter_plugin_node( *args):
+def install_contrail_vcenter_plugin_node(*args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
             sudo('cd /opt/contrail/contrail_vcenter_plugin_install_repo/; dpkg -i *.deb')
