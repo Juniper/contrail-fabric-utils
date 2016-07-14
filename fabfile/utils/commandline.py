@@ -142,8 +142,10 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     mt_opt = '--multi_tenancy' if get_mt_enable() else ''
     cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host))\
                          for cassandra_host in env.roledefs['database']]
-    control_ip_list = [hstr_to_ip(get_control_host_string(control_host))\
-                         for control_host in env.roledefs['control']]
+    control_ip_list = []
+    if 'control' in env.roledefs:
+        control_ip_list = [hstr_to_ip(get_control_host_string(control_host))\
+                          for control_host in env.roledefs['control']]
 
     orch = get_orchestrator()
     cassandra_user = get_cassandra_user()
@@ -153,7 +155,8 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cmd += " --collector_ip %s %s" % (collector_ip, mt_opt)
     cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
     cmd += " --zookeeper_ip_list %s" % ' '.join(cassandra_ip_list)
-    cmd += " --control_ip_list %s" % ' '.join(control_ip_list)
+    if control_ip_list:
+        cmd += " --control_ip_list %s" % ' '.join(control_ip_list)
     cmd += " --quantum_port %s" % quantum_port
     cmd += " --nworkers %d" % nworkers
     cmd += " --service_token %s" % get_service_token()
