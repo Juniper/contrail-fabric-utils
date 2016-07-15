@@ -7,12 +7,18 @@ from fabfile.tasks.install import apt_install, pkg_install
 @task
 def set_grub_default_node(*args, **kwargs):
     '''Set default kernel version to bootup for given list of nodes'''
-    value = kwargs.get('value', 'Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-40-generic')
+    value = kwargs.get('value')
     for host_string in args:
         with settings(host_string=host_string):
-            sudo("sed -i \'s/^GRUB_DEFAULT=.*/GRUB_DEFAULT=\"%s\"/g\' /etc/default/grub" % value)
-            sudo('update-grub')
-            sudo("grep '^GRUB_DEFAULT=\"%s\"' /etc/default/grub" % value)
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower():
+                sudo("sed -i \'s/^GRUB_DEFAULT=.*/GRUB_DEFAULT=\"%s\"/g\' /etc/default/grub" % value)
+                sudo('update-grub')
+                sudo("grep '^GRUB_DEFAULT=\"%s\"' /etc/default/grub" % value)
+            elif 'centos' in dist.lower():
+                kernels = sudo("grep '^title CentOS' /boot/grub/grub.conf")
+                req_kernel = filter(lambda x: value in x[1], enumerate(kernels.split('\n')))
+                sudo("sed -i 's/^default=.*$/default=%s/g' /boot/grub/grub.conf" % req_kernel[0][0])
             print '[%s]: Updated Default Grub to (%s)' % (host_string, value)
 
 @task
@@ -37,6 +43,8 @@ def upgrade_kernel_all(*tgzs, **kwargs):
         elif version == '14.04':
             (package, os_type) = ('linux-image-3.13.0-40-generic', 'ubuntu')
             default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-40-generic'
+        elif 'centos' in dist.lower() and version.startswith('6'):
+            (package, os_type) = ('kernel-2.6.32-573.26.1.el6.x86_64', 'centos')
         else:
             raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
                                " kernel upgrade." % (dist, version, extra))
@@ -67,8 +75,8 @@ def upgrade_kernel_without_openstack(*tgzs, **kwargs):
     with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
         dist, version, extra = get_linux_distro()
 
-    if 'red hat' in dist.lower() and version == '7.0':
-        (package, os_type) = ('kernel-3.10.0-229.el7.x86_64', 'redhat')
+    if 'centos' in dist.lower() and version.startswith('6'):
+        (package, os_type) = ('kernel-2.6.32-573.26.1.el6.x86_64', 'centoslinux')
     else:
         raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
                            " kernel upgrade." % (dist, version, extra))
@@ -123,6 +131,12 @@ def upgrade_kernel_node(*args):
                              "kernel-tools-3.10.0-229.el7.x86_64",
                              "kernel-tools-libs-3.10.0-229.el7.x86_64",
                              "kernel-headers-3.10.0-229.el7.x86_64"], disablerepo=False)
+            elif 'centos' in dist.lower() and version.startswith('6'):
+                print "Upgrading Centos kernel to version 2.6.32-573.26.1"
+                pkg_install(["kernel-2.6.32-573.26.1.el6.x86_64",
+                             "kernel-headers-2.6.32-573.26.1.el6.x86_64"], disablerepo=False)
+                default_grub='2.6.32-573.26.1.el6.x86_64'
+                execute('set_grub_default_node', host_string, value=default_grub)
 
 @task
 @EXECUTE_TASK
