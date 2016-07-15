@@ -263,3 +263,47 @@ def upgrade_without_openstack(from_rel, pkg):
     """Upgrades all the  contrail packages in all nodes except openstack node as per the role definition.
     """
     execute('upgrade_contrail', from_rel, pkg, orch='no')
+
+@task
+def dist_upgrade_node(*args, **kwargs):
+    """Performs dist upgrade on given node(s)
+       Arguments:
+       args: a list of host_strings where dist_upgrade needs to be executed
+       kwargs:
+           enable_contrail_repo:
+               For Rhel/Centos Platforms: Disable all repos and Enable only repo name starting with "contrail"
+               For Ubuntu Platform: TBD
+               Default: True
+           exclude_kernel: Skip updating kernel related packages as part of dist upgrade
+                           Default: True
+    """
+
+    enable_contrail_repo = kwargs.get('enable_contrail_repo', True)
+    exclude_kernel = kwargs.get('exclude_kernel', True)
+    for host_string in args:
+        with settings(host_string=host_string):
+            os_type = detect_ostype()
+            if os_type in ['centos', 'redhat', 'centoslinux']:
+                contrail_only_repo = ' --disablerepo=* --enablerepo=contrail*' if enable_contrail_repo else ''
+                no_kernel = ' --exclude=kernel*' if exclude_kernel else ''
+                cmd = 'yum -y --nogpgcheck %s %s update' % (no_kernel, contrail_only_repo)
+            elif os_type in ['ubuntu']:
+                print 'Dist upgrade is yet to be supported'
+            sudo(cmd)
+
+@task
+@roles('all')
+def dist_upgrade_all(exclude_kernel=True, enable_contrail_repo=True):
+    """Performs dist upgrade on all nodes specified under role all
+       Arguments:
+       kwargs:
+       enable_contrail_repo:
+               For Rhel/Centos Platforms: Disable all repos and Enable only repo name starting with "contrail"
+               For Ubuntu Platform: TBD
+               Default: True
+       exclude_kernel: Skip updating kernel related packages as part of dist upgrade
+                           Default: True
+    """
+
+    execute('dist_upgrade_node', env.host_string, exclude_kernel=exclude_kernel,
+            enable_contrail_repo=enable_contrail_repo)

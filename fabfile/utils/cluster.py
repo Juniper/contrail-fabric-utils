@@ -93,20 +93,21 @@ def get_nodes_to_upgrade_pkg(package, os_type, *args, **kwargs):
     version = kwargs.get('version', None)
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
-            act_os_type = detect_ostype()
-            if act_os_type == os_type:
+            if os_type in ['ubuntu']:
                 installed = sudo("dpkg -l | grep %s" % package)
-                if not installed:
-                    nodes.append(host_string)
-                elif (version and
-                      version != '%s-%s' %
-                         (get_release(package), get_build(package))):
-                    nodes.append(host_string)
-                else:
-                    print 'Required package %s installed. Skipping!' % package
+            elif os_type in ['centos', 'redhat', 'centoslinux']:
+                installed = sudo("rpm -qa | grep %s" % package)
             else:
-                raise RuntimeError('Actual OS Type (%s) != Expected OS Type (%s)'
-                                    'Aborting!' % (act_os_type, os_type))
+                raise RuntimeError('Unsupported OS type!')
+
+            if not installed:
+                nodes.append(host_string)
+            elif (version and
+                  version != '%s-%s' %
+                     (get_release(package), get_build(package))):
+                nodes.append(host_string)
+            else:
+                print 'Required package %s installed. Skipping!' % package
     return nodes
 
 def get_package_installed_info(package, os_type, *nodes):
