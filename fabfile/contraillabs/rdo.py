@@ -130,6 +130,15 @@ def setup_rhosp_node():
     endpoint_id_openstack = sudo('source /etc/contrail/openstackrc; keystone endpoint-list 2> /dev/null | grep %s:9696 | tr -d " " | cut -d "|" -f2' % os_ip)
     # remove endpoint list
     sudo('source /etc/contrail/openstackrc; keystone endpoint-delete %s' % endpoint_id_openstack)
+    with settings(warn_only=True):
+        status = sudo('source /etc/contrail/openstackrc; keystone endpoint-list | grep %s' % endpoint_id_openstack)
+        if status.succeeded:
+            print "WARNING: Neutron Endpoint pointing to  openstack node is not removed"
+            print "WARNING: Removing neutron endpoint pointing to openstack node from db"
+            sudo('mysql -u root  -o keystone -e "delete from endpoint where url=\'http://%s:9696\'";' % os_ip)
+        status = sudo('source /etc/contrail/openstackrc; keystone endpoint-list | grep %s' % endpoint_id_openstack)
+        if status.succeeded:
+            raise RuntimeError('Delete neutron endpoint pointing to openstack node from db failed')
 
     # recreate with cfgm
     endpoint_cfgm = 'http://%s:9696' % cfgm_0_ip
