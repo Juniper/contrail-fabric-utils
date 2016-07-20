@@ -4,7 +4,7 @@ from fabfile.config import *
 from fabfile.templates import openstack_haproxy, collector_haproxy
 from fabfile.tasks.helpers import enable_haproxy
 from fabfile.tasks.rabbitmq import purge_node_from_rabbitmq_cluster
-from fabfile.utils.fabos import detect_ostype, get_as_sudo, is_package_installed
+from fabfile.utils.fabos import detect_ostype, get_as_sudo, is_package_installed, get_openstack_services
 from fabfile.utils.host import get_authserver_ip, get_control_host_string,\
     hstr_to_ip, get_from_testbed_dict, get_service_token, get_env_passwords,\
     get_openstack_internal_vip, get_openstack_external_vip,\
@@ -769,7 +769,9 @@ def setup_cmon_param_zkonupgrade_node(*args):
 @roles('openstack')
 def start_openstack():
     with settings(warn_only=True):
-        sudo('service supervisor-openstack start')
+        openstack_services = get_openstack_services()
+        for openstack_service in openstack_services['services']:
+            sudo('service %s start' % openstack_service)
 
 @task
 @roles('build')
@@ -784,7 +786,9 @@ def join_orchestrator(new_ctrl_host):
             execute('sync_keystone_ssl_certs_node', new_ctrl_host)
             execute('setup_cluster_monitors_node', new_ctrl_host)
         with settings(host_string = new_ctrl_host):
-            sudo('service supervisor-openstack restart')
+            openstack_services = get_openstack_services()
+            for openstack_service in openstack_services['services']:
+                sudo('service %s restart' % openstack_service)
         execute('verify_openstack')
 
 @task
@@ -812,8 +816,13 @@ def purge_node_from_openstack_cluster(del_openstack_node):
     if ping_test(del_openstack_node):
         with settings(host_string=del_openstack_node, warn_only=True):
             sudo("service mysql stop")
-            sudo("service supervisor-openstack stop")
-            sudo("chkconfig supervisor-openstack off")
+            openstack_services = get_openstack_services()
+            for openstack_service in openstack_services['services']:
+                sudo("service %s stop" % openstack_service)
+                if openstack_services['initsystem'] == 'systemd':
+                    sudo('systemctl disable %s' % openstack_service)
+                else:
+                    sudo("chkconfig %s off" % openstack_service)
 
 @task
 @roles('build')

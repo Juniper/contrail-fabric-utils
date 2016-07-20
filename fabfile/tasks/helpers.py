@@ -1557,3 +1557,19 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
 
 #end all_sm_reimage_status
 
+@task
+def get_openstack_services():
+    """ Retrieves list of openstack service names dependending on its init system """
+    openstack_services_systemd = ['openstack-cinder-api', 'openstack-cinder-scheduler',
+                                  'openstack-glance-api', 'openstack-glance-registry',
+                                  'openstack-heat-api', 'openstack-heat-engine',
+                                  'openstack-keystone', 'openstack-nova-api',
+                                  'openstack-nova-conductor', 'openstack-nova-consoleauth',
+                                  'openstack-nova-novncproxy', 'openstack-nova-scheduler']
+    openstack_services_sysv = ['supervisor-openstack']
+    with settings(warn_only=True):
+        os_type =  detect_ostype()
+    if os_type in ['centoslinux']:
+        return openstack_services_systemd
+    else:
+        return openstack_services_sysv
