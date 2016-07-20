@@ -1,6 +1,6 @@
 Installation and Provisioning of servers for Juniper Contrail Virtual Network System
 ====================================================================================
-This document describe a mechanism to install and provision a set of servers that work in the Juniper Contrail Virtual Network System. The main tasks are
+This document describes a mechanism to install and provision a set of servers that work in the Juniper Contrail Virtual Network System. The main tasks are
 
 * Define the testbed by creating a file at /opt/contrail/utils/fabfile/testbeds/testbed.py
 on the server that works as config node.
@@ -42,7 +42,7 @@ On the server running config node:
 The following commands are required on the server running config node:
 
     cd /opt/contrail/utils
-    fab upgrade_kernel_all  #Only in case ofr Ubuntu to upgrade kernal(Optional)
+    fab upgrade_kernel_all  #Only in case of Ubuntu to upgrade kernal(Optional)
     <all nodes will reboot>
     fab -c fabrc install_contrail
     <compute nodes will reboot>
@@ -80,7 +80,7 @@ On the server running config node:
 The following commands are required on the server running config node:
 
     cd /opt/contrail/utils
-    fab upgrade_kernel_all  #Only in case ofr Ubuntu to upgrade kernal(Optional)
+    fab upgrade_kernel_all  #Only in case of Ubuntu to upgrade kernal(Optional)
     <all nodes will reboot>
     fab -c fabrc install_contrail
     <Compute nodes will reboot>
@@ -122,7 +122,7 @@ On the server running config node:
 The following commands are required on the server running config node:
 
     cd /opt/contrail/utils
-    fab upgrade_kernel_all  #Only in case ofr Ubuntu to upgrade kernal(Optional)
+    fab upgrade_kernel_all  #Only in case of Ubuntu to upgrade kernal(Optional)
     <all nodes will reboot>
     fab -c fabrc install_contrail
     <Compute nodes will reboot>
