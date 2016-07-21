@@ -564,7 +564,9 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
         cmd += " --cassandra_user %s" % cassandra_user
         cmd += " --cassandra_password %s" % cassandra_password
 
-    if get_analytics_mt_enable() and orchestrator == 'openstack':
-        cmd += " --multi_tenancy"
+    analytics_aaa_mode = get_analytics_aaa_mode()
+    if orchestrator != 'openstack':
+        analytics_aaa_mode = 'no-auth'
+    cmd += " --aaa_mode %s" % analytics_aaa_mode
     return cmd
 
