@@ -536,6 +536,11 @@ def fixup_restart_haproxy_in_openstack_node(*args):
 
         # haproxy enable
         with settings(host_string=host_string, warn_only=True):
+            #In mitaka, barbican runs behind apache2 and listens on 9311;
+            #stop apache2 before starting haproxy
+            #apache2 is restarted later from barbican-server-setup.sh after
+            #updating secondary port in apache barbican conf file
+            sudo("service apache2 stop")
             sudo("chkconfig haproxy on")
             enable_haproxy()
             sudo("service haproxy restart")
