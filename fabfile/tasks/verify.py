@@ -1,7 +1,7 @@
 from time import sleep
 
 from fabfile.config import *
-from fabfile.utils.fabos import detect_ostype
+from fabfile.utils.fabos import detect_ostype, get_openstack_services
 from fabfile.utils.cluster import get_orchestrator
 import re
 
@@ -41,7 +41,8 @@ def verify_webui():
 @task
 @roles('openstack')
 def verify_openstack():
-    verify_service("keystone")
+    openstack_services = get_openstack_services()
+    verify_service(openstack_services["keystone"])
     for x in xrange(10):
         with settings(warn_only=True):
             output = sudo("source /etc/contrail/openstackrc; keystone tenant-list")

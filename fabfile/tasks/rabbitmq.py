@@ -1,6 +1,7 @@
-import uuid
+import os
 import re
 import time
+import uuid
 
 from fabfile.config import *
 from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node,\
@@ -385,6 +386,34 @@ def join_rabbitmq_cluster(new_ctrl_host):
             exit(1)
 
 @task
+@parallel
+@roles('rabbit')
+def add_restart_params_to_rabbit_service():
+    """ Add restart params to rabbimq server systemd service for nodes in rabbit roles
+        Refer: Bug #1605437
+    """
+    execute('add_restart_params_to_rabbit_service_node', env.host_string)
+
+@task
+def add_restart_params_to_rabbit_service_node(*args):
+    """ Add restart params to rabbimq server systemd service for the given nodes
+        Refer: Bug #1605437
+        Arguments:
+            args: a host string or list of host string
+    """
+    systemd_conf = '/etc/systemd/system/rabbitmq-server.service.d/'
+    rabbitmq_conf = os.path.join(systemd_conf, 'restart-contrail.conf')
+    for host_string in args:
+        with settings(host_string=host_string):
+            with settings(warn_only=True):
+                is_rabbitmq_systemd = sudo('ls /usr/lib/systemd/system/rabbitmq-server.service')
+            if is_rabbitmq_systemd.succeeded:
+                sudo('mkdir -p /etc/systemd/system/rabbitmq-server.service.d/')
+                sudo('printf "[Service]\nRestart=on-failure\nRestartSec=5\n" > %s' % rabbitmq_conf)
+                sudo('systemctl daemon-reload')
+                sudo('systemctl restart rabbitmq-server')
+
+@task
 @roles('build')
 def setup_rabbitmq_cluster(force=False):
     """Task to cluster the rabbit servers."""
@@ -442,3 +471,4 @@ def setup_rabbitmq_cluster(force=False):
         if False in result.values():
             print "Unable to setup RabbitMQ cluster in role[%s]...." % role
             exit(1)
+        execute('add_restart_params_to_rabbit_service')
