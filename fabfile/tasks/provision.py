@@ -653,6 +653,12 @@ def fixup_ceilometer_conf_common():
     rabbit_port = "5672"
     if get_openstack_internal_vip():
         rabbit_port = "5673"
+        sudo("openstack-config --set %s notification workload_partitioning %s" %
+                    (conf_file, "True"))
+        sudo("openstack-config --set %s compute workload_partitioning %s" %
+                    (conf_file, "True"))
+        sudo("openstack-config --set %s coordination backend_url %s%s%s" %
+                (conf_file, "kazoo://", env.roledefs['database'][0], ":2181"))
     sudo("openstack-config --set %s DEFAULT rabbit_port %s" % (conf_file,
 	rabbit_port))
     value = "/var/log/ceilometer"
