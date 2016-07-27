@@ -195,3 +195,24 @@ def get_available_packages(os_type, *packages):
             if versions.succeeded:
                 pkg_dict[package] = versions.split('\r\n')
     return pkg_dict
+
+def get_openstack_services():
+    """ Retrieves list of openstack service names dependending on its init system """
+    openstack_services_systemd = {}
+    openstack_services_sysv = {}
+    services = ['cinder-api', 'cinder-scheduler', 'glance-api', 'glance-registry',
+                'heat-api', 'heat-engine', 'keystone', 'nova-api', 'nova-conductor',
+                'nova-consoleauth', 'nova-novncproxy', 'nova-scheduler']
+    openstack_services_systemd['services'] = ['openstack-%s' % svc for svc in services]
+    openstack_services_systemd['initsystem'] = 'systemd'
+    openstack_services_systemd.update([(svc, 'openstack-%s' % svc) for svc in services])
+
+    openstack_services_sysv['services'] = ['supervisor-openstack']
+    openstack_services_sysv['initsystem'] = 'sysv'
+    openstack_services_sysv.update([(svc, svc) for svc in services])
+    with settings(warn_only=True):
+        os_type =  detect_ostype()
+    if os_type in ['centoslinux', 'redhat']:
+        return openstack_services_systemd
+    else:
+        return openstack_services_sysv

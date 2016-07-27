@@ -1,7 +1,7 @@
 import os
 from fabfile.config import *
 from misc import zoolink
-from fabfile.utils.fabos import detect_ostype
+from fabfile.utils.fabos import detect_ostype, get_openstack_services
 from fabfile.utils.cluster import get_orchestrator
 from fabric.contrib.files import exists
 from fabfile.utils.host import hstr_to_ip
@@ -160,13 +160,15 @@ def restart_openstack():
 @task
 def restart_openstack_node(*args):
     """Restarts the contrail openstack services in once openstack node. USAGE:fab restart_openstack_node:user@1.1.1.1,user@2.2.2.2"""
-    openstack_services = [ 'httpd', 'memcached', 'supervisor-openstack']
+    openstack_services = get_openstack_services()
     if detect_ostype() in ['ubuntu']:
-        openstack_services = ['memcached', 'supervisor-openstack']
+        openstack_services['services'] += ['memcached']
+    else:
+        openstack_services['services'] += ['httpd', 'memcached']
 
     for host_string in args:
         with  settings(host_string=host_string):
-            for svc in openstack_services:
+            for svc in openstack_services['services']:
                 sudo('service %s restart' % svc)
 
 @task
