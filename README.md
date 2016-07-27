@@ -1,7 +1,7 @@
 contrail-fabric-utils
 =====================
 
-# Contrail Fabirc Utilites
+# Contrail Fabric Utilites
 
 This software is licensed under the Apache License, Version 2.0 (the "License");
 you may not use this software except in compliance with the License.
@@ -15,19 +15,19 @@ limitations under the License.
 
 ### Overview
 
-The Contrail Fabirc-utils repository contains the code for installing and setting up Contrail network virtualization solution.
-All fabric tasks in this repository is dreiven by the input file ``fabfile/testbeds/testbed.py``, Example testbed.py files are at [fabfile/testbeds/testbed_singlebox_example.py](fabfile/testbeds/testbed_singlebox_example.py) and [fabfile/testbeds/testbed_multibox_example.py](fabfile/testbeds/testbed_multibox_example.py)
+The Contrail Fabric-utils repository contains the code for installing and setting up Contrail network virtualization solution.
+All fabric tasks in this repository are driven by the input file ``fabfile/testbeds/testbed.py``, Example testbed.py files are at [fabfile/testbeds/testbed_singlebox_example.py](fabfile/testbeds/testbed_singlebox_example.py) and [fabfile/testbeds/testbed_multibox_example.py](fabfile/testbeds/testbed_multibox_example.py)
 
-The contrail provisioning code is avaialable in a separate code repository (http://github.com/Juniper/contrail-provisioning).
+The Contrail provisioning code is available in a separate code repository (http://github.com/Juniper/contrail-provisioning).
 
 ### Install
-Fabric tasks to install Contrail network virtualization solution in a cluster is located under ``fabfile/tasks/install.py``, It provides various fabric tasks to install specific cluster node with specific packages based on roles.
+Fabric tasks to install Contrail network virtualization solution in a cluster are located under ``fabfile/tasks/install.py``, It provides various fabric tasks to install specific cluster node with specific packages based on roles.
 
 ### Setup
-Fabric tasks to setup Contrail network virtualization solution in a cluster is located under ``fabfile/tasks/setup.py``, It provides various fabric tasks to setup specific cluster node with specific components/services based on roles.
+Fabric tasks to setup Contrail network virtualization solution in a cluster are located under ``fabfile/tasks/setup.py``, It provides various fabric tasks to setup specific cluster node with specific components/services based on roles.
 
 ### Upgrade
-Fabric tasks to upgrade Contrail network virtualization solution in a cluster is located under ``fabfile/tasks/upgrade.py``, It provides various fabric tasks to upgrade specific cluster node based on roles.
+Fabric tasks to upgrade Contrail network virtualization solution in a cluster are located under ``fabfile/tasks/upgrade.py``, It provides various fabric tasks to upgrade specific cluster node based on roles.
 
 More specific information on fabric tasks to bringup a cluster with Contrail network virtualization solution is in ``README`` file.
 
