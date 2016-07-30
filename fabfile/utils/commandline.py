@@ -146,7 +146,6 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
                                  env.roledefs['collector'][hindex])
             collector_ip = hstr_to_ip(collector_host)
  
-    mt_opt = '--multi_tenancy' if get_mt_enable() else ''
     zookeeper_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host))\
                          for cassandra_host in env.roledefs['database']]
     control_ip_list = []
@@ -159,7 +158,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cassandra_password = get_cassandra_password()
 
     cmd += " --self_ip %s" % tgt_ip
-    cmd += " --collector_ip %s %s" % (collector_ip, mt_opt)
+    cmd += " --collector_ip %s" % (collector_ip)
     cmd += " --cassandra_ip_list %s" % ' '.join(get_config_db_ip_list())
     cmd += " --zookeeper_ip_list %s" % ' '.join(zookeeper_ip_list)
     if control_ip_list:
@@ -182,6 +181,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
         cmd += " --haproxy %s" % haproxy
     if manage_config_db():
         cmd += " --manage_db"
+    cmd += get_rbac_opts()
     if orch == 'openstack':
         (_, openstack_admin_password) = get_authserver_credentials()
         authserver_ip = get_authserver_ip()
