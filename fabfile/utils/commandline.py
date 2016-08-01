@@ -174,10 +174,9 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cmd += " --amqp_port %s" % get_amqp_port()
     cmd += " --orchestrator %s" % orch
     if (len(env.roledefs['cfgm'])>2):
-        cmd += " --seed_list %s" % ','.join(database_ip_list[:2])
+        cmd += " --seed_list %s" % ','.join(get_config_db_ip_list()[:2])
     else:
-        cmd += " --seed_list %s" % (hstr_to_ip(get_control_host_string(
-                                       env.roledefs['cfgm'][0])))
+        cmd += " --seed_list %s" % ','.join(get_config_db_ip_list())
     database_dir = get_database_dir() or '/var/lib/cassandra/data'
     cmd += " --data_dir %s" % database_dir
     haproxy = get_haproxy()
