@@ -1289,6 +1289,16 @@ def pre_check():
         exit(1)
     else:
         print "\nINFO: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
+    #  Check the cfgm/database nodes
+    cfgm_nodes = deepcopy(env.roledefs['cfgm'])
+    if (set(cfgm_nodes) != set(database_nodes) and
+            not set(cfgm_nodes).issubset(set(database_nodes))):
+        print "\nERROR: \n\tcfgm and database nodes should be in,"
+        print "\t 1.Different set of nodes or"
+        print "\t 2.Same set of nodes or"
+        print "\t 3.cfgm should be subset of database nodes."
+        exit(1)
+
 
 def role_to_ip_dict(role=None):
     role_to_ip_dict = {}
