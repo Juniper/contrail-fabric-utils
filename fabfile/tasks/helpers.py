@@ -1292,7 +1292,7 @@ def pre_check():
     #  Check the cfgm/database nodes
     cfgm_nodes = deepcopy(env.roledefs['cfgm'])
     if (set(cfgm_nodes) != set(database_nodes) and
-            not set(cfgm_nodes).issubset(set(database_nodes))):
+            set(database_nodes).issubset(set(cfgm_nodes))):
         print "\nERROR: \n\tcfgm and database nodes should be in,"
         print "\t 1.Different set of nodes or"
         print "\t 2.Same set of nodes or"
