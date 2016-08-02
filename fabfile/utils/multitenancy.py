@@ -2,12 +2,7 @@ from fabfile.config import testbed
 from fabric.api import env
 from fabfile.utils.host import *
 
-def get_analytics_aaa_mode():
-    return getattr(testbed, 'analytics_aaa_mode', 'cloud-admin-only')
-# end get_analytics_mt_enable
-
-def get_mt_opts():
-    mt_opts = ''
+def is_auth_reqd():
     mt = getattr(testbed, 'multi_tenancy', None)
     aaa_mode = getattr(testbed, 'aaa_mode', None)
     auth_needed = True
@@ -15,7 +10,18 @@ def get_mt_opts():
         auth_needed = mt
     elif aaa_mode is not None:
         auth_needed = aaa_mode != "no-auth"
-    if auth_needed:
+    return auth_needed
+
+def get_mt_enable():
+    return is_auth_reqd()
+
+def get_analytics_aaa_mode():
+    return getattr(testbed, 'analytics_aaa_mode', 'cloud-admin-only')
+# end get_analytics_mt_enable
+
+def get_mt_opts():
+    mt_opts = ''
+    if is_auth_reqd():
         u, p = get_authserver_credentials()
         t = get_admin_tenant_name()
         if not u or not p or not t:
