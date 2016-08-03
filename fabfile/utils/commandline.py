@@ -214,6 +214,9 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     if cassandra_user is not None:
         cmd += ' --cassandra_user %s' % (cassandra_user)
         cmd += ' --cassandra_password %s' % (cassandra_password)
+    cloud_admin_role = get_cloud_admin_role()
+    if cloud_admin_role:
+        cmd += " --cloud_admin_role %s" % cloud_admin_role
     return cmd
 
 def frame_vnc_vcenter_plugin_cmd(host_string, cmd="setup-vcenter-plugin"):
@@ -586,5 +589,8 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     if orchestrator != 'openstack':
         analytics_aaa_mode = 'no-auth'
     cmd += " --aaa_mode %s" % analytics_aaa_mode
+    cloud_admin_role = get_cloud_admin_role()
+    if cloud_admin_role:
+        cmd += " --cloud_admin_role %s" % cloud_admin_role
     return cmd
 
