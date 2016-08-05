@@ -1160,6 +1160,18 @@ def setup_contrail_horizon_node(*args):
     if not exists(file_name):
         return
 
+    loadbalancer_file = '/usr/lib/python2.7/dist-packages/' +\
+                        'neutron_lbaas_dashboard/enabled/' +\
+                        '_1481_project_ng_loadbalancersv2_panel.py'
+    with settings(warn_only=True):
+        if exists(loadbalancer_file):
+            sudo('cp %s /usr/share/openstack-dashboard/openstack_dashboard/enabled/' \
+                 %(loadbalancer_file))
+            openstack_dashboard_path = '/usr/share/openstack-dashboard'
+            with cd(openstack_dashboard_path):
+                sudo('echo "yes\n"| ./manage.py collectstatic')
+                sudo('./manage.py compress')
+
     pattern='^HORIZON_CONFIG.*customization_module.*'
     line = '''HORIZON_CONFIG[\'customization_module\'] = \'contrail_openstack_dashboard.overrides\' '''
     insert_line_to_file(pattern = pattern, line = line, file_name = file_name)
