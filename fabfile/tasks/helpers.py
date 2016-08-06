@@ -1567,3 +1567,40 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
 
 #end all_sm_reimage_status
 
+@task
+def is_rpm_equal_or_higher(reference):
+    """ Check if installed rpm is equal or higher than the given reference rpm info
+
+        Argument:
+        rpminfo - reference rpm info is accepted in two formats
+            string: expected format "<epoch> <version> <release>"
+            tuple: expected format ('<epoch>', '<version', '<release>')
+
+        Verdict:
+             True - if installed rpm is equal or higher version that the reference version
+             False - if installed version is lower than the referece rpm
+    """
+    rpmlabel = 0
+    if type(reference) is str:
+        reference = tuple(reference.split())
+
+    try:
+        import rpm
+        rpmlabel = 1
+    except ImportError:
+        from distutils.version import LooseVersion
+        pass
+    openstack_host = env.roledefs['openstack'][0]
+    with settings(host_string=openstack_host,
+                  password=get_env_passwords(openstack_host)):
+        actual_version = sudo('rpm -q --qf \"%{epochnum} %{V} %{R}\" openstack-nova-api')
+        actual_version = tuple(actual_version.split())
+    if rpmlabel:
+        if rpm.labelCompare(actual_version, reference) >= 0:
+            return True
+    elif LooseVersion(actual_version[0]) > LooseVersion(reference[0]) or \
+         LooseVersion(actual_version[0]) == LooseVersion(reference[0]) and \
+         LooseVersion(actual_version[1]) >= LooseVersion(reference[1]):
+        return True
+    else:
+        return False

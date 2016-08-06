@@ -5,6 +5,7 @@ from distutils.version import LooseVersion
 from fabfile.config import *
 from fabfile.utils.host import get_authserver_ip
 from fabfile.utils.cluster import reboot_nodes
+from fabfile.tasks.helpers import is_rpm_equal_or_higher
 
 @task
 @roles('openstack')
@@ -113,7 +114,7 @@ def setup_rhosp_node():
     authserver_ip = get_authserver_ip()
     # For juno, neutron_url is deprecated instead use "url" in neutron section
     api_version = sudo("rpm -q --queryformat='%{VERSION}' openstack-nova-api")
-    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
+    is_juno_or_higher = is_rpm_equal_or_higher("0 2014.2.2 2.el7ost")
     if is_juno_or_higher:
         sudo("openstack-config --set /etc/nova/nova.conf neutron url http://%s:9696" % cfgm_0_ip)
     else:
