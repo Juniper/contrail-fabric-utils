@@ -5,7 +5,7 @@ import time
 from fabfile.config import *
 from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node,\
     rabbitmq_env_conf
-from fabfile.utils.fabos import detect_ostype
+from fabfile.utils.fabos import detect_ostype, get_openstack_services
 from fabfile.tasks.helpers import disable_iptables, ping_test
 from fabfile.utils.host import get_from_testbed_dict, get_control_host_string,\
     hstr_to_ip, get_openstack_internal_vip, get_contrail_internal_vip,\
@@ -198,6 +198,10 @@ def start_rabbitmq():
 def start_rabbitmq_node(*args):
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
+            openstack_services = get_openstack_services()
+            if openstack_services['initsystem'] == 'systemd':
+                sudo('systemctl daemon-reload')
+                sudo('systemctl enable rabbitmq-server')
             sudo("service rabbitmq-server restart")
 
 @task
