@@ -10,13 +10,15 @@ from fabfile.utils.host import get_control_host_string
 @task
 @roles('cfgm')
 def stop_rabbitmq():
+    openstack_services = get_openstack_services()
     with settings(warn_only=True):
-        sudo('service supervisor-support-service stop')
+        sudo('service %s stop' % openstack_services['rabbitmq-server'])
 
 @task
 @roles('cfgm')
 def restart_rabbitmq():
-    sudo('service supervisor-support-service restart')
+    openstack_services = get_openstack_services()
+    sudo('service %s restart' % openstack_services['rabbitmq-server'])
 
 @task
 def stop_and_disable_qpidd():
@@ -50,18 +52,20 @@ def stop_cfgm():
 
 @task
 def stop_cfgm_node(*args):
+    openstack_services = get_openstack_services()
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
             sudo('service supervisor-config stop')
             sudo('service neutron-server stop')
-            sudo('service supervisor-support-service stop')
+            sudo('service %s stop' % openstack_services['rabbitmq-server'])
 
 @task
 @roles('cfgm')
 def start_cfgm():
     """starts the contrail config services."""
+    openstack_services = get_openstack_services()
     with settings(warn_only=True):
-        sudo('service supervisor-support-service start')
+        sudo('service %s start' % openstack_services['rabbitmq-server'])
         sudo('service supervisor-config start')
         sudo('service neutron-server start')
 
@@ -194,9 +198,10 @@ def restart_cfgm():
 @task
 def restart_cfgm_node(*args):
     """Restarts the contrail config services in once cfgm node. USAGE:fab restart_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
+    openstack_services = get_openstack_services()
     for host_string in args:
         with  settings(host_string=host_string):
-            sudo('service supervisor-support-service restart')
+            sudo('service %s restart' % openstack_services['rabbitmq-server'])
             sudo('service supervisor-config restart')
             if get_orchestrator() == 'openstack':
                 sudo('service neutron-server restart')

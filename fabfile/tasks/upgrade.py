@@ -264,7 +264,9 @@ def upgrade_contrail(from_rel, pkg, orch='yes'):
     """Upgrades all the contrail pkgs in all nodes.
     """
     execute('pre_check')
-    execute('install_pkg_all', pkg)
+    # commented as this step is no  more required as
+    # individual tasks install the required packages
+    #execute('install_pkg_all', pkg)
     execute('stop_cfgm')
     execute('stop_rabbitmq')
     execute('stop_collector')
