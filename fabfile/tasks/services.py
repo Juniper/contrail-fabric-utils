@@ -12,6 +12,7 @@ from fabfile.utils.host import get_control_host_string
 def stop_rabbitmq():
     openstack_services = get_openstack_services()
     with settings(warn_only=True):
+        sudo('service supervisor-support-service stop')
         sudo('service %s stop' % openstack_services['rabbitmq-server'])
 
 @task
@@ -74,7 +75,6 @@ def stop_cfgm_db_node(*args):
                 sudo('service contrail-database stop')
             sudo('service zookeeper stop')
 
-
 @task
 @roles('cfgm')
 def start_cfgm():
@@ -104,7 +104,6 @@ def start_cfgm_node(*args):
             if manage_config_db():
                 sudo('service contrail-database start')
             sudo('service zookeeper start')
-
 
 @task
 @roles('database')

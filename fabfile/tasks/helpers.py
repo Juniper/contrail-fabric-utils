@@ -516,7 +516,7 @@ def add_images(image=None):
             openstack_sku = get_openstack_sku()
             liberty_or_above = is_liberty_or_above()
 
-            if os_type in ['ubuntu'] and liberty_or_above:
+            if liberty_or_above:
                 cmd = "source /etc/contrail/openstackrc; {PRECMD}"\
                       " glance --insecure image-create --name {IMGNAME}"\
                       " --visibility public --container-format {IMGFORMAT}"\
