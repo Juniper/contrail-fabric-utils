@@ -465,3 +465,11 @@ def drop_analytics_keyspace(confirm=False):
     execute('stop_collector')
     execute("drop_analytics_keyspace_node", env.roledefs['database'][0])
 
+@task
+@roles('openstack')
+def restart_openstack_on_demand():
+    ''' Restart openstack services for
+        https://bugs.launchpad.net/juniperopenstack/+bug/1610024
+    '''
+    if detect_ostype() in ['centoslinux'] and get_openstack_sku() in ['kilo']:
+        execute('restart_openstack_node', env.host_string)

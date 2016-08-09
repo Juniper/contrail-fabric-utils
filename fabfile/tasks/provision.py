@@ -2486,6 +2486,8 @@ def setup_all(reboot='True'):
     execute('verify_webui')
     if 'vcenter_compute' in env.roledefs:
         execute('setup_vcenter_compute')
+    # For bug: https://bugs.launchpad.net/juniperopenstack/+bug/1610024
+    execute('restart_openstack_on_demand')
     execute('setup_vrouter')
     execute('prov_config')
     execute('prov_database')
