@@ -33,7 +33,8 @@ from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         create_esxi_vrouter_map_file
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
-        setup_apiserver_ssl_certs_node)
+        setup_apiserver_ssl_certs_node, copy_keystone_ssl_certs_to_node,
+        copy_apiserver_ssl_certs_to_node)
 
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
@@ -58,7 +59,7 @@ def setup_cfgm():
         if apiserver_ssl_enabled():
             execute("setup_apiserver_ssl_certs_node", env.host_string)
         if keystone_ssl_enabled():
-            execute("copy_keystone_ssl_certs_to_config_node", env.host_string)
+            execute("copy_keystone_ssl_certs_to_node", env.host_string)
         execute("setup_cfgm_node", env.host_string)
 
 @roles('cfgm')
@@ -129,7 +130,7 @@ listen contrail-config-stats :5937
 frontend quantum-server *:9696
     default_backend    quantum-server-backend
 
-frontend  contrail-api *:8082
+$__contrail_api_frontend__
     default_backend    contrail-api-backend
     timeout client 3m
 
@@ -146,6 +147,7 @@ backend contrail-api-backend
     option nolinger
     timeout server 3m
     balance     roundrobin
+$__contrail_api_ssl_forwarding__
 $__contrail_api_backend_servers__
     #server  10.84.14.2 10.84.14.2:9100 check
     #server  10.84.14.2 10.84.14.2:9101 check
@@ -166,6 +168,8 @@ $__rabbitmq_config__
     q_listen_port = 9697
     q_server_lines = ''
     api_listen_port = 9100
+    api_frontend = 'frontend  contrail-api *:8082'
+    api_ssl_forwarding = ''
     api_server_lines = ''
     disc_listen_port = 9110
     disc_server_lines = ''
@@ -214,9 +218,20 @@ listen  rabbitmq 0.0.0.0:5673
     if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():
         tor_agent_ha_config = get_all_tor_agent_haproxy_config()
 
+    # contail-api SSL termination
+    if apiserver_ssl_enabled():
+        api_frontend = """frontend  contrail-api
+    bind *:8082 ssl crt /tmp/apiservercertbundle.pem"""
+    api_ssl_forwarding = """    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }"""
+
+
     for host_string in env.roledefs['cfgm']:
         haproxy_config = template.safe_substitute({
             '__contrail_quantum_servers__': q_server_lines,
+            '__contrail_api_frontend__': api_frontend,
+            '__contrail_api_ssl_forwarding__': api_ssl_forwarding,
             '__contrail_api_backend_servers__': api_server_lines,
             '__contrail_disc_backend_servers__': disc_server_lines,
             '__contrail_hap_user__': 'haproxy',
@@ -1217,6 +1232,10 @@ def setup_collector():
     """Provisions collector services in all nodes defined in collector role."""
     if env.roledefs['collector']:
         execute("setup_collector_node", env.host_string)
+        if keystone_ssl_enabled():
+            execute("copy_keystone_ssl_certs_to_node", env.host_string)
+        if apiserver_ssl_enabled():
+            execute("copy_apiserver_ssl_certs_to_node", env.host_string)
 
 @task
 def setup_redis_server_node(*args):

@@ -57,6 +57,7 @@ def setup_keystone_ssl_certs_node(*nodes):
                     pass
                 else:
                     raise RuntimeError("%s doesn't exists locally or in openstack node")
+                sudo("chown -R keystone:keystone /etc/keystone/ssl")
 
 
 @task
@@ -103,17 +104,25 @@ def setup_apiserver_ssl_certs_node(*nodes):
                     print "Certificate (%s) exists in cfgm node" % ssl_cert
                 else:
                     raise RuntimeError("%s doesn't exists locally or in cfgm node" % ssl_cert)
+                sudo("chown -R contrail:contrail /etc/contrail/ssl")
 
 
 @task
 @EXECUTE_TASK
 @roles('cfgm')
 def copy_keystone_ssl_certs_to_config():
-    execute('copy_keystone_ssl_certs_to_config_node', env.host_string)
+    execute('copy_keystone_ssl_certs_to_node', env.host_string)
 
 
 @task
-def copy_keystone_ssl_certs_to_config_node(*nodes):
+@EXECUTE_TASK
+@roles('collector')
+def copy_keystone_ssl_certs_to_collector():
+    execute('copy_keystone_ssl_certs_to_node', env.host_string)
+
+
+@task
+def copy_keystone_ssl_certs_to_node(*nodes):
     ssl_certs = (get_keystone_certfile(),
                  get_keystone_keyfile(),
                  get_keystone_cafile())
@@ -121,6 +130,9 @@ def copy_keystone_ssl_certs_to_config_node(*nodes):
     for node in nodes:
         with settings(host_string=node, password=get_env_passwords(node)):
             for ssl_cert in ssl_certs:
+                if exists(ssl_cert, use_sudo=True):
+                    print "INFO: %s already present in %s" % (ssl_cert, node)
+                    continue
                 with settings(host_string=openstack_host,
                               password=get_env_passwords(openstack_host)):
                     tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
@@ -129,3 +141,34 @@ def copy_keystone_ssl_certs_to_config_node(*nodes):
                 sudo("mkdir -p /etc/keystone/ssl/private/")
                 put(tmp_fname, ssl_cert, use_sudo=True)
                 os.remove(tmp_fname)
+                sudo("chown -R contrail:contrail /etc/keystone/ssl")
+
+
+@task
+@EXECUTE_TASK
+@roles('collector')
+def copy_apiserver_ssl_certs_to_collector():
+    execute('copy_apiserver_ssl_certs_to_node', env.host_string)
+
+
+@task
+def copy_apiserver_ssl_certs_to_node(*nodes):
+    ssl_certs = (get_apiserver_certfile(),
+                 get_apiserver_keyfile(),
+                 get_apiserver_cafile())
+    cfgm_host = env.roledefs['cfgm'][0]
+    for node in nodes:
+        with settings(host_string=node, password=get_env_passwords(node)):
+            for ssl_cert in ssl_certs:
+                if exists(ssl_cert, use_sudo=True):
+                    print "INFO: %s already present in %s" % (ssl_cert, node)
+                    continue
+                with settings(host_string=cfgm_host,
+                              password=get_env_passwords(cfgm_host)):
+                    tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
+                    get_as_sudo(ssl_cert, tmp_fname)
+                sudo("mkdir -p /etc/contrail/ssl/certs/")
+                sudo("mkdir -p /etc/contrail/ssl/private/")
+                put(tmp_fname, ssl_cert, use_sudo=True)
+                os.remove(tmp_fname)
+                sudo("chown -R contrail:contrail /etc/contrail/ssl")
