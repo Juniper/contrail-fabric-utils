@@ -594,14 +594,22 @@ env.ostypes = {
 # If some compute nodes should use DPDK vRouter version it has to be put in
 # env.dpdk dictionary. The format is:
 # env.dpdk = {
-#     host1: { 'huge_pages' : '50', 'coremask' : '0xf' },
-#     host2: { 'huge_pages' : '50', 'coremask' : '0,3-7' },
+#     host1: { 'huge_pages' : '50', 'coremask' : '0xf', 'uio_driver' : 'uio_pci_generic' },
+#     host2: { 'huge_pages' : '50', 'coremask' : '0,3-7', 'uio_driver' : 'vfio-pci' },
 # }
 # huge_pages - Specify what percentage of host memory should be reserved
 #              for access with huge pages
 # coremask   - Specify CPU affinity mask to run vRouter with. Supported formats:
-#              hexadecimal, comma-sepparated list of CPUs, dash-separated range
+#              hexadecimal, comma-separated list of CPUs, dash-separated range
 #              of CPUs.
+# uio_driver - UIO driver to use for DPDK. The driver is one of:
+#                * igb_uio - DPDK driver with legacy and MSI-X interrupts
+#                  support (defualt)
+#                * uio_pci_generic - Linux standard UIO driver with legacy
+#                  interrupts support only (i.e. no VF support)
+#                * vfio-pci - Linux standard UIO driver with MSI-X support.
+#                  IOMMU must be configured in order to use the driver.
+#
 # OPTIONAL vrouter limit parameter
 # ==================================
 #env.vrouter_module_params = {
