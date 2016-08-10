@@ -516,12 +516,12 @@ def add_images(image=None):
 
             if os_type in ['ubuntu'] and liberty_or_above:
                 cmd = "source /etc/contrail/openstackrc; {PRECMD}"\
-                      " glance image-create --name {IMGNAME}"\
+                      " glance --insecure image-create --name {IMGNAME}"\
                       " --visibility public --container-format {IMGFORMAT}"\
                       " --disk-format {DISKFORMAT} {IMGFILE_OPT}"
             else:
                 cmd = "source /etc/contrail/openstackrc; {PRECMD}"\
-                      " glance image-create --name {IMGNAME}"\
+                      " glance --insecure image-create --name {IMGNAME}"\
                       " --is-public True --container-format {IMGFORMAT}"\
                   " --disk-format {DISKFORMAT} {IMGFILE_OPT}"
             if ".vmdk" in loc:
@@ -620,23 +620,23 @@ def add_basic_images(image=None):
         if os_type in ['ubuntu'] and liberty_or_above:
             if ".vmdk" in loc:
                 if 'converts' in loc:
-                    glance_id = run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --visibility public --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                    glance_id = run("(source /etc/contrail/openstackrc; glance --insecure image-create --name '"+name+"' --visibility public --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
                 else:
-                    glance_id = run("(source /etc/contrail/openstackrc; glance add name='"+name+"' --visibility public container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                    glance_id = run("(source /etc/contrail/openstackrc; glance --insecure add name='"+name+"' --visibility public container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
                 if glance_id.succeeded:
                     preload_image_to_esx('http://%s/%s' % (mount,local), glance_id, sizes, openstack_version)
             else:
-                run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --visibility public --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
+                run("(source /etc/contrail/openstackrc; glance --insecure image-create --name '"+name+"' --visibility public --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
         else:
             if ".vmdk" in loc:
                 if 'converts' in loc:
-                    glance_id = run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                    glance_id = run("(source /etc/contrail/openstackrc; glance --insecure image-create --name '"+name+"' --is-public True --container-format bare --disk-format vmdk --property vmware_disktype='sparse' --property vmware_adaptertype='ide' < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
                 else:
-                    glance_id = run("(source /etc/contrail/openstackrc; glance add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
+                    glance_id = run("(source /etc/contrail/openstackrc; glance --insecure add name='"+name+"' is_public=true container_format=ovf disk_format=vmdk < "+remote+" | grep -e 'id\>' | awk '{printf $4}')")
                 if glance_id.succeeded:
                     preload_image_to_esx('http://%s/%s' % (mount,local), glance_id, sizes, openstack_version)
             else:
-                run("(source /etc/contrail/openstackrc; glance image-create --name '"+name+"' --is-public True --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
+                run("(source /etc/contrail/openstackrc; glance --insecure image-create --name '"+name+"' --is-public True --container-format ovf --disk-format qcow2 --property hypervisor_type=qemu < "+remote+")")
 
         run("rm "+remote)
 
