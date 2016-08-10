@@ -2502,21 +2502,6 @@ def setup_vm_coremask_node(q_coremask, *args):
                 raise RuntimeError("Error: setting QEMU core mask %s for host %s failed." \
                     %(vr_coremask, host_string))
 
-@task
-@roles('build')
-def restart_openstack_on_demand():
-    ''' Restart openstack services for
-        https://bugs.launchpad.net/juniperopenstack/+bug/1610024
-    '''
-    openstack_host = env.roledefs['openstack'][0]
-    with settings(host_string=openstack_host,
-                  password=get_env_passwords(openstack_host)):
-        os_type = detect_ostype()
-        os_sku  = get_openstack_sku()
-
-    if os_type in ['centoslinux'] and os_sku in ['kilo']:
-        execute('restart_openstack')
-
 @roles('build')
 @task
 def setup_all(reboot='True'):
