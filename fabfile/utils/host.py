@@ -207,7 +207,7 @@ def get_keystone_version():
     return get_from_testbed_dict('keystone', 'version', 'v2.0')
 
 def get_keystone_insecure_flag():
-    return get_from_testbed_dict('keystone', 'insecure', 'True')
+    return get_from_testbed_dict('keystone', 'insecure', 'False')
 
 def get_authserver_port():
     orch = getattr(env, 'orchestrator', 'openstack')
@@ -432,11 +432,18 @@ def get_apiserver_cafile():
     default = '/etc/contrail/ssl/certs/contrail_ca.pem'
     return get_from_testbed_dict('cfgm','cafile', default)
 
+
+def get_apiserver_cert_bundle():
+    return '/etc/contrail/ssl/certs/contrailcertbundle.pem'
+
+
 def keystone_ssl_enabled():
     return get_from_testbed_dict('keystone', 'ssl', False)
+
 
 def apiserver_ssl_enabled():
     return get_from_testbed_dict('cfgm', 'ssl', False)
 
+
 def get_apiserver_insecure_flag():
-    return get_from_testbed_dict('cfgm', 'insecure', 'True')
+    return get_from_testbed_dict('cfgm', 'insecure', 'False')
