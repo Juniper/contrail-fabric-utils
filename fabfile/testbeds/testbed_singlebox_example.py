@@ -210,7 +210,6 @@ env.ostypes = {
 #    'service_tenant'  : 'service',               #Default is service
 #    'admin_tenant'    : 'admin',                 #Default is admin
 #    'region_name'     : 'RegionOne',             #Default is RegionOne
-#    'ssl'             : 'True',                  #Default is False
 #    'insecure'        : 'True',                  #Default = False
 #    'certfile'        : '/root/keystone.pem',    #Default /etc/keystone/ssl/certs/keystone.pem
 #    'keyfile'         : '/root/keystone_key.pem',#Default /etc/keystone/ssl/private/keystone_key.pem
@@ -264,7 +263,7 @@ env.ostypes = {
 #    'amqp_port' : '5672',
 #    'haproxy_token' : 'secret123',
 #    'manage_db' : 'no',
-#    'ssl'             : 'True',                   #Default is False
+#    'auth_protocol'   : 'http',                  #Default is http
 #    'insecure'        : 'True',                   #Default is False
 #    'certfile'        : '/root/apiserver.pem',    #Default is '/etc/contrail/ssl/certs/apiserver.pem'
 #    'keyfile'         : '/root/apiserver_key.pem',#Default is '/etc/contrail/ssl/private/apiserver_key.pem'

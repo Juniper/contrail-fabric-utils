@@ -199,15 +199,16 @@ def get_authserver_protocol():
            return get_from_vcenter_dict(k, 'auth', 'https')
     # openstack
     auth_protocol = 'http'
-    if keystone_ssl_enabled():
-        auth_protocol = 'https'
     return get_from_testbed_dict('keystone', 'auth_protocol', auth_protocol)
+
+def get_apiserver_protocol():
+    return get_from_testbed_dict('cfgm', 'auth_protocol', 'http')
 
 def get_keystone_version():
     return get_from_testbed_dict('keystone', 'version', 'v2.0')
 
 def get_keystone_insecure_flag():
-    return get_from_testbed_dict('keystone', 'insecure', 'True')
+    return get_from_testbed_dict('keystone', 'insecure', 'False')
 
 def get_authserver_port():
     orch = getattr(env, 'orchestrator', 'openstack')
@@ -318,7 +319,10 @@ def get_amqp_port():
     return get_from_testbed_dict('cfgm', 'amqp_port', '5672')
 
 def get_quantum_service_protocol():
-    return get_from_testbed_dict('neutron', 'protocol', 'http')
+    auth_proto = 'http'
+    if apiserver_ssl_enabled():
+        auth_proto = 'https'
+    return get_from_testbed_dict('neutron', 'protocol', auth_proto)
     
 def verify_sshd(host, user, password):
 
@@ -432,11 +436,26 @@ def get_apiserver_cafile():
     default = '/etc/contrail/ssl/certs/contrail_ca.pem'
     return get_from_testbed_dict('cfgm','cafile', default)
 
+
+def get_apiserver_cert_bundle():
+    return '/etc/contrail/ssl/certs/contrailcertbundle.pem'
+
+
 def keystone_ssl_enabled():
-    return get_from_testbed_dict('keystone', 'ssl', False)
+    ssl = False
+    auth_protocol = get_from_testbed_dict('keystone', 'auth_protocol', 'http')
+    if auth_protocol == 'https':
+        ssl = True
+    return ssl
+
 
 def apiserver_ssl_enabled():
-    return get_from_testbed_dict('cfgm', 'ssl', False)
+    ssl = False
+    auth_protocol = get_apiserver_protocol()
+    if auth_protocol == 'https':
+        ssl = True
+    return ssl
+
 
 def get_apiserver_insecure_flag():
-    return get_from_testbed_dict('cfgm', 'insecure', 'True')
+    return get_from_testbed_dict('cfgm', 'insecure', 'False')
