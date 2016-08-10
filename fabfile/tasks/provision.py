@@ -733,7 +733,7 @@ def fixup_ceilometer_pipeline_conf(analytics_ip):
                        'name': 'contrail_source',
                        'sinks': ['contrail_sink']}
     contrail_source['resources'] = ['contrail://%s:8081/' % (analytics_ip)]
-    contrail_sink = {'publishers': ['rpc://'],
+    contrail_sink = {'publishers': ['notifier://' if is_mitaka_or_above() else 'rpc://'],
                      'transformers': None,
                      'name': 'contrail_sink'}
     pipeline_dict['sources'].append(contrail_source)
