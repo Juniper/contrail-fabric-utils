@@ -109,6 +109,17 @@ def get_vgw_details(compute_host_string):
     vgw_details = (set_vgw, gateway_routes, public_subnet, public_vn_name, vgw_intf_list)
     return vgw_details
 
+def get_compute_as_gateway_list():
+    gateway_server_hosts = []
+    gateway_server_ip_list = []
+    gateway_server_hosts = getattr(testbed, 'compute_as_gateway_list', None)
+    if gateway_server_hosts:
+        for host in gateway_server_hosts['all'] :
+            gateway_server_ip_list.append(host.split('@')[1])
+        return gateway_server_ip_list
+    else:
+        return False
+
 def get_vmware_details(compute_host_string):
     esxi_data = {}
     esxi_info = getattr(testbed, 'esxi_hosts', None)
@@ -323,6 +334,3 @@ def is_contrail_node(node):
     with settings(host_string=node, warn_only=True):
         package_info = get_build('contrail-setup')
     return True if package_info else False
-
-
-
