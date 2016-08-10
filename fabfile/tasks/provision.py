@@ -127,7 +127,7 @@ listen contrail-config-stats :5937
    stats uri /
    stats auth $__contrail_hap_user__:$__contrail_hap_passwd__
 
-frontend quantum-server *:9696
+$__quantum_server_frontend__
     default_backend    quantum-server-backend
 
 $__contrail_api_frontend__
@@ -140,6 +140,7 @@ frontend  contrail-discovery *:5998
 backend quantum-server-backend
     option nolinger
     balance     roundrobin
+$__quantum_ssl_forwarding__
 $__contrail_quantum_servers__
     #server  10.84.14.2 10.84.14.2:9697 check
 
@@ -167,6 +168,8 @@ $__rabbitmq_config__
 
     q_listen_port = 9697
     q_server_lines = ''
+    q_frontend = 'frontend  quantum-server *:9696'
+    q_ssl_forwarding = ''
     api_listen_port = 9100
     api_frontend = 'frontend  contrail-api *:8082'
     api_ssl_forwarding = ''
@@ -220,9 +223,14 @@ listen  rabbitmq 0.0.0.0:5673
 
     # contail-api SSL termination
     if apiserver_ssl_enabled():
+        q_frontend = """frontend  quantum-server
+    bind *:9696 ssl crt /etc/contrail/ssl/certs/contrailcertbundle.pem"""
+        q_ssl_forwarding = """    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }"""
         api_frontend = """frontend  contrail-api
-    bind *:8082 ssl crt /tmp/apiservercertbundle.pem"""
-    api_ssl_forwarding = """    option forwardfor
+    bind *:8082 ssl crt /etc/contrail/ssl/certs/contrailcertbundle.pem"""
+        api_ssl_forwarding = """    option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }"""
 
@@ -230,6 +238,8 @@ listen  rabbitmq 0.0.0.0:5673
     for host_string in env.roledefs['cfgm']:
         haproxy_config = template.safe_substitute({
             '__contrail_quantum_servers__': q_server_lines,
+            '__quantum_server_frontend__': q_frontend,
+            '__quantum_ssl_forwarding__': q_ssl_forwarding,
             '__contrail_api_frontend__': api_frontend,
             '__contrail_api_ssl_forwarding__': api_ssl_forwarding,
             '__contrail_api_backend_servers__': api_server_lines,
@@ -2521,7 +2531,6 @@ def restart_openstack_on_demand():
 @task
 def setup_all(reboot='True'):
     """Provisions required contrail services in all nodes as per the role definition.
-    """
     execute('setup_common')
     execute('setup_ha')
     execute('setup_rabbitmq_cluster')
@@ -2531,6 +2540,7 @@ def setup_all(reboot='True'):
     execute('fixup_mongodb_conf')
     execute('setup_mongodb_ceilometer_cluster')
     execute('setup_orchestrator')
+    """
     execute('setup_cfgm')
     execute('verify_cfgm')
     execute('setup_control')

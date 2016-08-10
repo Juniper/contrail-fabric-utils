@@ -555,6 +555,11 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     cmd += " --amqp_ip_list %s" % ' '.join(get_amqp_servers())
     cmd += " --amqp_port %s" % get_amqp_port()
     cmd += " --cfgm_ip %s" % cfgm_ip
+    if apiserver_ssl_enabled():
+        cmd += " --apiserver_insecure %s" % get_apiserver_insecure_flag()
+        cmd += " --apiserver_certfile %s" % get_apiserver_certfile()
+        cmd += " --apiserver_keyfile %s" % get_apiserver_keyfile()
+        cmd += " --apiserver_cafile %s" % get_apiserver_cafile()
     cmd += " --self_collector_ip %s" % tgt_ip
     cmd += " --num_nodes %d " % ncollectors
     analytics_syslog_port = get_collector_syslog_port()
@@ -590,6 +595,11 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
                 get_authserver_protocol()
         cmd += " --keystone_auth_port %s" % get_authserver_port()
         cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
+        if keystone_ssl_enabled():
+            cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
+            cmd += " --keystone_certfile %s" % get_keystone_certfile()
+            cmd += " --keystone_keyfile %s" % get_keystone_keyfile()
+            cmd += " --keystone_cafile %s" % get_keystone_cafile()
 
     internal_vip = get_contrail_internal_vip()
     if internal_vip:
