@@ -466,6 +466,10 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
         if gateway_routes:
             cmd += " --vgw_gateway_routes %s" % str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
 
+    compute_as_gateway_list = get_compute_as_gateway_list()
+    if compute_as_gateway_list:
+        cmd += " --gateway_server_list %s" % compute_as_gateway_list
+
     sriov_string = get_sriov_details(host_string)
     if sriov_string:
         cmd += " --sriov %s" % sriov_string
