@@ -316,6 +316,7 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
     redis_password = get_redis_password()
 
     cmd += " --cfgm_ip %s" % cfgm_ip
+    cmd += " --apiserver_auth_protocol %s" % get_apiserver_protocol()
     cmd += " --collector_ip %s" % collector_ip
     cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
     cmd += " --orchestrator %s" % orch
@@ -336,6 +337,7 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
         authserver_ip = get_authserver_ip()
         ks_admin_user, ks_admin_password = get_authserver_credentials()
         cmd += " --keystone_ip %s" % authserver_ip
+        cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
         cmd += " --keystone_version %s" % get_keystone_version()
         cmd += " --openstack_ip %s" % openstack_ip
         cmd += " --admin_user %s" % ks_admin_user
@@ -555,6 +557,11 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     cmd += " --amqp_ip_list %s" % ' '.join(get_amqp_servers())
     cmd += " --amqp_port %s" % get_amqp_port()
     cmd += " --cfgm_ip %s" % cfgm_ip
+    if apiserver_ssl_enabled():
+        cmd += " --apiserver_insecure %s" % get_apiserver_insecure_flag()
+        cmd += " --apiserver_certfile %s" % get_apiserver_certfile()
+        cmd += " --apiserver_keyfile %s" % get_apiserver_keyfile()
+        cmd += " --apiserver_cafile %s" % get_apiserver_cafile()
     cmd += " --self_collector_ip %s" % tgt_ip
     cmd += " --num_nodes %d " % ncollectors
     analytics_syslog_port = get_collector_syslog_port()
@@ -590,6 +597,11 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
                 get_authserver_protocol()
         cmd += " --keystone_auth_port %s" % get_authserver_port()
         cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
+        if keystone_ssl_enabled():
+            cmd += " --keystone_insecure %s" % get_keystone_insecure_flag()
+            cmd += " --keystone_certfile %s" % get_keystone_certfile()
+            cmd += " --keystone_keyfile %s" % get_keystone_keyfile()
+            cmd += " --keystone_cafile %s" % get_keystone_cafile()
 
     internal_vip = get_contrail_internal_vip()
     if internal_vip:
