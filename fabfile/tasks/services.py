@@ -1,7 +1,7 @@
 import os
 from fabfile.config import *
 from misc import zoolink
-from fabfile.utils.fabos import detect_ostype, get_openstack_services
+from fabfile.utils.fabos import detect_ostype, get_openstack_services, get_openstack_sku
 from fabfile.utils.cluster import get_orchestrator
 from fabric.contrib.files import exists
 from fabfile.utils.host import hstr_to_ip
