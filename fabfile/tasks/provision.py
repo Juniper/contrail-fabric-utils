@@ -617,9 +617,10 @@ def setup_cfgm_node(*args):
         with  settings(host_string=host_string):
             if apiserver_ssl_enabled():
                 execute("setup_apiserver_ssl_certs_node", host_string)
-                execute("copy_certs_for_neutron_node", host_string)
             if keystone_ssl_enabled():
                 execute("copy_keystone_ssl_certs_to_node", host_string)
+            if apiserver_ssl_enabled():
+                execute("copy_certs_for_neutron_node", host_string)
             enable_haproxy()
     nworkers = 1
     fixup_restart_haproxy_in_all_cfgm(nworkers)
