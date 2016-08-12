@@ -52,12 +52,15 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
         cmd += " --seed_list %s" % (hstr_to_ip(get_control_host_string(
                                        env.roledefs['database'][0])))
     cmd += " --zookeeper_ip_list %s" % ' '.join(database_ip_list)
-    if parent_cmd == "setup-vnc-database" or parent_cmd == "update-zoo-servers":
+    if parent_cmd in ['setup-vnc-database',
+                      'update-zoo-servers',
+                      'upgrade-vnc-database']:
         cmd += " --database_index %d" % (database_host_list.index(database_host) + 1)
     minimum_diskGB = get_minimum_diskGB()
     if minimum_diskGB is not None:
         cmd += " --minimum_diskGB %s" % minimum_diskGB
-    if parent_cmd == "setup-vnc-database" and get_kafka_enabled() is not None:
+    if (parent_cmd in ['setup-vnc-database', 'upgrade-vnc-database']
+            and get_kafka_enabled() is not None):
         cmd += " --kafka_broker_id %d" % broker_id
     if parent_cmd == "remove-cassandra-node":
         cmd += " --node_to_delete %s" % hstr_to_ip(host_string)
