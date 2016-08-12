@@ -153,11 +153,8 @@ def copy_keystone_ssl_certs_to_node(*nodes):
         with settings(host_string=node, password=get_env_passwords(node)):
             for ssl_cert in ssl_certs:
                 cert_file = '/etc/contrail/ssl/certs/%s' % os.path.basename(ssl_cert)
-                if node not in env.roledefs['openstack']:
-                    # Clear old certificate
-                    sudo('rm -f %s' % cert_file)
-                if exists(cert_file, use_sudo=True):
-                    continue
+                # Clear old certificate
+                sudo('rm -f %s' % cert_file)
                 with settings(host_string=openstack_host,
                               password=get_env_passwords(openstack_host)):
                     tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
@@ -165,8 +162,20 @@ def copy_keystone_ssl_certs_to_node(*nodes):
                 sudo("mkdir -p /etc/contrail/ssl/certs/")
                 put(tmp_fname, cert_file, use_sudo=True)
                 os.remove(tmp_fname)
-                if node not in env.roledefs['openstack']:
-                    sudo("chown -R contrail:contrail /etc/contrail/ssl")
+                sudo("chown -R contrail:contrail /etc/contrail/ssl")
+@task
+@EXECUTE_TASK
+@roles('config')
+def copy_certs_for_neutron():
+    execute('copy_certs_for_neutron_node', env.host_string)
+
+@task
+def copy_certs_for_neutron_node(*nodes):
+    for node in nodes:
+        with settings(host_string=node, password=get_env_passwords(node)):
+            sudo("mkdir -p /etc/neutron/ssl/certs/")
+            sudo("cp /etc/contrail/ssl/certs/* /etc/neutron/ssl/certs/")
+            sudo("chown -R neutron:neutron /etc/neutron/ssl")
 
 
 @task

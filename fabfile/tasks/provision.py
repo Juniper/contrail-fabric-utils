@@ -34,7 +34,8 @@ from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
         setup_apiserver_ssl_certs_node, copy_keystone_ssl_certs_to_node,
-        copy_apiserver_ssl_certs_to_node, copy_vnc_api_lib_ini_to_compute_node)
+        copy_apiserver_ssl_certs_to_node, copy_vnc_api_lib_ini_to_compute_node,
+        copy_certs_for_neutron_node)
 
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
@@ -616,6 +617,7 @@ def setup_cfgm_node(*args):
         with  settings(host_string=host_string):
             if apiserver_ssl_enabled():
                 execute("setup_apiserver_ssl_certs_node", host_string)
+                execute("copy_certs_for_neutron_node", host_string)
             if keystone_ssl_enabled():
                 execute("copy_keystone_ssl_certs_to_node", host_string)
             enable_haproxy()
