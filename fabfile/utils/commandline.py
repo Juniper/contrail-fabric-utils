@@ -448,6 +448,7 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
         cmd += " --nova_password %s" % get_nova_password()
         cmd += " --neutron_password %s" % get_neutron_password()
         cmd += " --service_tenant_name %s" % get_keystone_service_tenant_name()
+        cmd += " --region_name %s" % get_region_name()
         if cpu_mode is not None:
             cmd += " --cpu_mode %s" % cpu_mode
             if cpu_mode == 'custom':
