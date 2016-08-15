@@ -198,7 +198,11 @@ def get_authserver_protocol():
        for k in env.vcenter_servers.keys():
            return get_from_vcenter_dict(k, 'auth', 'https')
     # openstack
-    return get_from_testbed_dict('keystone', 'auth_protocol','http')
+    auth_protocol = 'http'
+    return get_from_testbed_dict('keystone', 'auth_protocol', auth_protocol)
+
+def get_apiserver_protocol():
+    return get_from_testbed_dict('cfgm', 'auth_protocol', 'http')
 
 def get_keystone_version():
     return get_from_testbed_dict('keystone', 'version', 'v2.0')
@@ -315,7 +319,10 @@ def get_amqp_port():
     return get_from_testbed_dict('cfgm', 'amqp_port', '5672')
 
 def get_quantum_service_protocol():
-    return get_from_testbed_dict('neutron', 'protocol', 'http')
+    auth_proto = 'http'
+    if apiserver_ssl_enabled():
+        auth_proto = 'https'
+    return get_from_testbed_dict('neutron', 'protocol', auth_proto)
     
 def verify_sshd(host, user, password):
 
@@ -400,3 +407,59 @@ def manage_config_db():
             not cfgm_nodes.issubset(database_nodes)):
         return True
     return False
+
+
+def get_keystone_certfile():
+    default = '/etc/keystone/ssl/certs/keystone.pem'
+    return get_from_testbed_dict('keystone','certfile', default)
+
+
+def get_keystone_keyfile():
+    default = '/etc/keystone/ssl/private/keystone.key'
+    return get_from_testbed_dict('keystone','keyfile', default)
+
+
+def get_keystone_cafile():
+    default = '/etc/keystone/ssl/certs/keystone_ca.pem'
+    return get_from_testbed_dict('keystone','cafile', default)
+
+
+def get_apiserver_certfile():
+    default = '/etc/contrail/ssl/certs/contrail.pem'
+    return get_from_testbed_dict('cfgm','certfile', default)
+
+
+def get_apiserver_keyfile():
+    default = '/etc/contrail/ssl/private/contrail.key'
+    return get_from_testbed_dict('cfgm','keyfile', default)
+
+
+def get_apiserver_cafile():
+    default = '/etc/contrail/ssl/certs/contrail_ca.pem'
+    return get_from_testbed_dict('cfgm','cafile', default)
+
+
+def get_apiserver_cert_bundle():
+    return '/etc/contrail/ssl/certs/contrailcertbundle.pem'
+
+
+def keystone_ssl_enabled():
+    ssl = False
+    auth_protocol = get_from_testbed_dict('keystone', 'auth_protocol', 'http')
+    if auth_protocol == 'https':
+        ssl = True
+    return ssl
+
+
+
+def apiserver_ssl_enabled():
+    ssl = False
+    auth_protocol = get_apiserver_protocol()
+    if auth_protocol == 'https':
+        ssl = True
+    return ssl
+
+
+
+def get_apiserver_insecure_flag():
+    return get_from_testbed_dict('cfgm', 'insecure', 'False')

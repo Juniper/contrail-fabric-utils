@@ -34,6 +34,7 @@ from tasks.zookeeper import *
 from tasks.backup_restore import *
 from tasks.kernel import *
 from tasks.issu_process import *
+from tasks.ssl import *
 
 # For contrail use
 try:
