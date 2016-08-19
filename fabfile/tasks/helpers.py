@@ -1053,6 +1053,45 @@ def setup_coremask_node(*args):
                 raise RuntimeError("Error: Core mask %s for host %s is invalid." \
                     %(coremask, host_string))
 
+@task
+def setup_uio_driver(*args):
+    """Setup UIO driver to use for DPDK (igb_uio, uio_pci_generic or vfio-pci)
+    USAGE: fab setup_uio_driver:user@host1,user@host2,...
+    """
+    vrouter_agent_file = '/etc/contrail/contrail-vrouter-agent.conf'
+
+    for host_string in args:
+        dpdk = getattr(env, 'dpdk', None)
+        if dpdk:
+            if host_string in dpdk:
+                if 'uio_driver' in dpdk[host_string]:
+                    uio_driver = dpdk[host_string]['uio_driver']
+                else:
+                    print "No UIO driver defined for host %s, skipping..." \
+                        %(host_string)
+                    return
+            else:
+                print "No host %s defined in the dpdk section, skipping..." \
+                    %(host_string)
+                return
+        else:
+            print "No env.dpdk section in testbed file, skipping the configuration..."
+            return
+
+        if not uio_driver:
+            raise RuntimeError("UIO driver for host %s is not defined." \
+                % host_string)
+
+        with settings(host_string=host_string):
+            if sudo('modprobe %s' %(uio_driver), quiet=True).succeeded:
+                print "Setting UIO driver to %s for host %s..." % (uio_driver,
+                    host_string)
+                sudo('sed -i.bak \'s/physical_uio_driver=.*/physical_uio_driver=%s/\' %s' \
+                    %(uio_driver, vrouter_agent_file))
+            else:
+                raise RuntimeError("Error: invalid UIO driver %s for host %s" \
+                    %(uio_driver, host_string))
+
 @roles('openstack')
 @task
 def increase_ulimits():
