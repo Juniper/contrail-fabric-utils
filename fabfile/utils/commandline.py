@@ -72,6 +72,7 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
 
     cmd += " --self_ip %s" % self_ip
     cmd += " --keystone_ip %s" % authserver_ip
+    cmd += " --keystone_version %s" % get_keystone_version()
     cmd += " --keystone_admin_passwd %s" % openstack_admin_password
     cmd += " --cfgm_ip %s " % cfgm_ip
     cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
@@ -137,7 +138,6 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
                                  env.roledefs['collector'][hindex])
             collector_ip = hstr_to_ip(collector_host)
  
-    mt_opt = '--multi_tenancy' if get_mt_enable() else ''
     cassandra_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host))\
                          for cassandra_host in env.roledefs['database']]
     control_ip_list = [hstr_to_ip(get_control_host_string(control_host))\
@@ -148,7 +148,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cassandra_password = get_cassandra_password()
 
     cmd += " --self_ip %s" % tgt_ip
-    cmd += " --collector_ip %s %s" % (collector_ip, mt_opt)
+    cmd += " --collector_ip %s" % (collector_ip)
     cmd += " --cassandra_ip_list %s" % ' '.join(cassandra_ip_list)
     cmd += " --zookeeper_ip_list %s" % ' '.join(cassandra_ip_list)
     cmd += " --control_ip_list %s" % ' '.join(control_ip_list)
@@ -161,11 +161,13 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     haproxy = get_haproxy()
     if haproxy:
         cmd += " --haproxy %s" % haproxy
+    cmd += get_rbac_opts()
     if orch == 'openstack':
         (_, openstack_admin_password) = get_authserver_credentials()
         authserver_ip = get_authserver_ip()
         # Pass keystone arguments in case for openstack orchestrator
         cmd += " --keystone_ip %s" % authserver_ip
+        cmd += " --keystone_version %s" % get_keystone_version()
         cmd += " --keystone_admin_passwd %s" % openstack_admin_password
         cmd += " --keystone_service_tenant_name %s" % get_keystone_service_tenant_name()
         cmd += ' --neutron_password %s' % get_neutron_password()
@@ -236,6 +238,7 @@ def frame_vnc_vcenter_plugin_cmd(host_string, cmd="setup-vcenter-plugin"):
          authserver_ip = get_authserver_ip()
          ks_admin_user, ks_admin_password = get_authserver_credentials()
          cmd += " --keystone_ip %s" % authserver_ip
+         cmd += " --keystone_version %s" % get_keystone_version()
          cmd += " --keystone_admin_user %s" % ks_admin_user
          cmd += " --keystone_admin_passwd %s" % ks_admin_password
          cmd += " --keystone_admin_tenant_name %s" % get_admin_tenant_name()
@@ -294,6 +297,7 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
         authserver_ip = get_authserver_ip()
         ks_admin_user, ks_admin_password = get_authserver_credentials()
         cmd += " --keystone_ip %s" % authserver_ip
+        cmd += " --keystone_version %s" % get_keystone_version()
         cmd += " --openstack_ip %s" % openstack_ip
         cmd += " --admin_user %s" % ks_admin_user
         cmd += " --admin_password %s" % ks_admin_password
@@ -390,6 +394,7 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
         ks_auth_port = get_authserver_port()
         ks_admin_user, ks_admin_password = get_authserver_credentials()
         cmd += " --keystone_ip %s" % authserver_ip
+        cmd += " --keystone_version %s" % get_keystone_version()
         cmd += " --openstack_mgmt_ip %s" % openstack_mgmt_ip
         cmd += " --keystone_auth_protocol %s" % ks_auth_protocol
         cmd += " --keystone_auth_port %s" % ks_auth_port
@@ -535,6 +540,7 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
         # Pass keystone arguments in case for openstack orchestrator
         ks_admin_user, ks_admin_password = get_authserver_credentials()
         cmd += " --keystone_ip %s" % get_authserver_ip()
+        cmd += " --keystone_version %s" % get_keystone_version()
         cmd += " --keystone_admin_user %s" % ks_admin_user
         cmd += " --keystone_admin_passwd %s" % ks_admin_password
         cmd += " --keystone_admin_tenant_name %s" % \
