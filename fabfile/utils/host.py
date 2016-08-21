@@ -186,6 +186,9 @@ def get_authserver_protocol():
     # openstack
     return get_from_testbed_dict('keystone', 'auth_protocol','http')
 
+def get_keystone_version():
+    return get_from_testbed_dict('keystone', 'version', 'v2.0')
+
 def get_keystone_insecure_flag():
     return get_from_testbed_dict('keystone', 'insecure', 'False')
 
