@@ -68,6 +68,15 @@ def is_liberty_or_above():
     if openstack_sku in ['liberty', 'mitaka']:
        liberty_or_above = True
     return liberty_or_above
+#end is_liberty_or_above
+
+def is_mitaka_or_above():
+    openstack_sku = get_openstack_sku()
+    if openstack_sku in ['mitaka']:
+        return True
+    else:
+        return False
+#end is_mitaka_or_above
 
 def get_release(pkg='contrail-install-packages', use_install_repo=False):
     pkg_ver = None
