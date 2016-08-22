@@ -181,7 +181,8 @@ def setup_test_env():
             host_dict['name'] = esxi
             host_dict['username'] = esxi_hosts[esxi]['username']
             host_dict['password'] = esxi_hosts[esxi]['password']
-            host_dict['contrail_vm'] = esxi_hosts[esxi]['contrail_vm']['host']
+            if 'contrail_vm' in host_dict:
+                host_dict['contrail_vm'] = esxi_hosts[esxi]['contrail_vm']['host']
             host_dict['roles'] = []
             sanity_testbed_dict['hosts'].append(host_dict)
             sanity_testbed_dict['esxi_vms'].append(host_dict)
@@ -282,7 +283,7 @@ def setup_test_env():
             mail_port = env.mail_port
 
         vcenter_dc = ''
-        if orch == 'vcenter':
+        if orch in ['vcenter','vcenter_gateway']:
             public_tenant_name='vCenter'
 
         if env.has_key('vcenter_servers'):
