@@ -309,6 +309,12 @@ env.ostypes = {
 # Default Value: 7200
 #ceilometer_ttl = 7200
 
+# Gateway Mode to support Remote Instances can be server/vcpe
+# Set the computes which will act as gateway
+#env.compute_as_gateway_mode = {
+#   host1 : 'server',
+#}
+
 #OPTIONAL REMOTE SYSLOG CONFIGURATION
 #===================================
 #For R1.10 this needs to be specified to enable rsyslog.
