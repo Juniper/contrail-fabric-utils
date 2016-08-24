@@ -280,8 +280,13 @@ env.ostypes = {
 #To enable multi-tenancy feature
 #multi_tenancy = True
 
-#To enable analytics multi-tenancy feature
-#analytics_multi_tenancy = True
+# Name of cloud-admin role
+# (admin by default)
+#cloud_admin_role = 'admin'
+
+# Set analytics aaa_mode. Possible options are no-auth, cloud-admin.
+# (cloud-admin by default)
+#analytics_aaa_mode = 'cloud-admin'
 
 #To Enable prallel execution of task in multiple nodes
 #do_parallel = True
