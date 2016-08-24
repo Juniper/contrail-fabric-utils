@@ -2,6 +2,18 @@ from fabfile.config import testbed
 from fabric.api import env
 from fabfile.utils.host import *
 
+def is_auth_reqd():
+    mt = getattr(testbed, 'multi_tenancy', None)
+    aaa_mode = getattr(testbed, 'aaa_mode', None)
+    auth_needed = True
+    if mt is not None:
+        auth_needed = mt
+    elif aaa_mode is not None:
+        auth_needed = aaa_mode != "no-auth"
+    return auth_needed
+
+def get_mt_enable():
+    return is_auth_reqd()
 
 def get_analytics_aaa_mode():
     return getattr(testbed, 'analytics_aaa_mode', 'cloud-admin')
@@ -12,18 +24,11 @@ def get_cloud_admin_role():
 
 def get_mt_opts():
     mt_opts = ''
-    mt = getattr(testbed, 'multi_tenancy', None)
-    aaa_mode = getattr(testbed, 'aaa_mode', None)
-    auth_needed = True
-    if mt is not None:
-        auth_needed = mt
-    elif aaa_mode is not None:
-        auth_needed = aaa_mode != "no-auth"
-    if auth_needed:
+    if is_auth_reqd():
         u, p = get_authserver_credentials()
         t = get_admin_tenant_name()
         if not u or not p or not t:
-            raise Exception('Admin user, password and tenant must be defined if multi tenancy is enabled')
+             raise Exception('Admin user, password and tenant must be defined if multi tenancy is enabled')
         mt_opts = " --admin_user %s --admin_password %s --admin_tenant_name %s" %(u, p, t)
     return mt_opts
 
