@@ -828,7 +828,7 @@ def setup_ceilometer_mongodb(ip, mongodb_ip_list):
             "'db = db.getSiblingDB(\"ceilometer\")'"
         verify_command_succeeded(cmd = cmd, expected_output = "ceilometer",
                                  error_str = "Not able to connect to mongodb",
-                                 max_count = 10, sleep_interval = 1,
+                                 max_count = 60, sleep_interval = 2,
                                  warn_only = True)
         # Verify if replicaSet is already configured
         cmd = "mongo --host " + ip + " --quiet --eval 'rs.conf()._id'"
