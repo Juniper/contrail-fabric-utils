@@ -23,6 +23,11 @@ from fabfile.utils.analytics import is_ceilometer_install_supported, \
     is_ceilometer_compute_install_supported, \
     is_ceilometer_contrail_plugin_install_supported
 
+SERVICE_NAMES = {
+    'keystone' : {'centos' : 'openstack-keystone',
+                  'centoslinux' : 'openstack-keystone'}
+}
+
 @task
 @parallel(pool_size=20)
 @roles('all')
@@ -1043,9 +1048,11 @@ def update_config_option(role, file_path, section, option, value, service):
        USAGE:fab update_config_option:openstack,/etc/keystone/keystone.conf,token,expiration,86400,keystone
     """
     cmd1 = "openstack-config --set " + file_path + " " +  section + " " + option + " " + value
-    cmd2= "service " + service + " restart"
     for host in env.roledefs[role]:
         with settings(host_string=host, password=get_env_passwords(host)):
+            ostype = detect_ostype()
+            service_name = SERVICE_NAMES.get(service, {}).get(ostype, service)
+            cmd2 = "service " + service_name + " restart"
             sudo(cmd1)
             sudo(cmd2)
 # end update_config_option
