@@ -214,10 +214,12 @@ def get_openstack_services():
                 'nova-consoleauth', 'nova-novncproxy', 'nova-scheduler']
     openstack_services_systemd['services'] = ['openstack-%s' % svc for svc in services]
     openstack_services_systemd['initsystem'] = 'systemd'
+    openstack_services_systemd['rabbitmq-server'] = 'rabbitmq-server'
     openstack_services_systemd.update([(svc, 'openstack-%s' % svc) for svc in services])
 
     openstack_services_sysv['services'] = ['supervisor-openstack']
     openstack_services_sysv['initsystem'] = 'sysv'
+    openstack_services_sysv['rabbitmq-server'] = 'supervisor-support-service'
     openstack_services_sysv.update([(svc, svc) for svc in services])
     with settings(warn_only=True):
         os_type =  detect_ostype()
