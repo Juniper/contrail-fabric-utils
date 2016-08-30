@@ -176,6 +176,27 @@ def copy_certs_for_neutron_node(*nodes):
             sudo("mkdir -p /etc/neutron/ssl/certs/")
             sudo("cp /etc/contrail/ssl/certs/* /etc/neutron/ssl/certs/")
             sudo("chown -R neutron:neutron /etc/neutron/ssl")
+            sudo("usermod -a -G contrail neutron")
+
+
+@task
+@EXECUTE_TASK
+@roles('openstack')
+def copy_certs_for_heat():
+    execute('copy_certs_for_heat_node', env.host_string)
+
+@task
+def copy_certs_for_heat_node(*nodes):
+    for node in nodes:
+        with settings(host_string=node, password=get_env_passwords(node)):
+            if node in env.roledefs['cfgm']:
+                sudo("usermod -a -G contrail heat")
+            else:
+                execute('copy_apiserver_ssl_certs_to_node', node)
+                execute('copy_vnc_api_lib_ini_to_node', node)
+                sudo("chown -R heat:heat /etc/contrail")
+            for svc in ['heat-api', 'heat-engine', 'heat-api-cfn']:
+                sudo("service %s restart" % svc)
 
 
 @task
@@ -224,11 +245,11 @@ def copy_apiserver_ssl_certs_to_node(*nodes):
 @EXECUTE_TASK
 @roles('compute')
 def copy_vnc_api_lib_ini_to_compute():
-    execute('copy_vnc_api_lib_ini_to_compute_node', env.host_string)
+    execute('copy_vnc_api_lib_ini_to_node', env.host_string)
 
 
 @task
-def copy_vnc_api_lib_ini_to_compute_node(*nodes):
+def copy_vnc_api_lib_ini_to_node(*nodes):
     vnc_api_lib = '/etc/contrail/vnc_api_lib.ini'
     cfgm_host = env.roledefs['cfgm'][0]
     for node in nodes:
