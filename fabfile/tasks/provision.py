@@ -984,7 +984,7 @@ def setup_ceilometer_node(*args):
 
             fixup_ceilometer_conf_common()
             #keystone auth params
-            cmd = "source /etc/contrail/openstackrc;keystone user-get ceilometer"
+            cmd = "source /etc/contrail/openstackrc;keystone --insecure user-get ceilometer"
             with settings(warn_only=True):
                 output = sudo(cmd)
             count = 1
@@ -998,17 +998,17 @@ def setup_ceilometer_node(*args):
                 with settings(warn_only=True):
                     output = sudo(cmd)
             if not output.succeeded:
-                sudo("source /etc/contrail/openstackrc;keystone user-create --name=ceilometer --pass=CEILOMETER_PASS --tenant=service --email=ceilometer@example.com")
-                sudo("source /etc/contrail/openstackrc;keystone user-role-add --user=ceilometer --tenant=service --role=admin")
+                sudo("source /etc/contrail/openstackrc;keystone --insecure user-create --name=ceilometer --pass=CEILOMETER_PASS --tenant=service --email=ceilometer@example.com")
+                sudo("source /etc/contrail/openstackrc;keystone --insecure user-role-add --user=ceilometer --tenant=service --role=admin")
 
             fixup_ceilometer_conf_keystone(self_ip)
 
             #create keystone service and endpoint
             with settings(warn_only=True):
-                ceilometer_service_exists = sudo("source /etc/contrail/openstackrc;keystone service-list | grep ceilometer").succeeded
+                ceilometer_service_exists = sudo("source /etc/contrail/openstackrc;keystone --insecure service-list | grep ceilometer").succeeded
             if not ceilometer_service_exists:
-                sudo("source /etc/contrail/openstackrc;keystone service-create --name=ceilometer --type=metering --description=\"Telemetry\"")
-                sudo("source /etc/contrail/openstackrc;keystone endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777 --region=RegionOne" %(self_ip, self_ip, self_ip))
+                sudo("source /etc/contrail/openstackrc;keystone --insecure service-create --name=ceilometer --type=metering --description=\"Telemetry\"")
+                sudo("source /etc/contrail/openstackrc;keystone --insecure endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777 --region=RegionOne" %(self_ip, self_ip, self_ip))
             # Fixup ceilometer pipeline cfg
             fixup_ceilometer_pipeline_conf(analytics_ip)
             for svc in ceilometer_services:
@@ -1134,7 +1134,7 @@ def setup_nova_aggregate_node(*args):
                 with settings(warn_only=True, prefix='source /etc/contrail/openstackrc'):
                     with prefix('source /etc/contrail/openstackrc'):
                         #aggregate_list = sudo("(%s; nova aggregate-list)" % env_vars)
-                        aggregate_list = sudo("(nova aggregate-list)")
+                        aggregate_list = sudo("(nova --insecure aggregate-list)")
                         if aggregate_list.failed: # Services might be starting up after reboot
                             sleep(6)
                             retry -= 1
