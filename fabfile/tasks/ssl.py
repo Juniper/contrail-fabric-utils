@@ -239,7 +239,8 @@ def copy_apiserver_ssl_certs_to_node(*nodes):
                 sudo("mkdir -p /etc/contrail/ssl/private/")
                 put(tmp_fname, cert_file, use_sudo=True)
                 os.remove(tmp_fname)
-                sudo("chown -R contrail:contrail /etc/contrail/ssl")
+                with settings(warn_only=True):
+                   sudo("chown -R contrail:contrail /etc/contrail/ssl")
 
 @task
 @EXECUTE_TASK
