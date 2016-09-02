@@ -22,6 +22,8 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     database_host_list = [get_control_host_string(entry)\
                           for entry in env.roledefs['database']]
     database_ip_list = [hstr_to_ip(db_host) for db_host in database_host_list]
+    zookeeper_ip_list = [hstr_to_ip(get_control_host_string(config_host))\
+                                    for config_host in env.roledefs['cfgm']]
     database_host=get_control_host_string(host_string)
     database_host_password=get_env_passwords(host_string)
     tgt_ip = hstr_to_ip(database_host)
@@ -48,8 +50,10 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     else:
         cmd += " --seed_list %s" % (hstr_to_ip(get_control_host_string(
                                        env.roledefs['database'][0])))
-    cmd += " --zookeeper_ip_list %s" % ' '.join(database_ip_list)
-    if parent_cmd == "setup-vnc-database" or parent_cmd == "update-zoo-servers":
+    cmd += " --zookeeper_ip_list %s" % ' '.join(zookeeper_ip_list)
+    if parent_cmd in ['setup-vnc-database',
+                      'update-zoo-servers',
+                      'upgrade-vnc-database']:
         cmd += " --database_index %d" % (database_host_list.index(database_host) + 1)
     minimum_diskGB = get_minimum_diskGB()
     if minimum_diskGB is not None:
@@ -150,8 +154,8 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
                                  env.roledefs['collector'][hindex])
             collector_ip = hstr_to_ip(collector_host)
  
-    zookeeper_ip_list = [hstr_to_ip(get_control_host_string(cassandra_host))\
-                         for cassandra_host in env.roledefs['database']]
+    zookeeper_ip_list = [hstr_to_ip(get_control_host_string(config_host))\
+                         for config_host in env.roledefs['cfgm']]
     control_ip_list = [hstr_to_ip(get_control_host_string(control_host))\
                          for control_host in env.roledefs['control']]
 
@@ -160,6 +164,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cassandra_password = get_cassandra_password()
 
     cmd += " --self_ip %s" % tgt_ip
+    cmd += " --cfgm_index %d" % (cfgm_host_list.index(config_host) + 1)
     cmd += " --collector_ip %s" % (collector_ip)
     cmd += " --cassandra_ip_list %s" % ' '.join(get_config_db_ip_list())
     cmd += " --zookeeper_ip_list %s" % ' '.join(zookeeper_ip_list)
@@ -242,8 +247,8 @@ def frame_vnc_vcenter_plugin_cmd(host_string, cmd="setup-vcenter-plugin"):
                      vcenter_server = vcenter_info[v]
                      break
 
-    zookeeper_ip_list = [hstr_to_ip(get_control_host_string(\
-        cassandra_host)) for cassandra_host in env.roledefs['database']]
+    zookeeper_ip_list = [hstr_to_ip(get_control_host_string(config_host))\
+                         for config_host in env.roledefs['cfgm']]
     if get_orchestrator() == 'vcenter':
         cfgm_ip = get_contrail_internal_vip() or\
           hstr_to_ip(get_control_host_string(host_string));
@@ -540,7 +545,8 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
         database_host_list.remove(collector_host)
         database_host_list.insert(0, collector_host)
     cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in database_host_list]
-    zookeeper_ip_list = [hstr_to_ip(zookeeper_host) for zookeeper_host in database_host_list]
+    zookeeper_ip_list = [hstr_to_ip(get_control_host_string(config_host))\
+                         for config_host in env.roledefs['cfgm']]
     redis_master_ip = hstr_to_ip(redis_master_host)
     cassandra_user = get_cassandra_user()
     cassandra_password = get_cassandra_password()
