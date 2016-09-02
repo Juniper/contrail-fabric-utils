@@ -4,7 +4,7 @@ from misc import zoolink
 from fabfile.utils.fabos import detect_ostype, get_openstack_services, get_openstack_sku
 from fabfile.utils.cluster import get_orchestrator
 from fabric.contrib.files import exists
-from fabfile.utils.host import hstr_to_ip
+from fabfile.utils.host import hstr_to_ip, manage_config_db
 from fabfile.utils.host import get_control_host_string
 
 @task
@@ -59,15 +59,52 @@ def stop_cfgm_node(*args):
             sudo('service neutron-server stop')
             sudo('service %s stop' % openstack_services['rabbitmq-server'])
 
+
+@task
+@roles('cfgm')
+def stop_cfgm_db():
+    """stops the contrail config db services."""
+    execute('stop_cfgm_db_node', env.host_string)
+
+@task
+def stop_cfgm_db_node(*args):
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            if manage_config_db():
+                sudo('service contrail-database stop')
+            sudo('service zookeeper stop')
+
+
 @task
 @roles('cfgm')
 def start_cfgm():
     """starts the contrail config services."""
+    execute('start_cfgm_node', env.host_string)
+
+@task
+def start_cfgm_node(*args):
     openstack_services = get_openstack_services()
-    with settings(warn_only=True):
-        sudo('service %s start' % openstack_services['rabbitmq-server'])
-        sudo('service supervisor-config start')
-        sudo('service neutron-server start')
+    for host_string in args:
+        with settings(warn_only=True):
+            sudo('service %s start' % openstack_services['rabbitmq-server'])
+            sudo('service supervisor-config start')
+            sudo('service neutron-server start')
+
+
+@task
+@roles('cfgm')
+def start_cfgm_db():
+    """starts the contrail config db services."""
+    execute('start_cfgm_node', env.host_string)
+
+@task
+def start_cfgm_node(*args):
+    for host_string in args:
+        with settings(warn_only=True):
+            if manage_config_db():
+                sudo('service contrail-database start')
+            sudo('service zookeeper start')
+
 
 @task
 @roles('database')
@@ -147,12 +184,6 @@ def restart_database_node(*args):
     """Restarts the contrail database services in once database node. USAGE:fab restart_database_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with  settings(host_string=host_string):
-            execute('zoolink_node', host_string)
-            zoo_svc = 'zookeeper'
-            sudo('service %s restart' % zoo_svc)
-
-    for host_string in args:
-        with  settings(host_string=host_string):
             sudo('service supervisor-database restart')
 
 @task
@@ -171,7 +202,7 @@ def restart_openstack_node(*args):
         openstack_services['services'] += ['httpd', 'memcached']
 
     for host_string in args:
-        with  settings(host_string=host_string):
+        with settings(host_string=host_string):
             for svc in openstack_services['services']:
                 sudo('service %s restart' % svc)
 
@@ -205,6 +236,22 @@ def restart_cfgm_node(*args):
             sudo('service supervisor-config restart')
             if get_orchestrator() == 'openstack':
                 sudo('service neutron-server restart')
+
+
+@task
+@parallel
+@roles('cfgm')
+def restart_cfgm_db():
+    """Restarts the contrail config db services."""
+
+@task
+def restart_cfgm_node(*args):
+    """Restarts the contrail config db services in once cfgm node. USAGE:fab restart_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        with  settings(host_string=host_string):
+            if manage_config_db():
+                sudo('service contrail-database restart')
+            sudo('service zookeeper restart')
 
 @task
 @roles('control')
@@ -293,7 +340,7 @@ def start_contrail_control_services():
     execute('start_webui')
 
 @task
-@roles('database')
+@roles('cfgm')
 def backup_cassandra_zk():
     """take backup of cassandra db"""
     data_dir = None
