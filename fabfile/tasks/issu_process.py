@@ -13,6 +13,13 @@ from fabfile.tasks.provision import prov_config_node
 from fabfile.tasks.provision import prov_database_node
 from fabfile.tasks.provision import prov_control_bgp_node
 from fabfile.utils.install import get_vrouter_kmod_pkg
+from fabfile.utils.host import *
+from fabfile.utils.fabos import *
+from fabric.contrib.files import exists
+
+
+def host_string_to_ip(host_string):
+    return host_string.split('@')[1]
 
 @task
 @roles('compute')
@@ -363,3 +370,259 @@ def issu_contrail():
     #execute('issu_contrail_migrate_compute')
     #execute('issu_contrail_finalize')
     print "Single touch ISSU is not yet supported"
+
+#################################################################################################################
+#
+#
+# ISSU Openstack JUNO to KILO and KILO to LIBERTY.
+#
+#
+#################################################################################################################
+from enum import Enum
+class Upgrade_Option(Enum):
+    invalid=0
+    juno2kilo=1
+    kilo2liberty=2
+
+@task
+@roles('cfgm')
+def issu_openstack_migrate_neutron(from_version, to_version):
+    """Migrate neutron to new version of openstack"""
+    execute("issu_openstack_migrate_neutron_node", from_version, to_version, env.host_string)
+
+@task
+def issu_openstack_migrate_neutron_node(from_version, to_version, *args):
+    upgrade_option = get_openstack_upgrade_option(from_version, to_version)
+    auth_host = get_authserver_ip()
+    auth_port = get_authserver_port()
+    admin_token = get_keystone_admin_token()
+    for host_string in args:
+        with settings(host_string=host_string):
+            sudo("openstack-config --set /etc/contrail/vnc_api_lib.ini auth AUTHN_SERVER %s" %(auth_host))
+            sudo("openstack-config --set /etc/contrail/contrail-keystone-auth.conf KEYSTONE auth_host %s" %(auth_host))
+            sudo("openstack-config --set /etc/neutron/plugins/opencontrail/ContrailPlugin.ini KEYSTONE auth_url http://%s:%s/v2.0" %(auth_host, auth_port))
+            cmd = "openstack-config --set /etc/neutron/neutron.conf keystone_authtoken"
+            sudo("%s auth_host %s" %(cmd, auth_host))
+            sudo("%s auth_uri http://%s:%s/v2.0/" %(cmd, auth_host, auth_port))
+            sudo("%s identity_uri http://%s:5000" %(cmd, auth_host))
+            sudo("%s admin_token %s" %(cmd, admin_token))
+            if upgrade_option is Upgrade_Option.juno2kilo:
+                sudo("openstack-config --set /etc/neutron/neutron.conf upgrade_levels compute juno")
+            elif upgrade_option is Upgrade_Option.kilo2liberty:
+                sudo("openstack-config --set /etc/neutron/neutron.conf upgrade_levels compute kilo")
+            else:
+                raise RuntimeError("Upgrade option %s not supported" %(upgrade_option))
+
+            sudo("service neutron-server restart")
+            sudo("service supervisor-config restart")
+@task
+@roles('cfgm')
+def issu_openstack_upgrade_neutron(from_version, to_version, pkg):
+    """Upgrade neutron packages in config node"""
+    execute("issu_openstack_upgrade_neutron_node", from_version, to_version, pkg, env.host_string)
+
+@task
+def issu_openstack_upgrade_neutron_node(from_version, to_version, pkg, *args):
+    upgrade_option = get_openstack_upgrade_option(from_version, to_version)
+    for host_string in args:
+        with settings(host_string=host_string):
+            execute('install_pkg_node', pkg, host_string)
+            execute('create_install_repo_node', host_string, is_openstack_upgrade='True')
+            ostype = detect_ostype()
+            if (ostype in ['ubuntu']):
+                cmd = 'apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confold"'
+            elif ostype in ['centos', 'fedora', 'redhat', 'centoslinux']:
+                cmd = 'yum -y'
+            else:
+                raise RuntimeError("Unsupported OS")
+            if upgrade_option is Upgrade_Option.juno2kilo:
+                sudo("%s install neutron-server" %(cmd))
+            elif upgrade_option is Upgrade_Option.kilo2liberty:
+                sudo("%s install neutron-plugin-ml2 python-sqlalchemy-ext  python-alembic  python-oslo.utils neutron-server" %(cmd))
+            else:
+                raise RuntimeError("Upgrade option %s not supported" %(upgrade_option))
+            sudo("%s install neutron-plugin-ml2 python-sqlalchemy-ext  python-alembic  python-oslo.utils neutron-server" %(cmd))
+            sudo("%s install python-neutron-lbaas" %(cmd))
+            execute('issu_provision_neutron_node', upgrade_option, host_string)
+@task
+def issu_provision_neutron_node(upgrade_option, *args):
+    for host_string in args:
+        val = sudo('openstack-config --get /etc/neutron/neutron.conf DEFAULT lock_path')
+        sudo("openstack-config --set /etc/neutron/neutron.conf oslo_concurrency lock_path %s" %(val))
+        if upgrade_option is Upgrade_Option.kilo2liberty:
+            PYDIST=sudo('python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"')
+            sudo('openstack-config --set /etc/neutron/neutron.conf DEFAULT service_plugins neutron_plugin_contrail.plugins.opencontrail.loadbalancer.v2.plugin.LoadBalancerPluginV2')
+            sudo('openstack-config --set /etc/neutron/neutron.conf DEFAULT api_extensions_path extensions:%s/neutron_plugin_contrail/extensions:%s/neutron_lbaas/extensions' %(PYDIST, PYDIST))
+        sudo("service neutron-server restart")
+        sudo("service supervisor-config restart")
+
+@task
+@roles('compute')
+def issu_openstack_migrate_compute(from_version, to_version):
+    """Migrate compute node to new version of openstack"""
+    execute("issu_openstack_migrate_compute_node", from_version, to_version, env.host_string)
+
+@task
+def issu_openstack_migrate_compute_node(from_version, to_version, *args):
+    upgrade_option = get_openstack_upgrade_option(from_version, to_version)
+    auth_host = get_authserver_ip()
+    auth_port = get_authserver_port()
+    rabbit_host = get_openstack_amqp_server()
+    openstack_host = env.roledefs['openstack'][0]
+    for host_string in args:
+        with settings(host_string=host_string):
+            sudo("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" %(rabbit_host))
+            if upgrade_option is Upgrade_Option.juno2kilo:
+                cmd = "openstack-config --set /etc/nova/nova.conf"
+                sudo("%s DEFAULT neutron_admin_auth_url http://%s:%s/v2.0/" % (cmd, auth_host, auth_port))
+                sudo("%s DEFAULT glance_host %s" %(cmd, openstack_host))
+                sudo("%s DEFAULT novncproxy_base_url http://%s/:5999/vnc_auto.html" %(cmd, openstack_host))
+                sudo("%s keystone_authtoken auth_host %s" %(cmd, auth_host))
+                sudo("%s upgrade_levels compute juno" %(cmd))
+            elif upgrade_option is Upgrade_Option.kilo2liberty:
+                cmd = "openstack-config --set /etc/nova/nova.conf"
+                sudo("%s neutron admin_auth_url http://%s:%s/v2.0/" %(cmd, auth_host, auth_port))
+                sudo("%s glance host root@%s" %(cmd, openstack_host))
+                sudo("%s keystone_authtoken auth_host %s" %(cmd, auth_host))
+                sudo("%s upgrade_levels compute kilo" %(cmd))
+            else:
+                raise RuntimeError("Upgrade option %s not supported" %(upgrade_option))
+            sudo("service nova-compute restart")
+@task
+@roles('compute')
+def issu_openstack_upgrade_compute(from_version, to_version, pkg):
+    """Upgrade nova packages in compute node"""
+    execute("issu_openstack_upgrade_compute_node", from_version, to_version, pkg, env.host_string)
+
+@task
+def issu_openstack_upgrade_compute_node(from_version, to_version, pkg, *args):
+    upgrade_option = get_openstack_upgrade_option(from_version, to_version)
+    for host_string in args:
+        with settings(host_string=host_string):
+            execute('install_pkg_node', pkg, host_string)
+            execute('create_install_repo_node', host_string, is_openstack_upgrade='True')
+            ostype = detect_ostype()
+            if (ostype in ['ubuntu']):
+                cmd = 'apt-get -y --force-yes -o Dpkg::Options::="--force-overwrite" -o Dpkg::Options::="--force-confold"'
+            elif ostype in ['centos', 'fedora', 'redhat', 'centoslinux']:
+                cmd = 'yum -y'
+            else:
+                raise RuntimeError("Unsupported OS")
+                print "Invalid OS"
+                return
+            sudo("%s install python-neutronclient" %(cmd))
+            sudo("%s install python-nova" %(cmd))
+            sudo("%s install python-novaclient" %(cmd))
+            sudo("%s install nova-compute-libvirt" %(cmd))
+            import pdb;pdb.set_trace()
+            if upgrade_option is Upgrade_Option.juno2kilo:
+                execute('provision_compute_node', host_string)
+@task
+def provision_compute_node(*args):
+    admin_user, admin_password = get_authserver_credentials()
+    admin_tenant_name = get_admin_tenant_name()
+    auth_host = get_authserver_ip()
+    auth_port = get_authserver_port()
+    auth_protocol = get_authserver_protocol()
+    signing_dir = "/tmp/keystone-signing-nova"
+    for host_string in args:
+        with settings(host_string=host_string):
+            cmd_get = "openstack-config --get /etc/nova/nova.conf DEFAULT"
+            cmd_set = "openstack-config --set /etc/nova/nova.conf"
+            val = sudo("%s compute_driver" %(cmd_get))
+            sudo("%s compute compute_driver %s" %(cmd_set, val))
+            val = sudo("%s neutron_admin_auth_url" %(cmd_get))
+            sudo("%s neutron admin_auth_url %s" %(cmd_set, val))
+            val = sudo("%s neutron_admin_username" %(cmd_get))
+            sudo("%s neutron admin_username %s" %(cmd_set, val))
+            val = sudo("%s neutron_admin_password" %(cmd_get))
+            sudo("%s neutron admin_password %s" %(cmd_set, val))
+            val = sudo("%s neutron_admin_tenant_name" %(cmd_get))
+            sudo("%s neutron admin_tenant_name %s" %(cmd_set, val))
+            val = sudo("%s neutron_url" %(cmd_get))
+            sudo("%s neutron url %s" %(cmd_set, val))
+            val = sudo("%s neutron_url_timeout" %(cmd_get))
+            sudo("%s neutron url_timeout %s" %(cmd_set, val))
+            val = sudo("%s glance_host" %(cmd_get))
+            sudo("%s glance host %s" %(cmd_set, val))
+            sudo("%s keystone_authtoken admin_tenant_name %s" %(cmd_set, admin_tenant_name))
+            sudo("%s keystone_authtoken admin_user %s" %(cmd_set, admin_user))
+            sudo("%s keystone_authtoken admin_password %s" %(cmd_set, admin_password))
+            sudo("%s keystone_authtoken auth_host %s" %(cmd_set, auth_host))
+            sudo("%s keystone_authtoken auth_protocol %s" %(cmd_set, auth_protocol))
+            sudo("%s keystone_authtoken auth_port %s" %(cmd_set, auth_port))
+            sudo("%s keystone_authtoken signing_dir %s" %(cmd_set, signing_dir))
+            sudo("service nova-compute restart")
+
+def get_openstack_upgrade_option(from_version, to_version):
+    if from_version == 'juno' and to_version == 'kilo':
+        upgrade_option = Upgrade_Option.juno2kilo
+    elif from_version == 'kilo' and to_version == 'liberty':
+        upgrade_option = Upgrade_Option.kilo2liberty
+    else:
+        raise RuntimeError("Upgrade option %s not supported" %(upgrade_option))
+    return upgrade_option
+
+@task
+def issu_openstack_migrate_to_new_controller(from_version, to_version):
+    db_file = 'issu_openstack_db'
+    upgrade_option = get_openstack_upgrade_option(from_version, to_version)
+    execute('issu_openstack_snapshot_db', from_version, to_version, db_file)
+    execute('issu_openstack_sync', from_version, to_version, db_file)
+    execute('issu_openstack_migrate_neutron', from_version, to_version)
+    execute('issu_openstack_migrate_compute', from_version, to_version)
+
+@task
+@roles('openstack')
+def issu_openstack_sync(from_version, to_version, db_file):
+    upgrade_option = get_openstack_upgrade_option(from_version, to_version)
+    sql_passwd = sudo('cat /etc/contrail/mysql.token')
+    newopenstack=host_string_to_ip(env.host_string)
+    oldopenstack=host_string_to_ip(env.roledefs['oldopenstack'][0])
+    sudo("sed -i 's/%s/%s/g' %s" %(oldopenstack, newopenstack, db_file))
+    if upgrade_option is Upgrade_Option.kilo2liberty:
+        from_string = "$(compute_port)s"
+        to_string = "8774"
+        sudo("sed -i 's/%s/%s/g' %s" %(from_string, to_string, db_file))
+    print sql_passwd
+    sudo("mysql --user root --password=%s < %s" %(sql_passwd, db_file))
+    sudo("nova-manage db sync")
+    sudo("keystone-manage db_sync")
+    sudo("cinder-manage db sync")
+    sudo("glance-manage db sync")
+    print "Migrate openstack orchestrator"
+
+@task
+@roles('oldopenstack')
+def issu_openstack_snapshot_db(from_version, to_version, db_file):
+    upgrade_option = get_openstack_upgrade_option(from_version, to_version)
+    if upgrade_option is Upgrade_Option.kilo2liberty:
+        sudo("nova-manage db migrate_flavor_data")
+    sql_passwd = sudo('cat /etc/contrail/mysql.token')
+    sudo("mysqldump -u root  --password=%s --opt --add-drop-database --all-databases > %s" %(sql_passwd, db_file))
+    execute(ssh_key_gen)
+    new_openstack=env.roledefs['openstack'][0]
+    path='~/'
+    sudo('scp -o "StrictHostKeyChecking no" %s %s:%s' %(db_file, new_openstack,path))
+    path='/etc/contrail'
+    svc_token = '/etc/contrail/service.token'
+    sudo('scp -o "StrictHostKeyChecking no" %s %s:%s' %(svc_token, new_openstack,path))
+    mysql_token = '/etc/contrail/mysql.token'
+    sudo('scp -o "StrictHostKeyChecking no" %s %s:%s' %(mysql_token, new_openstack,path))
+
+def ssh_key_gen():
+    host = env.host_string
+    with settings(host_string=host):
+        if not exists('~/.ssh/id_rsa.pub'):
+            sudo('ssh-keygen  -f ~/.ssh/id_rsa  -t rsa -N "" -q ')
+        key = get('~/.ssh/id_rsa.pub', '/tmp/')
+    with settings(host_string=env.roledefs['openstack'][0]):
+        with settings(warn_only=True):
+            sudo('mkdir /pub-key/')
+        put(key[0], '/pub-key/', use_sudo=True)
+        if not exists('~/.ssh/'):
+            sudo('mkdir ~/.ssh/')
+        with cd('/pub-key/'):
+            sudo('cat id_rsa.pub >~/.ssh/authorized_keys')
+        sudo('chmod 700 ~/.ssh/authorized_keys')
+        sudo('rm -rf /pub-key/')

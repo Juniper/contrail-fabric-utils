@@ -646,7 +646,7 @@ def create_install_repo_from_tgz_node(host_string, *tgzs, **kwargs):
             execute(create_apt_repo_from_tgz_node, tgz, host_string, **kwargs)
 
 @task
-def create_install_repo_node(*args):
+def create_install_repo_node(*args, **kwargs):
     """Creates contrail install repo in one or list of nodes. USAGE:fab create_install_repo_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with settings(host_string=host_string, warn_only=True):
@@ -672,7 +672,8 @@ def create_install_repo_node(*args):
             # with the installed version of contrail-install-packages, then its safer to
             # assume that the corresponding local repo was already created
 
-            if install_versions[0] not in setup_versions:
+            is_openstack_upgrade = kwargs.get('is_openstack_upgrade', 'False')
+            if is_openstack_upgrade or install_versions[0] not in setup_versions:
                 if exists('/opt/contrail/contrail_packages/setup.sh', use_sudo=True):
                     sudo("sudo /opt/contrail/contrail_packages/setup.sh")
                 else:
