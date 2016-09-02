@@ -29,8 +29,6 @@ def verify_service(service, initd_service=False):
 @task
 @roles('database')
 def verify_database():
-    zoo_svc = 'zookeeper'
-    verify_service(zoo_svc)
     verify_service("supervisor-database")
     verify_service("contrail-database", initd_service=True)
 
@@ -60,6 +58,9 @@ def verify_openstack():
 @task
 @roles('cfgm')
 def verify_cfgm():
+    verify_service("zookeeper")
+    if manage_config_db():
+        verify_service("contrail-database")
     verify_service("supervisor-config")
     verify_service("contrail-api")
     verify_service("contrail-discovery")
