@@ -14,9 +14,6 @@ from fabfile.tasks.provision import prov_database_node
 from fabfile.tasks.provision import prov_control_bgp_node
 from fabfile.utils.install import get_vrouter_kmod_pkg
 
-ISSU_DIR = '/usr/share/contrail-utils'
-#ISSU_DIR = '~/'
-
 @task
 @roles('compute')
 def issu_contrail_switch_compute(discovery_ip):
@@ -261,19 +258,31 @@ def issu_open_nb_connectivity(*args):
 
 @task
 def issu_pre_sync():
-    #This will become a service later on
-    sudo("python %s/issu_contrail_pre_sync.py" %(ISSU_DIR))
+    sudo("contrail-issu-pre-sync")
 
 @task
 def issu_run_sync():
-    #This will become a service later on
-    sudo("python %s/issu_contrail_run_sync.py" %(ISSU_DIR))
+    sudo("touch /etc/supervisor/conf.d/contrail-issu.conf")
+    cmd = "openstack-config --set /etc/supervisor/conf.d/contrail-issu.conf program:contrail-issu"
+    sudo("%s command 'contrail-issu-run-sync'" %(cmd))
+    sudo("%s numprocs 1" %(cmd))
+    sudo("openstack-config --set /etc/supervisor/conf.d/contrail-issu.conf program:contrail-issu process_name '%(process_num)s'")
+    sudo("%s redirect_stderr true" %(cmd))
+    sudo("openstack-config --set /etc/supervisor/conf.d/contrail-issu.conf program:contrail-issu stdout_logfile  '/var/log/issu-contrail-run-sync-%(process_num)s-stdout.log'")
+    sudo("openstack-config --set /etc/supervisor/conf.d/contrail-issu.conf program:contrail-issu stderr_logfile '/dev/null'")
+    sudo("%s priority 440" %(cmd))
+    sudo("%s autostart true" %(cmd))
+    sudo("%s killasgroup false" %(cmd))
+    sudo("%s stopsignal KILL" %(cmd))
+    sudo("%s exitcodes 0" %(cmd))
+    sudo("service supervisor restart")
 
 @task
 def issu_post_sync():
-    #This will become a service later on
-    sudo("python %s/issu_contrail_post_sync.py" %(ISSU_DIR))
-    sudo("python %s/issu_contrail_zk_sync.py" %(ISSU_DIR))
+    sudo("rm -f /etc/supervisor/conf.d/contrail-issu.conf")
+    sudo("service supervisor restart")
+    sudo("contrail-issu-post-sync")
+    sudo("contrail-issu-zk-sync")
 
 @task
 @roles('build')
@@ -282,9 +291,8 @@ def issu_contrail_migrate_config():
     execute('issu_contrail_prepare_new_control')
     execute('issu_freeze_nb')
     execute('issu_pre_sync')
-    execute('issu_open_nb')
-    #run_sync is a daemon,so order changed.But there is a race condition
     execute('issu_run_sync')
+    execute('issu_open_nb')
 
 @task
 @roles('compute')
