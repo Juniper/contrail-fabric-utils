@@ -201,6 +201,20 @@ def create_esxi_vrouter_map_file(vcenter_server_name, vcenter_server, host_strin
          put(tmp_fname, "/etc/contrail/ESXiToVRouterIp.map", use_sudo=True)
          local("rm %s" %(tmp_fname))
 
+def update_esxi_vrouter_map_file(esxi_host):
+    #update the static esxi:vrouter map file
+    esxi_info = getattr(testbed, 'esxi_hosts', None)
+    if not esxi_info:
+        print 'Info: esxi_hosts block is not defined in testbed file. Exiting'
+        return
+
+    esxi_ip = esxi_info[esxi_host]['ip']
+    vrouter_ip_string = esxi_info[esxi_host]['contrail_vm']['host']
+    vrouter_ip = vrouter_ip_string.split('@')[1]
+    map_file = open('/etc/contrail/ESXiToVRouterIp.map', 'a')
+    map_file.write('%s:%s\n' %(esxi_ip, vrouter_ip))
+    map_file.close()
+
 def get_nodes_to_upgrade_pkg(package, os_type, *args, **kwargs):
     """get the list of nodes in which th given package needs to be upgraded"""
     nodes = []

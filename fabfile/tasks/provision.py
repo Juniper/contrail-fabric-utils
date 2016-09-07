@@ -30,7 +30,7 @@ from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
         get_esxi_vms_and_hosts, get_mode, is_contrail_node,\
-        create_esxi_vrouter_map_file
+        create_esxi_vrouter_map_file, update_esxi_vrouter_map_file
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
         setup_apiserver_ssl_certs_node, copy_keystone_ssl_certs_to_node,
@@ -3087,7 +3087,7 @@ def add_esxi_to_vcenter(*args):
                   with settings(host_string=host_string):
                       (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list)
                       provision_vcenter(vcenter_server, hosts, clusters, vms)
-                      create_esxi_vrouter_map_file(vcenter_server_name, vcenter_server, env.host_string)
+                      update_esxi_vrouter_map_file(host)
                       sudo("service contrail-vcenter-plugin restart")
                       provision_vcenter_features(vcenter_server, esxi_info, host_list)
                       break
