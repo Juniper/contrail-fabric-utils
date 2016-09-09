@@ -214,6 +214,15 @@ def setup_test_env():
             server = {}
             server[k] = env.vcenter_servers[k]
             sanity_testbed_dict['vcenter_servers'].append(server)
+    
+    #get other orchestrators (vcenter etc) info if any  
+    if env.has_key('other_orchestrators'):
+        sanity_testbed_dict['other_orchestrators'] = env.other_orchestrators
+        for k,v in env.other_orchestrators.items():
+            if v['type'] == 'vcenter':
+                slave_orch = 'vcenter'
+                
+    
     #get sriov info
     if env.has_key('sriov'):
         sanity_testbed_dict['sriov'].append(env.sriov)
@@ -283,7 +292,7 @@ def setup_test_env():
             mail_port = env.mail_port
 
         vcenter_dc = ''
-        if orch in ['vcenter','vcenter_gateway']:
+        if orch == 'vcenter' or slave_orch== 'vcenter':
             public_tenant_name='vCenter'
 
         if env.has_key('vcenter_servers'):
