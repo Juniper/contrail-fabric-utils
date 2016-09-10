@@ -35,14 +35,17 @@ def upgrade_kernel_all(*tgzs, **kwargs):
     execute('create_installer_repo')
     execute('create_install_repo', *tgzs)
     nodes = []
+    kernel_ver = kwargs.get('version')
     with settings(host_string=env.roledefs['all'][0], warn_only=True):
         dist, version, extra = get_linux_distro()
         if version == '12.04':
             (package, os_type) = ('linux-image-3.13.0-34-generic', 'ubuntu')
             default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-34-generic'
         elif version == '14.04':
-            (package, os_type) = ('linux-image-3.13.0-85-generic', 'ubuntu')
-            default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-85-generic'
+            if kernel_ver is None:
+                kernel_ver='3.13.0-85'
+            (package, os_type) = ('linux-image-'+kernel_ver+'-generic', 'ubuntu')
+            default_grub='Advanced options for Ubuntu>Ubuntu, with Linux '+kernel_ver+'-generic'
         elif 'centos linux' in dist.lower() and version.startswith('7'):
             (package, os_type) = ('kernel-3.10.0-327.10.1.el7.x86_64', 'centoslinux')
         elif 'red hat' in dist.lower() and version.startswith('7'):
@@ -54,7 +57,7 @@ def upgrade_kernel_all(*tgzs, **kwargs):
     if not nodes:
         print "kernel is already of expected version"
         return
-    execute(upgrade_kernel_node, *nodes)
+    execute(upgrade_kernel_node, *nodes, **kwargs)
     if reboot == 'yes':
         node_list_except_build = list(nodes)
         if env.host_string in nodes:
@@ -89,7 +92,7 @@ def upgrade_kernel_without_openstack(*tgzs, **kwargs):
         print "Nodes (%s) are already booted in expected "\
               "kernel version" % ", ".join(nodes['installed'])
 
-    execute(upgrade_kernel_node, *nodes['not_installed'])
+    execute(upgrade_kernel_node, *nodes['not_installed'], **kwargs)
     if reboot == 'yes':
         if env.host_string in nodes:
             nodes.remove(env.host_string).append(env.host_string)
@@ -101,12 +104,12 @@ def upgrade_kernel_without_openstack(*tgzs, **kwargs):
 @task
 @EXECUTE_TASK
 @roles('all')
-def upgrade_kernel():
+def upgrade_kernel(**kwargs):
     """upgrades the kernel image in all nodes."""
-    execute("upgrade_kernel_node", env.host_string)
+    execute("upgrade_kernel_node", env.host_string, **kwargs)
 
 @task
-def upgrade_kernel_node(*args):
+def upgrade_kernel_node(*args, **kwargs):
     """upgrades the kernel image in given nodes."""
     for host_string in args:
         with settings(host_string=host_string):
@@ -123,13 +126,17 @@ def upgrade_kernel_node(*args):
                 default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-34-generic'
                 execute('set_grub_default_node', host_string, value=default_grub)
             elif version == '14.04':
-                print "Installing 3.13.0-85 kernel headers"
-                apt_install(["linux-headers-3.13.0-85",
-                             "linux-headers-3.13.0-85-generic"])
-                print "Upgrading the kernel to 3.13.0-85"
-                apt_install(["linux-image-3.13.0-85-generic",
-                             "linux-image-extra-3.13.0-85-generic"])
-                default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-85-generic'
+                if 'version' in kwargs:
+                    kernel_ver = kwargs.get('version')
+                else:
+                    kernel_ver = "3.13.0-85"
+                print "Installing "+kernel_ver+" kernel headers"
+                apt_install(["linux-headers-"+kernel_ver,
+                             "linux-headers-"+kernel_ver+"-generic"])
+                print "Upgrading the kernel to "+kernel_ver
+                apt_install(["linux-image-"+kernel_ver+"-generic",
+                             "linux-image-extra-"+kernel_ver+"-generic"])
+                default_grub='Advanced options for Ubuntu>Ubuntu, with Linux '+kernel_ver+'-generic'
                 execute('set_grub_default_node', host_string, value=default_grub)
             elif 'red hat' in dist.lower() and version.startswith('7'):
                 print "Upgrading RHEL kernel to version 3.10.0-327.10.1"
@@ -151,16 +158,20 @@ def upgrade_kernel_node(*args):
 @task
 @EXECUTE_TASK
 @roles('compute')
-def migrate_compute_kernel():
+def migrate_compute_kernel(**kwargs):
     execute('create_install_repo_node', env.host_string)
-    execute('migrate_compute_kernel_node', env.host_string)
+    execute('migrate_compute_kernel_node', env.host_string, **kwargs)
 
 @task
-def migrate_compute_kernel_node(*args):
+def migrate_compute_kernel_node(*args, **kwargs):
     for host_string in args:
         with settings(host_string=host_string):
             out = sudo('service supervisor-vrouter status')
             if 'stop' not in out:
                 sudo('service supervisor-vrouter stop')
-            sudo('apt-get -o Dpkg::Options::="--force-overwrite" -y install contrail-vrouter-3.13.0-85-generic')
-            upgrade_kernel_node(host_string)
+            if 'version' in kwargs:
+                kernel_ver = kwargs.get('version')
+            else:
+                kernel_ver = "3.13.0-85"
+            sudo('apt-get -o Dpkg::Options::="--force-overwrite" -y install contrail-vrouter-'+kernel_ver+'-generic')
+            upgrade_kernel_node(host_string, **kwargs)
