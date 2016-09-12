@@ -484,6 +484,7 @@ class Vcenter(object):
         self.cluster_name = vcenter_params['cluster_name']
 
         self.dvswitch_name = vcenter_params['dvswitch_name']
+        self.dvswitch_version = vcenter_params['dvswitch_version']
         self.dvportgroup_name = vcenter_params['dvportgroup_name']
         self.dvportgroup_num_ports = vcenter_params['dvportgroup_num_ports']
 
@@ -503,7 +504,7 @@ class Vcenter(object):
             if dvs:
                 dvs = self.reconfigure_dvSwitch(self.vcenter_base.service_instance, self.clusters, self.dvswitch_name)
             else:
-                dvs=self.create_dvSwitch(self.vcenter_base.service_instance, network_folder, self.clusters, self.dvswitch_name)
+                dvs=self.create_dvSwitch(self.vcenter_base.service_instance, network_folder, self.clusters, self.dvswitch_name, self.dvswitch_version)
                 self.configure_hosts_on_dvSwitch(self.vcenter_base.service_instance, network_folder, self.clusters, self.dvswitch_name)
             self.vcenter_base.set_dvs_mtu(dvs, self.datacenter_mtu)
             self.add_dvPort_group(self.vcenter_base.service_instance,dvs, self.dvportgroup_name)
@@ -642,7 +643,7 @@ class Vcenter(object):
             self.vcenter_base.wait_for_task(task, si)
         print "Succesfully added  ContrailVM:%s to the DV port group" %(vm_name)
 
-    def create_dvSwitch(self, si, network_folder, clusters, dvs_name):
+    def create_dvSwitch(self, si, network_folder, clusters, dvs_name, dvs_version):
         dvs = self.vcenter_base.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], dvs_name)
         if dvs is not None:
             print("dvswitch already exists")
@@ -673,6 +674,8 @@ class Vcenter(object):
                 pvlan_configs.append(pvlan_config_spec2)
             dvs_config_spec.pvlanConfigSpec = pvlan_configs
             dvs_config_spec.name = dvs_name
+            if dvs_version is not None:
+                dvs_create_spec.productInfo = self.pyVmomi.vim.dvs.ProductSpec(version=dvs_version)
             dvs_create_spec.configSpec = dvs_config_spec
             task = network_folder.CreateDVS_Task(dvs_create_spec)
             self.vcenter_base.wait_for_task(task,si)

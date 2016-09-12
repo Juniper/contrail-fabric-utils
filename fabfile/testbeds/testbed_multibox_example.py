@@ -544,7 +544,7 @@ env.ostypes = {
 #dv_port_group_sr_iov section contains distributed port group params for sr-iov based fab network
 #       dv_portgroup_name and the number of ports the group has
 #dvswitch section contains distributed switch related params for overlay network
-#       dv_switch_name
+#       dv_switch_name and dvswitch_version(compatibility with esxi os version)
 #dvportgroup section contains distributed port group info for overlay network
 #       dv_portgroup_name and the number of ports the group has
 ####################################################################################
@@ -567,7 +567,10 @@ env.ostypes = {
 #                'dv_portgroup_name': 'sr-iov-pg',
 #                'number_of_ports': '2',
 #         },
-#        'dv_switch': { 'dv_switch_name': 'kd_dvswitch'},
+#        'dv_switch': {
+#                'dv_switch_name': 'kd_dvswitch',
+#                'dv_switch_version': '6.0.0',
+#         },
 #        'dv_port_group': {
 #                'dv_portgroup_name': 'kd_dvportgroup',
 #                'number_of_ports': '3',
