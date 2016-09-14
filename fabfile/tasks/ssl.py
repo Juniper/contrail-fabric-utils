@@ -9,7 +9,7 @@ from fabfile.utils.host import (get_keystone_certfile, get_keystone_keyfile,
                                 get_apiserver_keyfile, get_apiserver_cafile,
                                 get_env_passwords, get_openstack_internal_vip,
                                 get_contrail_internal_vip, hstr_to_ip,
-                                get_apiserver_cert_bundle)
+                                get_apiserver_cert_bundle, get_control_host_string)
 from fabfile.utils.fabos import get_as_sudo
 
 
@@ -42,7 +42,8 @@ def setup_keystone_ssl_certs_node(*nodes):
                         if not exists(ssl_cert, use_sudo=True):
                             print "Creating keystone SSL certs in first openstack node"
                             sudo('create-keystone-ssl-certs.sh %s' % (
-                                    get_openstack_internal_vip() or hstr_to_ip(openstack_host)))
+                                    get_openstack_internal_vip() or
+                                    hstr_to_ip(get_control_host_string(openstack_host))))
                     else:
                         with settings(host_string=openstack_host,
                                       password=get_env_passwords(openstack_host)):
@@ -96,7 +97,7 @@ def setup_apiserver_ssl_certs_node(*nodes):
                     if index == 1:
                         if not exists(ssl_cert, use_sudo=True):
                             print "Creating apiserver SSL certs in first cfgm node"
-                            cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
+                            cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
                             sudo('create-api-ssl-certs.sh %s' % cfgm_ip)
                     else:
                         with settings(host_string=cfgm_host,
