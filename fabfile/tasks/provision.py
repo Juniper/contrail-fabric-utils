@@ -1623,12 +1623,6 @@ def prov_config_node(*args, **kwargs):
     cfgm_host = env.roledefs['cfgm'][0]
     cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
-    api_use_ssl = False
-    api_use_ssl = False
-    if apiserver_ssl_enabled():
-        api_use_ssl = True
-    if apiserver_ssl_enabled():
-        api_use_ssl = True
     for host_string in args:
         with settings(host_string=host_string,
                       password=get_env_passwords(host_string)):
@@ -1642,11 +1636,12 @@ def prov_config_node(*args, **kwargs):
                     password=cfgm_host_password):
                 cmd = "python provision_config_node.py"
                 cmd += " --api_server_ip %s" % cfgm_ip
-                cmd += " --api_server_use_ssl %s" % api_use_ssl
                 cmd += " --host_name %s" % tgt_hostname
                 cmd += " --host_ip %s" % tgt_ip
                 cmd += " --oper %s" % oper
                 cmd += " %s" % get_mt_opts()
+                if apiserver_ssl_enabled():
+                    cmd += " --api_server_use_ssl True"
                 sudo(cmd)
 #end prov_config_node
 
@@ -1663,9 +1658,6 @@ def prov_database_node(*args, **kwargs):
     cfgm_host = env.roledefs['cfgm'][0]
     cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
-    api_use_ssl = False
-    if apiserver_ssl_enabled():
-        api_use_ssl = True
     for host_string in args:
         with settings(host_string=host_string,
                       password=get_env_passwords(host_string)):
@@ -1680,11 +1672,12 @@ def prov_database_node(*args, **kwargs):
                           password=cfgm_host_password):
                 cmd = "python provision_database_node.py"
                 cmd += " --api_server_ip %s" % cfgm_ip
-                cmd += " --api_server_use_ssl %s" % api_use_ssl
                 cmd += " --host_name %s" % tgt_hostname
                 cmd += " --host_ip %s" % tgt_ip
                 cmd += " --oper %s" %oper
                 cmd += " %s" % get_mt_opts()
+                if apiserver_ssl_enabled():
+                    cmd += " --api_server_use_ssl True"
                 sudo(cmd)
 #end prov_database_node
 
@@ -1701,9 +1694,6 @@ def prov_analytics_node(*args, **kwargs):
     cfgm_host = env.roledefs['cfgm'][0]
     cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
-    api_use_ssl = False
-    if apiserver_ssl_enabled():
-        api_use_ssl = True
     for host_string in args:
         with settings(host_string=host_string,
                       password=get_env_passwords(host_string)):
@@ -1717,11 +1707,12 @@ def prov_analytics_node(*args, **kwargs):
                           password=cfgm_host_password):
                 cmd = "python provision_analytics_node.py"
                 cmd += " --api_server_ip %s" % cfgm_ip
-                cmd += " --api_server_use_ssl %s" % api_use_ssl
                 cmd += " --host_name %s" % tgt_hostname
                 cmd += " --host_ip %s" % tgt_ip
                 cmd += " --oper %s " % oper
                 cmd += " %s" % get_mt_opts()
+                if apiserver_ssl_enabled():
+                    cmd += " --api_server_use_ssl True"
                 sudo(cmd)
 #end prov_analytics_node
 
@@ -1738,9 +1729,6 @@ def prov_control_bgp_node(*args, **kwargs):
     cfgm_host = kwargs.get('cfgm_host', env.roledefs['cfgm'][0])
     cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
-    api_use_ssl = False
-    if apiserver_ssl_enabled():
-        api_use_ssl = True
     for host_string in args:
         with settings(host_string=host_string,
                       password=get_env_passwords(host_string)):
@@ -1757,13 +1745,14 @@ def prov_control_bgp_node(*args, **kwargs):
                 cmd = "python provision_control.py"
                 cmd += " --api_server_ip %s" % cfgm_ip
                 cmd += " --api_server_port 8082"
-                cmd += " --api_server_use_ssl %s" % api_use_ssl
                 cmd += " --router_asn %s" % testbed.router_asn
                 md5_value = get_bgp_md5(env.host_string)
                 #if condition required because without it, it will configure literal 'None' md5 key
                 if md5_value:
                     cmd += " --md5 %s" % md5_value
                 cmd += " %s" % get_mt_opts()
+                if apiserver_ssl_enabled():
+                    cmd += " --api_server_use_ssl True"
                 sudo(cmd)
                 print "Adding control node as bgp router"
                 cmd += " --host_name %s" % tgt_hostname
@@ -1779,9 +1768,6 @@ def prov_external_bgp():
 
 @task
 def prov_external_bgp_node(*args):
-    api_use_ssl = False
-    if apiserver_ssl_enabled():
-        api_use_ssl = True
     for host_string in args:
         with settings(host_string=host_string,
                       password=get_env_passwords(host_string)):
@@ -1793,11 +1779,12 @@ def prov_external_bgp_node(*args):
                     cmd = "python provision_mx.py"
                     cmd += " --api_server_ip %s" % cfgm_ip
                     cmd += " --api_server_port 8082"
-                    cmd += " --api_server_use_ssl %s" % api_use_ssl
                     cmd += " --router_name %s" % ext_bgp_name
                     cmd += " --router_ip %s" % ext_bgp_ip
                     cmd += " --router_asn %s" % testbed.router_asn
                     cmd += " %s" % get_mt_opts()
+                    if apiserver_ssl_enabled():
+                        cmd += " --api_server_use_ssl True"
                     sudo(cmd)
 #end prov_control_bgp
 
@@ -1808,9 +1795,6 @@ def prov_metadata_services():
 
 @task
 def prov_metadata_services_node(host_string, oper = 'add'):
-    api_use_ssl = False
-    if apiserver_ssl_enabled():
-        api_use_ssl = True
     with settings(host_string = host_string):
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
         orch = get_orchestrator()
@@ -1829,12 +1813,13 @@ def prov_metadata_services_node(host_string, oper = 'add'):
         metadata_args += " --admin_password %s" % admin_password
         metadata_args += " --ipfabric_service_ip %s" % ipfabric_service_ip
         metadata_args += " --api_server_ip %s" % cfgm_ip
-        metadata_args += " --api_server_use_ssl %s" % api_use_ssl
         metadata_args += " --linklocal_service_name metadata"
         metadata_args += " --linklocal_service_ip 169.254.169.254"
         metadata_args += " --linklocal_service_port 80"
         metadata_args += " --ipfabric_service_port %s" % ipfabric_service_port
         metadata_args += " --oper %s" % oper
+        if apiserver_ssl_enabled():
+            metadata_args += " --api_server_use_ssl True"
         sudo("python /opt/contrail/utils/provision_linklocal.py %s" % metadata_args)
 #end prov_metadata_services
 
@@ -1845,9 +1830,6 @@ def prov_encap_type():
 
 @task
 def prov_encap_type_node(host_string, oper = 'add'):
-    api_use_ssl = False
-    if apiserver_ssl_enabled():
-        api_use_ssl = True
     with settings(host_string = host_string):
         cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
         admin_user, admin_password = get_authserver_credentials()
@@ -1857,8 +1839,9 @@ def prov_encap_type_node(host_string, oper = 'add'):
         encap_args += " --admin_password %s" % admin_password
         encap_args += " --encap_priority %s" % env.encap_priority
         encap_args += " --api_server_ip %s" % cfgm_ip
-        encap_args += " --api_server_use_ssl %s" % api_use_ssl
         encap_args += " --oper %s" % oper
+        if apiserver_ssl_enabled():
+            encap_args += " --api_server_use_ssl True"
         sudo("python /opt/contrail/utils/provision_encap.py %s" % encap_args)
         sleep(10)
 #end prov_encap_type
@@ -2000,15 +1983,14 @@ def add_tsn_node(restart=True,*args):
                     sudo("nova-manage service disable --host=%s --service=nova-compute" %(compute_hostname))
         admin_user, admin_password = get_authserver_credentials()
         authserver_ip = get_authserver_ip()
-        api_use_ssl = False
-        if apiserver_ssl_enabled():
-            api_use_ssl = True
         with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
             prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
-                        "--admin_user %s --admin_password %s --admin_tenant_name %s --openstack_ip %s --router_type tor-service-node --api_server_use_ssl %s" \
+                        "--admin_user %s --admin_password %s --admin_tenant_name %s --openstack_ip %s --router_type tor-service-node" \
                         %(compute_hostname, compute_control_ip, cfgm_ip,
                           admin_user, admin_password,
-                          admin_tenant_name, authserver_ip, api_use_ssl)
+                          admin_tenant_name, authserver_ip)
+            if apiserver_ssl_enabled():
+                prov_args += " --api_server_use_ssl True"
             sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
         with settings(host_string=host_string, warn_only=True):
             nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
@@ -2182,23 +2164,24 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         orch = get_orchestrator()
         admin_user, admin_password = get_authserver_credentials()
         authserver_ip = get_authserver_ip()
-        api_use_ssl = False
-        if apiserver_ssl_enabled():
-            api_use_ssl = True
         prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper add " \
                     "--admin_user %s --admin_password %s --admin_tenant_name %s\
-                     --openstack_ip %s --router_type tor-agent --api_server_use_ssl %s" \
+                     --openstack_ip %s --router_type tor-agent" \
                      %(tor_agent_name, compute_control_ip, cfgm_ip,
                        admin_user, admin_password,
-                       admin_tenant_name, authserver_ip, api_use_ssl)
+                       admin_tenant_name, authserver_ip)
+        if apiserver_ssl_enabled():
+            prov_args += " --api_server_use_ssl True"
         pr_args = "--device_name %s --vendor_name %s --device_mgmt_ip %s\
                    --device_tunnel_ip %s --device_tor_agent %s\
                    --device_tsn %s --api_server_ip %s --oper add\
                    --admin_user %s --admin_password %s\
-                   --admin_tenant_name %s --openstack_ip %s --api_server_use_ssl %s"\
+                   --admin_tenant_name %s --openstack_ip %s"\
             %(tor_name, tor_vendor_name, tor_mgmt_ip,tor_tunnel_ip,
               tor_agent_name,tsn_name,cfgm_ip, admin_user, admin_password,
-              admin_tenant_name, authserver_ip, api_use_ssl)
+              admin_tenant_name, authserver_ip)
+        if apiserver_ssl_enabled():
+            pr_args += " --api_server_use_ssl True"
         if tor_product_name:
             pr_args += " --product_name %s" %(tor_product_name)
         with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
@@ -2305,19 +2288,20 @@ def delete_tor_agent_by_index(index, node_info, restart=True, remove_cacert=Fals
         orch = get_orchestrator()
         admin_user, admin_password = get_authserver_credentials ()
         authserver_ip = get_authserver_ip()
-        api_use_ssl = False
-        if apiserver_ssl_enabled():
-            api_use_ssl = True
         prov_args = "--host_name %s --host_ip %s --api_server_ip %s --oper del " \
                     "--admin_user %s --admin_password %s --admin_tenant_name %s\
-                     --openstack_ip %s --api_server_use_ssl %s" \
+                     --openstack_ip %s" \
                      %(tor_agent_name, compute_control_ip, cfgm_ip, admin_user,
-                       admin_password, admin_tenant_name, authserver_ip, api_use_ssl)
+                       admin_password, admin_tenant_name, authserver_ip)
+        if apiserver_ssl_enabled():
+            prov_args += " --api_server_use_ssl True"
         pr_args = "--device_name %s --vendor_name %s --api_server_ip %s\
                    --oper del --admin_user %s --admin_password %s\
-                   --admin_tenant_name %s --openstack_ip %s --api_server_use_ssl %s"\
+                   --admin_tenant_name %s --openstack_ip %s"\
             %(tor_name, tor_vendor_name, cfgm_ip, admin_user, admin_password,
-              admin_tenant_name, authserver_ip, api_use_ssl)
+              admin_tenant_name, authserver_ip)
+        if apiserver_ssl_enabled():
+            pr_args += " --api_server_use_ssl True"
         with settings(host_string=env.roledefs['cfgm'][0], password=cfgm_passwd):
             sudo("python /opt/contrail/utils/provision_physical_device.py %s" %(pr_args))
             sudo("python /opt/contrail/utils/provision_vrouter.py %s" %(prov_args))
