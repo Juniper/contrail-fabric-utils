@@ -171,7 +171,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cassandra_password = get_cassandra_password()
 
     cmd += " --self_ip %s" % tgt_ip
-    cmd += " --cfgm_index %d" % (cfgm_host_list.index(config_host) + 1)
+    cmd += " --cfgm_index %d" % (cfgm_host_list.index(cfgm_host) + 1)
     cmd += " --collector_ip %s" % (collector_ip)
     cmd += " --cassandra_ip_list %s" % ' '.join(get_config_db_ip_list())
     cmd += " --zookeeper_ip_list %s" % ' '.join(zookeeper_ip_list)
