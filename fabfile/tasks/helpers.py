@@ -224,7 +224,8 @@ def all_sm_reimage(build_param=None,smgr_client='/cs-shared/server-manager/clien
     else:
         if esxi_hosts:
             for esxi in esxi_hosts:
-                hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+                if 'contrail_vm' in esxi:#In vcenter gateway,contrail_vm not there
+                    hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
         for host in hosts:
             hostname = get_hostname(host)
             if build_param is not None:
@@ -248,11 +249,12 @@ def all_sm_reimage(build_param=None,smgr_client='/cs-shared/server-manager/clien
             count=0
             image="esx5.5"
             for esxi in esxi_hosts:
-                count=count+1
-                image_id=image + "-" + str(count)
-                with settings(warn_only=True):
-                    local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (esxi,image_id))
-                    sleep(10)
+                if 'skip_reimage' not in esxi_hosts[esxi]:#Its a hack to avoid reimage of the esxi servers
+                    count=count+1
+                    image_id=image + "-" + str(count)
+                    with settings(warn_only=True):
+                        local("/cs-shared/server-manager/client/server-manager reimage --no_confirm --server_id %s %s" % (esxi,image_id))
+                        sleep(10)
 #end all_sm_reimage
 
 @roles('compute')
