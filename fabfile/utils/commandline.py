@@ -491,6 +491,15 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
         if gateway_routes:
             cmd += " --vgw_gateway_routes %s" % str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
 
+    # Qos Arguments
+    (set_qos, qos_nic_queue, qos_queue_scheduling, qos_queue_bandwidth) = get_qos_details(host_string)
+    if set_qos:
+        cmd += " --qos_nic_queue %s" % str([(';'.join(str(e) for e in qos_nic_queue)).replace(" ","")])
+        if qos_queue_scheduling:
+            cmd += " --qos_queue_scheduling %s" % str([(';'.join(str(e) for e in qos_queue_scheduling)).replace(" ","")])
+        if qos_queue_bandwidth:
+            cmd += " --qos_queue_bandwidth %s" % str([(';'.join(str(e) for e in qos_queue_bandwidth)).replace(" ","")])
+
     compute_as_gateway_list = get_compute_as_gateway_list()
     if compute_as_gateway_list:
         cmd += " --gateway_server_list %s" % ' '.join(compute_as_gateway_list)

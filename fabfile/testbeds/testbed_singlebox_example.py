@@ -353,6 +353,11 @@ env.ostypes = {
 #                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}
 #          }
 
+#env.qos = {host1: {'physical_q1':{'queue':['1', '6-10', '8-10'], 'scheduling': 'strict', 'bandwidth': '70'}},
+#                   'physical_q2':{'queue':['2'], 'scheduling': 'rr', 'bandwidth': '75'},
+#                   'physical_q_default':{'queue':['7'], 'scheduling': 'strict', 'bandwidth': '60'}
+#          }
+
 #OPTIONAL optional tor agent and tsn CONFIGURATION
 #==================================================
 #Section tor agent is only relevant when you want to use Tor Agent feature.
