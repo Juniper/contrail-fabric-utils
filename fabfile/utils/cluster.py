@@ -5,7 +5,7 @@ from fabric.api import env, settings, run
 from fabos import detect_ostype, get_release, get_build
 from fabfile.config import *
 from fabfile.utils.config import get_value
-
+from collections import OrderedDict
 
 def get_all_hostnames():
     if isinstance(env.hostnames.get('all', None), list):
@@ -108,6 +108,30 @@ def get_vgw_details(compute_host_string):
 
     vgw_details = (set_vgw, gateway_routes, public_subnet, public_vn_name, vgw_intf_list)
     return vgw_details
+
+def get_qos_details(compute_host_string):
+    set_qos = False
+    qos_logical_queue = []
+    queue_scheduling = []
+    queue_bandwidth = []
+    queue_id = []
+    qos_details = (set_qos, qos_logical_queue, queue_id, queue_scheduling, queue_bandwidth)
+    if ('qos' not in env.roledefs or
+        compute_host_string not in env.roledefs['qos']):
+        return qos_details
+
+    set_qos = True
+    qos_info_compute = OrderedDict(sorted(env.qos[compute_host_string].items()))
+    for nic_queue in qos_info_compute.keys():
+        qos_logical_queue.append(str(qos_info_compute[nic_queue]['logical_queue']).replace(" ",""))
+        queue_id.append(qos_info_compute[nic_queue]['hardware_q_id'])
+        if 'scheduling' in qos_info_compute[nic_queue].keys():
+            queue_scheduling.append(qos_info_compute[nic_queue]['scheduling'])
+        if 'bandwidth' in qos_info_compute[nic_queue].keys():
+            queue_bandwidth.append(qos_info_compute[nic_queue]['bandwidth'])
+
+    qos_details = (set_qos, qos_logical_queue, queue_id, queue_scheduling, queue_bandwidth)
+    return qos_details
 
 def get_compute_as_gateway_list():
     gateway_server_ip_list = []

@@ -40,6 +40,7 @@ env.roledefs = {
     # 'toragent': [host1], Optional, Only to enable Tor Agent. Only compute can
     # support Tor Agent
  #   'backup':[backup_node],  # only if the backup_node is defined
+    # 'qos': [host1], # optional, to enable Qos.
 }
 
 #Openstack admin password
@@ -351,6 +352,22 @@ env.ostypes = {
 
 #env.vgw = {host1: {'vgw1':{'vn':'default-domain:admin:public:public', 'ipam-subnets': ['10.204.220.128/29', '10.204.220.136/29', 'gateway-routes': ['8.8.8.0/24', '1.1.1.0/24']}]},
 #                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}
+#          }
+
+#Definition for the Key used
+#--------------------------------------
+# For Qos hardware queues (nic queues) are mapped to logical queues in agent .
+# hardware_q_id: Identifier for the hardwarwe queue.
+# logical_queue: Defines the logical queues each hardware queue is mapped to.
+# scheduling: Defines the scheduling algorathim used in logical queues.
+# bandwidth: Total hardware queue bandwidth used by logical queues.
+# hardware_q_default: Defines the default hardware queue for Qos.
+# scheduling and bandwidth properties for each hardware queue is not implemented for now in agent.
+
+#env.qos = {host1: {'hardware_q1':{'hardware_q_id': '3', 'logical_queue':['1', '6-10', '12-15'], 'scheduling': 'strict', 'bandwidth': '70'},
+#                   'hardware_q2':{'hardware_q_id': '5', 'logical_queue':['2'], 'scheduling': 'rr', 'bandwidth': '75'},
+#                   'hardware_q3':{'hardware_q_id': '8', 'logical_queue':['3-5'], 'scheduling': 'rr', 'bandwidth': '75'},
+#                   'hardware_q_default':{'hardware_q_id': '1', 'logical_queue':['7'], 'scheduling': 'strict', 'bandwidth': '60'}}
 #          }
 
 #OPTIONAL optional tor agent and tsn CONFIGURATION
