@@ -49,6 +49,7 @@ env.roledefs = {
     # 'toragent': [host1], Optional, Only to enable Tor Agent. Only compute can
     # support Tor Agent
     #   'backup':[backup_node],  # only if the backup_node is defined
+    # 'qos': [host4, host5], # optional, to enable Qos.
 }
 
 #Hostnames
@@ -482,6 +483,14 @@ env.ostypes = {
 #env.vgw = {host4: {'vgw1':{'vn':'default-domain:admin:public:public', 'ipam-subnets': ['10.204.220.128/29', '10.204.220.136/29', 'gateway-routes': ['8.8.8.0/24', '1.1.1.0/24']}]},
 #                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}},
 #           host5: {'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}}
+#          }
+
+#env.qos = {host4: {'physical_q1':{'queue':['1', '6-10', '8-10'], 'scheduling': 'strict', 'bandwidth': '70'},
+#                   'physical_q2':{'queue':['2'], 'scheduling': 'rr', 'bandwidth': '75'},
+#                   'physical_q3':{'queue':['2-5'], 'scheduling': 'rr', 'bandwidth': '75'},
+#                   'physical_q_default':{'queue':['7'], 'scheduling': 'strict', 'bandwidth': '60'}},
+#           host5: {'physical_q1':{'queue':['1', '3-8', '5-10'], 'scheduling': 'rr', 'bandwidth': '75'},
+#                   'physical_q_default':{'queue':['7'], 'scheduling': 'strict', 'bandwidth': '80'}}
 #          }
 
 #OPTIONAL optional tor agent and tsn CONFIGURATION
