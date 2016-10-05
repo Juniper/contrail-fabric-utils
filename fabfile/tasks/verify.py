@@ -60,7 +60,7 @@ def verify_openstack():
 def verify_cfgm():
     verify_service("zookeeper")
     if manage_config_db():
-        verify_service("contrail-database")
+        verify_service("contrail-database", initd_service=True)
     verify_service("supervisor-config")
     verify_service("contrail-api")
     verify_service("contrail-discovery")
