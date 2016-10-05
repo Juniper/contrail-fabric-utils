@@ -82,7 +82,12 @@ def setup_rhosp_node():
     """Set up RHOSP Node"""
     mysql_passwd = 'juniper123'
     sudo('sudo yum install -y openstack-packstack')
-    sudo('packstack --allinone --mariadb-pw=%s --use-epel=n --nagios-install=n' % mysql_passwd)
+    sudo('packstack --allinone \
+                    --mariadb-pw=%s \
+                    --use-epel=n \
+                    --nagios-install=n \
+                    --os-heat-install=y \
+                    --os-heat-mysql-password=%s' % (mysql_passwd, mysql_passwd))
     openstack_password = getattr(env, 'openstack_admin_password', 'c0ntrail123')
     sudo('source keystonerc_admin && keystone user-password-update --pass %s admin' % openstack_password)
     sudo("sed -i -e 's/export OS_PASSWORD=.*/export OS_PASSWORD=%s/' keystonerc_admin " % openstack_password)
