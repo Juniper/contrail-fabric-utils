@@ -288,6 +288,9 @@ def upgrade_contrail(from_rel, pkg, orch='yes'):
         execute('prov_config')
         execute('prov_database')
         execute('prov_analytics')
+    # Provision alarm
+    if LooseVersion(from_rel) < LooseVersion('3.2.0.0'):
+        execute('prov_alarm')
     execute('replace_vrouter_ko')
     #Clear the connections cache
     connections.clear()

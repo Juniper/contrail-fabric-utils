@@ -1642,6 +1642,22 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
 
 @task
 @EXECUTE_TASK
+def prov_alarm():
+    cfgm_host = env.roledefs['cfgm'][0]
+    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+    cfgm_host_password = get_env_passwords(cfgm_host)
+    with settings(cd(UTILS_DIR), host_string=cfgm_host,
+            password=cfgm_host_password):
+        cmd = "python provision_alarm.py"
+        cmd += " --api_server_ip %s" % cfgm_ip
+        cmd += " %s" % get_mt_opts()
+        if apiserver_ssl_enabled():
+            cmd += " --api_server_use_ssl True"
+        sudo(cmd)
+#end prov_alarm_node
+
+@task
+@EXECUTE_TASK
 @roles('cfgm')
 def prov_config():
     execute("prov_config_node", env.host_string)
@@ -2568,6 +2584,7 @@ def setup_all(reboot='True'):
     execute('restart_openstack_on_demand')
     execute('setup_vrouter')
     execute('prov_config')
+    execute('prov_alarm')
     execute('prov_database')
     execute('prov_analytics')
     execute('prov_control_bgp')
