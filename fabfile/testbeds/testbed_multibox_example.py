@@ -49,6 +49,7 @@ env.roledefs = {
     # 'toragent': [host1], Optional, Only to enable Tor Agent. Only compute can
     # support Tor Agent
     #   'backup':[backup_node],  # only if the backup_node is defined
+    # 'qos': [host4, host5], # optional, to enable Qos.
 }
 
 #Hostnames
@@ -482,6 +483,24 @@ env.ostypes = {
 #env.vgw = {host4: {'vgw1':{'vn':'default-domain:admin:public:public', 'ipam-subnets': ['10.204.220.128/29', '10.204.220.136/29', 'gateway-routes': ['8.8.8.0/24', '1.1.1.0/24']}]},
 #                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}},
 #           host5: {'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}}
+#          }
+
+#Definition for the Key used
+#--------------------------------------
+# For Qos hardware queues (nic queues) are mapped to logical queues in agent .
+# hardware_q_id: Identifier for the hardwarwe queue.
+# logical_queue: Defines the logical queues each hardware queue is mapped to.
+# scheduling: Defines the scheduling algorathim used in logical queues.
+# bandwidth: Total hardware queue bandwidth used by logical queues.
+# default: When set to True defines the default hardware queue for Qos, one of the queue must be defined default.
+# scheduling and bandwidth properties for each hardware queue is not implemented for now in agent.
+
+#env.qos = {host4: [ {'hardware_q_id': '3', 'logical_queue':['1', '6-10', '12-15'], 'scheduling': 'strict', 'bandwidth': '70'},
+#                    {'hardware_q_id': '5', 'logical_queue':['2'], 'scheduling': 'rr', 'bandwidth': '75'},
+#                    {'hardware_q_id': '8', 'logical_queue':['3-5'], 'scheduling': 'rr', 'bandwidth': '75'},
+#                    {'hardware_q_id': '1', 'logical_queue':['7'], 'scheduling': 'strict', 'bandwidth': '60', 'default': 'True'}],
+#           host5: [ {'hardware_q_id': '2', 'logical_queue':['1', '3-8', '10-15'], 'scheduling': 'rr', 'bandwidth': '75'},
+#                    {'hardware_q_id': '6', 'logical_queue':['7'], 'scheduling': 'strict', 'bandwidth': '80', 'default': 'True'}]
 #          }
 
 #OPTIONAL optional tor agent and tsn CONFIGURATION
