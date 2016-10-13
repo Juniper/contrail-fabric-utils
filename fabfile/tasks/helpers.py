@@ -330,9 +330,14 @@ def check_reimage_state():
     esxi_hosts = getattr(testbed, 'esxi_hosts', None)
     if esxi_hosts:
         for esxi in esxi_hosts:
-            if env['host_string'] == esxi_hosts[esxi]['contrail_vm']['host']:
-                print "skipping contrail vm, continue..."
-                return
+            try:
+                if env['host_string'] == esxi_hosts[esxi]['contrail_vm']['host']:
+                    print "skipping contrail vm, continue..."
+                    return
+            except Exception as e:
+                print "%s"%e
+                return #Handling the exception if contrail-vm not present in testbed.py,
+                       #which is the case for vcenter gateway
     for host in hosts:
         if exists('/opt/contrail'):
             failed_host.append(host)
@@ -555,28 +560,32 @@ def preload_image_to_esx(url, glance_id, sizes, version):
     if not esxi_hosts:
         return
     for esxi in esxi_hosts.values():
-        if esxi['contrail_vm']['host'] in env.roledefs['compute']:
-            apply_esxi_defaults(esxi)
-            # for havana(2013.2), images are stored under datastore/vmware_base/
-            base = esxi['datastore'] + 'vmware_base/'
-            # for icehouse, images are stored under datstore/<ip>_base/<glanceid>/
-            if '2014.1' in version:
-                ip = esxi['contrail_vm']['host'].split('@')[-1]
-                base = esxi['datastore'] + '/' + ip + '_base/' + glance_id + '/'
+        try:
+            if esxi['contrail_vm']['host'] in env.roledefs['compute']:
+                apply_esxi_defaults(esxi)
+                # for havana(2013.2), images are stored under datastore/vmware_base/
+                base = esxi['datastore'] + 'vmware_base/'
+                # for icehouse, images are stored under datstore/<ip>_base/<glanceid>/
+                if '2014.1' in version:
+                    ip = esxi['contrail_vm']['host'].split('@')[-1]
+                    base = esxi['datastore'] + '/' + ip + '_base/' + glance_id + '/'
 
-            with settings(host_string = esxi['username'] + '@' + esxi['ip'],
+                with settings(host_string = esxi['username'] + '@' + esxi['ip'],
                           password = esxi['password'], warn_only=True,
                           shell = '/bin/sh -l -c'):
-                 run('mkdir -p %s' % base)
-                 with cd(base):
-                      run('wget -O ' + glance_id + '-sparse.vmdk.gz ' + url)
-                      run('gunzip ' + glance_id + '-sparse.vmdk.gz')
-                      run('vmkfstools -i ' + glance_id + '-sparse.vmdk -a ide ' + glance_id + '.vmdk')
+                     run('mkdir -p %s' % base)
+                     with cd(base):
+                          run('wget -O ' + glance_id + '-sparse.vmdk.gz ' + url)
+                          run('gunzip ' + glance_id + '-sparse.vmdk.gz')
+                          run('vmkfstools -i ' + glance_id + '-sparse.vmdk -a ide ' + glance_id + '.vmdk')
 
-                      run('rm ' + glance_id + '-sparse.vmdk')
-                      for size in sizes:
-                          run('vmkfstools -i ' + glance_id + '.vmdk -a ide ' + glance_id + '.' + str(size) + '.vmdk')
-                          run('vmkfstools -X ' + str(size) + 'G ' + glance_id + '.' + str(size) + '.vmdk')
+                          run('rm ' + glance_id + '-sparse.vmdk')
+                          for size in sizes:
+                              run('vmkfstools -i ' + glance_id + '.vmdk -a ide ' + glance_id + '.' + str(size) + '.vmdk')
+                              run('vmkfstools -X ' + str(size) + 'G ' + glance_id + '.' + str(size) + '.vmdk')
+        except Exception as e:
+            print "%s"%e
+            pass #Handling exception for vcenter gateway
 
 #end preload_images_to_esx
 
@@ -828,7 +837,12 @@ def wait_till_all_up(attempts=90, interval=10, node=None, waitdown=True, contrai
                     hstr = esxi_hosts[esxi]['username'] + '@' + esxi_hosts[esxi]['ip']
                     nodes.append(hstr)
                     env.passwords[hstr] = esxi_hosts[esxi]['password']
-                    nodes.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+                    try:
+                        nodes.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+                    except Exception as e:
+                        print "%s"%e
+                        pass #Handing exception for vcenter gateway
+                             #Entry for contrail_vm not there in testbed.py
 
     nodes = [nodes] if type(nodes) is str else nodes
     #Waits for node to shutdown
@@ -1553,8 +1567,13 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
         esxi_hosts = getattr(testbed, 'esxi_hosts', None)
         if esxi_hosts:
             for esxi in esxi_hosts:
-                nodes.remove(esxi_hosts[esxi]['contrail_vm']['host'])
-                nodes.append(esxi_hosts[esxi]['username']+'@'+esxi_hosts[esxi]['ip'])
+                try:
+                    nodes.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+                    nodes.append(esxi_hosts[esxi]['username']+'@'+esxi_hosts[esxi]['ip'])
+                except Exception as e:
+                    print "%s"%e
+                    pass #Handing exception for vcenter gateway
+                         #Entry for contrail_vm not there in testbed.py
 
         # Skip checking for nodes which are vms
         vm_nodes = getattr(testbed, 'vm_node_details', None)
