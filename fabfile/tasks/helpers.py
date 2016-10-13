@@ -592,15 +592,17 @@ def add_basic_images(image=None):
     images = [ ("converts/ubuntu.vmdk", "ubuntu", [10,20]),
                ("converts/ubuntu-traffic.vmdk", "ubuntu-traffic", [10,20]),
                ("converts/centos-min.vmdk", "centos65-ipv6", [10]),
-               ("converts/ubuntu-in-net.vmdk", "ubuntu-in-net", []),
                ("converts/ubuntu-dhcp-server.vmdk", "ubuntu-dhcp-server", []),
                ("converts/cirros-0.3.0-x86_64-disk.vmdk", "cirros", [1,10]),
-               ("vsrx/junos-vsrx-12.1-transparent.img", "vsrx-bridge", []),
                ("vsrx/junos-vsrx-12.1-in-network.img", "vsrx", []),
                ("analyzer/analyzer-vm-console.qcow2", "analyzer", []),
                ("converts/ubuntu-dns-server.vmdk", "ubuntu-dns-server", []),
                ("converts/ubuntu-dhcpdns-server.vmdk", "ubuntu-dhcpdns-server", []),
-             ]
+               ("tinycore/tinycore-in-network-nat.qcow2", "tiny-nat-fw", []),
+               ("tinycore/tinycore-in-network.qcow2", "tiny-in-net", []),
+               ("tinycore/tinycore-net-transparent-fw.qcow2", "tiny-trans-fw", []),
+
+               ]
 
     for (loc, name, sizes) in images:
         if image is not None and image != name:
