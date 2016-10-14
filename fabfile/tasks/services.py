@@ -67,7 +67,7 @@ def stop_cfgm_db():
 def stop_cfgm_db_node(*args):
     """stop the contrail config db services."""
     for host_string in args:
-        with settings(warn_only=True):
+        with settings(host_string=host_string,warn_only=True):
             if manage_config_db():
                 sudo('service contrail-database stop')
             sudo('service zookeeper stop')
@@ -83,7 +83,7 @@ def start_cfgm():
 def start_cfgm_node(*args):
     """starts the contrail config services."""
     for host_string in args:
-        with settings(warn_only=True):
+        with settings(host_string=host_string,warn_only=True):
             sudo('service supervisor-support-service start')
             sudo('service supervisor-config start')
             sudo('service neutron-server start')
@@ -98,7 +98,7 @@ def start_cfgm_db():
 def start_cfgm_db_node(*args):
     """starts the contrail config db services."""
     for host_string in args:
-        with settings(warn_only=True):
+        with settings(host_string=host_string,warn_only=True):
             if manage_config_db():
                 sudo('service contrail-database start')
             sudo('service zookeeper start')
