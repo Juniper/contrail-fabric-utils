@@ -98,7 +98,7 @@ def start_cfgm_db():
 def start_cfgm_db_node(*args):
     """starts the contrail config db services."""
     for host_string in args:
-        with settings(warn_only=True):
+        with settings(host_string=host_string,warn_only=True):
             if manage_config_db():
                 sudo('service contrail-database start')
             sudo('service zookeeper start')
