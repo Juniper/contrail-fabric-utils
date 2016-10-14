@@ -552,7 +552,12 @@ def install_vrouter(manage_nova_compute='yes'):
 @task
 def install_vrouter_node(*args):
     """Installs nova compute and vrouter pkgs in one or list of nodes. USAGE:fab install_vrouter_node:user@1.1.1.1,user@2.2.2.2"""
-    execute('install_only_vrouter_node', 'yes', *args)
+    for host_string in args:
+        with settings(host_string=host_string):
+            if get_mode(host_string) is 'vcenter':
+                execute('install_only_vrouter_node', 'no', host_string)
+            else:
+                execute('install_only_vrouter_node', 'yes', host_string)
 
 @task
 def install_only_vrouter_node(manage_nova_compute='yes', *args):
