@@ -34,7 +34,7 @@ def get_orchestrator():
 
 
 def get_mode(compute_host):
-    mode = None
+    mode = get_orchestrator()
     esxi_info = getattr(testbed, 'esxi_hosts', None)
 
     if not esxi_info:
@@ -44,12 +44,12 @@ def get_mode(compute_host):
     if esxi_info:
         for host in esxi_info.keys():
             esxi_data = esxi_info[host]
+            if 'contrail_vm' not in esxi_data:
+                continue #For vcenter gateway 'contrail_vm' not present in testbed.py
             data = esxi_data['contrail_vm']
             if (esxi_data['contrail_vm']['host'] == compute_host):
                 if 'mode' in data.keys():
                    mode = esxi_data['contrail_vm']['mode']
-                else:
-                   mode = get_orchestrator()
     return mode
 
 def is_lbaas_enabled():
@@ -124,6 +124,8 @@ def get_vmware_details(compute_host_string):
     if esxi_info:
         for host in esxi_info.keys():
             esxi_data = esxi_info[host]
+            if 'contrail_vm' not in esxi_data:
+                continue #For vcenter gateway contrail_vm not present in testbed.py
             data = esxi_data['contrail_vm']
             if (esxi_data['contrail_vm']['host'] == compute_host_string):
                  return esxi_data
@@ -167,8 +169,11 @@ def get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, p
                    hosts.append(esx_list)
                    modified_vm_name = vm_name+"-"+vcenter_server['datacenter']+"-"+esxi_data['ip']
                    for host_string in compute_list:
-                       if host_string == esxi_data['contrail_vm']['host']:
-                           break
+                       try: 
+                           if host_string == esxi_data['contrail_vm']['host']:
+                               break
+                       except Exception as e:#Handling exception in case 
+                           print '%s'%e      #contrail_vm not present(vcenter gateway) 
                    password  = password_list[host_string]
                    vm_info_list = modified_vm_name, host_string, password
                    vms.append(vm_info_list)
