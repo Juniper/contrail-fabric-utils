@@ -85,7 +85,7 @@ def start_cfgm():
 def start_cfgm_node(*args):
     openstack_services = get_openstack_services()
     for host_string in args:
-        with settings(warn_only=True):
+        with settings(host_string=host_string,warn_only=True):
             sudo('service %s start' % openstack_services['rabbitmq-server'])
             sudo('service supervisor-config start')
             sudo('service neutron-server start')
@@ -98,9 +98,9 @@ def start_cfgm_db():
     execute('start_cfgm_node', env.host_string)
 
 @task
-def start_cfgm_node(*args):
+def start_cfgm_db_node(*args):
     for host_string in args:
-        with settings(warn_only=True):
+        with settings(host_string=host_string,warn_only=True):
             if manage_config_db():
                 sudo('service contrail-database start')
             sudo('service zookeeper start')
@@ -244,7 +244,7 @@ def restart_cfgm_db():
     """Restarts the contrail config db services."""
 
 @task
-def restart_cfgm_node(*args):
+def restart_cfgm_db_node(*args):
     """Restarts the contrail config db services in once cfgm node. USAGE:fab restart_cfgm_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
         with  settings(host_string=host_string):
