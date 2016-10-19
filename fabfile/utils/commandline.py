@@ -299,9 +299,9 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
     cfgm_ip = hstr_to_ip(cfgm_host)
     webui_host = get_control_host_string(host_string)
     ncollectors = len(env.roledefs['collector'])
-    database_host_list=[]
-    for entry in env.roledefs['database']:
-        database_host_list.append(get_control_host_string(entry))
+    cfgm_host_list = []
+    for entry in env.roledefs['cfgm']:
+        cfgm_host_list.append(get_control_host_string(entry))
     webui_host_list=[]
     for entry in env.roledefs['webui']:
         webui_host_list.append(get_control_host_string(entry))
@@ -314,7 +314,7 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
         hindex = hindex % ncollectors
         collector_host = get_control_host_string(env.roledefs['collector'][hindex])
         collector_ip = hstr_to_ip(collector_host)
-    cassandra_ip_list = [hstr_to_ip(cassandra_host) for cassandra_host in database_host_list]
+    cassandra_ip_list = [hstr_to_ip(cfgm_host) for cfgm_host in cfgm_host_list]
     orch = get_orchestrator()
 
     # If redis password is specified in testbed file, then add that to the
