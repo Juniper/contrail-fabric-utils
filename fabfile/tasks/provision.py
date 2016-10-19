@@ -2914,6 +2914,8 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
         return
 
     if host in esxi_info.keys():
+         if 'contrail_vm' not in host:
+             return #For vcenter gateway, contrail_vm not there in esxi info 
          mode = get_mode(esxi_info[host]['contrail_vm']['host'])
          if mode == 'openstack':
              std_switch = True
@@ -3198,6 +3200,8 @@ def setup_esx_zone():
     sudo("(source /etc/contrail/openstackrc; nova aggregate-create esx esx)")
     cmd = "(source /etc/contrail/openstackrc; nova aggregate-add-host esx %s)"
     for server in esx:
+        if 'contrail_vm' not in esx[server]:
+            continue
         sudo(cmd % esx[server]['contrail_vm']['name'])
 # end setup_esx_zone
 
