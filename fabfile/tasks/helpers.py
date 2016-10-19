@@ -686,7 +686,7 @@ def copy(src, dst = '.'):
     put(src, dst, use_sudo=True)
 #end copy
 
-@roles('openstack','compute')
+@roles('openstack')
 def cleanup_os_config():
     '''
     This has to be run from reset_config() task only
@@ -696,10 +696,9 @@ def cleanup_os_config():
     ubuntu_services =['mysql', 'nova-novncproxy', 'rabbitmq-server', 'cinder-volume', 'cinder-scheduler', 'cinder-api', 'glance-registry', 'glance-api', 'nova-xvpvncproxy', 'nova-scheduler', 'nova-objectstore', 'nova-metadata-api', 'nova-consoleauth', 'nova-console', 'nova-compute', 'nova-cert', 'nova-api', 'contrail-vncserver', 'keystone', ]
     # Drop all dbs
     with settings(warn_only=True):
-        token=sudo('cat /etc/contrail/mysql.token')
+        sudo('mysqladmin -u root -p$(cat /etc/contrail/mysql.token) password \'\' ')
         for db in dbs:
-            sudo('mysql -u root --password=%s -e \'drop database %s;\''  %(token, db))
-
+            sudo('mysql -u root -e \'drop database %s;\''  %(db))
 
         if detect_ostype() == 'ubuntu':
             services = ubuntu_services
