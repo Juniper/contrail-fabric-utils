@@ -40,7 +40,6 @@ env.roledefs = {
     # 'toragent': [host1], Optional, Only to enable Tor Agent. Only compute can
     # support Tor Agent
  #   'backup':[backup_node],  # only if the backup_node is defined
-    # 'qos': [host1], # optional, to enable Qos.
 }
 
 #Openstack admin password

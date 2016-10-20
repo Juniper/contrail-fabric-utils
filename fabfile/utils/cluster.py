@@ -116,8 +116,11 @@ def get_qos_details(compute_host_string):
     queue_bandwidth = []
     queue_id = []
     qos_details = (set_qos, qos_logical_queue, queue_id, queue_scheduling, queue_bandwidth)
-    if ('qos' not in env.roledefs or
-        compute_host_string not in env.roledefs['qos']):
+    qos_info = getattr(env, 'qos', None)
+    if qos_info:
+        if( compute_host_string not in qos_info.keys()):
+            return qos_details
+    else:
         return qos_details
 
     set_qos = True
