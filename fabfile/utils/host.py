@@ -261,10 +261,6 @@ def get_keystone_service_tenant_name():
 
 def get_admin_tenant_name():
     orch = getattr(env, 'orchestrator', 'openstack')
-    if env.has_key('other_orchestrators'):
-        for k,v in env.other_orchestrators.items():
-            if v['type'] == 'vcenter':
-                return 'vCenter'
     if orch == 'vcenter':
        return 'vCenter'
     admin_tenant_name = getattr(testbed, 'os_tenant_name', 'admin')
