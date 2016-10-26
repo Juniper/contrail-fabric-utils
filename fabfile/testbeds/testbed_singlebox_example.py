@@ -355,19 +355,28 @@ env.ostypes = {
 
 #Definition for the Key used
 #--------------------------------------
-# For Qos hardware queues (nic queues) are mapped to logical queues in agent .
+# For Qos hardware queues (nic queues) are mapped to logical queues in agent.
 # hardware_q_id: Identifier for the hardwarwe queue.
 # logical_queue: Defines the logical queues each hardware queue is mapped to.
-# scheduling: Defines the scheduling algorathim used in logical queues.
-# bandwidth: Total hardware queue bandwidth used by logical queues.
 # default: When set to True defines the default hardware queue for Qos, one of the queue must be defined default.
-# scheduling and bandwidth properties for each hardware queue is not implemented for now in agent.
 
-#env.qos = {host1: [ {'hardware_q_id': '3', 'logical_queue':['1', '6-10', '12-15'], 'scheduling': 'strict', 'bandwidth': '70'},
-#                    {'hardware_q_id': '5', 'logical_queue':['2'], 'scheduling': 'rr', 'bandwidth': '75'},
-#                    {'hardware_q_id': '8', 'logical_queue':['3-5'], 'scheduling': 'rr', 'bandwidth': '75'},
-#                    {'hardware_q_id': '1', 'logical_queue':['7'], 'scheduling': 'strict', 'bandwidth': '60', 'default': 'True'}]
+#env.qos = {host1: [ {'hardware_q_id': '3', 'logical_queue':['1', '6-10', '12-15']},
+#                    {'hardware_q_id': '5', 'logical_queue':['2']},
+#                    {'hardware_q_id': '8', 'logical_queue':['3-5']},
+#                    {'hardware_q_id': '1', 'logical_queue':['7'], 'default': 'True'}],
 #          }
+
+#Definition for the Key used for qos priority group
+#--------------------------------------------------------------------
+# priority_id: Priority group for qos.
+# scheduling: Defines the scheduling algorithm used for priority group, strict or roundrobin (rr).
+# bandwidth: Total hardware queue bandwidth used by priority group.
+# Bandwidth cannot be specified if strict scheduling is used for priority group set it as 0.
+#env.qos_niantic = {host1:[
+#                     { 'priority_id': '1', 'scheduling': 'strict', 'bandwidth': '0'},
+#                     { 'priority_id': '2', 'scheduling': 'rr', 'bandwidth': '20'},
+#                     { 'priority_id': '3', 'scheduling': 'rr', 'bandwidth': '10'}],
+#                  }
 
 #OPTIONAL optional tor agent and tsn CONFIGURATION
 #==================================================
