@@ -112,10 +112,8 @@ def get_vgw_details(compute_host_string):
 def get_qos_details(compute_host_string):
     set_qos = False
     qos_logical_queue = []
-    queue_scheduling = []
-    queue_bandwidth = []
     queue_id = []
-    qos_details = (set_qos, qos_logical_queue, queue_id, queue_scheduling, queue_bandwidth)
+    qos_details = (set_qos, qos_logical_queue, queue_id)
     qos_info = getattr(env, 'qos', None)
     if qos_info:
         if( compute_host_string not in qos_info.keys()):
@@ -124,26 +122,44 @@ def get_qos_details(compute_host_string):
         return qos_details
 
     set_qos = True
-    qos_info_compute = env.qos[compute_host_string]
+    qos_info_compute = qos_info[compute_host_string]
     for nic_queue in qos_info_compute:
         if 'default' not in nic_queue.keys():
             qos_logical_queue.append(str(nic_queue['logical_queue']).strip('[]').replace(" ",""))
             queue_id.append(nic_queue['hardware_q_id'])
-            if 'scheduling' in nic_queue.keys():
-                queue_scheduling.append(nic_queue['scheduling'])
-            if 'bandwidth' in nic_queue.keys():
-                queue_bandwidth.append(nic_queue['bandwidth'])
         else:
            default_nic_queue = nic_queue
     qos_logical_queue.append(str(default_nic_queue['logical_queue']).strip('[]').replace(" ",""))
     queue_id.append(default_nic_queue['hardware_q_id'])
-    if 'scheduling' in default_nic_queue.keys():
-        queue_scheduling.append(default_nic_queue['scheduling'])
-    if 'bandwidth' in default_nic_queue.keys():
-        queue_bandwidth.append(default_nic_queue['bandwidth'])
 
-    qos_details = (set_qos, qos_logical_queue, queue_id, queue_scheduling, queue_bandwidth)
+    qos_details = (set_qos, qos_logical_queue, queue_id)
     return qos_details
+
+def get_priority_group_details(compute_host_string):
+    set_priority = False
+    priority_id = []
+    priority_bandwidth = []
+    priority_scheduling = []
+    priority_details = (set_priority, priority_id, priority_bandwidth, priority_scheduling)
+    priority_info = getattr(env, 'qos_niantic', None)
+    if priority_info:
+        if (compute_host_string not in priority_info.keys()):
+            return priority_details
+    else:
+        return priority_details
+
+    set_priority = True
+    priority_info_compute = priority_info[compute_host_string]
+    for priority in priority_info_compute:
+        priority_id.append(priority['priority_id'])
+        priority_scheduling.append(priority['scheduling'])
+        if priority['scheduling'] != 'strict':
+            priority_bandwidth.append(priority['bandwidth'])
+        else:
+            priority_bandwidth.append('0')
+
+    priority_details = (set_priority, priority_id, priority_bandwidth, priority_scheduling)
+    return priority_details
 
 def get_compute_as_gateway_list():
     gateway_server_ip_list = []
