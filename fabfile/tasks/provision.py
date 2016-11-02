@@ -2914,8 +2914,8 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
         return
 
     if host in esxi_info.keys():
-         if 'contrail_vm' not in host:
-             return #For vcenter gateway, contrail_vm not there in esxi info 
+         if 'contrail_vm' not in esxi_info[host]:
+             return #For vcenter gateway, contrail_vm not present in esxi info
          mode = get_mode(esxi_info[host]['contrail_vm']['host'])
          if mode == 'openstack':
              std_switch = True
