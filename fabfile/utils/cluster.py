@@ -5,6 +5,7 @@ from fabric.api import env, settings, run
 from fabos import detect_ostype, get_release, get_build
 from fabfile.config import *
 from fabfile.utils.config import get_value
+from fabfile.utils.interface import get_data_ip
 from collections import OrderedDict
 
 def get_all_hostnames():
@@ -167,7 +168,7 @@ def get_compute_as_gateway_list():
     if gateway_mode_info:
         for host in gateway_mode_info.keys():
             if( gateway_mode_info[host] == 'server' ):
-                gateway_server_ip_list.append(host.split('@')[1])
+                gateway_server_ip_list.append(get_data_ip(host)[0])
     return gateway_server_ip_list
 
 def get_vmware_details(compute_host_string):
