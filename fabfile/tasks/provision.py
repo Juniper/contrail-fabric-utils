@@ -3,8 +3,9 @@ import string
 import textwrap
 import json
 import socket
+import ConfigParser
+from ConfigParser import SafeConfigParser
 from time import sleep
-
 from fabric.contrib.files import exists
 
 from fabfile.config import *
@@ -30,7 +31,8 @@ from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
         get_esxi_vms_and_hosts, get_mode, is_contrail_node,\
-        create_esxi_vrouter_map_file, update_esxi_vrouter_map_file
+        create_esxi_vrouter_map_file, update_esxi_vrouter_map_file,\
+        get_qos_nodes, get_qos_niantic_nodes
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
         setup_apiserver_ssl_certs_node, copy_keystone_ssl_certs_to_node,
@@ -1340,6 +1342,115 @@ def setup_collector_node(*args):
                 print cmd
                 sudo(cmd)
 #end setup_collector_node
+
+@task
+@hosts(get_qos_nodes())
+def setup_qos():
+    '''Generate [QOS] section in contrail-vrouter-agent.conf
+    '''
+    execute("setup_qos_node", env.host_string)
+
+@task
+def setup_qos_node(*args):
+    '''Read qos configuration from testbed.py and populate agent_conf
+    '''
+    agent_conf = "/etc/contrail/contrail-vrouter-agent.conf"
+    conf_file = "contrail-vrouter-agent.conf"
+    qos_logical_queue = []
+    queue_id = []
+    qos_info = getattr(env, 'qos', None)
+    if qos_info is None:
+        print 'Info: qos block is not defined in testbed file. Exiting'
+        return True
+    for compute_host_string in args:
+        qos_info_compute = qos_info[compute_host_string]
+        for nic_queue in qos_info_compute:
+            if 'default' not in nic_queue.keys():
+                qos_logical_queue.append(str(nic_queue['logical_queue']).strip('[]').replace(" ",""))
+                queue_id.append(nic_queue['hardware_q_id'])
+            else:
+                default_nic_queue = nic_queue
+        qos_logical_queue.append(str(default_nic_queue['logical_queue']).strip('[]').replace(" ",""))
+        queue_id.append(default_nic_queue['hardware_q_id'])
+        if queue_id != None:
+            qos_str = ""
+            qos_str += "[QOS]\n"
+            for i in range(len(queue_id)):
+                qos_str += '[%s%s]\n' %("QUEUE-", queue_id[i])
+                if (i == (len(qos_logical_queue)-1)):
+                    qos_str += "# This is the default hardware queue\n"
+                    qos_str += "default_hw_queue= true\n\n"
+                qos_str += "# Logical nic queues for qos config\n"
+                qos_str += "logical_queue=[%s]\n\n" % qos_logical_queue[i].replace(",",", ")
+
+            with settings(host_string=compute_host_string):
+                ltemp_dir = tempfile.mkdtemp()
+                get(agent_conf, ltemp_dir)
+                parser = SafeConfigParser()
+                with open('%s/%s' %(ltemp_dir, conf_file), "r") as f:
+                    parser.readfp(f)
+                for section in parser.sections():
+                    if ("QUEUE-" in section or section == "QOS"):
+                        parser.remove_section(section)
+                with open('%s/%s' %(ltemp_dir, conf_file), "w") as f:
+                    parser.write(f)
+                put('%s/%s' % (ltemp_dir, conf_file), agent_conf, use_sudo=True)
+                local('rm -rf %s' % (ltemp_dir))
+                sudo("echo '%s' >> %s" %(qos_str, agent_conf))
+
+@task
+@hosts(get_qos_niantic_nodes())
+def setup_qos_niantic_nic():
+    '''Generate [QOS-NIANTIC] section in contrail-vrouter-agent.conf
+    '''
+    execute("setup_qos_niantic_node", env.host_string)
+
+@task
+def setup_qos_niantic_node(*args):
+    '''Read qos configuration from testbed.py and populate agent_conf
+    '''
+    agent_conf = "/etc/contrail/contrail-vrouter-agent.conf"
+    conf_file = "contrail-vrouter-agent.conf"
+    priority_id = []
+    priority_bandwidth = []
+    priority_scheduling = []
+    priority_info = getattr(env, 'qos_niantic', None)
+    if priority_info is None:
+        print 'Info: qos niantic block is not defined in testbed file. Exiting'
+        return True
+    for compute_host_string in args:
+        priority_info_compute = priority_info[compute_host_string]
+        for priority in priority_info_compute:
+            priority_id.append(priority['priority_id'])
+            priority_scheduling.append(priority['scheduling'])
+            if priority['scheduling'] != 'strict':
+                priority_bandwidth.append(priority['bandwidth'])
+            else:
+                priority_bandwidth.append('0')
+        if priority_id != None:
+            priority_group_str = ""
+            priority_group_str += "[QOS-NIANTIC]\n"
+            for i in range(len(priority_id)):
+                priority_group_str += '[%s%s]\n' %("PG-", priority_id[i])
+                priority_group_str += "# Scheduling algorithm for priority group (strict/rr)\n"
+                priority_group_str += "scheduling=" + priority_scheduling[i] + "\n\n"
+                priority_group_str += "# Total hardware queue bandwidth used by priority group\n"
+                priority_group_str += "bandwidth=" + priority_bandwidth[i] + "\n\n"
+
+        with settings(host_string=compute_host_string):
+                ltemp_dir = tempfile.mkdtemp()
+                get(agent_conf, ltemp_dir)
+                parser = SafeConfigParser()
+                with open('%s/%s' %(ltemp_dir, conf_file), "r") as f:
+                    parser.readfp(f)
+                for section in parser.sections():
+                    if ("PG-" in section or section == "QOS-NIANTIC"):
+                        parser.remove_section(section)
+                with open('%s/%s' %(ltemp_dir, conf_file), "w") as f:
+                    parser.write(f)
+                put('%s/%s' % (ltemp_dir, conf_file), agent_conf, use_sudo=True)
+                local('rm -rf %s' % (ltemp_dir))
+                sudo("echo '%s' >> %s" %(priority_group_str, agent_conf))
 
 @task
 @roles('database')
