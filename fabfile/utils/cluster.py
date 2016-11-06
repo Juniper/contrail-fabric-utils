@@ -5,7 +5,6 @@ from fabric.api import env, settings, run
 from fabos import detect_ostype, get_release, get_build
 from fabfile.config import *
 from fabfile.utils.config import get_value
-from fabfile.utils.interface import get_data_ip
 from collections import OrderedDict
 
 def get_all_hostnames():
@@ -161,6 +160,26 @@ def get_priority_group_details(compute_host_string):
 
     priority_details = (set_priority, priority_id, priority_bandwidth, priority_scheduling)
     return priority_details
+
+def get_qos_nodes():
+    """Identifies the list of nodes to be provisioned for
+       Qos.
+    """
+    qos_info = getattr(env, 'qos', None)
+    if qos_info:
+        return qos_info.keys()
+    else:
+        return []
+
+def get_qos_niantic_nodes():
+    """Identifies the list of nodes to be provisioned for
+       Qos on niantic nic with priority group configuration.
+    """
+    qos_niantic_info = getattr(env, 'qos_niantic', None)
+    if qos_niantic_info:
+        return qos_niantic_info.keys()
+    else:
+        return []
 
 def get_compute_as_gateway_list():
     gateway_server_ip_list = []
