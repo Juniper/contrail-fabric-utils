@@ -162,6 +162,26 @@ def get_priority_group_details(compute_host_string):
     priority_details = (set_priority, priority_id, priority_bandwidth, priority_scheduling)
     return priority_details
 
+def get_qos_nodes():
+    """Identifies the list of nodes to be provisioned for
+       Qos in testbed.py.
+    """
+    qos_info = getattr(env, 'qos', None)
+    if qos_info:
+        return qos_info.keys()
+    else:
+        return []
+
+def get_qos_niantic_nodes():
+    """Identifies the list of nodes to be provisioned for
+       Qos on niantic nic with priority group configuration in testbed.py .
+    """
+    qos_niantic_info = getattr(env, 'qos_niantic', None)
+    if qos_niantic_info:
+        return qos_niantic_info.keys()
+    else:
+        return []
+
 def get_compute_as_gateway_list():
     gateway_server_ip_list = []
     gateway_mode_info = getattr(env, 'compute_as_gateway_mode', None)
