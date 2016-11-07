@@ -2652,6 +2652,36 @@ def setup_without_openstack(manage_nova_compute='yes', config_nova='yes', reboot
         connections.clear()
         execute('verify_compute')
 
+roles('build')
+@task
+def setup_without_openstack_and_compute():
+    """Provisions required contrail packages in all nodes as per the role definition except the openstack.
+       User has to provision the openstack node with their custom openstack pakckages.
+       Doesn't provision compute nodes. Primarily meant for ISSU to setup new cluster.
+    """
+    execute('setup_common')
+    execute('setup_ha')
+    execute('setup_rabbitmq_cluster')
+    execute('increase_limits')
+    execute('setup_database')
+    execute('verify_database')
+    execute('setup_cfgm')
+    execute('verify_cfgm')
+    execute('setup_control')
+    execute('verify_control')
+    execute('setup_collector')
+    execute('verify_collector')
+    execute('setup_webui')
+    execute('verify_webui')
+    execute('prov_config')
+    execute('prov_database')
+    execute('prov_analytics')
+    execute('prov_control_bgp')
+    execute('prov_external_bgp')
+    execute('prov_metadata_services')
+    execute('prov_encap_type')
+    execute('setup_remote_syslog')
+
 @roles('build')
 @task
 def setup_contrail_analytics_components(manage_nova_compute='no', reboot='False'):

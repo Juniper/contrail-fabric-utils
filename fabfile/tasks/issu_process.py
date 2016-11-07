@@ -17,6 +17,8 @@ from fabfile.utils.host import *
 from fabfile.utils.fabos import *
 from fabric.contrib.files import exists
 
+issu_process_bash_file="issu_process.sh" 
+issu_process_bash_path="/opt/contrail/utils/fabfile/tasks/issu_process.sh"
 
 @task
 @roles('compute')
@@ -29,15 +31,9 @@ def issu_contrail_switch_compute_node(discovery_ip, *args):
     """Usage: fab issu_contrail_switch_compute_node:<new_discovery_ip>,root@1.1.1.4..."""
     for host in args:
         with settings(host_string=host):
-            sudo("route -n")
-            sudo("openstack-config --set /etc/contrail/contrail-vrouter-agent.conf DISCOVERY server %s" %(discovery_ip))
-            sudo("openstack-config --set /etc/contrail/supervisord_vrouter_files/contrail-vrouter-agent.ini program:contrail-vrouter-agent autostart true")
-            sudo("openstack-config --set /etc/contrail/supervisord_vrouter_files/contrail-vrouter-agent.ini program:contrail-vrouter-agent killasgroup true")
-            sudo("openstack-config --set /etc/contrail/contrail-vrouter-nodemgr.conf DISCOVERY server %s" %(discovery_ip))
-            sudo("service supervisor-vrouter restart")
-            sudo("contrail-status")
-            sudo("route -n")
-
+            put('%s' %(issu_process_bash_path), '/tmp/%s' %(issu_process_bash_file), use_sudo=True)
+            sudo("chmod 777 /tmp/%s" %(issu_process_bash_file))
+            sudo("source /tmp/%s;issu_contrail_switch_compute_node %s" %(issu_process_bash_file, discovery_ip))
 @task
 @roles('compute')
 def issu_contrail_prepare_compute():
@@ -49,11 +45,9 @@ def issu_contrail_prepare_compute_node(*args):
     """Usage: fab issu_contrail_prepare_compute_node:root@1.1.1.4..."""
     for host in args:
         with settings(host_string=host):
-            sudo('route -n')
-            sudo("openstack-config --del /etc/contrail/supervisord_vrouter_files/contrail-vrouter-agent.ini program:contrail-vrouter-agent autostart")
-            sudo("openstack-config --del /etc/contrail/supervisord_vrouter_files/contrail-vrouter-agent.ini program:contrail-vrouter-agent killasgroup")
-            sudo("contrail-status")
-
+            put('%s' %(issu_process_bash_path), '/tmp/%s' %(issu_process_bash_file), use_sudo=True)
+            sudo("chmod 777 /tmp/%s" %(issu_process_bash_file))
+            sudo("source /tmp/%s;issu_contrail_prepare_compute_node" %(issu_process_bash_file))
 @task
 @roles('compute')
 def issu_contrail_upgrade_compute(from_rel, pkg):
@@ -80,13 +74,7 @@ def issu_contrail_prepare_new_control_node(*args):
     """Usage: fab issu_contrail_control_prepare_new:root@1.1.1.4 """
     for host in args:
         with settings(host_string=host):
-            sudo('contrail-status')
-            sudo("openstack-config --set /etc/contrail/supervisord_config.conf include files \"/etc/contrail/supervisord_config_files/contrail-api.ini  /etc/contrail/supervisord_config_files/contrail-discovery.ini /etc/contrail/supervisord_config_files/ifmap.ini\"")
-            sudo("contrail-status")
-            sudo("service supervisor-config restart")
-            sudo("contrail-status")
-            sudo("service supervisor-config stop")
-            sudo("contrail-status")
+            sudo("source %s; issu_contrail_prepare_new_control_node" %(issu_process_bash_path))
 
 @task
 @roles('cfgm')
@@ -99,10 +87,7 @@ def issu_contrail_post_new_control_node(*args):
     """Usage: fab issu_contrail_control_post_new:root@1.1.1.4"""
     for host in args:
         with settings(host_string=host):
-            sudo('contrail-status')
-            sudo("openstack-config --set /etc/contrail/supervisord_config.conf include files \"/etc/contrail/supervisord_config_files/*.ini\"")
-            sudo("service supervisor-config restart")
-            sudo("contrail-status")
+            sudo("source %s; issu_contrail_post_new_control_node" %(issu_process_bash_path))
 
 @task
 @roles('control')
@@ -118,70 +103,8 @@ def issu_contrail_config_new_control_on_old(*args):
         execute('prov_control_bgp_node', host_string, cfgm_host=cfgm_host)
 
 @task
-@roles('oldcfgm')
-def issu_prune_old_config():
-    execute('issu_prune_old_config_node', env.host_string)
-
-@task
-@roles('cfgm')
-def issu_prune_old_config_node(*args):
-    for host_string in args:
-         execute('prov_config_node', host_string, oper='del')
-
-@task
-@roles('oldcollector')
-def issu_prune_old_collector():
-    execute('issu_prune_old_collector_node', env.host_string)
-
-@task
-@roles('collector')
-def issu_prune_old_collector_node(*args):
-    for host_string in args:
-        execute('prov_analytics_node', host_string, oper='del')
-
-@task
-@roles('oldcontrol')
-def issu_prune_old_control():
-    execute('issu_prune_old_control_node', env.host_string)
-
-@task
-@roles('control')
-def issu_prune_old_control_node(*args):
-    for host_string in args:
-        execute('prov_control_bgp_node', host_string, oper='del')
-
-@task
-@roles('olddatabase')
-def issu_prune_old_database():
-    execute('issu_prune_old_database_node', env.host_string)
-
-@task
-@roles('database')
-def issu_prune_old_database_node(*args):
-    for host_string in args:
-        execute('prov_database_node', host_string, oper='del')
-
-@task
-def issu_prov_config():
-    execute('prov_config')
-
-@task
-def issu_prov_collector():
-    execute('prov_analytics')
-
-@task
-def issu_prov_database():
-    execute('prov_database')
-
-@task
 def issu_contrail_finalize_config_node():
-    execute('issu_prune_old_config')
-    execute('issu_prune_old_collector')
-    execute('issu_prune_old_control')
-    execute('issu_prune_old_database')
-    execute('issu_prov_config')
-    execute('issu_prov_collector')
-    execute('issu_prov_database')
+    sudo("python /opt/contrail/utils/provision_issu.py -c /etc/contrail/contrail-issu.conf")
 
 @task
 @roles('build')
@@ -262,31 +185,15 @@ def issu_open_nb_connectivity(*args):
 
 @task
 def issu_pre_sync():
-    sudo("contrail-issu-pre-sync")
+    sudo("source %s; issu_pre_sync" %(issu_process_bash_path))
 
 @task
 def issu_run_sync():
-    sudo("touch /etc/supervisor/conf.d/contrail-issu.conf")
-    cmd = "openstack-config --set /etc/supervisor/conf.d/contrail-issu.conf program:contrail-issu"
-    sudo("%s command 'contrail-issu-run-sync'" %(cmd))
-    sudo("%s numprocs 1" %(cmd))
-    sudo("openstack-config --set /etc/supervisor/conf.d/contrail-issu.conf program:contrail-issu process_name '%(process_num)s'")
-    sudo("%s redirect_stderr true" %(cmd))
-    sudo("openstack-config --set /etc/supervisor/conf.d/contrail-issu.conf program:contrail-issu stdout_logfile  '/var/log/issu-contrail-run-sync-%(process_num)s-stdout.log'")
-    sudo("openstack-config --set /etc/supervisor/conf.d/contrail-issu.conf program:contrail-issu stderr_logfile '/dev/null'") 
-    sudo("%s priority 440" %(cmd))
-    sudo("%s autostart true" %(cmd))
-    sudo("%s killasgroup false" %(cmd))
-    sudo("%s stopsignal KILL" %(cmd))
-    sudo("%s exitcodes 0" %(cmd))
-    sudo("service supervisor restart")
+    sudo("source %s; issu_run_sync" %(issu_process_bash_path))
 
 @task
 def issu_post_sync():
-    sudo("rm -f /etc/supervisor/conf.d/contrail-issu.conf")
-    sudo("service supervisor restart")
-    sudo("contrail-issu-post-sync")
-    sudo("contrail-issu-zk-sync")
+    sudo("source %s; issu_post_sync" %(issu_process_bash_path))
  
 @task
 @roles('build')
@@ -324,14 +231,16 @@ def issu_contrail_downgrade_compute(from_rel, pkg, discovery_ip):
 def issu_contrail_downgrade_compute_node(from_rel, pkg, *args):
     #Downgrade is a reference till role based packaginig is done.
     """Usage: fab issu_conntrail_compute_upgrade:from_rel,pkg,root@1.1.1.4"""
-    remove_pkgs = 'contrail-setup %s contrail-fabric-utils contrail-install-packages contrail-lib contrail-nodemgr contrail-setup contrail-utils contrail-vrouter-utils python-contrail contrail-openstack-vrouter  contrail-nova-vif contrail-setup contrail-vrouter-utils' %(get_vrouter_kmod_pkg())
+    remove_pkgs = 'contrail-setup %s contrail-fabric-utils contrail-install-packages contrail-lib contrail-nodemgr contrail-setup contrail-utils contrail-vrouter-utils python-contrail  contrail-nova-vif contrail-setup contrail-vrouter-utils' %(get_vrouter_kmod_pkg())
     for host in args:
         with settings(host_string=host):
             if sudo('lsb_release -i | grep Ubuntu | wc -l'):
                 sudo('DEBIAN_FRONTEND=noninteractive apt-get -y remove %s' %(remove_pkgs))
             else:
                 sudo('yum remove -y %s' %(remove_pkgs))
-            execute("upgrade_compute_node", from_rel, pkg, host, manage_nova_compute='no', configure_nova='no')
+            with settings(host_string=env.roledefs['oldcfgm'][0]):
+                sudo('contrail-version')
+                execute("upgrade_compute_node", from_rel, pkg, host, manage_nova_compute='no', configure_nova='no')
             sudo('contrail-version')
 
 @task
@@ -367,6 +276,62 @@ def issu_contrail():
     #execute('issu_contrail_migrate_compute')
     #execute('issu_contrail_finalize')
     print "Single touch ISSU is not yet supported"
+
+@task
+@roles('build')
+def issu_contrail_generate_conf():
+    conf_file='/etc/contrail/contrail-api.conf'
+    final_conf='/tmp/contrail-issu.conf'
+    new_conf='/tmp/new-api.conf'
+    old_conf='/tmp/old-api.conf'
+    sudo("touch %s" %(final_conf))
+    sudo('chmod 777 %s' %(issu_process_bash_path))
+    with settings(host_string=env.roledefs['oldcfgm'][0]):
+        get_as_sudo('%s' %(conf_file), '%s' %(old_conf))
+    with settings(host_string=env.roledefs['cfgm'][0]):
+        get_as_sudo('%s' %(conf_file), '%s' %(new_conf))
+    var = "%s" %(final_conf) 
+    sudo("source %s; issu_contrail_generate_conf %s %s %s" %(issu_process_bash_path, old_conf, new_conf, var))
+    sudo("cat %s" %(final_conf))
+    execute("issu_contrail_generate_moreconf", final_conf)
+    sudo("cat %s" %(final_conf))
+    with settings(host_string=env.roledefs['cfgm'][0]):
+        put('%s' %(final_conf), '/etc/contrail/contrail-issu.conf', use_sudo=True)
+    sudo("rm -f %s" %(new_conf))
+    sudo("rm -f %s" %(old_conf))
+    sudo("rm -f /tmp/%s" %(final_conf))
+
+@task
+def issu_contrail_generate_moreconf(final_conf):
+    sudo('touch %s' %(final_conf))
+    cmd  = 'openstack-config --set %s DEFAULTS' %(final_conf)
+
+    new_api_info = ','.join(["'%s':['root', '%s']" %(hstr_to_ip(get_control_host_string(config_host)), env.passwords[config_host]) for config_host in env.roledefs['cfgm']])	
+    new_api_info = '"{'+new_api_info+'}"'
+    sudo('%s new_api_info %s' %(cmd, new_api_info))
+
+    db_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(config_host)), env.hostnames['all'][env.roledefs['all'].index(config_host)]) for config_host in env.roledefs['database']])
+    db_host_info = '"{'+db_host_info+'}"'
+    sudo('%s db_host_info %s' %(cmd, db_host_info))
+
+    config_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(config_host)), env.hostnames['all'][env.roledefs['all'].index(config_host)]) for config_host in env.roledefs['cfgm']])
+    config_host_info = '"{'+config_host_info+'}"'
+    sudo('%s config_host_info %s' %(cmd, config_host_info))
+
+    analytics_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(config_host)), env.hostnames['all'][env.roledefs['all'].index(config_host)]) for config_host in env.roledefs['collector']])
+    analytics_host_info = '"{'+analytics_host_info+'}"'
+    sudo('%s analytics_host_info %s' %(cmd, analytics_host_info))
+
+    control_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(config_host)), env.hostnames['all'][env.roledefs['all'].index(config_host)]) for config_host in env.roledefs['control']])
+    control_host_info = '"{'+control_host_info+'}"'
+    sudo('%s control_host_info %s' %(cmd, control_host_info))
+    
+    admin_user, admin_password = get_authserver_credentials()
+    sudo('%s admin_password %s' %(cmd, admin_password))
+    sudo('%s admin_user %s' %(cmd, admin_user))
+    sudo('%s admin_tenant_name %s' %(cmd, get_admin_tenant_name()))
+    sudo('%s openstack_ip %s' %(cmd, hstr_to_ip(get_control_host_string(env.roledefs['openstack'][0]))))
+    sudo('%s api_server_ip %s' %(cmd, hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))))
 
 #################################################################################################################
 #
