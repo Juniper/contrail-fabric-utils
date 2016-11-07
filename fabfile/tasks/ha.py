@@ -211,7 +211,7 @@ def join_galera_cluster(new_ctrl_host):
 
     with settings(host_string = new_ctrl_host):
         zoo_ip_list = [hstr_to_ip(get_control_host_string(\
-                        cassandra_host)) for cassandra_host in env.roledefs['database']]
+                        cfgm_host)) for cfgm_host in env.roledefs['cfgm']]
 
         monitor_galera="False"
         if get_openstack_internal_vip():
@@ -284,7 +284,7 @@ def setup_galera_cluster():
     external_vip = get_openstack_external_vip()
 
     zoo_ip_list = [hstr_to_ip(get_control_host_string(\
-                    cassandra_host)) for cassandra_host in env.roledefs['database']]
+                    cfgm_host)) for cfgm_host in env.roledefs['cfgm']]
 
     monitor_galera="False"
     if get_openstack_internal_vip():
@@ -327,7 +327,7 @@ def remove_node_from_galera(del_galera_node):
     internal_vip = get_openstack_internal_vip()
     external_vip = get_openstack_external_vip()
     zoo_ip_list = [hstr_to_ip(get_control_host_string(\
-                    cassandra_host)) for cassandra_host in env.roledefs['database']]
+                    cfgm_host)) for cfgm_host in env.roledefs['cfgm']]
 
     with cd(INSTALLER_DIR):
         cmd = "remove-galera-node\
@@ -751,7 +751,7 @@ def setup_cmon_param_zkonupgrade_node(*args):
     for host_string in args:
         cmon_param = '/etc/contrail/ha/cmon_param'
         zoo_ip_list = [hstr_to_ip(get_control_host_string(\
-                        cassandra_host)) for cassandra_host in env.roledefs['database']]
+                        cfgm_host)) for cfgm_host in env.roledefs['cfgm']]
         zk_servers_ports = ','.join(['%s:2181' %(s) for s in zoo_ip_list])
         zks = 'ZK_SERVER_IP="%s"' % (zk_servers_ports)
         monitor_galera="False"
