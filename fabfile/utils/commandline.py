@@ -74,7 +74,6 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     return cmd
 
 def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
-    amqp_server_ip = get_openstack_amqp_server()
     self_host = get_control_host_string(host_string)
     self_ip = hstr_to_ip(self_host)
     mgmt_self_ip = hstr_to_ip(host_string)
@@ -92,7 +91,8 @@ def frame_vnc_openstack_cmd(host_string, cmd="setup-vnc-openstack"):
     cmd += " --keystone_admin_passwd %s" % openstack_admin_password
     cmd += " --cfgm_ip %s " % cfgm_ip
     cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
-    cmd += " --amqp_server_ip %s" % amqp_server_ip
+    cmd += " --amqp_server_list %s" % get_openstack_amqp_servers()
+    cmd += " --amqp_server_port %s" % get_openstack_amqp_port()
     cmd += " --quantum_service_protocol %s" % get_quantum_service_protocol()
     cmd += " --service_token %s" % get_service_token()
     cmd += " --service-dbpass %s" % get_service_dbpass()
@@ -408,11 +408,6 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
     compute_mgmt_ip= host_string.split('@')[1]
     compute_control_ip= hstr_to_ip(compute_host)
 
-    amqp_server_ip = get_contrail_amqp_server()
-    # Using amqp running in openstack node
-    if (get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes' or
-        get_from_testbed_dict('openstack', 'amqp_host', None)):
-        amqp_server_ip = get_openstack_amqp_server()
     cpu_mode = get_nova_cpu_mode()
     cpu_model = get_nova_cpu_model()
 
@@ -422,7 +417,8 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
     cmd += " --cfgm_user %s" % cfgm_user
     cmd += " --cfgm_passwd %s" % cfgm_passwd
     cmd += " --ncontrols %s" % ncontrols
-    cmd += " --amqp_server_ip %s" % amqp_server_ip
+    cmd += " --amqp_server_list %s" % get_openstack_amqp_servers()
+    cmd += " --amqp_server_port %s" % get_openstack_amqp_port()
     cmd += " --service_token %s" % get_service_token()
     cmd += " --orchestrator %s" % get_orchestrator()
     cmd += " --hypervisor %s" % get_hypervisor(host_string)

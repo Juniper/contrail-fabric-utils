@@ -682,8 +682,9 @@ def fixup_ceilometer_conf_common():
         sudo("openstack-config --set %s DEFAULT connection %s" % (conf_file, value))
     else:
         sudo("openstack-config --set %s database connection %s" % (conf_file, value))
-    amqp_server_ip = get_openstack_amqp_server()
-    sudo("openstack-config --set %s DEFAULT rabbit_host %s" % (conf_file, amqp_server_ip))
+    rabbit_hosts = ','.join([amqp_server + ':' + get_openstack_amqp_port()
+        for amqp_server in get_openstack_amqp_servers()])
+    sudo("openstack-config --set %s DEFAULT rabbit_hosts %s" % (conf_file, rabbit_hosts))
     # If HA is enabled, then use the frontend HAProxy Rabbit port
     rabbit_port = "5672"
     if get_openstack_internal_vip():
@@ -1040,8 +1041,8 @@ def setup_network_service_node(*args):
 def setup_identity_service_node(*args):
     """Provisions identity services in one or list of nodes.
        USAGE: fab setup_identity_service_node:user@1.1.1.1,user@2.2.2.2"""
-    amqp_server_ip = get_openstack_amqp_server()
-    rabbit_port    = "5672"
+    rabbit_hosts = ','.join([amqp_server + ':' + get_openstack_amqp_port()
+        for amqp_server in get_openstack_amqp_servers()])
     
     # If HA is enabled, then use the frontend HAProxy Rabbit port
     if get_openstack_internal_vip():
@@ -1049,8 +1050,7 @@ def setup_identity_service_node(*args):
 
     conf_file = '/etc/keystone/keystone.conf'
     keystone_configs = {'DEFAULT' : {'notification_driver' : 'messaging',
-                                     'rabbit_host' : '%s' % amqp_server_ip,
-                                     'rabbit_port' : '%s' % rabbit_port }
+                                     'rabbit_hosts' : '%s' % rabbit_hosts}
                       }
     for host_string in args:
         for section, key_values in keystone_configs.iteritems():
@@ -1062,13 +1062,14 @@ def setup_identity_service_node(*args):
 @task
 def setup_image_service_node(*args):
     """Provisions image services in one or list of nodes. USAGE: fab setup_image_service_node:user@1.1.1.1,user@2.2.2.2"""
-    amqp_server_ip = get_openstack_amqp_server()
+    rabbit_hosts = ','.join([amqp_server + ':' + get_openstack_amqp_port()
+        for amqp_server in get_openstack_amqp_servers()])
     for host_string in args:
         openstack_sku = get_openstack_sku()
 
         glance_configs = {'DEFAULT' : {'notification_driver' : 'messaging',
                                        'rpc_backend' : 'rabbit',
-                                       'rabbit_host' : '%s' % amqp_server_ip,
+                                       'rabbit_hosts' : '%s' % rabbit_hosts,
                                        'rabbit_password' : 'guest'}
                         }
         if openstack_sku == 'havana':

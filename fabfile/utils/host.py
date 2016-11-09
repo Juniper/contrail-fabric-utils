@@ -311,6 +311,20 @@ def get_contrail_amqp_server():
     internal_vip = get_contrail_internal_vip()
     return (internal_vip or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0])))
 
+def get_openstack_amqp_servers():
+    amqp_in_role = 'cfgm'
+    if get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes':
+        amqp_in_role = 'openstack'
+    get_from_testbed_dict('openstack','amqp_hosts',
+    amqp_ip_list = get_from_testbed_dict('openstack','amqp_hosts',
+        (get_from_testbed_dict('openstack', 'amqp_host',
+            [hstr_to_ip(get_control_host_string(amqp_host))
+                for amqp_host in env.roledefs[amqp_in_role]]))
+    return amqp_ip_list
+
+def get_openstack_amqp_port():
+    return get_from_testbed_dict('openstack', 'amqp_port', '5672')
+
 def get_amqp_servers():
     """Returns a list of amqp servers"""
     amqp_ip_list = get_from_testbed_dict('cfgm', 'amqp_hosts',

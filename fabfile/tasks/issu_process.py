@@ -457,11 +457,12 @@ def issu_openstack_migrate_compute(from_version, to_version):
 def issu_openstack_migrate_compute_node(from_version, to_version, *args):
     auth_host = get_authserver_ip()
     auth_port = get_authserver_port()
-    rabbit_host = get_openstack_amqp_server()
+    rabbit_hosts = ','.join([amqp_server + ':' + get_openstack_amqp_port()
+        for amqp_server in get_openstack_amqp_servers()])
     openstack_host = env.roledefs['openstack'][0]
     for host_string in args:
         with settings(host_string=host_string):
-            sudo("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_host %s" %(rabbit_host))
+            sudo("openstack-config --set /etc/nova/nova.conf DEFAULT rabbit_hosts %s" %(rabbit_hosts))
             if from_version == 'juno' and to_version == 'kilo':
                 cmd = "openstack-config --set /etc/nova/nova.conf"
                 sudo("%s DEFAULT neutron_admin_auth_url http://%s:%s/v2.0/" % (cmd, auth_host, auth_port))
