@@ -302,7 +302,7 @@ def backup_instance_image(db_datas, store_db='local'):
             msg = "Processing glance image Backup and puting glance image backup  into remote host:({HOST}) and default path is ~/contrail_bkup_data/hostname/images or backup path is defined as per testbed.py file \n"
             remote_host = env.roledefs['backup'][0]
             print (msg.format(HOST=remote_host))
-        images_path = sudo("grep  'filesystem_store_datadir'   /etc/glance/glance-api.conf")
+        images_path = sudo("grep  'filesystem_store_datadir'   /etc/glance/glance-api.conf | grep -v '#' ")
         images_path = images_path.split('=')
         images_path = images_path[-1]
         images_path=images_path.strip() 
@@ -852,7 +852,7 @@ def restore_instance_image(backup_data_path, store_db='local'):
     msg = "Restoring backed-up images  data in ({HOST}).\n"
     with settings(host_string=host):
         host_name = sudo('hostname')
-        images_path = sudo("grep  'filesystem_store_datadir'   /etc/glance/glance-api.conf")
+        images_path = sudo("grep  'filesystem_store_datadir'   /etc/glance/glance-api.conf | grep -v '#' ")
         images_path = images_path.split('=')
         images_path = images_path[-1]
         images_path=images_path.strip()
