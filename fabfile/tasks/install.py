@@ -619,6 +619,21 @@ def create_install_repo_without_openstack(*tgzs, **kwargs):
             execute(cmd, host_string, *tgzs, **kwargs)
 
 @task
+@roles('build')
+def create_install_repo_without_openstack_and_compute(*tgzs, **kwargs):
+    """Creates contrail install repo in all nodes excluding openstack and compute nodes."""
+    if len(tgzs) == 0:
+        cmd = 'create_install_repo_node'
+    else:
+        cmd = 'create_install_repo_from_tgz_node'
+
+    for host_string in env.roledefs['all']:
+        if host_string in env.roledefs['openstack'] or host_string in env.roledefs['compute']:
+            continue
+        with settings(host_string=host_string):
+            execute(cmd, host_string, *tgzs, **kwargs)
+
+@task
 def create_install_repo_from_tgz_node(host_string, *tgzs, **kwargs):
     """Create contrail repos from each tgz files in the given node
        * tgzs can be absolute/relative paths or a pattern
@@ -925,6 +940,19 @@ def install_without_openstack(*tgzs, **kwargs):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
     execute('reboot_on_kernel_update_without_openstack', reboot)
+
+@roles('build')
+@task
+def install_without_openstack_and_compute(*tgzs, **kwargs):
+    """ Installs contrail package without openstack and compute. Typically used for ISSU."""
+    execute('create_installer_repo')
+    execute(create_install_repo_without_openstack_and_compute, *tgzs, **kwargs)
+    execute('pre_check')
+    execute(install_database, False)
+    execute(install_cfgm)
+    execute(install_control)
+    execute(install_collector)
+    execute(install_webui)
 
 @roles('build')
 @task
