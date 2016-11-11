@@ -358,7 +358,7 @@ env.ostypes = {
 # For Qos hardware queues (nic queues) are mapped to logical queues in agent.
 # hardware_q_id: Identifier for the hardwarwe queue.
 # logical_queue: Defines the logical queues each hardware queue is mapped to.
-# default: When set to True defines the default hardware queue for Qos, one of the queue must be defined default.
+# default: When set to True defines the default hardware queue for Qos.
 
 #env.qos = {host1: [ {'hardware_q_id': '3', 'logical_queue':['1', '6-10', '12-15']},
 #                    {'hardware_q_id': '5', 'logical_queue':['2']},
