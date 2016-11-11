@@ -489,10 +489,12 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
             cmd += " --vgw_gateway_routes %s" % str([(';'.join(str(e) for e in gateway_routes)).replace(" ","")])
 
     # Qos Arguments
-    (set_qos, qos_logical_queue, qos_queue_id) = get_qos_details(host_string)
+    (set_qos, qos_logical_queue, qos_queue_id, default_hw_queue) = get_qos_details(host_string)
     if set_qos:
         cmd += " --qos_logical_queue %s" % ' '.join(qos_logical_queue)
         cmd += " --qos_queue_id %s" %  ' '.join(qos_queue_id)
+        if default_hw_queue:
+            cmd += " --default_hw_queue"
 
     # Qos priority group arguments
     (set_priority, priority_id, priority_bandwidth, priority_scheduling) = get_priority_group_details(host_string)
