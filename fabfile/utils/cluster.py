@@ -112,9 +112,10 @@ def get_vgw_details(compute_host_string):
 
 def get_qos_details(compute_host_string):
     set_qos = False
+    default_hw_queue = False
     qos_logical_queue = []
     queue_id = []
-    qos_details = (set_qos, qos_logical_queue, queue_id)
+    qos_details = (set_qos, qos_logical_queue, queue_id, default_hw_queue)
     qos_info = getattr(env, 'qos', None)
     if qos_info:
         if( compute_host_string not in qos_info.keys()):
@@ -130,10 +131,12 @@ def get_qos_details(compute_host_string):
             queue_id.append(nic_queue['hardware_q_id'])
         else:
            default_nic_queue = nic_queue
-    qos_logical_queue.append(str(default_nic_queue['logical_queue']).strip('[]').replace(" ",""))
-    queue_id.append(default_nic_queue['hardware_q_id'])
+           default_hw_queue = True
+    if default_hw_queue:
+        qos_logical_queue.append(str(default_nic_queue['logical_queue']).strip('[]').replace(" ",""))
+        queue_id.append(default_nic_queue['hardware_q_id'])
 
-    qos_details = (set_qos, qos_logical_queue, queue_id)
+    qos_details = (set_qos, qos_logical_queue, queue_id, default_hw_queue)
     return qos_details
 
 def get_priority_group_details(compute_host_string):
