@@ -684,10 +684,7 @@ def fixup_ceilometer_conf_common():
         sudo("openstack-config --set %s database connection %s" % (conf_file, value))
     amqp_server_ip = get_openstack_amqp_server()
     sudo("openstack-config --set %s DEFAULT rabbit_host %s" % (conf_file, amqp_server_ip))
-    # If HA is enabled, then use the frontend HAProxy Rabbit port
-    rabbit_port = "5672"
     if get_openstack_internal_vip():
-        rabbit_port = "5673"
         sudo("openstack-config --set %s notification workload_partitioning %s" %
                     (conf_file, "True"))
         sudo("openstack-config --set %s compute workload_partitioning %s" %
@@ -695,7 +692,7 @@ def fixup_ceilometer_conf_common():
         sudo("openstack-config --set %s coordination backend_url %s%s%s" %
                 (conf_file, "kazoo://", env.roledefs['database'][0], ":2181"))
     sudo("openstack-config --set %s DEFAULT rabbit_port %s" % (conf_file,
-	rabbit_port))
+	get_openstack_amqp_port()))
     value = "/var/log/ceilometer"
     sudo("openstack-config --set %s DEFAULT log_dir %s" % (conf_file, value))
     value = "a74ca26452848001921c"
@@ -1041,16 +1038,11 @@ def setup_identity_service_node(*args):
     """Provisions identity services in one or list of nodes.
        USAGE: fab setup_identity_service_node:user@1.1.1.1,user@2.2.2.2"""
     amqp_server_ip = get_openstack_amqp_server()
-    rabbit_port    = "5672"
-    
-    # If HA is enabled, then use the frontend HAProxy Rabbit port
-    if get_openstack_internal_vip():
-        rabbit_port = "5673"
 
     conf_file = '/etc/keystone/keystone.conf'
     keystone_configs = {'DEFAULT' : {'notification_driver' : 'messaging',
                                      'rabbit_host' : '%s' % amqp_server_ip,
-                                     'rabbit_port' : '%s' % rabbit_port }
+                                     'rabbit_port' : '%s' % get_openstack_amqp_port() }
                       }
     for host_string in args:
         for section, key_values in keystone_configs.iteritems():
@@ -1069,6 +1061,7 @@ def setup_image_service_node(*args):
         glance_configs = {'DEFAULT' : {'notification_driver' : 'messaging',
                                        'rpc_backend' : 'rabbit',
                                        'rabbit_host' : '%s' % amqp_server_ip,
+                                       'rabbit_port' : '%s' % get_openstack_amqp_port(),
                                        'rabbit_password' : 'guest'}
                         }
         if openstack_sku == 'havana':
