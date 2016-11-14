@@ -1,15 +1,19 @@
 import os
+import tempfile
 from time import sleep
 
 from fabric.contrib.files import exists
 
 from fabfile.config import *
-from fabfile.utils.host import (get_keystone_certfile, get_keystone_keyfile,
-                                get_keystone_cafile, get_apiserver_certfile,
-                                get_apiserver_keyfile, get_apiserver_cafile,
-                                get_env_passwords, get_openstack_internal_vip,
-                                get_contrail_internal_vip, hstr_to_ip,
-                                get_apiserver_cert_bundle, get_control_host_string)
+from fabfile.utils.host import (
+        get_keystone_certfile, get_keystone_keyfile,
+        get_keystone_cafile, get_apiserver_certfile,
+        get_apiserver_keyfile, get_apiserver_cafile,
+        get_env_passwords, get_openstack_internal_vip,
+        get_contrail_internal_vip, hstr_to_ip,
+        get_apiserver_cert_bundle, get_control_host_string,
+        get_keystone_cert_bundle,
+        )
 from fabfile.utils.fabos import get_as_sudo
 
 
@@ -25,6 +29,7 @@ def setup_keystone_ssl_certs_node(*nodes):
     default_certfile = '/etc/keystone/ssl/certs/keystone.pem'
     default_keyfile = '/etc/keystone/ssl/private/keystone.key'
     default_cafile = '/etc/keystone/ssl/certs/keystone_ca.pem'
+    keystonecertbundle = get_keystone_cert_bundle()
     ssl_certs = ((get_keystone_certfile(), default_certfile),
                  (get_keystone_keyfile(), default_keyfile),
                  (get_keystone_cafile(), default_cafile))
@@ -35,6 +40,7 @@ def setup_keystone_ssl_certs_node(*nodes):
                 if ssl_cert == default:
                     # Clear old certificate
                     sudo('rm -f %s' % ssl_cert)
+                    sudo('rm -f %s' % keystonecertbundle)
             for ssl_cert, default in ssl_certs:
                 if ssl_cert == default:
                     openstack_host = env.roledefs['openstack'][0]
@@ -51,9 +57,12 @@ def setup_keystone_ssl_certs_node(*nodes):
                                 print "Wait for SSL certs to be created in first openstack"
                                 sleep(0.1)
                             print "Get SSL cert(%s) from first openstack" % ssl_cert
-                            tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
+                            tmp_dir= tempfile.mkdtemp()
+                            tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
                             get_as_sudo(ssl_cert, tmp_fname)
                         print "Copy to this(%s) openstack node" % env.host_string 
+                        sudo('mkdir -p /etc/keystone/ssl/certs/')
+                        sudo('mkdir -p /etc/keystone/ssl/private/')
                         put(tmp_fname, ssl_cert, use_sudo=True)
                         os.remove(tmp_fname)
                 elif os.path.isfile(ssl_cert): 
@@ -64,7 +73,10 @@ def setup_keystone_ssl_certs_node(*nodes):
                     pass
                 else:
                     raise RuntimeError("%s doesn't exists locally or in openstack node")
-                sudo("chown -R keystone:keystone /etc/keystone/ssl")
+            if not exists(keystonecertbundle, use_sudo=True):
+                ((certfile, _), (keyfile, _), (cafile, _)) = ssl_certs
+                sudo('cat %s %s > %s' % (certfile, cafile, keystonecertbundle))
+            sudo("chown -R keystone:keystone /etc/keystone/ssl")
 
 
 @task
@@ -106,9 +118,12 @@ def setup_apiserver_ssl_certs_node(*nodes):
                                 print "Wait for SSL certs to be created in first cfgm"
                                 sleep(0.1)
                             print "Get SSL cert(%s) from first cfgm" % ssl_cert
-                            tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
+                            tmp_dir= tempfile.mkdtemp()
+                            tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
                             get_as_sudo(ssl_cert, tmp_fname)
                         print "Copy to this(%s) cfgm node" % env.host_string 
+                        sudo('mkdir -p /etc/contrail/ssl/certs/')
+                        sudo('mkdir -p /etc/contrail/ssl/private/')
                         put(tmp_fname, ssl_cert, use_sudo=True)
                         os.remove(tmp_fname)
                 elif os.path.isfile(ssl_cert): 
@@ -118,10 +133,10 @@ def setup_apiserver_ssl_certs_node(*nodes):
                     print "Certificate (%s) exists in cfgm node" % ssl_cert
                 else:
                     raise RuntimeError("%s doesn't exists locally or in cfgm node" % ssl_cert)
-                if not exists(contrailcertbundle, use_sudo=True):
-                    ((certfile, _), (keyfile, _), (cafile, _)) = ssl_certs
-                    sudo('cat %s %s > %s' % (certfile, cafile, contrailcertbundle))
-                sudo("chown -R contrail:contrail /etc/contrail/ssl")
+            if not exists(contrailcertbundle, use_sudo=True):
+                ((certfile, _), (keyfile, _), (cafile, _)) = ssl_certs
+                sudo('cat %s %s > %s' % (certfile, cafile, contrailcertbundle))
+            sudo("chown -R contrail:contrail /etc/contrail/ssl")
 
 
 @task
@@ -158,7 +173,8 @@ def copy_keystone_ssl_certs_to_node(*nodes):
                 sudo('rm -f %s' % cert_file)
                 with settings(host_string=openstack_host,
                               password=get_env_passwords(openstack_host)):
-                    tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
+                    tmp_dir= tempfile.mkdtemp()
+                    tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
                     get_as_sudo(ssl_cert, tmp_fname)
                 sudo("mkdir -p /etc/contrail/ssl/certs/")
                 put(tmp_fname, cert_file, use_sudo=True)
@@ -234,7 +250,8 @@ def copy_apiserver_ssl_certs_to_node(*nodes):
                     continue
                 with settings(host_string=cfgm_host,
                               password=get_env_passwords(cfgm_host)):
-                    tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
+                    tmp_dir= tempfile.mkdtemp()
+                    tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
                     get_as_sudo(ssl_cert, tmp_fname)
                 sudo("mkdir -p /etc/contrail/ssl/certs/")
                 sudo("mkdir -p /etc/contrail/ssl/private/")
@@ -258,6 +275,7 @@ def copy_vnc_api_lib_ini_to_node(*nodes):
         with settings(host_string=node, password=get_env_passwords(node)):
             with settings(host_string=cfgm_host,
                           password=get_env_passwords(cfgm_host)):
-                tmp_fname = os.path.join('/tmp', os.path.basename(vnc_api_lib))
+                tmp_dir= tempfile.mkdtemp()
+                tmp_fname = os.path.join(tmp_dir, os.path.basename(vnc_api_lib))
                 get_as_sudo(vnc_api_lib, tmp_fname)
             put(tmp_fname, vnc_api_lib, use_sudo=True)

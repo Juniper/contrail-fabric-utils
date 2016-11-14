@@ -1315,6 +1315,13 @@ def pre_check():
         print "\t 2.Same set of nodes or"
         print "\t 3.cfgm should be subset of database nodes."
         exit(1)
+    if (env.roledefs['openstack'] and # Openstack defined
+            [os_node for os_node in env.roledefs['openstack']
+                if os_node in env.roledefs['all']] and # Openstack in all role(contrail-cloud deployment)
+            keystone_ssl_enabled() and # ssl enabled for keystone
+            not apiserver_ssl_enabled()): # ssl disabled for apiserver
+        print "\nERROR: \n\tIn contrail cloud deployment, recommended to deploy both keystone and apiserver with ssl."
+        exit(1)
 
 
 def role_to_ip_dict(role=None):
