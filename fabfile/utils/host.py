@@ -305,6 +305,16 @@ def get_openstack_amqp_server():
     return get_from_testbed_dict('openstack','amqp_host',
         (rabbit_vip or hstr_to_ip(get_control_host_string(env.roledefs[amqp_in_role][0]))))
 
+def get_openstack_amqp_port():
+    rabbit_port = 5672
+    if get_from_testbed_dict('openstack', 'manage_amqp', 'no') == 'yes':
+        if get_openstack_internal_vip():
+            rabbit_port = 5673
+    else:
+        if get_contrail_internal_vip():
+            rabbit_port = 5673
+    return get_from_testbed_dict('openstack','amqp_port', rabbit_port)
+
 def get_contrail_amqp_server():
     """Returns first cfgm ip in case of non HA setup and
        contrail_internal_vip in case of HA setup
