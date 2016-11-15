@@ -34,8 +34,8 @@ from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
         setup_apiserver_ssl_certs_node, copy_keystone_ssl_certs_to_node,
-        copy_apiserver_ssl_certs_to_node, copy_vnc_api_lib_ini_to_compute_node,
-        copy_certs_for_neutron_node)
+        copy_apiserver_ssl_certs_to_node, copy_vnc_api_lib_ini_to_node,
+        copy_certs_for_neutron_node, copy_certs_for_heat)
 
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
@@ -1606,7 +1606,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
                 execute("copy_keystone_ssl_certs_to_node", host_string)
             if apiserver_ssl_enabled():
                 execute("copy_apiserver_ssl_certs_to_node", host_string)
-                execute("copy_vnc_api_lib_ini_to_compute_node", host_string)
+                execute("copy_vnc_api_lib_ini_to_node", host_string)
 
             enable_haproxy()
         haproxy = get_haproxy_opt()
@@ -2561,6 +2561,8 @@ def setup_all(reboot='True'):
     execute('setup_orchestrator')
     execute('setup_cfgm')
     execute('verify_cfgm')
+    if apiserver_ssl_enabled():
+        execute('copy_certs_for_heat')
     execute('setup_control')
     execute('verify_control')
     execute('setup_collector')
