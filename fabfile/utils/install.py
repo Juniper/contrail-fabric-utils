@@ -71,8 +71,9 @@ def get_compute_pkgs(manage_nova_compute='yes'):
     if (manage_nova_compute == 'no' and ostype in ['centos', 'redhat', 'fedora', 'centoslinux']):
         pkgs = ['contrail-vrouter-common',
                'openstack-utils',
-               'contrail-nova-vif',
               ]
+        if get_openstack_sku() in ['juno']:
+            pkgs.append('contrail-nova-vif')
     elif (manage_nova_compute== 'no' and ostype in ['ubuntu']):
         pkgs = [contrail_vrouter_pkg,
                'contrail-vrouter-common']
