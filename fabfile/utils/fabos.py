@@ -21,8 +21,9 @@ def get_linux_distro():
 
 def detect_ostype():
     (dist, version, extra) = get_linux_distro()
-    if extra is not None and 'xen' in extra:
-        dist = 'xen'
+    if dist.lower() != 'ubuntu':
+        if extra is not None and 'xen' in extra:
+            dist = 'xen'
     elif 'red hat' in dist.lower():
         dist = 'redhat'
     elif 'centos linux' in dist.lower():
