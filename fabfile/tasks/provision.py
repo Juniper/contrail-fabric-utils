@@ -1716,9 +1716,6 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
         # if necessary
         dpdk_increase_vrouter_limit()
 
-        # Setup UIO driver
-        setup_uio_driver(host_string)
-
         # Execute the script to provision compute node.
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
@@ -1734,6 +1731,10 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
             with cd(INSTALLER_DIR):
                 print cmd
                 sudo(cmd)
+
+        # Setup UIO driver
+        setup_uio_driver(host_string)
+
 #end setup_vrouter
 
 @task
