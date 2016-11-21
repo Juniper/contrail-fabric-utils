@@ -1433,6 +1433,43 @@ def setup_qos_niantic_node(*args):
                 sudo("echo '%s' >> %s" %(priority_group_str, agent_conf))
 
 @task
+@hosts(get_qos_niantic_nodes())
+def provision_qos_priority_groups():
+    '''On each compute node for which qos_niantic section is defined in
+       testbed.py, populate contrail-vrouter-agent.conf and run qosmap.py script
+    '''
+
+    execute("setup_qos_niantic_node", env.host_string)
+    execute("provision_qos_priority_group_on_node", env.host_string)
+
+@task
+def provision_qos_priority_group_on_node(*args):
+    '''Write zeros to xps_cpu files for all tx queues disabling Xmit-Packet-Steering
+       and run qosmap.py script on the node.
+    '''
+
+    for compute_host_string in args:
+        physical_interface = sudo("openstack-config --get /etc/contrail/contrail-vrouter-agent.conf VIRTUAL-HOST-INTERFACE physical_interface")
+        file_path = "/sys/class/net/" + physical_interface + "/queues/"
+        num_tx_queues = sudo("cd %s;ls | grep tx | wc -l " % (file_path))
+        if (num_tx_queues and num_tx_queues !='0'):
+            for i in range(int(num_tx_queues)):
+                file_str = "tx-%s/xps_cpus" % i
+                filename = file_path + file_str
+                xps_cpu_file = os.path.isfile(filename)
+                if (not xps_cpu_file):
+                    print "File not found %s on compute %s while prvisioning priority queues" % (xps_cpu_file, compute_host_string)
+                    continue
+                with open(filename, "w") as f:
+                       writing_zeros = '00000000'
+                       f.write(writing_zeros)
+        else:
+            print "Error: No tx queues found"
+        with settings(host_string=compute_host_string):
+            with cd("/opt/contrail/utils"):
+                sudo("python qosmap.py")
+
+@task
 @roles('database')
 def fixup_mongodb_conf():
     """Fixup configuration file for mongodb in all nodes defined in database
