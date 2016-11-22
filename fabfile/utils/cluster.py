@@ -132,7 +132,8 @@ def get_qos_details(compute_host_string):
            default_nic_queue = nic_queue
            default_hw_queue = True
     if default_hw_queue:
-        qos_logical_queue.append(str(default_nic_queue['logical_queue']).strip('[]').replace(" ",""))
+        if 'logical_queue' in default_nic_queue.keys():
+            qos_logical_queue.append(str(default_nic_queue['logical_queue']).strip('[]').replace(" ",""))
         queue_id.append(default_nic_queue['hardware_q_id'])
 
     qos_details = (set_qos, qos_logical_queue, queue_id, default_hw_queue)

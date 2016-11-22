@@ -359,11 +359,16 @@ env.ostypes = {
 # hardware_q_id: Identifier for the hardwarwe queue.
 # logical_queue: Defines the logical queues each hardware queue is mapped to.
 # default: When set to True defines the default hardware queue for Qos.
+# Defining a default hardware queue:
+#     1) Just set the queue as default, without any logical_queue mapping:
+#         {'hardware_q_id': '1', 'default': 'True'}
+#     2) Set the hardware queue as default with logical queue mapping:
+#         {'hardware_q_id': '6', 'logical_queue':['17-20'], 'default': 'True'}
 
 #env.qos = {host1: [ {'hardware_q_id': '3', 'logical_queue':['1', '6-10', '12-15']},
 #                    {'hardware_q_id': '5', 'logical_queue':['2']},
 #                    {'hardware_q_id': '8', 'logical_queue':['3-5']},
-#                    {'hardware_q_id': '1', 'logical_queue':['7'], 'default': 'True'}],
+#                    {'hardware_q_id': '1', 'logical_queue':['17-20'], 'default': 'True'}],
 #          }
 
 #Definition for the Key used for qos priority group
