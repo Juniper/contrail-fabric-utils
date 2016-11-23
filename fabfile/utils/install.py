@@ -65,6 +65,40 @@ def get_compute_pkgs(manage_nova_compute='yes'):
         else:
             pkgs = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
 
+        if env.host_string in getattr(env, 'ns_agilio_vrouter', []):
+            pkgs.append('ns-agilio-vrouter')
+            pkgs.append('ntp')
+            pkgs.append('libzmq3-dev')
+            pkgs.append('protobuf-c-compiler')
+            pkgs.append('protobuf-compiler')
+            pkgs.append('python-protobuf')
+            pkgs.append('python-tornado')
+            pkgs.append('python-werkzeug')
+            pkgs.append('python-zmq')
+            pkgs.append('quilt')
+            pkgs.append('libvirt0')
+            pkgs.append('libvirt-bin')
+            pkgs.append('libcacard0')
+            pkgs.append('libibverbs1')
+            pkgs.append('librdmacm1')
+            pkgs.append('libspice-server1')
+            pkgs.append('qemu-system')
+            pkgs.append('qemu-system-arm')
+            pkgs.append('qemu-system-common')
+            pkgs.append('qemu-system-mips')
+            pkgs.append('qemu-system-misc')
+            pkgs.append('qemu-system-ppc')
+            pkgs.append('qemu-system-sparc')
+            pkgs.append('qemu-system-x86')
+            pkgs.append('qemu-utils')
+            pkgs.append('libiscsi2')
+            pkgs.append('seabios')
+            pkgs.append('apparmor-utils')
+            pkgs.append('python3-apparmor')
+            pkgs.append('python3-libapparmor')
+            pkgs.append('python3-pkg-resources')
+            pkgs.append('msr-tools')
+
     # Append only vrouter and contrail vrouter dependent packages
     # no need to append the contrail-openstack-vrouter, which when
     # installed will bring in nova-compute and its dependents.
