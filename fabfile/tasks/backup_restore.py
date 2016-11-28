@@ -161,7 +161,7 @@ def backup_nova_instance_data():
 # end backup_nova_instance_data
 
 
-@roles('database')
+@roles('database', 'cfgm')
 def backup_cassandra(db_datas, store_db='local', cassandra_backup='full'):
     """Backup cassandra data in all databases  """
     global backup_path, final_dir
@@ -335,7 +335,7 @@ def backup_instance_image(db_datas, store_db='local'):
             sudo(remote_bk_cmd)
 # end backup_instances_images
 
-@roles('database')
+@roles('database', 'cfgm')
 def backup_zookeeper(db_datas, store_db='local'):
     """Backup zookeeper data to all database nodes """
     host = env.host_string
@@ -686,7 +686,7 @@ def restart_analytics():
     time.sleep(5)
 
 @task
-@roles('database')
+@roles('database', 'cfgm')
 def restore_cassandra(backup_data_path='', store_db='local',cassandra_backup='full'):
     """Restore cassandra data to all databases .and usuage is restore_cassadra_db """
     global backup_path
@@ -899,7 +899,7 @@ def restore_instance_image(backup_data_path, store_db='local'):
 
   # end restore_glance_images
 
-@roles('database')
+@roles('database', 'cfgm')
 def restore_zookeeper(backup_data_path, store_db='local'):
     """Restore zookeeper data to all database nodes  """
     global backup_path
