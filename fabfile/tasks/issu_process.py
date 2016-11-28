@@ -19,7 +19,7 @@ from fabric.contrib.files import exists
 from fabfile.utils.cluster import get_hostname
 
 issu_process_bash_file="issu_process.sh" 
-issu_process_bash_path="/opt/contrail/utils/fabfile/tasks/issu_process.sh"
+issu_process_bash_path="/opt/contrail/utils/issu_process.sh"
 
 @task
 @roles('compute')
