@@ -58,7 +58,7 @@ function issu_contrail_post_new_control_node {
 }
 
 function issu_pre_sync {
-    contrail-issu-pre-sync --config_file /etc/contrail/contrail-issu.conf
+    contrail-issu-pre-sync --conf_file /etc/contrail/contrail-issu.conf
 }
 
 function issu_run_sync {
@@ -81,8 +81,8 @@ function issu_run_sync {
 function issu_post_sync {
     rm -f /etc/supervisor/conf.d/contrail-issu.conf
     service supervisor restart
-    contrail-issu-post-sync --config_file /etc/contrail/contrail-issu.conf
-    contrail-issu-zk-sync --config_file /etc/contrail/contrail-issu.conf
+    contrail-issu-post-sync --conf_file /etc/contrail/contrail-issu.conf
+    contrail-issu-zk-sync --conf_file /etc/contrail/contrail-issu.conf
 }
 
 function issu_contrail_generate_conf {
@@ -99,11 +99,11 @@ function issu_contrail_get_and_set_old_conf {
 
     cmd="$get_old_cmd cassandra_server_list"
     val=$($cmd)
-    $set_cmd   old_cassandra_address_list $val
+    $set_cmd   old_cassandra_address_list "$val"
 
     cmd="$get_old_cmd zk_server_ip"
     val=$($cmd)
-    $set_cmd old_zookeeper_address_list $val
+    $set_cmd old_zookeeper_address_list "$val"
 
     cmd="$has_old_cmd rabbit_user"
     val=$($cmd)
@@ -111,7 +111,7 @@ function issu_contrail_get_and_set_old_conf {
     then
         cmd="$get_old_cmd rabbit_user"
         val=$($cmd)
-        $set_cmd old_rabbit_user $val
+        $set_cmd old_rabbit_user "$val"
     fi
    
     cmd="$has_old_cmd rabbit_password"
@@ -120,7 +120,7 @@ function issu_contrail_get_and_set_old_conf {
     then
         cmd="$get_old_cmd rabbit_password"
         val=$($cmd)
-        $set_cmd old_rabbit_password $val
+        $set_cmd old_rabbit_password "$val"
     fi
 
     cmd="$has_old_cmd rabbit_vhost"
@@ -129,7 +129,7 @@ function issu_contrail_get_and_set_old_conf {
     then
         cmd="$get_old_cmd rabbit_vhost"
         val=$($cmd)
-        $set_cmd old_rabbit_vhost $val
+        $set_cmd old_rabbit_vhost "$val"
     fi
  
     cmd="$has_old_cmd rabbit_ha_mode"
@@ -138,7 +138,7 @@ function issu_contrail_get_and_set_old_conf {
     then
         cmd="$get_old_cmd rabbit_ha_mode"
         val=$($cmd)
-        $set_cmd old_rabbit_ha_mode $val
+        $set_cmd old_rabbit_ha_mode "$val"
     fi
 
     cmd="$has_old_cmd reset_config"
@@ -147,7 +147,7 @@ function issu_contrail_get_and_set_old_conf {
     then
         cmd="$get_old_cmd reset_config"
         val=$($cmd)
-        $set_cmd reset_config $val
+        $set_cmd reset_config "$val"
     fi
 
     cmd="$has_old_cmd rabbit_port"
@@ -156,7 +156,7 @@ function issu_contrail_get_and_set_old_conf {
     then
         cmd="$get_old_cmd rabbit_port"
         val=$($cmd)
-        $set_cmd rabbbit_port $val
+        $set_cmd rabbbit_port "$val"
     fi
 
     cmd="$has_old_cmd rabbit_server"
@@ -165,7 +165,7 @@ function issu_contrail_get_and_set_old_conf {
     then
         cmd="$get_old_cmd rabbit_server"
         val=$($cmd)
-        $set_cmd old_rabbit_server $val
+        $set_cmd old_rabbit_server "$val"
     fi
 
     cmd="$has_old_cmd reset_config"
@@ -174,7 +174,7 @@ function issu_contrail_get_and_set_old_conf {
     then
         cmd="$get_old_cmd reset_config"
         val=$($cmd)
-        $set_cmd old_rabbit_ha_mode $val
+        $set_cmd old_rabbit_ha_mode "$val"
     fi
 
 }
@@ -186,11 +186,11 @@ function issu_contrail_get_and_set_new_conf {
 
     cmd="$get_new_cmd cassandra_server_list"
     val=$($cmd)
-    $set_cmd new_cassandra_address_list $val
+    $set_cmd new_cassandra_address_list "$val"
 
     cmd="$get_new_cmd zk_server_ip"
     val=$($cmd)
-    $set_cmd new_zookeeper_address_list $val
+    $set_cmd new_zookeeper_address_list "$val"
 
     cmd="$has_new_cmd rabbit_user"
     val=$($cmd)
@@ -198,7 +198,7 @@ function issu_contrail_get_and_set_new_conf {
     then
         cmd="$get_new_cmd rabbit_user"
         val=$($cmd)
-        $set_cmd new_rabbit_user $val
+        $set_cmd new_rabbit_user "$val"
     fi
    
     cmd="$has_new_cmd rabbit_password"
@@ -207,7 +207,7 @@ function issu_contrail_get_and_set_new_conf {
     then
         cmd="$get_new_cmd rabbit_password"
         val=$($cmd)
-        $set_cmd new_rabbit_password $val
+        $set_cmd new_rabbit_password "$val"
     fi
 
     cmd="$has_new_cmd rabbit_vhost"
@@ -216,7 +216,7 @@ function issu_contrail_get_and_set_new_conf {
     then
         cmd="$get_new_cmd rabbit_vhost"
         val=$($cmd)
-        $set_cmd new_rabbit_vhost $val
+        $set_cmd new_rabbit_vhost "$val"
     fi
  
     cmd="$has_new_cmd rabbit_ha_mode"
@@ -225,7 +225,7 @@ function issu_contrail_get_and_set_new_conf {
     then
         cmd="$get_new_cmd rabbit_ha_mode"
         val=$($cmd)
-        $set_cmd new_rabbit_ha_mode $val
+        $set_cmd new_rabbit_ha_mode "$val"
     fi
 
     cmd="$has_new_cmd reset_config"
@@ -234,7 +234,7 @@ function issu_contrail_get_and_set_new_conf {
     then
         cmd="$get_new_cmd reset_config"
         val=$($cmd)
-        $set_cmd reset_config $val
+        $set_cmd reset_config "$val"
     fi
 
     cmd="$has_new_cmd rabbit_port"
@@ -243,7 +243,7 @@ function issu_contrail_get_and_set_new_conf {
     then
         cmd="$get_new_cmd rabbit_port"
         val=$($cmd)
-        $set_cmd rabbbit_port $val
+        $set_cmd rabbbit_port "$val"
     fi
 
     cmd="$has_new_cmd rabbit_server"
@@ -252,7 +252,7 @@ function issu_contrail_get_and_set_new_conf {
     then
         cmd="$get_new_cmd rabbit_server"
         val=$($cmd)
-        $set_cmd new_rabbit_server $val
+        $set_cmd new_rabbit_server "$val"
     fi
 
     cmd="$has_new_cmd reset_config"
@@ -261,7 +261,7 @@ function issu_contrail_get_and_set_new_conf {
     then
         cmd="$get_new_cmd reset_config"
         val=$($cmd)
-        $set_cmd new_rabbit_ha_mode $val
+        $set_cmd new_rabbit_ha_mode "$val"
     fi
 
 }
