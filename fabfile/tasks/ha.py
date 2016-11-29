@@ -4,14 +4,21 @@ from fabfile.config import *
 from fabfile.templates import openstack_haproxy, collector_haproxy
 from fabfile.tasks.helpers import enable_haproxy
 from fabfile.tasks.rabbitmq import purge_node_from_rabbitmq_cluster
-from fabfile.utils.fabos import detect_ostype, get_as_sudo, is_package_installed, get_openstack_services
-from fabfile.utils.host import get_authserver_ip, get_control_host_string,\
-    hstr_to_ip, get_from_testbed_dict, get_service_token, get_env_passwords,\
-    get_openstack_internal_vip, get_openstack_external_vip,\
-    get_contrail_internal_vip, get_contrail_external_vip, \
-    get_openstack_internal_virtual_router_id, get_contrail_internal_virtual_router_id, \
-    get_openstack_external_virtual_router_id, get_contrail_external_virtual_router_id,\
-    get_haproxy_token
+from fabfile.utils.fabos import (
+        detect_ostype, get_as_sudo, is_package_installed,
+        get_openstack_services
+        )
+from fabfile.utils.host import (
+        get_authserver_ip, get_control_host_string, hstr_to_ip,
+        get_from_testbed_dict, get_service_token, get_env_passwords,
+        get_openstack_internal_vip, get_openstack_external_vip,
+        get_contrail_internal_vip, get_contrail_external_vip,
+        get_openstack_internal_virtual_router_id,
+        get_contrail_internal_virtual_router_id,
+        get_openstack_external_virtual_router_id,
+        get_contrail_external_virtual_router_id,
+        get_haproxy_token, keystone_ssl_enabled,
+        )
 from fabfile.utils.cluster import get_orchestrator
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 from fabfile.utils.commandline import frame_vnc_database_cmd, frame_vnc_config_cmd
@@ -437,11 +444,19 @@ def fixup_restart_haproxy_in_openstack_node(*args):
         mgmt_host_ip = hstr_to_ip(host_string)
         host_ip = hstr_to_ip(get_control_host_string(host_string))
         keystone_server_lines +=\
-            '%s server %s %s:6000 check inter 2000 rise 2 fall 1\n'\
+            '%s server %s %s:6000 check inter 2000 rise 2 fall 1'\
              % (space, host_ip, host_ip)
+             if keystone_ssl_enabled():
+                 keystone_server_lines += " ssl verify none\n"
+             else:
+                 keystone_server_lines += "\n"
         keystone_admin_server_lines +=\
-            '%s server %s %s:35358 check inter 2000 rise 2 fall 1\n'\
+            '%s server %s %s:35358 check inter 2000 rise 2 fall 1'\
              % (space, host_ip, host_ip)
+             if keystone_ssl_enabled():
+                 keystone_server_lines += " ssl verify none\n"
+             else:
+                 keystone_server_lines += "\n"
         glance_server_lines +=\
             '%s server %s %s:9393 check inter 2000 rise 2 fall 1\n'\
              % (space, host_ip, host_ip)
