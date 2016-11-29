@@ -705,6 +705,9 @@ def fixup_ceilometer_conf_common():
 #end fixup_ceilometer_conf_common
 
 def fixup_ceilometer_conf_keystone(openstack_ip):
+    auth_protocol = 'http'
+    if keystone_ssl_enabled():
+        auth_protocol = 'https'
     conf_file = '/etc/ceilometer/ceilometer.conf'
     with settings(warn_only=True):
         authtoken_config = sudo("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
@@ -713,15 +716,15 @@ def fixup_ceilometer_conf_keystone(openstack_ip):
         sudo("%s admin_password CEILOMETER_PASS" % config_cmd)
         sudo("%s admin_user ceilometer" % config_cmd)
         sudo("%s admin_tenant_name service" % config_cmd)
-        sudo("%s auth_uri http://%s:5000" % (config_cmd, openstack_ip))
-        sudo("%s auth_protocol http" % config_cmd)
+        sudo("%s auth_uri %s://%s:5000" % (config_cmd, auth_protocol, openstack_ip))
+        sudo("%s auth_protocol %s" % (config_cmd, auth_protocol))
         sudo("%s auth_port 35357" % config_cmd)
         sudo("%s auth_host %s" % (config_cmd, openstack_ip))
         config_cmd = "openstack-config --set %s service_credentials" % conf_file
         sudo("%s os_password CEILOMETER_PASS" % config_cmd)
         sudo("%s os_tenant_name service" % config_cmd)
         sudo("%s os_username ceilometer" % config_cmd)
-        sudo("%s os_auth_url http://%s:5000/v2.0" % (config_cmd, openstack_ip))
+        sudo("%s os_auth_url %s://%s:5000/v2.0" % (config_cmd, auth_protocol, openstack_ip))
 #end fixup_ceilometer_conf_keystone
 
 def fixup_ceilometer_pipeline_conf(analytics_ip):
@@ -1005,7 +1008,7 @@ def setup_ceilometer_node(*args):
                 ceilometer_service_exists = sudo("source /etc/contrail/openstackrc;keystone --insecure service-list | grep ceilometer").succeeded
             if not ceilometer_service_exists:
                 sudo("source /etc/contrail/openstackrc;keystone --insecure service-create --name=ceilometer --type=metering --description=\"Telemetry\"")
-                sudo("source /etc/contrail/openstackrc;keystone --insecure endpoint-create --service-id=$(keystone service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777 --region=RegionOne" %(self_ip, self_ip, self_ip))
+                sudo("source /etc/contrail/openstackrc;keystone --insecure endpoint-create --service-id=$(keystone --insecure service-list | awk '/ metering / {print $2}') --publicurl=http://%s:8777 --internalurl=http://%s:8777 --adminurl=http://%s:8777 --region=RegionOne" %(self_ip, self_ip, self_ip))
             # Fixup ceilometer pipeline cfg
             fixup_ceilometer_pipeline_conf(analytics_ip)
             for svc in ceilometer_services:
@@ -1034,6 +1037,13 @@ def setup_network_service_node(*args):
 #end setup_network_service_node
 
 @task
+@roles('openstack')
+def setup_identity_service():
+    """Provisions identity services in openstack nodes"""
+    if env.roledefs['openstack']:
+        execute("setup_identity_service_node", env.host_string)
+
+@task
 def setup_identity_service_node(*args):
     """Provisions identity services in one or list of nodes.
        USAGE: fab setup_identity_service_node:user@1.1.1.1,user@2.2.2.2"""
@@ -1050,6 +1060,13 @@ def setup_identity_service_node(*args):
                 sudo("openstack-config --set %s %s %s %s" % (conf_file, section, key, value))
         sudo("service keystone restart")
 #end setup_identity_service_node
+
+@task
+@roles('openstack')
+def setup_image_service():
+    """Provisions image services in openstack nodes"""
+    if env.roledefs['openstack']:
+        execute("setup_image_service_node", env.host_string)
 
 @task
 def setup_image_service_node(*args):
@@ -1088,11 +1105,6 @@ def setup_openstack():
             execute("setup_openstack_node", env.host_string)
         if is_package_installed('contrail-openstack-dashboard'):
             execute('setup_contrail_horizon_node', env.host_string)
-        if is_ceilometer_provision_supported():
-            execute("setup_ceilometer_node", env.host_string)
-            execute("setup_network_service") #Provisions in cfgm node
-            execute("setup_image_service_node", env.host_string)
-            execute("setup_identity_service_node", env.host_string)
 
 @task
 @roles('openstack')
@@ -1741,7 +1753,7 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
 @EXECUTE_TASK
 def prov_alarm():
     cfgm_host = env.roledefs['cfgm'][0]
-    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+    cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
     with settings(cd(UTILS_DIR), host_string=cfgm_host,
             password=cfgm_host_password):
@@ -1764,7 +1776,7 @@ def prov_config_node(*args, **kwargs):
     oper = kwargs.get('oper', 'add')
     tgt_node = kwargs.get('tgt_node', None)
     cfgm_host = env.roledefs['cfgm'][0]
-    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+    cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
@@ -1798,7 +1810,7 @@ def prov_database_node(*args, **kwargs):
     oper = kwargs.get('oper', 'add')
     tgt_node = kwargs.get('tgt_node', None)
     cfgm_host = env.roledefs['cfgm'][0]
-    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+    cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
@@ -1833,7 +1845,7 @@ def prov_analytics_node(*args, **kwargs):
     oper = kwargs.get('oper', 'add')
     tgt_node = kwargs.get('tgt_node', None)
     cfgm_host = env.roledefs['cfgm'][0]
-    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+    cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
@@ -1867,7 +1879,7 @@ def prov_control_bgp_node(*args, **kwargs):
     oper = kwargs.get('oper', 'add')
     tgt_node = kwargs.get('tgt_node', None)
     cfgm_host = kwargs.get('cfgm_host', env.roledefs['cfgm'][0])
-    cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+    cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
@@ -1909,7 +1921,7 @@ def prov_external_bgp():
 def prov_external_bgp_node(*args):
     for host_string in args:
         with settings(host_string = host_string):
-            cfgm_ip = hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+            cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
             for ext_bgp in testbed.ext_routers:
                 ext_bgp_name = ext_bgp[0]
                 ext_bgp_ip   = ext_bgp[1]
@@ -2515,8 +2527,11 @@ def setup_orchestrator():
     if orch == 'openstack':
         execute('increase_ulimits')
         execute('setup_openstack')
-        if get_openstack_internal_vip():
-            execute('sync_keystone_ssl_certs')
+        if is_ceilometer_provision_supported():
+            execute("setup_ceilometer")
+            execute("setup_network_service") #Provisions in cfgm node
+            execute("setup_image_service",)
+            execute("setup_identity_service")
         execute('verify_openstack')
     #setup_vcenter can be called outside of setup_all and need not be below. So commenting.
     #elif orch == 'vcenter':
