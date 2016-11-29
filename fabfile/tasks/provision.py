@@ -705,6 +705,9 @@ def fixup_ceilometer_conf_common():
 #end fixup_ceilometer_conf_common
 
 def fixup_ceilometer_conf_keystone(openstack_ip):
+    auth_protocol = 'http'
+    if keystone_ssl_enabled():
+        auth_protocol = 'https'
     conf_file = '/etc/ceilometer/ceilometer.conf'
     with settings(warn_only=True):
         authtoken_config = sudo("grep '^auth_host =' /etc/ceilometer/ceilometer.conf").succeeded
@@ -713,15 +716,15 @@ def fixup_ceilometer_conf_keystone(openstack_ip):
         sudo("%s admin_password CEILOMETER_PASS" % config_cmd)
         sudo("%s admin_user ceilometer" % config_cmd)
         sudo("%s admin_tenant_name service" % config_cmd)
-        sudo("%s auth_uri http://%s:5000" % (config_cmd, openstack_ip))
-        sudo("%s auth_protocol http" % config_cmd)
+        sudo("%s auth_uri %s://%s:5000" % (config_cmd, auth_protocol, openstack_ip))
+        sudo("%s auth_protocol %s" % (config_cmd, auth_protocol))
         sudo("%s auth_port 35357" % config_cmd)
         sudo("%s auth_host %s" % (config_cmd, openstack_ip))
         config_cmd = "openstack-config --set %s service_credentials" % conf_file
         sudo("%s os_password CEILOMETER_PASS" % config_cmd)
         sudo("%s os_tenant_name service" % config_cmd)
         sudo("%s os_username ceilometer" % config_cmd)
-        sudo("%s os_auth_url http://%s:5000/v2.0" % (config_cmd, openstack_ip))
+        sudo("%s os_auth_url %s://%s:5000/v2.0" % (config_cmd, auth_protocol, openstack_ip))
 #end fixup_ceilometer_conf_keystone
 
 def fixup_ceilometer_pipeline_conf(analytics_ip):
@@ -1088,11 +1091,6 @@ def setup_openstack():
             execute("setup_openstack_node", env.host_string)
         if is_package_installed('contrail-openstack-dashboard'):
             execute('setup_contrail_horizon_node', env.host_string)
-        if is_ceilometer_provision_supported():
-            execute("setup_ceilometer_node", env.host_string)
-            execute("setup_network_service") #Provisions in cfgm node
-            execute("setup_image_service_node", env.host_string)
-            execute("setup_identity_service_node", env.host_string)
 
 @task
 @roles('openstack')
@@ -2515,8 +2513,11 @@ def setup_orchestrator():
     if orch == 'openstack':
         execute('increase_ulimits')
         execute('setup_openstack')
-        if get_openstack_internal_vip():
-            execute('sync_keystone_ssl_certs')
+        if is_ceilometer_provision_supported():
+            execute("setup_ceilometer")
+            execute("setup_network_service") #Provisions in cfgm node
+            execute("setup_image_service",)
+            execute("setup_identity_service")
         execute('verify_openstack')
     #setup_vcenter can be called outside of setup_all and need not be below. So commenting.
     #elif orch == 'vcenter':
