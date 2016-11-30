@@ -6,7 +6,7 @@ function issu_contrail_switch_compute_node {
     openstack-config --set /etc/contrail/supervisord_vrouter_files/contrail-vrouter-agent.ini program:contrail-vrouter-agent autostart true
     openstack-config --set /etc/contrail/supervisord_vrouter_files/contrail-vrouter-agent.ini program:contrail-vrouter-agent killasgroup true
     openstack-config --set /etc/contrail/contrail-vrouter-nodemgr.conf DISCOVERY server $1 
-    service supervisor-vrouter restart
+    service supervisor-vrouter stop; rmmod vrouter;modprobe vrouter;service supervisor-vrouter start
     contrail-status
     route -n
 }
