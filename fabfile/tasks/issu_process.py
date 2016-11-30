@@ -16,10 +16,9 @@ from fabfile.utils.install import get_vrouter_kmod_pkg
 from fabfile.utils.host import *
 from fabfile.utils.fabos import *
 from fabric.contrib.files import exists
-from fabfile.utils.cluster import get_hostname
 
 issu_process_bash_file="issu_process.sh" 
-issu_process_bash_path="/opt/contrail/utils/fabfile/tasks/issu_process.sh"
+issu_process_bash_path="/opt/contrail/utils/issu_process.sh"
 
 @task
 @roles('compute')
@@ -280,6 +279,12 @@ def issu_contrail():
     #execute('issu_contrail_finalize')
     print "Single touch ISSU is not yet supported"
 
+def get_real_hostname(host_string):
+    with settings(host_string = host_string):
+        tgt_ip = hstr_to_ip(get_control_host_string(env.host_string))
+        tgt_hostname = sudo("hostname")
+    return tgt_hostname
+
 @task
 @roles('build')
 def issu_contrail_generate_conf():
@@ -313,19 +318,19 @@ def issu_contrail_generate_moreconf(final_conf):
     new_api_info = '"{'+new_api_info+'}"'
     sudo('%s new_api_info %s' %(cmd, new_api_info))
 
-    db_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(host)), get_hostname(host)) for host in env.roledefs['database']])
+    db_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(host)), get_real_hostname(host)) for host in env.roledefs['database']])
     db_host_info = '"{'+db_host_info+'}"'
     sudo('%s db_host_info %s' %(cmd, db_host_info))
 
-    config_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(host)), get_hostname(host)) for host in env.roledefs['cfgm']])
+    config_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(host)), get_real_hostname(host)) for host in env.roledefs['cfgm']])
     config_host_info = '"{'+config_host_info+'}"'
     sudo('%s config_host_info %s' %(cmd, config_host_info))
 
-    analytics_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(host)), get_hostname(host)) for host in env.roledefs['collector']])
+    analytics_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(host)), get_real_hostname(host)) for host in env.roledefs['collector']])
     analytics_host_info = '"{'+analytics_host_info+'}"'
     sudo('%s analytics_host_info %s' %(cmd, analytics_host_info))
 
-    control_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(config_host)), get_hostname(host)) for host in env.roledefs['control']])
+    control_host_info = ','.join(["'%s':'%s'" %(hstr_to_ip(get_control_host_string(host)), get_real_hostname(host)) for host in env.roledefs['control']])
     control_host_info = '"{'+control_host_info+'}"'
     sudo('%s control_host_info %s' %(cmd, control_host_info))
 
