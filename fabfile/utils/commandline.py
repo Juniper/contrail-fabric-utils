@@ -228,6 +228,9 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     if internal_vip:
         # Highly available openstack setup
         cmd += ' --internal_vip %s' % (internal_vip)
+    else:
+        openstack_ctrl_ip = hstr_to_ip(get_control_host_string(env.roledefs['openstack'][0]))
+        cmd += ' --openstack_ctrl_ip %s' % (openstack_ctrl_ip)
     if contrail_internal_vip:
         # Highly available contrail setup
         cmd += ' --contrail_internal_vip %s' % (contrail_internal_vip)
@@ -432,6 +435,7 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
 
     if orch == 'openstack':
         openstack_mgmt_ip = hstr_to_ip(env.roledefs['openstack'][0])
+        openstack_ctrl_ip = hstr_to_ip(get_control_host_string(env.roledefs['openstack'][0]))
         authserver_ip = get_authserver_ip()
         ks_auth_protocol = get_authserver_protocol()
         ks_auth_port = get_authserver_port()
@@ -439,6 +443,7 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
         cmd += " --keystone_ip %s" % authserver_ip
         cmd += " --keystone_version %s" % get_keystone_version()
         cmd += " --openstack_mgmt_ip %s" % openstack_mgmt_ip
+        cmd += " --openstack_ctrl_ip %s" % openstack_ctrl_ip
         cmd += " --keystone_auth_protocol %s" % ks_auth_protocol
         cmd += " --keystone_auth_port %s" % ks_auth_port
         cmd += " --quantum_service_protocol %s" % get_quantum_service_protocol()
