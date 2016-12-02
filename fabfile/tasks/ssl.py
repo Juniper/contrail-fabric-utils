@@ -54,6 +54,8 @@ def setup_keystone_ssl_certs_node(*nodes):
                             tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
                             get_as_sudo(ssl_cert, tmp_fname)
                         print "Copy to this(%s) openstack node" % env.host_string 
+                        sudo("mkdir -p /etc/keystone/ssl/certs/")
+                        sudo("mkdir -p /etc/keystone/ssl/private/")
                         put(tmp_fname, ssl_cert, use_sudo=True)
                         os.remove(tmp_fname)
                 elif os.path.isfile(ssl_cert): 
@@ -64,7 +66,7 @@ def setup_keystone_ssl_certs_node(*nodes):
                     pass
                 else:
                     raise RuntimeError("%s doesn't exists locally or in openstack node")
-                sudo("chown -R keystone:keystone /etc/keystone/ssl")
+            sudo("chown -R keystone:keystone /etc/keystone/ssl")
 
 
 @task
@@ -109,6 +111,8 @@ def setup_apiserver_ssl_certs_node(*nodes):
                             tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
                             get_as_sudo(ssl_cert, tmp_fname)
                         print "Copy to this(%s) cfgm node" % env.host_string 
+                        sudo("mkdir -p /etc/contrail/ssl/certs")
+                        sudo("mkdir -p /etc/contrail/ssl/private")
                         put(tmp_fname, ssl_cert, use_sudo=True)
                         os.remove(tmp_fname)
                 elif os.path.isfile(ssl_cert): 
@@ -118,10 +122,10 @@ def setup_apiserver_ssl_certs_node(*nodes):
                     print "Certificate (%s) exists in cfgm node" % ssl_cert
                 else:
                     raise RuntimeError("%s doesn't exists locally or in cfgm node" % ssl_cert)
-                if not exists(contrailcertbundle, use_sudo=True):
-                    ((certfile, _), (keyfile, _), (cafile, _)) = ssl_certs
-                    sudo('cat %s %s > %s' % (certfile, cafile, contrailcertbundle))
-                sudo("chown -R contrail:contrail /etc/contrail/ssl")
+            if not exists(contrailcertbundle, use_sudo=True):
+                ((certfile, _), (keyfile, _), (cafile, _)) = ssl_certs
+                sudo('cat %s %s > %s' % (certfile, cafile, contrailcertbundle))
+            sudo("chown -R contrail:contrail /etc/contrail/ssl")
 
 
 @task
