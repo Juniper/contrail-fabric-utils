@@ -437,6 +437,10 @@ def get_keystone_cafile():
     return get_from_testbed_dict('keystone','cafile', default)
 
 
+def get_keystone_cert_bundle():
+    return '/etc/keystone/ssl/certs/keystonecertbundle.pem'
+
+
 def get_apiserver_certfile():
     default = '/etc/contrail/ssl/certs/contrail.pem'
     return get_from_testbed_dict('cfgm','certfile', default)
