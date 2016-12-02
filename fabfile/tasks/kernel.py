@@ -72,15 +72,23 @@ def upgrade_kernel_all(*tgzs, **kwargs):
 def upgrade_kernel_without_openstack(*tgzs, **kwargs):
     """creates repo and upgrades kernel"""
     reboot = kwargs.get('reboot', 'yes')
-    non_openstack_nodes = [node for node in env.roledefs['all'] if node not in env.roledefs['openstack']]
+    if 'openstack' in env.roledefs:
+        non_openstack_nodes = [node for node in env.roledefs['all'] if node not in env.roledefs['openstack']]
+    else:
+        non_openstack_nodes = env.roledefs['all']
     execute('create_installer_repo')
     execute('create_install_repo_without_openstack', *tgzs)
     nodes = []
+    kernel_ver = kwargs.get('version')
     with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
         dist, version, extra = get_linux_distro()
 
     if ('red hat' in dist.lower() or 'centos linux' in dist.lower()) and version.startswith('7'):
         (package, os_type) = ('kernel-3.10.0-327.10.1.el7.x86_64', 'redhat')
+    elif 'ubuntu' in dist.lower() and version.startswith('14.04'):
+        kernel_ver = kernel_ver or '3.13.0-85'
+        (package, os_type) = ('linux-image-'+kernel_ver+'-generic', 'ubuntu')
+        default_grub='Advanced options for Ubuntu>Ubuntu, with Linux '+kernel_ver+'-generic'
     else:
         raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
                            " kernel upgrade." % (dist, version, extra))
