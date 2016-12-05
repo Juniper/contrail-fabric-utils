@@ -424,8 +424,8 @@ def fixup_restart_haproxy_in_openstack():
 
 @task
 def fixup_restart_haproxy_in_openstack_node(*args):
-    keystnone_frontend = 'frontend openstack-keystone *:5000'
-    keystnone_admin_frontend = 'frontend openstack-keystone-admin *:35357'
+    keystone_frontend = 'frontend openstack-keystone *:5000'
+    keystone_admin_frontend = 'frontend openstack-keystone-admin *:35357'
     keystone_server_lines = ''
     keystone_admin_server_lines = ''
     glance_server_lines = ''
