@@ -133,7 +133,7 @@ def issu_contrail_stop_old_control():
 @task
 @roles('oldwebui')
 def issu_contrail_stop_old_webui():
-    for host in env.roledefs['oldcontrol']:
+    for host in env.roledefs['oldwebui']:
         sudo("contrail-status")
         execute("stop_webui_node", host)
         sudo("contrail-status")
@@ -141,7 +141,7 @@ def issu_contrail_stop_old_webui():
 @task
 @roles('oldcollector')
 def issu_contrail_stop_old_collector():
-    for host in env.roledefs['oldcontrol']:
+    for host in env.roledefs['oldcollector']:
         sudo("contrail-status")
         execute("stop_collector_node", host)
         sudo("contrail-status")
