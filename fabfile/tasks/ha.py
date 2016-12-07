@@ -46,16 +46,16 @@ def fix_restart_xinetd_conf_node(*args):
 @EXECUTE_TASK
 @roles('openstack')
 def fix_memcache_conf():
-    """Increases the memcached memory to 2048 and listen address to mgmt ip"""
+    """Increases the memcached memory to 2048 and listen address to local ip"""
     execute('fix_memcache_conf_node', env.host_string)
 
 @task
 def fix_memcache_conf_node(*args):
-    """Increases the memcached memory to 2048 and listen address to mgmt ip.
+    """Increases the memcached memory to 2048 and listen address to local ip.
        USAGE:fab fix_memcache_conf_node:user@1.1.1.1,user@2.2.2.2"""
     memory = '2048'
     for host_string in args:
-        listen_ip = hstr_to_ip(host_string)
+        listen_ip = '127.0.0.1'
         with settings(host_string=host_string, warn_only=True):
             if detect_ostype() == 'ubuntu':
                 memcache_conf='/etc/memcached.conf'
