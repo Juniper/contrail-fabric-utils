@@ -720,11 +720,15 @@ def fixup_ceilometer_conf_keystone(openstack_ip):
         sudo("%s auth_protocol %s" % (config_cmd, auth_protocol))
         sudo("%s auth_port 35357" % config_cmd)
         sudo("%s auth_host %s" % (config_cmd, openstack_ip))
+        if keystone_ssl_enabled():
+            sudo("%s insecure True" % config_cmd)
         config_cmd = "openstack-config --set %s service_credentials" % conf_file
         sudo("%s os_password CEILOMETER_PASS" % config_cmd)
         sudo("%s os_tenant_name service" % config_cmd)
         sudo("%s os_username ceilometer" % config_cmd)
         sudo("%s os_auth_url %s://%s:5000/v2.0" % (config_cmd, auth_protocol, openstack_ip))
+        if keystone_ssl_enabled():
+            sudo("%s insecure True" % config_cmd)
 #end fixup_ceilometer_conf_keystone
 
 def fixup_ceilometer_pipeline_conf(analytics_ip):
@@ -961,6 +965,8 @@ def setup_ceilometer():
 @task
 def setup_ceilometer_node(*args):
     """Provisions ceilometer services in one or list of nodes. USAGE: fab setup_ceilometer_node:user@1.1.1.1,user@2.2.2.2"""
+    if not is_ceilometer_provision_supported():
+        return
     analytics_ip = hstr_to_ip(env.roledefs['collector'][0])
     for host_string in args:
         self_host = get_control_host_string(host_string)
@@ -1026,6 +1032,8 @@ def setup_network_service():
 def setup_network_service_node(*args):
     """Provisions network services in one or list of nodes.
        USAGE: fab setup_network_service_node:user@1.1.1.1,user@2.2.2.2"""
+    if not is_ceilometer_provision_supported():
+        return
     conf_file = '/etc/neutron/neutron.conf'
     neutron_config = {'DEFAULT' : {'notification_driver' : 'neutron.openstack.common.notifier.rpc_notifier'}
                      }
@@ -1047,6 +1055,8 @@ def setup_identity_service():
 def setup_identity_service_node(*args):
     """Provisions identity services in one or list of nodes.
        USAGE: fab setup_identity_service_node:user@1.1.1.1,user@2.2.2.2"""
+    if not is_ceilometer_provision_supported():
+        return
     amqp_server_ip = get_openstack_amqp_server()
 
     conf_file = '/etc/keystone/keystone.conf'
@@ -1071,6 +1081,8 @@ def setup_image_service():
 @task
 def setup_image_service_node(*args):
     """Provisions image services in one or list of nodes. USAGE: fab setup_image_service_node:user@1.1.1.1,user@2.2.2.2"""
+    if not is_ceilometer_provision_supported():
+        return
     amqp_server_ip = get_openstack_amqp_server()
     for host_string in args:
         openstack_sku = get_openstack_sku()
@@ -2421,11 +2433,10 @@ def setup_orchestrator():
     if orch == 'openstack':
         execute('increase_ulimits')
         execute('setup_openstack')
-        if is_ceilometer_provision_supported():
-            execute("setup_ceilometer")
-            execute("setup_network_service") #Provisions in cfgm node
-            execute("setup_image_service",)
-            execute("setup_identity_service")
+        execute("setup_ceilometer")
+        execute("setup_network_service") #Provisions in cfgm node
+        execute("setup_image_service",)
+        execute("setup_identity_service")
         execute('verify_openstack')
     #setup_vcenter can be called outside of setup_all and need not be below. So commenting.
     #elif orch == 'vcenter':
