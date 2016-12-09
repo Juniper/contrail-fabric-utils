@@ -841,7 +841,7 @@ def setup_ceilometer_mongodb(ip, mongodb_ip_list):
             verify_command_succeeded(cmd = cmd, expected_output = "1",
                                      error_str = "Not able to add " + \
                                          other_ip + " to replicaSet",
-                                     max_count = 1, sleep_interval = 1,
+                                     max_count = 10, sleep_interval = 1,
                                      warn_only = False)
         # Verify replicaSet status and members
         cmd = "mongo --host " + ip + " --quiet --eval 'rs.status().ok'"
