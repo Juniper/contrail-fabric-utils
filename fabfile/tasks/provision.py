@@ -1469,6 +1469,67 @@ def setup_qos_niantic_node(*args):
                 sudo("echo '%s' >> %s" %(priority_group_str, agent_conf))
 
 @task
+@hosts(get_qos_niantic_nodes())
+def provision_qos_priority_groups():
+    '''On each compute node for which qos_niantic section is defined in
+       testbed.py, populate contrail-vrouter-agent.conf and run qosmap.py script
+    '''
+
+    execute("setup_qos_niantic_node", env.host_string)
+    if env.host_string:
+        execute("provision_qos_priority_group_on_node", env.host_string)
+
+@task
+def provision_qos_priority_group_on_node(*args):
+    '''Write zeros to xps_cpu files for all tx queues disabling Xmit-Packet-Steering
+       and run qosmap.py script on the node.
+    '''
+    intf_list = []
+    hosts = getattr(testbed, 'control_data', None)
+    if hosts:
+        for host in hosts:
+            if ((hosts[host].has_key('vlan')) and (host in args)):
+                print 'Vlan configuration found for device %s on compute %s .' % (hosts[host]['device'], host),\
+                      'Skipping setup: Qos queueing is not supported for interface having a Vlan sub interface .'
+                return True
+
+    bond_info = getattr(testbed, 'bond', None)
+
+    for compute_host_string in args:
+        if ((bond_info) and (compute_host_string in bond_info)):
+                intf_list = bond_info[compute_host_string]['member']
+        else:
+            with settings(host_string=compute_host_string):
+                physical_interface = sudo("openstack-config --get /etc/contrail/contrail-vrouter-agent.conf VIRTUAL-HOST-INTERFACE physical_interface")
+                intf_list.append(physical_interface)
+
+        for intf in intf_list:
+            file_path = "/sys/class/net/" + intf + "/queues/"
+            with settings(host_string=compute_host_string):
+                if os.path.exists(file_path):
+                    num_tx_queues = sudo("cd %s;ls | grep tx | wc -l " % (file_path))
+                else:
+                    print "Path for interface queue %s does not exist" % file_path
+                    return True
+            if (num_tx_queues and num_tx_queues !='0'):
+                for i in range(int(num_tx_queues)):
+                    file_str = "tx-%s/xps_cpus" % i
+                    filename = file_path + file_str
+                    xps_cpu_file = os.path.isfile(filename)
+                    if (not xps_cpu_file):
+                        print "xps_cpu file not found %s on compute %s while disabling Xmit-Packet-Steering" % (xps_cpu_file, compute_host_string)
+                        return True
+                    with settings(host_string=compute_host_string):
+                        sudo('echo 0 > %s' % filename)
+            else:
+                print "Error: %s No tx queues found for file paths %s " % (num_tx_queues, file_path)
+                return True
+
+        with settings(host_string=compute_host_string):
+            with cd("/usr/share/contrail-utils"):
+                sudo("python qosmap.py --interface_list %s " % intf_list)
+
+@task
 @roles('database')
 def fixup_mongodb_conf():
     """Fixup configuration file for mongodb in all nodes defined in database
