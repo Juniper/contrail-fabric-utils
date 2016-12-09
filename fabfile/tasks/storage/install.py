@@ -117,7 +117,6 @@ def create_storage_repo_node(*args):
 def install_storage():
     """Installs required storage packages in nodes as per the role definition.
     """
-    execute(create_storage_repo)
     execute(install_storage_master)
     execute(install_storage_compute)
     execute(install_storage_webui)
@@ -126,19 +125,5 @@ def install_storage():
 @task
 @roles('build')
 def upgrade_storage(from_rel, pkg):
-    """upgrades contrail-storage pkgs in all nodes."""
-    from_rel = get_release('contrail-storage-packages')
-    to_rel = sudo('dpkg --info %s |grep Version: | cut -d\':\' -f 2'
-                    %(pkg)).split('-')[0]
-    from_build = get_build('contrail-storage-packages').split('~')[0]
-    to_build = sudo('dpkg --info %s |grep Version: | cut -d\':\' -f 2'
-                    %(pkg)).split('-')[1].split('~')[0]
-    if (LooseVersion(to_rel) > LooseVersion(from_rel)) or \
-        (LooseVersion(to_rel) == LooseVersion(from_rel) and \
-        LooseVersion(to_build) >= LooseVersion(from_build)):
-        execute('install_storage_pkg_all', pkg)
-        execute('install_storage')
-        execute('setup_upgrade_storage')
-    else:
-        raise RuntimeError("Downgrade not supported. Current version - %s~%s, New version - %s~%s"
-            %(from_rel, from_build, to_rel, to_build))
+    execute('install_storage')
+    execute('setup_upgrade_storage')
