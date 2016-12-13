@@ -1372,23 +1372,29 @@ def setup_collector_node(*args):
 
 @task
 @hosts(get_qos_nodes())
-def setup_qos():
+def setup_qos_queuing():
     '''Generate [QOS] section in contrail-vrouter-agent.conf
+       Run qosmap.py script.
     '''
-    execute("setup_qos_node", env.host_string)
+    if (get_qos_nodes()):
+        execute("setup_qos_queuing_on_node", env.host_string)
 
 @task
-def setup_qos_node(*args):
-    '''Read qos configuration from testbed.py and populate agent_conf
+def setup_qos_queuing_on_node(*args):
+    '''Write zeros to xps_cpu files for all tx queues disabling Xmit-Packet-Steering
+       and run qosmap.py script on the node.
     '''
+    default_hw_queue = False
     agent_conf = "/etc/contrail/contrail-vrouter-agent.conf"
     conf_file = "contrail-vrouter-agent.conf"
     qos_logical_queue = []
     queue_id = []
+    intf_list = []
     qos_info = getattr(env, 'qos', None)
     if qos_info is None:
         print 'Info: qos block is not defined in testbed file. Exiting'
         return True
+
     for compute_host_string in args:
         qos_info_compute = qos_info[compute_host_string]
         for nic_queue in qos_info_compute:
@@ -1397,49 +1403,90 @@ def setup_qos_node(*args):
                 queue_id.append(nic_queue['hardware_q_id'])
             else:
                 default_nic_queue = nic_queue
-        qos_logical_queue.append(str(default_nic_queue['logical_queue']).strip('[]').replace(" ",""))
-        queue_id.append(default_nic_queue['hardware_q_id'])
+                default_hw_queue = True
+        if default_hw_queue:
+            if 'logical_queue' in default_nic_queue.keys():
+                qos_logical_queue.append(str(default_nic_queue['logical_queue']).strip('[]').replace(" ",""))
+            queue_id.append(default_nic_queue['hardware_q_id'])
+
         if queue_id != None:
             qos_str = ""
             qos_str += "[QOS]\n"
-            for i in range(len(queue_id)):
+            num_sections = len(qos_logical_queue)
+            if(len(qos_logical_queue) == len(queue_id) and default_hw_queue):
+                num_sections = num_sections - 1
+            for i in range(num_sections):
                 qos_str += '[%s%s]\n' %("QUEUE-", queue_id[i])
-                if (i == (len(qos_logical_queue)-1)):
-                    qos_str += "# This is the default hardware queue\n"
-                    qos_str += "default_hw_queue= true\n\n"
                 qos_str += "# Logical nic queues for qos config\n"
                 qos_str += "logical_queue=[%s]\n\n" % qos_logical_queue[i].replace(",",", ")
 
+            if (default_hw_queue):
+                qos_str += '[%s%s]\n' %("QUEUE-", queue_id[-1])
+                qos_str += "# This is the default hardware queue\n"
+                qos_str += "default_hw_queue= true\n\n"
+                qos_str += "# Logical nic queues for qos config\n"
+
+                if(len(qos_logical_queue) == len(queue_id)):
+                    qos_str += "logical_queue=[%s]\n\n" % qos_logical_queue[-1].replace(",",", ")
+                else:
+                    qos_str += "logical_queue=[ ]\n\n"
+
+        with settings(host_string=compute_host_string):
+            ltemp_dir = tempfile.mkdtemp()
+            get(agent_conf, ltemp_dir)
+            local("sed -i -e '/^\[QOS\]/d' -e '/^\[QUEUE-/d' -e '/^logical_queue/d' %s/%s" % (ltemp_dir, conf_file))
+            local("sed -i -e '/^\# Logical nic queues/d' -e '/^# This is the default/d' -e '/^default_hw_queue/d' %s/%s" % (ltemp_dir, conf_file))
+            put('%s/%s' % (ltemp_dir, conf_file), agent_conf, use_sudo=True)
+            local('rm -rf %s' % (ltemp_dir))
+            sudo("echo '%s' >> %s" %(qos_str, agent_conf))
+
+        bond_info = getattr(testbed, 'bond', None)
+        if ((bond_info) and (compute_host_string in bond_info)):
+                intf_list = bond_info[compute_host_string]['member']
+        else:
             with settings(host_string=compute_host_string):
-                ltemp_dir = tempfile.mkdtemp()
-                get(agent_conf, ltemp_dir)
-                local("sed -i -e '/^\[QOS\]/d' -e '/^\[QUEUE-/d' -e '/^logical_queue/d' %s/%s" % (ltemp_dir, conf_file))
-                local("sed -i -e '/^\# Logical nic queues/d' -e '/^# This is the default/d' -e '/^default_hw_queue/d' %s/%s" % (ltemp_dir, conf_file))
-                put('%s/%s' % (ltemp_dir, conf_file), agent_conf, use_sudo=True)
-                local('rm -rf %s' % (ltemp_dir))
-                sudo("echo '%s' >> %s" %(qos_str, agent_conf))
-                sudo("service contrail-vrouter-agent restart")
+                physical_interface = sudo("openstack-config --get /etc/contrail/contrail-vrouter-agent.conf VIRTUAL-HOST-INTERFACE physical_interface")
+                intf_list.append(physical_interface)
+
+        with settings(host_string=compute_host_string):
+            intf_list = ' '.join(intf_list)
+            with cd("/usr/share/contrail-utils"):
+                sudo("python qosmap.py --interface_list %s " % intf_list)
+        sudo("service contrail-vrouter-agent restart")
 
 @task
 @hosts(get_qos_niantic_nodes())
-def setup_qos_niantic_nic():
+def setup_qos_scheduling():
     '''Generate [QOS-NIANTIC] section in contrail-vrouter-agent.conf
+       Run qosmap.py script
     '''
-    execute("setup_qos_niantic_node", env.host_string)
+    if (get_qos_niantic_nodes()):
+        execute("setup_qos_scheduling_on_node", env.host_string)
 
 @task
-def setup_qos_niantic_node(*args):
-    '''Read qos configuration from testbed.py and populate agent_conf
+def setup_qos_scheduling_on_node(*args):
+    '''Write zeros to xps_cpu files for all tx queues disabling Xmit-Packet-Steering
+       and run qosmap.py script on the node.
     '''
     agent_conf = "/etc/contrail/contrail-vrouter-agent.conf"
     conf_file = "contrail-vrouter-agent.conf"
     priority_id = []
     priority_bandwidth = []
     priority_scheduling = []
+    intf_list = []
     priority_info = getattr(env, 'qos_niantic', None)
     if priority_info is None:
         print 'Info: qos niantic block is not defined in testbed file. Exiting'
         return True
+
+    hosts = getattr(testbed, 'control_data', None)
+    if hosts:
+        for host in hosts:
+            if ((hosts[host].has_key('vlan')) and (host in args)):
+                print 'Vlan configuration found for device %s on compute %s .' % (hosts[host]['device'], host),\
+                      'Skipping setup: Qos queueing is not supported for interface having a Vlan sub interface .'
+                return True
+
     for compute_host_string in args:
         priority_info_compute = priority_info[compute_host_string]
         for priority in priority_info_compute:
@@ -1467,6 +1514,19 @@ def setup_qos_niantic_node(*args):
                 put('%s/%s' % (ltemp_dir, conf_file), agent_conf, use_sudo=True)
                 local('rm -rf %s' % (ltemp_dir))
                 sudo("echo '%s' >> %s" %(priority_group_str, agent_conf))
+
+        bond_info = getattr(testbed, 'bond', None)
+        if ((bond_info) and (compute_host_string in bond_info)):
+                intf_list = bond_info[compute_host_string]['member']
+        else:
+            with settings(host_string=compute_host_string):
+                physical_interface = sudo("openstack-config --get /etc/contrail/contrail-vrouter-agent.conf VIRTUAL-HOST-INTERFACE physical_interface")
+                intf_list.append(physical_interface)
+
+        with settings(host_string=compute_host_string):
+            intf_list = ' '.join(intf_list)
+            with cd("/usr/share/contrail-utils"):
+                sudo("python qosmap.py --interface_list %s " % intf_list)
 
 @task
 @roles('database')
