@@ -187,6 +187,8 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
         cmd += " --apiserver_certfile %s" % get_apiserver_certfile()
         cmd += " --apiserver_keyfile %s" % get_apiserver_keyfile()
         cmd += " --apiserver_cafile %s" % get_apiserver_cafile()
+        first_cfgm_ip = hstr_to_ip(cfgm_host_list[0])
+        cmd += " --first_cfgm_ip %s" % first_cfgm_ip
     cmd += " --orchestrator %s" % orch
     if (len(env.roledefs['cfgm'])>2):
         cmd += " --seed_list %s" % ','.join(get_config_db_ip_list()[:2])
