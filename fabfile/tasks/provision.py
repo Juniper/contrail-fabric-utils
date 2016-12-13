@@ -1423,7 +1423,7 @@ def setup_qos_node(*args):
 @task
 @hosts(get_qos_niantic_nodes())
 def setup_qos_niantic_nic():
-    '''Generate [QOS-NIANTIC] section in contrail-vrouter-agent.conf
+    '''Generate [QOS-SCHEDULING] section in contrail-vrouter-agent.conf
     '''
     execute("setup_qos_niantic_node", env.host_string)
 
@@ -1451,7 +1451,7 @@ def setup_qos_niantic_node(*args):
                 priority_bandwidth.append('0')
         if priority_id != None:
             priority_group_str = ""
-            priority_group_str += "[QOS-NIANTIC]\n"
+            priority_group_str += "[QOS-SCHEDULING]\n"
             for i in range(len(priority_id)):
                 priority_group_str += '[%s%s]\n' %("PG-", priority_id[i])
                 priority_group_str += "# Scheduling algorithm for priority group (strict/rr)\n"
@@ -1462,7 +1462,7 @@ def setup_qos_niantic_node(*args):
         with settings(host_string=compute_host_string):
                 ltemp_dir = tempfile.mkdtemp()
                 get(agent_conf, ltemp_dir)
-                local("sed -i -e '/^\[QOS-NIANTIC\]/d' -e '/^\[PG-/d' -e '/^scheduling/d' -e '/^bandwidth/d' %s/%s" % (ltemp_dir, conf_file))
+                local("sed -i -e '/^\[QOS-SCHEDULING\]/d' -e '/^\[PG-/d' -e '/^scheduling/d' -e '/^bandwidth/d' %s/%s" % (ltemp_dir, conf_file))
                 local("sed -i -e '/^# Scheduling algorithm for/d' -e '/^# Total hardware queue bandwidth/d' %s/%s" % (ltemp_dir, conf_file))
                 put('%s/%s' % (ltemp_dir, conf_file), agent_conf, use_sudo=True)
                 local('rm -rf %s' % (ltemp_dir))
