@@ -1375,6 +1375,29 @@ def pre_check():
         print "\t 2.Same set of nodes or"
         print "\t 3.cfgm should be subset of database nodes."
         exit(1)
+    # Check for VIP's
+    control_data = getattr(testbed, 'control_data', None)
+    if (len(env.roledefs['openstack']) > 1 and control_data):
+        if not get_openstack_internal_vip:
+            print "\nERROR: \n\tMultiple openstack nodes, Specify 'internal_vip' and continue..."
+        if not get_openstack_external_vip:
+            print "\nERROR: \n\tMultiple openstack nodes with multi-interface, Specify 'external_vip' and continue..."
+    elif (len(env.roledefs['openstack']) > 1 and not control_data):
+        if not get_openstack_internal_vip:
+            print "\nERROR: \n\tMultiple openstack nodes, Specify 'internal_vip' and continue..."
+        if get_openstack_external_vip:
+            print "\nERROR: \n\tNot a multi-interface setup, Remove 'external_vip' and continue..."
+    if set(env.roledefs['openstack']) != set(env.roledefs['cfgm']):
+        if (len(env.roledefs['cfgm']) > 1 and control_data):
+            if not get_cfgm_internal_vip:
+                print "\nERROR: \n\tMultiple cfgm nodes, Specify 'contrail_internal_vip' and continue..."
+            if not get_cfgm_external_vip:
+                print "\nERROR: \n\tMultiple cfgm nodes with multi-interface, Specify 'contrail_external_vip' and continue..."
+        elif (len(env.roledefs['openstack']) > 1 and not control_data):
+            if not get_cfgm_internal_vip:
+                print "\nERROR: \n\tMultiple cfgm nodes, Specify 'contrail_internal_vip' and continue..."
+            if get_cfgm_external_vip:
+                print "\nERROR: \n\tNot a multi-interface setup, Remove 'contrail_external_vip' and continue..."
 
 
 def role_to_ip_dict(role=None):
