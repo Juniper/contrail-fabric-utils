@@ -1526,7 +1526,7 @@ def setup_qos_scheduling_on_node(*args):
         with settings(host_string=compute_host_string):
             intf_list = ' '.join(intf_list)
             with cd("/usr/share/contrail-utils"):
-                sudo("python qosmap.py --interface_list %s " % intf_list)
+                sudo("python qosmap.py --interface_list %s --qos_scheduling" % intf_list)
 
 @task
 @roles('database')
