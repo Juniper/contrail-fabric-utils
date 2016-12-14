@@ -1127,6 +1127,8 @@ def setup_ha():
         execute('fix_wsrep_cluster_address')
         execute('setup_cmon_schema')
         execute('fix_restart_xinetd_conf')
+        if keystone_ssl_enabled():
+            execute("setup_keystone_ssl_certs")
         execute('fixup_restart_haproxy_in_openstack')
         execute('setup_glance_images_loc')
         execute('fix_memcache_conf')
