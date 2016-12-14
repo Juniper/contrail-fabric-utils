@@ -161,6 +161,12 @@ def copy_keystone_ssl_certs_to_compute():
 
 
 @task
+@EXECUTE_TASK
+@roles('openstack')
+def copy_keystone_ssl_certs():
+    execute('copy_keystone_ssl_certs_to_node', env.host_string)
+
+@task
 def copy_keystone_ssl_certs_to_node(*nodes):
     ssl_certs = (get_keystone_certfile(),
                  get_keystone_cafile())
