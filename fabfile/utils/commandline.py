@@ -498,6 +498,7 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
 
     # Qos priority group arguments
     (set_priority, priority_id, priority_bandwidth, priority_scheduling) = get_priority_group_details(host_string)
+    set_priority = False
     if set_priority:
         cmd += " --priority_id %s" % ' '.join(priority_id)
         cmd += " --priority_scheduling %s" % ' '.join(priority_scheduling)
