@@ -1,4 +1,5 @@
 import os
+import tempfile
 from time import sleep
 
 from fabric.contrib.files import exists
@@ -56,7 +57,8 @@ def setup_keystone_ssl_certs_node(*nodes):
                                 print "Wait for SSL certs to be created in first openstack"
                                 sleep(0.1)
                             print "Get SSL cert(%s) from first openstack" % ssl_cert
-                            tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
+                            tmp_dir= tempfile.mkdtemp()
+                            tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
                             get_as_sudo(ssl_cert, tmp_fname)
                         print "Copy to this(%s) openstack node" % env.host_string 
                         sudo('mkdir -p /etc/keystone/ssl/certs/')
@@ -116,7 +118,8 @@ def setup_apiserver_ssl_certs_node(*nodes):
                                 print "Wait for SSL certs to be created in first cfgm"
                                 sleep(0.1)
                             print "Get SSL cert(%s) from first cfgm" % ssl_cert
-                            tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
+                            tmp_dir= tempfile.mkdtemp()
+                            tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
                             get_as_sudo(ssl_cert, tmp_fname)
                         print "Copy to this(%s) cfgm node" % env.host_string 
                         sudo('mkdir -p /etc/contrail/ssl/certs/')
@@ -170,7 +173,8 @@ def copy_keystone_ssl_certs_to_node(*nodes):
                 sudo('rm -f %s' % cert_file)
                 with settings(host_string=openstack_host,
                               password=get_env_passwords(openstack_host)):
-                    tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
+                    tmp_dir= tempfile.mkdtemp()
+                    tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
                     get_as_sudo(ssl_cert, tmp_fname)
                 sudo("mkdir -p /etc/contrail/ssl/certs/")
                 put(tmp_fname, cert_file, use_sudo=True)
@@ -246,7 +250,8 @@ def copy_apiserver_ssl_certs_to_node(*nodes):
                     continue
                 with settings(host_string=cfgm_host,
                               password=get_env_passwords(cfgm_host)):
-                    tmp_fname = os.path.join('/tmp', os.path.basename(ssl_cert))
+                    tmp_dir= tempfile.mkdtemp()
+                    tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
                     get_as_sudo(ssl_cert, tmp_fname)
                 sudo("mkdir -p /etc/contrail/ssl/certs/")
                 sudo("mkdir -p /etc/contrail/ssl/private/")
@@ -270,6 +275,7 @@ def copy_vnc_api_lib_ini_to_node(*nodes):
         with settings(host_string=node, password=get_env_passwords(node)):
             with settings(host_string=cfgm_host,
                           password=get_env_passwords(cfgm_host)):
-                tmp_fname = os.path.join('/tmp', os.path.basename(vnc_api_lib))
+                tmp_dir= tempfile.mkdtemp()
+                tmp_fname = os.path.join(tmp_dir, os.path.basename(vnc_api_lib))
                 get_as_sudo(vnc_api_lib, tmp_fname)
             put(tmp_fname, vnc_api_lib, use_sudo=True)
