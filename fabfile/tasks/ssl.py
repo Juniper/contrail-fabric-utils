@@ -14,7 +14,7 @@ from fabfile.utils.host import (
         get_apiserver_cert_bundle, get_control_host_string,
         get_keystone_cert_bundle,
         )
-from fabfile.utils.fabos import get_as_sudo
+from fabfile.utils.fabos import get_as_sudo, get_openstack_services
 
 
 @task
@@ -212,8 +212,8 @@ def copy_certs_for_heat_node(*nodes):
                 execute('copy_apiserver_ssl_certs_to_node', node)
                 execute('copy_vnc_api_lib_ini_to_node', node)
                 sudo("chown -R heat:heat /etc/contrail")
-            for svc in ['heat-api', 'heat-engine', 'heat-api-cfn']:
-                sudo("service %s restart" % svc)
+            for svc_key in ['heat-api', 'heat-engine', 'heat-api-cfn']:
+                sudo("service %s restart" % get_openstack_services()[svc_key])
 
 
 @task

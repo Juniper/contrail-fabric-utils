@@ -212,8 +212,8 @@ def get_openstack_services():
     openstack_services_systemd = {}
     openstack_services_sysv = {}
     services = ['cinder-api', 'cinder-scheduler', 'glance-api', 'glance-registry',
-                'heat-api', 'heat-engine', 'keystone', 'nova-api', 'nova-conductor',
-                'nova-consoleauth', 'nova-novncproxy', 'nova-scheduler']
+                'heat-api', 'heat-engine', 'heat-api-cfn', 'keystone', 'nova-api',
+                'nova-conductor', 'nova-consoleauth', 'nova-novncproxy', 'nova-scheduler']
     openstack_services_systemd['services'] = ['openstack-%s' % svc for svc in services]
     openstack_services_systemd['initsystem'] = 'systemd'
     openstack_services_systemd['rabbitmq-server'] = 'rabbitmq-server'
