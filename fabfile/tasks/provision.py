@@ -1182,7 +1182,8 @@ def setup_openstack_node(*args):
         cmd = frame_vnc_openstack_cmd(host_string)
         # Execute the provision openstack script
         with  settings(host_string=host_string):
-            if keystone_ssl_enabled():
+            # Certs are already created in setup_ha task
+            if keystone_ssl_enabled() and not get_openstack_internal_vip():
                 execute("setup_keystone_ssl_certs_node", host_string)
             with cd(INSTALLER_DIR):
                 sudo(cmd)
