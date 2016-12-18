@@ -1785,8 +1785,12 @@ def prov_control_bgp():
 def prov_control_bgp_node(*args, **kwargs):
     oper = kwargs.get('oper', 'add')
     tgt_node = kwargs.get('tgt_node', None)
-    cfgm_host = kwargs.get('cfgm_host', env.roledefs['cfgm'][0])
-    cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
+    cfgm_host = kwargs.get('cfgm_host', None)
+    if cfgm_host:
+        cfgm_ip = hstr_to_ip(get_control_host_string(cfgm_host))
+    else:
+        cfgm_host = env.roledefs['cfgm'][0]
+        cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
     cfgm_host_password = get_env_passwords(cfgm_host)
     for host_string in args:
         with settings(host_string = host_string):
