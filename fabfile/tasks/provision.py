@@ -1470,6 +1470,27 @@ def setup_qos_niantic_node(*args):
                 sudo("echo '%s' >> %s" %(priority_group_str, agent_conf))
 
 @task
+@hosts(get_qos_nodes())
+def setup_xps_cpu():
+    '''Disable xmit-Packet-Steering .
+    '''
+    if (get_qos_nodes()):
+        execute("setup_xps_cpu_on_node", env.host_string)
+
+@task
+def setup_xps_cpu_on_node(*args):
+    '''
+       Set qos_enabled flag to true in agent_param on reboot
+       qosmap.py sets xps_cpu file to zeros if qos_enabled is set.
+    '''
+
+    conf_file = "/etc/contrail/agent_param"
+
+    for compute_host_string in args:
+        with settings(host_string=compute_host_string, warn_only=True):
+            sudo("sed -i -e 's/^qos_enabled.*/qos_enabled=true/' %s" % (conf_file))
+
+@task
 @roles('database')
 def fixup_mongodb_conf():
     """Fixup configuration file for mongodb in all nodes defined in database
@@ -2736,6 +2757,7 @@ def setup_all(reboot='True'):
     execute('add_tor_agent', restart=False)
     execute('increase_vrouter_limit')
     execute('setup_vm_coremask')
+    execute('setup_xps_cpu')
     if get_openstack_internal_vip():
         execute('setup_cluster_monitors')
     if reboot == 'True':
