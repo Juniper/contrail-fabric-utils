@@ -57,6 +57,8 @@ def get_openstack_sku(use_install_repo=False):
         openstack_sku = 'liberty'
     elif pkg_ver.find('13.0') != -1:
         openstack_sku = 'mitaka'
+    elif pkg_ver.find('14.0') != -1:
+        openstack_sku = 'newton'
     else:
         print "OpenStack distribution unknown.. assuming icehouse.."
         openstack_sku = 'icehouse'
@@ -212,8 +214,17 @@ def get_openstack_services():
     openstack_services_systemd = {}
     openstack_services_sysv = {}
     services = ['cinder-api', 'cinder-scheduler', 'glance-api', 'glance-registry',
-                'heat-api', 'heat-engine', 'heat-api-cfn', 'keystone', 'nova-api',
-                'nova-conductor', 'nova-consoleauth', 'nova-novncproxy', 'nova-scheduler']
+                'heat-api', 'heat-engine', 'keystone', 'nova-api', 'nova-conductor',
+                'nova-consoleauth', 'nova-novncproxy', 'nova-scheduler']
+
+    dist, version, extra = get_linux_distro()
+    if 'ubuntu' in dist.lower() and version == '16.04':
+         openstack_services_systemd['services'] = ['%s' % svc for svc in services]
+         openstack_services_systemd['initsystem'] = 'systemd'
+         openstack_services_systemd['rabbitmq-server'] = 'rabbitmq-server'
+         openstack_services_systemd.update([(svc, '%s' % svc) for svc in services])
+         return openstack_services_systemd
+
     openstack_services_systemd['services'] = ['openstack-%s' % svc for svc in services]
     openstack_services_systemd['initsystem'] = 'systemd'
     openstack_services_systemd['rabbitmq-server'] = 'rabbitmq-server'

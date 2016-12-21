@@ -627,9 +627,11 @@ def setup_cfgm_node(*args):
 
     for host_string in args:
         with  settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower():
                 with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-config.override')
+                    if version != '16.04':
+                        sudo('rm /etc/init/supervisor-config.override')
                     sudo('rm /etc/init/neutron-server.override')
 
             # Frame the command line to provision config node
@@ -1363,7 +1365,8 @@ def setup_collector_node(*args):
                 execute("copy_keystone_ssl_certs_to_node", host_string)
             if apiserver_ssl_enabled():
                 execute("copy_apiserver_ssl_certs_to_node", host_string)
-            if detect_ostype() == 'ubuntu':
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower() and version != '16.04':
                 with settings(warn_only=True):
                     sudo('rm /etc/init/supervisor-analytics.override')
             with cd(INSTALLER_DIR):
@@ -1580,7 +1583,8 @@ def setup_database_node(*args):
         cmd = frame_vnc_database_cmd(host_string)
         # Execute the provision database script
         with settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower() and version != '16.04':
                 with settings(warn_only=True):
                     sudo('rm /etc/init/supervisor-database.override')
             with cd(INSTALLER_DIR):
@@ -1633,7 +1637,8 @@ def setup_webui_node(*args):
         # Execute the provision webui script
         with settings(host_string=host_string):
             with settings(warn_only=True):
-                if detect_ostype() == 'ubuntu':
+                dist, version, extra = get_linux_distro()
+                if 'ubuntu' in dist.lower() and version != '16.04':
                     sudo('rm /etc/init/supervisor-webui.override')
             with cd(INSTALLER_DIR):
                 sudo(cmd)
@@ -1667,7 +1672,8 @@ def setup_control_node(*args):
         fixup_irond_config(host_string)
         cmd = frame_vnc_control_cmd(host_string)
         with  settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower() and version != '16.04':
                 with settings(warn_only=True):
                     sudo('rm /etc/init/supervisor-control.override')
                     sudo('rm /etc/init/supervisor-dns.override')
@@ -1719,7 +1725,9 @@ def setup_agent_config_in_node(*args):
     if restart_service:
         for host_string in args:
             with settings(host_string=host_string):
-                out = sudo("service supervisor-vrouter restart")
+                dist, version, extra = get_linux_distro()
+                if 'ubuntu' in dist.lower() and version != '16.04':
+                     out = sudo("service supervisor-vrouter restart")
 
 # end setup_agent_config_in_node
 
@@ -1817,7 +1825,9 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-vrouter.override')
+                    dist, version, extra = get_linux_distro()
+                    if 'ubuntu' in dist.lower() and version != '16.04':
+                         sudo('rm /etc/init/supervisor-vrouter.override')
                     # Fix /dev/vhost-net permissions. It is required for
                     # multiqueue operation
                     sudo('echo \'KERNEL=="vhost-net", GROUP="kvm", MODE="0660"\' > /etc/udev/rules.d/vhost-net.rules')
@@ -2235,7 +2245,9 @@ def add_tsn_node(restart=True,*args):
             nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
             sudo("openstack-config --set %s DEFAULT agent_mode tsn" % nova_conf_file)
             if restart:
-                sudo("service supervisor-vrouter restart")
+                dist, version, extra = get_linux_distro()
+                if 'ubuntu' in dist.lower() and version != '16.04':
+                     sudo("service supervisor-vrouter restart")
 
 @hosts(get_toragent_nodes())
 @task

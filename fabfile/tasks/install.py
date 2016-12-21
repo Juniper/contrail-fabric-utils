@@ -285,7 +285,8 @@ def install_database_node(install_mongodb, *args):
             if install_mongodb and is_ceilometer_install_supported(use_install_repo=True):
                 pkgs_ceilometer_database = ['mongodb-clients', 'mongodb-server']
                 pkg.extend(pkgs_ceilometer_database)
-            if detect_ostype() == 'ubuntu':
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower() and version != '16.04':
                 sudo('echo "manual" >> /etc/init/supervisor-database.override')
                 apt_install(pkg)
             else:
@@ -437,7 +438,8 @@ def install_cfgm_node(*args):
         with settings(host_string=host_string):
             pkg = get_config_pkgs()
 
-            if detect_ostype() == 'ubuntu':
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower() and version != '16.04':
                 sudo('echo "manual" >> /etc/init/supervisor-config.override')
                 sudo('echo "manual" >> /etc/init/neutron-server.override')
                 apt_install(pkg)
@@ -462,7 +464,8 @@ def install_control_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-control']
-            if detect_ostype() == 'ubuntu':
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower() and version != '16.04':
                 sudo('echo "manual" >> /etc/init/supervisor-control.override')
                 sudo('echo "manual" >> /etc/init/supervisor-dns.override')
                 apt_install(pkg)
@@ -484,7 +487,8 @@ def install_collector_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-analytics', 'contrail-docs']
-            if detect_ostype() == 'ubuntu':
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower() and version != '16.04':
                 sudo('echo "manual" >> /etc/init/supervisor-analytics.override')
                 apt_install(pkg)
             else:
@@ -505,7 +509,8 @@ def install_webui_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-webui']
-            if detect_ostype() == 'ubuntu':
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower() and version != '16.04':
                 sudo('echo "manual" >> /etc/init/supervisor-webui.override')
                 apt_install(pkg)
             else:
@@ -566,10 +571,10 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
     """
     for host_string in args:
         with  settings(host_string=host_string):
-            ostype = detect_ostype()
             pkgs = get_compute_pkgs(manage_nova_compute)
 
-            if ostype == 'ubuntu':
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower() and version != '16.04':
                 sudo('echo "manual" >> /etc/init/supervisor-vrouter.override')
                 apt_install(pkgs)
             else:
