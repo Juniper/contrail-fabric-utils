@@ -560,6 +560,9 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     collector_host = get_control_host_string(host_string)
     ncollectors = len(env.roledefs['collector'])
     redis_master_host = get_control_host_string(env.roledefs['collector'][0])
+    collector_ip_list = [hstr_to_ip(get_control_host_string(entry)) \
+                          for entry in env.roledefs['collector']]
+
     if collector_host == redis_master_host:
         is_redis_master = True
     else:
@@ -579,6 +582,7 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     # Frame the command line to provision collector
     cmd += " --cassandra_ip_list %s" % (' '.join(cassandra_ip_list))
     cmd += " --zookeeper_ip_list %s" % (' '.join(zookeeper_ip_list))
+    cmd += " --collector_ip_list %s" % (' '.join(collector_ip_list))
     cmd += " --amqp_ip_list %s" % ' '.join(get_amqp_servers())
     cmd += " --amqp_port %s" % get_amqp_port()
     cmd += " --cfgm_ip %s" % cfgm_ip
