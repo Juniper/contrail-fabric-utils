@@ -34,6 +34,7 @@ env.roledefs = {
     #'olddatabase':[host2] old database for ISSU
     #'oldcollector':[host2] old collector for ISSU
     #'oldwebui':[host2] old webui for ISSU
+    #'oldbuild':[host2] old build for ISSU
     # 'rally': [host1], # Optional, to enable/setup rally, it can be a seprate node from contrail cluster
     # 'vgw': [host1], # Optional, Only to enable VGW. Only compute can support vgw
     # 'tsn': [host1], # Optional, Only to enable TSN. Only compute can support TSN
