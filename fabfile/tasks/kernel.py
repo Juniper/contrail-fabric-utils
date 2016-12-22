@@ -23,7 +23,7 @@ def set_grub_default_node(*args, **kwargs):
 
 @task
 @roles('all')
-def set_grub_default(value='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-85-generic'):
+def set_grub_default(value='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-100-generic'):
     '''Set default kernel version to bootup for all nodes'''
     execute('set_grub_default_node', env.host_string, value=value)
 
@@ -41,8 +41,8 @@ def upgrade_kernel_all(*tgzs, **kwargs):
             (package, os_type) = ('linux-image-3.13.0-34-generic', 'ubuntu')
             default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-34-generic'
         elif version == '14.04':
-            (package, os_type) = ('linux-image-3.13.0-85-generic', 'ubuntu')
-            default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-85-generic'
+            (package, os_type) = ('linux-image-3.13.0-100-generic', 'ubuntu')
+            default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-100-generic'
         elif 'centos linux' in dist.lower() and version.startswith('7'):
             (package, os_type) = ('kernel-3.10.0-327.10.1.el7.x86_64', 'centoslinux')
         elif 'red hat' in dist.lower() and version.startswith('7'):
@@ -123,13 +123,13 @@ def upgrade_kernel_node(*args):
                 default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-34-generic'
                 execute('set_grub_default_node', host_string, value=default_grub)
             elif version == '14.04':
-                print "Installing 3.13.0-85 kernel headers"
-                apt_install(["linux-headers-3.13.0-85",
-                             "linux-headers-3.13.0-85-generic"])
-                print "Upgrading the kernel to 3.13.0-85"
-                apt_install(["linux-image-3.13.0-85-generic",
-                             "linux-image-extra-3.13.0-85-generic"])
-                default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-85-generic'
+                print "Installing 3.13.0-100 kernel headers"
+                apt_install(["linux-headers-3.13.0-100",
+                             "linux-headers-3.13.0-100-generic"])
+                print "Upgrading the kernel to 3.13.0-100"
+                apt_install(["linux-image-3.13.0-100-generic",
+                             "linux-image-extra-3.13.0-100-generic"])
+                default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-100-generic'
                 execute('set_grub_default_node', host_string, value=default_grub)
             elif 'red hat' in dist.lower() and version.startswith('7'):
                 print "Upgrading RHEL kernel to version 3.10.0-327.10.1"
@@ -162,5 +162,5 @@ def migrate_compute_kernel_node(*args):
             out = sudo('service supervisor-vrouter status')
             if 'stop' not in out:
                 sudo('service supervisor-vrouter stop')
-            sudo('apt-get -o Dpkg::Options::="--force-overwrite" -y install contrail-vrouter-3.13.0-85-generic')
+            sudo('apt-get -o Dpkg::Options::="--force-overwrite" -y install contrail-vrouter-3.13.0-100-generic')
             upgrade_kernel_node(host_string)
