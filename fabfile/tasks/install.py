@@ -590,16 +590,14 @@ def create_install_repo(*tgzs, **kwargs):
 @roles('build')
 def create_install_repo_without_openstack(*tgzs, **kwargs):
     """Creates contrail install repo in all nodes excluding openstack node."""
-    if len(tgzs) == 0:
-        cmd = 'create_install_repo_node'
-    else:
-        cmd = 'create_install_repo_from_tgz_node'
-
     for host_string in env.roledefs['all']:
         if host_string in env.roledefs['openstack']:
             continue
         with settings(host_string=host_string):
-            execute(cmd, host_string, *tgzs, **kwargs)
+            if len(tgzs) == 0:
+                execute('create_install_repo_node', host_string)
+            else:
+                execute('create_install_repo_from_tgz_node', host_string, *tgzs, **kwargs)
 
 @task
 def create_install_repo_from_tgz_node(host_string, *tgzs, **kwargs):
@@ -736,7 +734,8 @@ def reboot_on_kernel_update_without_openstack(reboot='True'):
     all_nodes = env.roledefs['all']
     # remove openstack node
     for nodename in env.roledefs['openstack']:
-        all_nodes.remove(nodename)
+        if nodename in all_nodes:
+            all_nodes.remove(nodename)
 
     # moving current node to last to reboot current node at last
     if env.roledefs['build'] in all_nodes:
@@ -888,12 +887,15 @@ def install_without_openstack(*tgzs, **kwargs):
        kwargs:
            manage_nova_compute: no/yes; no - User has to install nova-compute in compute nodes
                                 Default: yes
+           install_vrouter: no/yes; no - Vrouter and its dependent packages will be skipped in compute nodes
+                                Default: yes
            reboot: True/False; True - To reboot nodes if interface rename is applied and on kernel upgrade
                                Default: True
            extra_repo: yes/no; yes - Extract repos recursively from given TGZs.
                                Default: no
     """
     manage_nova_compute = kwargs.get('manage_nova_compute', 'yes')
+    install_vrouter = kwargs.get('install_vrouter', 'yes')
     reboot = kwargs.get('reboot', 'True')
     execute('create_installer_repo')
     execute(create_install_repo_without_openstack, *tgzs, **kwargs)
@@ -903,7 +905,8 @@ def install_without_openstack(*tgzs, **kwargs):
     execute(install_control)
     execute(install_collector)
     execute(install_webui)
-    execute('install_vrouter', manage_nova_compute)
+    if install_vrouter == 'yes':
+        execute('install_vrouter', manage_nova_compute)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
