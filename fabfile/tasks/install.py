@@ -895,6 +895,7 @@ def install_contrail(*tgzs, **kwargs):
     execute('create_installer_repo')
     execute(create_install_repo, *tgzs, **kwargs)
     execute(create_install_repo_dpdk)
+    execute(create_install_repo_ns_agilio_vrouter)
     execute(install_database)
     execute('install_orchestrator')
     execute(install_cfgm)
@@ -1104,3 +1105,29 @@ def update_js_config(role, file_path, service):
             sudo(cmd2)
             sudo(cmd3)
 # end update_js_config
+
+############################## NS_AGILIO_VROUTER ###################################
+@task
+def create_install_repo_ns_agilio_vrouter_node(*args):
+    """Creates contrail install ns agilio vrouter repo in one or list of nodes.
+    USAGE:fab create_install_ns_agilio_vrouter_node:user@1.1.1.1,user@2.2.2.2
+    """
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            sudo("apt-get install ns-agilio-vrouter-depends-packages")
+
+            # Setup repo. Script handles automatically case when repo is
+            # already in /etc/apt/sources.list
+            sudo("/opt/contrail/contrail_packages_ns_agilio_vrouter/setup.sh")
+
+@task
+@roles('compute')
+def create_install_repo_ns_agilio_vrouter():
+    """Creates contrail install ns_agilio_vrouter repo on compute nodes
+    configured with ns agilio vrouter mode.
+    """
+    ns_agilio_vrouter_dict = getattr(env, 'ns_agilio_vrouter', None)
+    if ns_agilio_vrouter_dict:
+        if env.host_string in ns_agilio_vrouter_dict:
+            create_install_repo_ns_agilio_vrouter_node(env.host_string)
+

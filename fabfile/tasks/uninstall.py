@@ -12,6 +12,7 @@ from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_compute_pkgs, get_ceilometer_plugin_pkgs, get_config_pkgs,\
      get_openstack_ceilometer_pkgs
 from fabfile.tasks.helpers import *
+from fabfile.utils.ns_agilio_vrouter import *
 
 def get_pkg_list():
     output = sudo('yum list installed | grep @contrail_install_repo | cut -d" " -f1')
@@ -320,6 +321,19 @@ def uninstall_only_vrouter_node(manage_nova_compute='yes', *args):
                 manage_nova_compute = 'yes'
             pkgs = get_compute_pkgs(manage_nova_compute)
             if ostype == 'ubuntu':
+                ns_agilio_vrouter_dict = getattr(env, 'ns_agilio_vrouter', None)
+                bond_dict = getattr(testbed, 'bond', None)
+                control_data_dict = getattr(testbed, 'control_data', None)
+
+                if env.roledefs['compute']:
+                    if env.host_string in env.roledefs['compute']:
+                        ns_agilio_vrouter_prov = \
+                            ProvisionNsAgilioVrouter(env.host_string, \
+                                                     ns_agilio_vrouter_dict, \
+                                                     bond_dict, \
+                                                     control_data_dict)
+                        ns_agilio_vrouter_prov.teardown()
+
                 if is_ceilometer_compute_install_supported():
                     pkgs.append('ceilometer-agent-compute')
                 apt_uninstall(pkgs)

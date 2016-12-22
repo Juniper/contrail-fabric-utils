@@ -36,7 +36,7 @@ from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
         setup_apiserver_ssl_certs_node, copy_keystone_ssl_certs_to_node,
         copy_apiserver_ssl_certs_to_node, copy_vnc_api_lib_ini_to_node,
         copy_certs_for_neutron_node, copy_certs_for_heat)
-
+from fabfile.utils.ns_agilio_vrouter import *
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
 
@@ -1670,6 +1670,33 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
             with cd(INSTALLER_DIR):
                 print cmd
                 sudo(cmd)
+
+        ns_agilio_vrouter_dict = getattr(env, 'ns_agilio_vrouter', None)
+        bond_dict = getattr(testbed, 'bond', None)
+        control_data_dict = getattr(testbed, 'control_data', None)
+
+        # Execute ns_agilio_vrouter offload provisioning
+        if ns_agilio_vrouter_dict:
+            if detect_ostype() == 'ubuntu':
+                if env.roledefs['compute']:
+                    if env.host_string in env.roledefs['compute']:
+                        # env.host_string going into provisioning will always be a compute node
+                        # ns_agilio_vrouter will always be defined at this point
+                        # provisioning requires control_data to be defined
+                        # provisioning will use bond dictionary if defined
+                        ns_agilio_vrouter_prov = \
+                            ProvisionNsAgilioVrouter(env.host_string, \
+                                                     ns_agilio_vrouter_dict, \
+                                                     bond_dict, \
+                                                     control_data_dict)
+                        ns_agilio_vrouter_prov.setup()
+                else:
+                    fabric.utils.abort("Compute node role not defined")
+
+            else:
+                fabric.utils.abort("OS Type: %s is not currently \
+                                    supported by NS Agilio vRouter \
+                                    acceleration" % detect_ostype())
 #end setup_vrouter
 
 @task
