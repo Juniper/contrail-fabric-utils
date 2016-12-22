@@ -27,6 +27,9 @@ def get_control_host_string(mgmt_host):
 def get_manage_neutron():
     return get_from_testbed_dict('keystone','manage_neutron', 'yes')
 
+def get_provision_neutron_server():
+    return get_from_testbed_dict('cfgm','provision_neutron_server', 'yes')
+
 def get_neutron_password():
     admin_passwd = get_authserver_admin_password()
     return get_from_testbed_dict('keystone','neutron_password', admin_passwd)
@@ -143,7 +146,9 @@ def get_authserver_ip(ignore_vip=False, openstack_node=None):
     if openstack_node:
         openstack_host = get_control_host_string(openstack_node)
     else:
-        openstack_host = get_control_host_string(testbed.env.roledefs['openstack'][0])
+        if 'openstack' in testbed.env.roledefs and len(testbed.env.roledefs['openstack']) > 0:
+            openstack_host = get_control_host_string(testbed.env.roledefs['openstack'][0])
+            openstack_ip = hstr_to_ip(openstack_host)
     openstack_ip = hstr_to_ip(openstack_host)
     keystone_ip1 = getattr(testbed, 'keystone_ip', None)
     keystone_ip = get_from_testbed_dict('keystone', 'keystone_ip', keystone_ip1)
@@ -265,6 +270,9 @@ def get_openstack_internal_virtual_router_id():
 def get_openstack_external_virtual_router_id():
     return get_from_testbed_dict('ha', 'external_virtual_router_id', get_openstack_internal_virtual_router_id())
 
+def get_provision_openstack_ha():
+    return get_from_testbed_dict('ha', 'provision_openstack_ha', None)
+
 def get_contrail_internal_vip():
     vip = get_from_testbed_dict('ha', 'internal_vip', None)
     return get_from_testbed_dict('ha', 'contrail_internal_vip', vip)
@@ -311,6 +319,10 @@ def get_amqp_servers():
                        [hstr_to_ip(get_control_host_string(amqp_host))
                         for amqp_host in env.roledefs['cfgm']])
     return amqp_ip_list
+
+def get_amqp_password():
+    """Returns amqp - rabbitmq password"""
+    return get_from_testbed_dict('cfgm', 'amqp_password', '')
 
 def get_amqp_port():
     return get_from_testbed_dict('cfgm', 'amqp_port', '5672')

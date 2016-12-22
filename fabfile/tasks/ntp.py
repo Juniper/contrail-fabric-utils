@@ -16,7 +16,7 @@ def restart_ntp_node(*args):
     if ostype in ['ubuntu']:
         ntp_restart_cmd = "service ntp restart"
     else:
-        ntp_restart_cmd = "service ntpd restart"
+        ntp_restart_cmd = "systemctl enable ntpd && service ntpd restart"
     for host_string in args:
         with settings(host_string=host_string):
             sudo(ntp_restart_cmd, warn_only=True)
