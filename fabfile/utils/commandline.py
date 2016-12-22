@@ -182,6 +182,9 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cmd += " --service_token %s" % get_service_token()
     cmd += " --amqp_ip_list %s" % ' '.join(get_amqp_servers())
     cmd += " --amqp_port %s" % get_amqp_port()
+    amqp_password = get_amqp_password()
+    if amqp_password:
+        cmd += " --amqp_password %s" % amqp_password
     if apiserver_ssl_enabled():
         cmd += " --apiserver_insecure %s" % get_apiserver_insecure_flag()
         cmd += " --apiserver_certfile %s" % get_apiserver_certfile()
@@ -223,6 +226,11 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
         if manage_neutron == 'no':
             # Skip creating neutron service tenant/user/role etc in keystone.
             cmd += ' --manage_neutron %s' % manage_neutron
+        provision_neutron_server = get_provision_neutron_server()
+        if provision_neutron_server == 'no':
+            # Skip configuring/running neutron service in cfgm node
+            cmd += ' --provision_neutron_server %s' % provision_neutron_server
+
     else:
         cmd += ' --manage_neutron no'
     internal_vip = get_openstack_internal_vip()
@@ -336,14 +344,15 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
         cmd += " --contrail_internal_vip %s" % contrail_internal_vip
 
     if orch == 'openstack':
-        openstack_host = get_control_host_string(env.roledefs['openstack'][0])
-        openstack_ip = hstr_to_ip(openstack_host)
+        if 'openstack' in env.roledefs and len(env.roledefs['openstack']) > 0:
+            openstack_host = get_control_host_string(env.roledefs['openstack'][0])
+            openstack_ip = hstr_to_ip(openstack_host)
+            cmd += " --openstack_ip %s" % openstack_ip
         authserver_ip = get_authserver_ip()
         ks_admin_user, ks_admin_password = get_authserver_credentials()
         cmd += " --keystone_ip %s" % authserver_ip
         cmd += " --keystone_auth_protocol %s" % get_authserver_protocol()
         cmd += " --keystone_version %s" % get_keystone_version()
-        cmd += " --openstack_ip %s" % openstack_ip
         cmd += " --admin_user %s" % ks_admin_user
         cmd += " --admin_password %s" % ks_admin_password
         cmd += " --admin_tenant_name %s" % get_admin_tenant_name()

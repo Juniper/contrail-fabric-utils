@@ -1118,6 +1118,15 @@ def join_ha_cluster(new_ctrl_host):
  
 @task
 @roles('build')
+def setup_ha_without_openstack():
+    execute('pre_check')
+    if get_contrail_internal_vip():
+        print "Contrail HA setup, provisioning contrail HA."
+        execute('setup_contrail_keepalived')
+        execute('fixup_restart_haproxy_in_collector')
+
+@task
+@roles('build')
 def setup_ha():
     execute('pre_check')
 

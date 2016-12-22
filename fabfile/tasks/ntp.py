@@ -16,7 +16,7 @@ def restart_ntp_node():
     if ostype in ['ubuntu']:
         sudo("service ntp restart", warn_only=True)
     else:
-        sudo("service ntpd restart", warn_only=True)
+        sudo("systemctl enable ntpd && service ntpd restart", warn_only=True)
 
 @task
 @roles('all')

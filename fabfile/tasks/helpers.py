@@ -1364,6 +1364,8 @@ def pre_check():
         get_openstack_internal_vip() == get_contrail_internal_vip()):
         print "\nERROR: \n\tOpenstack and cfgm nodes are different, Need to specify  contrail_internal_vip testbed.py."
         exit(1)
+    elif len(env.roledefs['openstack']) == 0:
+        print "\nINOF: \n\tNo Openstack nodes in env.roledefs. Assuming using external Openstack"
     else:
         print "\nINFO: \n\tOpenstack and cfgm nodes are same, No need for contrail_internal_vip to be specified in testbed.py."
     #  Check the cfgm/database nodes
