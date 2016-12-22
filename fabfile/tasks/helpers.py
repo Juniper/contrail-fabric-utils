@@ -598,9 +598,9 @@ def add_basic_images(image=None):
                ("analyzer/analyzer-vm-console.qcow2", "analyzer", []),
                ("converts/ubuntu-dns-server.vmdk", "ubuntu-dns-server", []),
                ("converts/ubuntu-dhcpdns-server.vmdk", "ubuntu-dhcpdns-server", []),
-               ("tinycore/tinycore-in-network-nat.qcow2", "tiny-nat-fw", []),
-               ("tinycore/tinycore-in-network.qcow2", "tiny-in-net", []),
-               ("tinycore/tinycore-net-transparent-fw.qcow2", "tiny-trans-fw", []),
+               ("tinycore/tinycore-in-network-nat.qcow2", "tiny_nat_fw", []),
+               ("tinycore/tinycore-in-network.qcow2", "tiny_in_net", []),
+               ("tinycore/tinycore-net-transparent-fw.qcow2", "tiny_trans_fw", []),
 
                ]
 
