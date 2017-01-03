@@ -1,7 +1,7 @@
 from time import sleep
 
 from fabfile.config import *
-from fabfile.utils.fabos import detect_ostype, get_openstack_services
+from fabfile.utils.fabos import detect_ostype, get_openstack_services, is_xenial_or_above 
 from fabfile.utils.cluster import get_orchestrator
 from fabfile.utils.host import (keystone_ssl_enabled,
         get_keystone_insecure_flag, manage_config_db)
@@ -13,7 +13,7 @@ class OpenStackSetupError(Exception):
 def verify_service(service, initd_service=False):
     for x in xrange(10):
         with settings(warn_only=True):
-            output = sudo("service %s status" % service)
+            output = sudo("service %s status | head -10" % service)
         if initd_service:
             if output.succeeded or re.search('Active:.*active', output):
                 return
@@ -29,26 +29,32 @@ def verify_service(service, initd_service=False):
 @task
 @roles('database')
 def verify_database():
-    verify_service("supervisor-database")
-    verify_service("contrail-database", initd_service=True)
+    if not is_xenial_or_above():
+        verify_service("supervisor-database")
+        verify_service("contrail-database", initd_service=False)
 
 @task
 @roles('webui')
 def verify_webui():
-    verify_service("supervisor-webui")
+    if not is_xenial_or_above():
+        verify_service("supervisor-webui")
     #verify_service("contrail-webui-middleware")
 
 @task
 @roles('openstack')
 def verify_openstack():
     openstack_services = get_openstack_services()
-    verify_service(openstack_services["keystone"])
+    if not is_xenial_or_above():
+        verify_service(openstack_services["keystone"])
     insecure_flag = ''
     if keystone_ssl_enabled() and get_keystone_insecure_flag():
         insecure_flag = '--insecure'
     for x in xrange(10):
         with settings(warn_only=True):
-            output = sudo("source /etc/contrail/openstackrc; keystone %s tenant-list" % insecure_flag)
+            if is_xenial_or_above():
+                 output = sudo("source /etc/contrail/openstackrc; openstack %s project list" % insecure_flag)
+            else:
+                 output = sudo("source /etc/contrail/openstackrc; keystone %s tenant-list" % insecure_flag)
         if output.failed:
             sleep(10)
         else:
@@ -61,7 +67,8 @@ def verify_cfgm():
     verify_service("zookeeper")
     if manage_config_db():
         verify_service("contrail-database", initd_service=True)
-    verify_service("supervisor-config")
+    if not is_xenial_or_above():
+        verify_service("supervisor-config")
     verify_service("contrail-api")
     verify_service("contrail-discovery")
     verify_service("contrail-schema")
@@ -71,7 +78,8 @@ def verify_cfgm():
 @task
 @roles('control')
 def verify_control():
-    verify_service("supervisor-control")
+    if not is_xenial_or_above():
+        verify_service("supervisor-control")
     verify_service("contrail-control")
     #verify_service("supervisor-dns")
     #verify_service("contrail-dns")
@@ -80,15 +88,18 @@ def verify_control():
 @task
 @roles('collector')
 def verify_collector():
-    verify_service("supervisor-analytics")
-    verify_service("contrail-collector")
+    if not is_xenial_or_above():
+        verify_service("supervisor-analytics")
+        #To-do: to be verified once contrail-collector works on Ubuntu16.04
+        verify_service("contrail-collector")
     verify_service("contrail-analytics-api")
     verify_service("contrail-query-engine")
 
 @task
 @roles('compute')
 def verify_compute():
-    verify_service("supervisor-vrouter")
+    if not is_xenial_or_above():
+        verify_service("supervisor-vrouter")
     #verify_service("contrail-vrouter")
 
 
