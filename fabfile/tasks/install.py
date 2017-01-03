@@ -31,6 +31,36 @@ SERVICE_NAMES = {
 @task
 @parallel(pool_size=20)
 @roles('all')
+def disable_sysv_auto_generation():
+    _SYSTEMCTL_SKIP_REDIRECT=1
+    'export _SYSTEMCTL_SKIP_REDIRECT'
+
+@task
+@parallel(pool_size=20)
+@roles('all')
+def install_xenial_prerequisites():
+    contrail_systemd_services = run("ls -l /etc/systemd/system | grep .service | grep contrail | awk '{print $9}'")
+    services_list = contrail_systemd_services.split('\r\n')
+
+    nova_systemd_services = run("ls -l /etc/systemd/system | grep .service | grep nova | awk '{print $9}'")
+    nova_services_list =  nova_systemd_services.split('\r\n')
+    for svc in nova_services_list:
+         services_list.append(svc)
+
+    other_services = ['cassandra.service', 'ifmap.service', 'zookeeper.service']
+    for svc in other_services:
+         services_list.append(svc)
+
+    run("systemctl daemon-reload")
+    for svc in services_list:
+         svc_file = "/etc/systemd/system/%s" % svc
+         if os.path.exists(svc_file):
+             run("systemctl enable %s" % svc_file)
+             run("systemctl start %s" % svc.split('.')[0])
+
+@task
+@parallel(pool_size=20)
+@roles('all')
 def install_rpm_all(rpm):
     """Installs any rpm in all nodes."""
     execute('install_pkg_node', rpm, env.host_string)
@@ -286,7 +316,8 @@ def install_database_node(install_mongodb, *args):
                 pkgs_ceilometer_database = ['mongodb-clients', 'mongodb-server']
                 pkg.extend(pkgs_ceilometer_database)
             if detect_ostype() == 'ubuntu':
-                sudo('echo "manual" >> /etc/init/supervisor-database.override')
+                if not is_xenial_or_above():
+                    sudo('echo "manual" >> /etc/init/supervisor-database.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -438,7 +469,8 @@ def install_cfgm_node(*args):
             pkg = get_config_pkgs()
 
             if detect_ostype() == 'ubuntu':
-                sudo('echo "manual" >> /etc/init/supervisor-config.override')
+                if not is_xenial_or_above():
+                    sudo('echo "manual" >> /etc/init/supervisor-config.override')
                 sudo('echo "manual" >> /etc/init/neutron-server.override')
                 apt_install(pkg)
             else:
@@ -463,8 +495,9 @@ def install_control_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-control']
             if detect_ostype() == 'ubuntu':
-                sudo('echo "manual" >> /etc/init/supervisor-control.override')
-                sudo('echo "manual" >> /etc/init/supervisor-dns.override')
+                if not is_xenial_or_above():
+                    sudo('echo "manual" >> /etc/init/supervisor-control.override')
+                    sudo('echo "manual" >> /etc/init/supervisor-dns.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -485,7 +518,8 @@ def install_collector_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-analytics', 'contrail-docs']
             if detect_ostype() == 'ubuntu':
-                sudo('echo "manual" >> /etc/init/supervisor-analytics.override')
+                if not is_xenial_or_above():
+                    sudo('echo "manual" >> /etc/init/supervisor-analytics.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -506,7 +540,8 @@ def install_webui_node(*args):
         with settings(host_string=host_string):
             pkg = ['contrail-openstack-webui']
             if detect_ostype() == 'ubuntu':
-                sudo('echo "manual" >> /etc/init/supervisor-webui.override')
+                if not is_xenial_or_above():
+                    sudo('echo "manual" >> /etc/init/supervisor-webui.override')
                 apt_install(pkg)
             else:
                 yum_install(pkg)
@@ -566,11 +601,11 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
     """
     for host_string in args:
         with  settings(host_string=host_string):
-            ostype = detect_ostype()
             pkgs = get_compute_pkgs(manage_nova_compute)
 
-            if ostype == 'ubuntu':
-                sudo('echo "manual" >> /etc/init/supervisor-vrouter.override')
+            if detect_ostype() == 'ubuntu':
+                if not is_xenial_or_above():
+                    sudo('echo "manual" >> /etc/init/supervisor-vrouter.override')
                 apt_install(pkgs)
             else:
                 yum_install(pkgs)
@@ -892,6 +927,9 @@ def install_contrail(*tgzs, **kwargs):
     """
     reboot = kwargs.get('reboot', 'True')
     execute('pre_check')
+    if detect_ostype() == 'ubuntu':
+        if is_xenial_or_above():
+            execute('disable_sysv_auto_generation')
     execute('create_installer_repo')
     execute(create_install_repo, *tgzs, **kwargs)
     execute(create_install_repo_dpdk)
@@ -909,6 +947,9 @@ def install_contrail(*tgzs, **kwargs):
         execute(install_interface_name, reboot)
         #Clear the connections cache
         connections.clear()
+    if detect_ostype() == 'ubuntu':
+        if is_xenial_or_above():
+            execute(install_xenial_prerequisites)
     execute('reboot_on_kernel_update', reboot)
 
 @roles('build')
