@@ -3,6 +3,7 @@ import ast
 import tempfile
 
 from fabfile.config import *
+from distutils.version import LooseVersion
 
 def copy_pkg(tgt_host, pkg_file):
     with settings(host_string = tgt_host):
@@ -33,6 +34,22 @@ def detect_ostype():
     return dist.lower()
 #end detect_ostype
 
+def detect_osversion():
+    (dist, version, extra) = get_linux_distro()
+
+    return version 
+#end detect_osversion
+
+def is_xenial_or_above():
+    is_xenial_or_above = False
+
+    if detect_ostype() == 'ubuntu':
+        version = detect_osversion()  
+        if LooseVersion(version) >= LooseVersion('16.04'):
+            is_xenial_or_above = True
+
+    return is_xenial_or_above
+
 def get_openstack_sku(use_install_repo=False):
     dist = detect_ostype()
     if dist in ['ubuntu']:
@@ -57,6 +74,8 @@ def get_openstack_sku(use_install_repo=False):
         openstack_sku = 'liberty'
     elif pkg_ver.find('13.0') != -1:
         openstack_sku = 'mitaka'
+    elif pkg_ver.find('14.0') != -1:
+        openstack_sku = 'newton'
     else:
         print "OpenStack distribution unknown.. assuming icehouse.."
         openstack_sku = 'icehouse'
@@ -212,8 +231,20 @@ def get_openstack_services():
     openstack_services_systemd = {}
     openstack_services_sysv = {}
     services = ['cinder-api', 'cinder-scheduler', 'glance-api', 'glance-registry',
-                'heat-api', 'heat-engine', 'heat-api-cfn', 'keystone', 'nova-api',
+                'heat-api', 'heat-engine', 'heat-api-cfn', 'keystone', 'nova-api', 
                 'nova-conductor', 'nova-consoleauth', 'nova-novncproxy', 'nova-scheduler']
+
+    with settings(warn_only=True):
+        os_type = detect_ostype()
+        os_version = detect_osversion()
+
+    if is_xenial_or_above():
+         openstack_services_systemd['services'] = ['%s' % svc for svc in services]
+         openstack_services_systemd['initsystem'] = 'systemd'
+         openstack_services_systemd['rabbitmq-server'] = 'rabbitmq-server'
+         openstack_services_systemd.update([(svc, '%s' % svc) for svc in services])
+         return openstack_services_systemd
+
     openstack_services_systemd['services'] = ['openstack-%s' % svc for svc in services]
     openstack_services_systemd['initsystem'] = 'systemd'
     openstack_services_systemd['rabbitmq-server'] = 'rabbitmq-server'
@@ -223,8 +254,7 @@ def get_openstack_services():
     openstack_services_sysv['initsystem'] = 'sysv'
     openstack_services_sysv['rabbitmq-server'] = 'supervisor-support-service'
     openstack_services_sysv.update([(svc, svc) for svc in services])
-    with settings(warn_only=True):
-        os_type =  detect_ostype()
+
     if os_type in ['centoslinux', 'redhat']:
         return openstack_services_systemd
     else:
