@@ -113,8 +113,10 @@ def get_compute_pkgs(manage_nova_compute='yes'):
                'contrail-vrouter-common']
 	if get_orchestrator() is 'openstack':
             pkgs.append('contrail-nova-vif')
-        else:
+        elif get_orchestrator() is 'vcenter':
             pkgs.append('contrail-vmware-vrouter')
+        else:
+            pass
     # Append lbaas dependent packages if haproxy is enabled..
     if getattr(testbed, 'haproxy', False):
         pkgs.append('haproxy')

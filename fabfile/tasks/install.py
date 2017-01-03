@@ -543,11 +543,14 @@ def install_vcenter_compute_node(*args):
 @EXECUTE_TASK
 @roles('compute')
 def install_vrouter(manage_nova_compute='yes'):
+    orch = getattr(env, 'orchestrator', None);
     """Installs vrouter pkgs in all nodes defined in vrouter role."""
     if env.roledefs['compute']:
         # Nova compute need not required for TSN node
         if 'tsn' in env.roledefs.keys():
             if  env.host_string in env.roledefs['tsn']: manage_nova_compute='no'
+        if orch is 'none':
+            manage_nova_compute='no'
         if get_mode(env.host_string) is 'vcenter': 
             manage_nova_compute='no'
         execute("install_only_vrouter_node", manage_nova_compute, env.host_string)
