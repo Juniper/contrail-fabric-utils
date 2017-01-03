@@ -5,7 +5,7 @@ import time
 from fabfile.config import *
 from fabfile.templates import rabbitmq_config, rabbitmq_config_single_node,\
     rabbitmq_env_conf
-from fabfile.utils.fabos import detect_ostype, get_openstack_services
+from fabfile.utils.fabos import detect_ostype, get_openstack_services, is_xenial_or_above
 from fabfile.tasks.helpers import disable_iptables, ping_test
 from fabfile.utils.host import get_from_testbed_dict, get_control_host_string,\
     hstr_to_ip, get_openstack_internal_vip, get_contrail_internal_vip,\
@@ -253,7 +253,7 @@ def verify_cluster_status(retry='yes'):
     rabbitmq_up = False
     for i in range(0, 6):
         with settings(warn_only=True):
-            status = sudo("service rabbitmq-server status")
+            status = sudo("service rabbitmq-server status | head -10")
         if 'running' in status.lower():
             rabbitmq_up = True
             break
@@ -366,7 +366,8 @@ def join_rabbitmq_cluster(new_ctrl_host):
         if rabbitmq_cluster_uuid is None:
             raise RuntimeError("Not able to get the Erlang cookie from the cluster nodes")
 
-        execute(listen_at_supervisor_support_port_node, new_ctrl_host)
+        if not is_xenial_or_above():
+            execute(listen_at_supervisor_support_port_node, new_ctrl_host)
         execute(remove_mnesia_database_node, new_ctrl_host)
         execute(verify_rabbit_node_hostname)
         execute(allow_rabbitmq_port_node, new_ctrl_host)
@@ -420,7 +421,8 @@ def setup_rabbitmq_cluster(force=False):
         if not rabbitmq_cluster_uuid:
             rabbitmq_cluster_uuid = uuid.uuid4()
 
-        execute(listen_at_supervisor_support_port)
+        if not is_xenial_or_above():
+            execute(listen_at_supervisor_support_port)
         execute(remove_mnesia_database)
         execute(verify_rabbit_node_hostname)
         execute(allow_rabbitmq_port)
