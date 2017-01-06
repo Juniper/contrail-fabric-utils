@@ -62,7 +62,7 @@ def detach_vrouter_node(*args):
             if (nova_compute != ""):
                 sudo("service %s stop" % nova_compute)
             compute_hostname = sudo("hostname")
-        with settings(host_string=cfgm_host, pasword=cfgm_host_password):
+        with settings(host_string=env.roledefs['cfgm'][0], pasword=cfgm_host_password):
             sudo("python /opt/contrail/utils/provision_vrouter.py --host_name %s --host_ip %s --api_server_ip %s --oper del %s" %
                 (compute_hostname, host_string.split('@')[1], cfgm_ip, get_mt_opts()))
     execute("restart_control")
