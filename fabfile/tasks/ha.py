@@ -1055,6 +1055,7 @@ def join_ha_cluster(new_ctrl_host):
             execute('increase_limits_node', new_ctrl_host)
             execute('join_orchestrator', new_ctrl_host)
 
+    if get_contrail_internal_vip():
         if new_ctrl_host in env.roledefs['database']:
             execute('setup_database_node', new_ctrl_host)
             execute('fix_zookeeper_config')
