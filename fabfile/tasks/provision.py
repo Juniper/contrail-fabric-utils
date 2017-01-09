@@ -30,7 +30,8 @@ from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
         get_esxi_vms_and_hosts, get_mode, is_contrail_node,\
         create_esxi_vrouter_map_file, update_esxi_vrouter_map_file,\
-        get_qos_nodes, get_qos_niantic_nodes
+        get_qos_nodes, get_qos_niantic_nodes,\
+        get_vcenter_datacenters, get_vcenter_clusters, get_vcenter_dvswitches
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
         setup_apiserver_ssl_certs_node, copy_keystone_ssl_certs_to_node,
@@ -1333,11 +1334,15 @@ def setup_vcenter_compute_node(*args):
                    if not vcenter_info:
                        print 'Error: vcenter_servers block is not defined in testbed file.Exiting'
                        return
-                   for v in vcenter_info:
-                        if vcenter_info[v]['vcenter_compute'] == host_ip:
-                            vcenter_server = vcenter_info[v]
-                            vcenter_server_name = v
-                            break
+                   for v in vcenter_info.keys():
+                        vcenter_server = vcenter_info[v]
+                        datacenters = get_vcenter_datacenters(vcenter_server)
+                        for dc in datacenters:
+                             dc_info = vcenter_server['datacenters'][dc]
+                             vcenter_compute_nodes = get_vcenter_compute_nodes(dc_info)
+                             if host_ip in vcenter_compute_nodes:
+                                 vcenter_server_name = v
+                                 break
 
                    # create the static esxi:vrouter map file
                    create_esxi_vrouter_map_file(vcenter_server_name, vcenter_server, host_string)
@@ -3189,14 +3194,14 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
                  std_switch = True
                  power_on = False
              elif 'fabric_vswitch' in esxi_info[host].keys():
-                 esxi_info[host]['datacenter_mtu'] = vcenter_info['datacenter_mtu']
+                 esxi_info[host]['datacenter_mtu'] = get_vcenter_datacenter_mtu(vcenter_info)
                  std_switch = True
                  power_on = True
              elif 'dv_switch_fab' in vcenter_info.keys():
                  std_switch = False
                  power_on = False
              else:
-                 esxi_info[host]['datacenter_mtu'] = vcenter_info['datacenter_mtu']
+                 esxi_info[host]['datacenter_mtu'] = get_vcenter_datacenter_mtu(vcenter_info)
                  std_switch = True
                  power_on = True
          if (std_switch == True):
@@ -3236,8 +3241,6 @@ def prov_esxi(*args):
 
     for v in vcenter_info.keys():
         vcenter_server = vcenter_info[v]
-        if not 'datacenter_mtu' in vcenter_server.keys():
-            vcenter_server['datacenter_mtu'] = 1500
         esxi_hosts = []
         for host in esxi_host_list:
             if esxi_info[host]['vcenter_server'] is v:
@@ -3335,21 +3338,31 @@ def add_esxi_to_vcenter(*args):
            for v in vcenter_info.keys():
                if esxi_data['vcenter_server'] is v:
                   vcenter_server = vcenter_info[v]
-                  if not 'datacenter_mtu' in vcenter_server.keys():
-                      vcenter_server['datacenter_mtu'] = 1500
-                  vcenter_server_name = v
-                  if 'vcenter_compute' in env.roledefs:
-                      vcenter_compute = vcenter_server['vcenter_compute']
-                      host_string = vcenter_compute
-                  else:
-                      host_string = env.roledefs['cfgm'][0]
-                  with settings(host_string=host_string):
-                      (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list)
-                      provision_vcenter(vcenter_server, hosts, clusters, vms)
-                      update_esxi_vrouter_map_file(host)
-                      sudo("service contrail-vcenter-plugin restart")
-                      provision_vcenter_features(vcenter_server, esxi_info, host_list)
-                      break
+                  datacenters = get_vcenter_datacenters(vcenter_server)
+                  for dc in datacenters:
+                       if esxi_data['datacenter'] is dc:
+                           dc_info = vcenter_server['datacenters'][dc]
+                           dc_info['datacenter_mtu'] = get_vcenter_datacenter_mtu(dc_info)
+                           dc_name = dc
+                           dc_mtu = dc_info['datacenter_mtu']
+                           dv_switches = get_vcenter_dvswitches(dc_info)
+                           clusters = get_vcenter_clusters(dc_info)
+                           if 'vcenter_compute' in env.roledefs:
+                               dvs_list = dc_info['dv_switches']
+                               for dvs in dvs_list:
+                                   dvs_info = dvs_list[dvs] 
+                                   if esxi_data['cluster'] in dvs_info['clusters']:
+                                       vcenter_compute = dvs_info['vcenter_compute']
+                                       host_string = vcenter_compute
+                           else:
+                               host_string = env.roledefs['cfgm'][0]
+                           with settings(host_string=host_string):
+                                 (hosts, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list)
+                                 provision_vcenter(vcenter_server, dc_name, dc_mtu, dv_switches, clusters, hosts, vms)
+                                 update_esxi_vrouter_map_file(host)
+                                 sudo("service contrail-vcenter-plugin restart")
+                                 provision_vcenter_features(vcenter_server, esxi_info, host_list, dc, clusters)
+                                 break
 
 @roles('build')
 @task
@@ -3371,17 +3384,23 @@ def setup_vcenter():
 
     for v in vcenter_info.keys():
         vcenter_server = vcenter_info[v]
-        if not 'datacenter_mtu' in vcenter_server.keys():
-            vcenter_server['datacenter_mtu'] = 1500
-        esxi_hosts = []
-        for host in esxi_host_list:
-            if esxi_info[host]['vcenter_server'] is v:
-               esxi_hosts.append(host)
+        datacenters = get_vcenter_datacenters(vcenter_server)
+        for dc in datacenters:
+             dc_info = vcenter_server['datacenters'][dc]
+             dc_info['datacenter_mtu'] = get_vcenter_datacenter_mtu(dc_info)
+             dc_name = dc
+             dc_mtu = dc_info['datacenter_mtu']
+             dv_switches = get_vcenter_dvswitches(dc_info)
+             clusters = get_vcenter_clusters(dc_info)
 
-        host_list = esxi_hosts
-        (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list)
-        provision_vcenter(vcenter_server, hosts, clusters, vms)
-        provision_vcenter_features(vcenter_server, esxi_info, host_list)
+             esxi_hosts = []
+             for host in esxi_host_list:
+                  if esxi_info[host]['cluster'] in clusters:
+                      esxi_hosts.append(host)
+             host_list = esxi_hosts
+             (hosts, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list)
+             provision_vcenter(vcenter_server, dc_name, dc_mtu, dv_switches, clusters, hosts, vms)
+             provision_vcenter_features(vcenter_server, esxi_info, host_list, dc, clusters)
 
 @task
 @roles('build')
