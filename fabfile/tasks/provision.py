@@ -626,10 +626,11 @@ def setup_cfgm_node(*args):
     fixup_restart_haproxy_in_all_cfgm(nworkers)
 
     for host_string in args:
-        with  settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
-                with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-config.override')
+        with settings(host_string=host_string):
+            with settings(warn_only=True):
+                if detect_ostype() == 'ubuntu':
+                    if not is_xenial_or_above():
+                        sudo('rm /etc/init/supervisor-config.override')
                     sudo('rm /etc/init/neutron-server.override')
 
             # Frame the command line to provision config node
@@ -1364,8 +1365,9 @@ def setup_collector_node(*args):
             if apiserver_ssl_enabled():
                 execute("copy_apiserver_ssl_certs_to_node", host_string)
             if detect_ostype() == 'ubuntu':
-                with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-analytics.override')
+                if not is_xenial_or_above():
+                    with settings(warn_only=True):
+                        sudo('rm /etc/init/supervisor-analytics.override')
             with cd(INSTALLER_DIR):
                 print cmd
                 sudo(cmd)
@@ -1601,9 +1603,10 @@ def setup_database_node(*args):
         cmd = frame_vnc_database_cmd(host_string)
         # Execute the provision database script
         with settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
-                with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-database.override')
+            with settings(warn_only=True):
+                if detect_ostype() == 'ubuntu':
+                    if not is_xenial_or_above():
+                        sudo('rm /etc/init/supervisor-database.override')
             with cd(INSTALLER_DIR):
                 sudo(cmd)
 #end setup_database
@@ -1655,7 +1658,8 @@ def setup_webui_node(*args):
         with settings(host_string=host_string):
             with settings(warn_only=True):
                 if detect_ostype() == 'ubuntu':
-                    sudo('rm /etc/init/supervisor-webui.override')
+                    if not is_xenial_or_above():
+                        sudo('rm /etc/init/supervisor-webui.override')
             with cd(INSTALLER_DIR):
                 sudo(cmd)
 #end setup_webui
@@ -1687,11 +1691,12 @@ def setup_control_node(*args):
     for host_string in args:
         fixup_irond_config(host_string)
         cmd = frame_vnc_control_cmd(host_string)
-        with  settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
-                with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-control.override')
-                    sudo('rm /etc/init/supervisor-dns.override')
+        with settings(host_string=host_string):
+            with settings(warn_only=True):   
+                if detect_ostype() == 'ubuntu':
+                    if not is_xenial_or_above():
+                        sudo('rm /etc/init/supervisor-control.override')
+                        sudo('rm /etc/init/supervisor-dns.override')
             with cd(INSTALLER_DIR):
                 sudo(cmd)
                 if detect_ostype() in ['centos', 'redhat', 'fedora', 'centoslinux']:
@@ -1740,7 +1745,9 @@ def setup_agent_config_in_node(*args):
     if restart_service:
         for host_string in args:
             with settings(host_string=host_string):
-                out = sudo("service supervisor-vrouter restart")
+                if detect_ostype() == 'ubuntu':
+                    if not is_xenial_or_above():
+                        out = sudo("service supervisor-vrouter restart")
 
 # end setup_agent_config_in_node
 
@@ -1838,7 +1845,9 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
-                    sudo('rm /etc/init/supervisor-vrouter.override')
+                    if detect_ostype() == 'ubuntu':
+                        if not is_xenial_or_above():
+                            sudo('rm /etc/init/supervisor-vrouter.override')
                     # Fix /dev/vhost-net permissions. It is required for
                     # multiqueue operation
                     sudo('echo \'KERNEL=="vhost-net", GROUP="kvm", MODE="0660"\' > /etc/udev/rules.d/vhost-net.rules')
@@ -2256,7 +2265,13 @@ def add_tsn_node(restart=True,*args):
             nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
             sudo("openstack-config --set %s DEFAULT agent_mode tsn" % nova_conf_file)
             if restart:
-                sudo("service supervisor-vrouter restart")
+                if detect_ostype() == 'ubuntu':
+                    if not is_xenial_or_above():
+                        sudo("service contrail-vrouter-agent restart")
+                        sudo("service contrail-vrouter-nodemgr restart")
+                    else:
+                        sudo("service supervisor-vrouter restart")
+                        
 
 @hosts(get_toragent_nodes())
 @task
