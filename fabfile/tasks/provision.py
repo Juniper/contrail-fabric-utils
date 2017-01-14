@@ -127,6 +127,8 @@ listen contrail-config-stats :5937
 $__quantum_server_frontend__
     default_backend    quantum-server-backend
 
+$__contrail_api_frontend_ext__
+
 $__contrail_api_frontend__
     default_backend    contrail-api-backend
     timeout client 3m
@@ -168,6 +170,7 @@ $__rabbitmq_config__
     q_frontend = 'frontend  quantum-server *:9696'
     q_ssl_forwarding = ''
     api_listen_port = 9100
+    api_frontend_ext = ''
     api_frontend = 'frontend  contrail-api *:8082'
     api_ssl_forwarding = ''
     api_server_lines = ''
@@ -225,7 +228,16 @@ listen  rabbitmq 0.0.0.0:5673
         q_ssl_forwarding = """    option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }"""
-        api_frontend = """frontend  contrail-api
+        if get_contrail_external_vip():
+            api_frontend_ext = """frontend  contrail-api-external
+    bind %s:8082 ssl crt /etc/contrail/ssl/external/certs/contrailcertbundle.pem
+    default_backend    contrail-api-backend
+    timeout client 3m""" % get_contrail_external_vip()
+            api_frontend = """frontend  contrail-api
+    bind %s:8082 ssl crt /etc/contrail/ssl/certs/contrailcertbundle.pem""" % get_contrail_internal_vip()
+        else:
+            api_frontend_ext = ''
+            api_frontend = """frontend  contrail-api
     bind *:8082 ssl crt /etc/contrail/ssl/certs/contrailcertbundle.pem"""
         api_ssl_forwarding = """    option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
@@ -237,6 +249,7 @@ listen  rabbitmq 0.0.0.0:5673
             '__contrail_quantum_servers__': q_server_lines,
             '__quantum_server_frontend__': q_frontend,
             '__quantum_ssl_forwarding__': q_ssl_forwarding,
+            '__contrail_api_frontend_ext__': api_frontend_ext,
             '__contrail_api_frontend__': api_frontend,
             '__contrail_api_ssl_forwarding__': api_ssl_forwarding,
             '__contrail_api_backend_servers__': api_server_lines,
@@ -617,6 +630,10 @@ def setup_cfgm_node(*args):
         with  settings(host_string=host_string):
             if apiserver_ssl_enabled():
                 execute("setup_apiserver_ssl_certs_node", host_string)
+                if get_contrail_external_vip():
+                    execute("setup_apiserver_ssl_certs_node", host_string,
+                            cfgm_ip=get_contrail_external_vip(),
+                            vip='external')
             if keystone_ssl_enabled():
                 execute("copy_keystone_ssl_certs_to_node", host_string)
             if apiserver_ssl_enabled():
@@ -624,6 +641,7 @@ def setup_cfgm_node(*args):
             enable_haproxy()
     nworkers = 1
     fixup_restart_haproxy_in_all_cfgm(nworkers)
+    return
 
     for host_string in args:
         with  settings(host_string=host_string):
