@@ -460,6 +460,25 @@ def get_apiserver_cert_bundle():
     return '/etc/contrail/ssl/certs/contrailcertbundle.pem'
 
 
+def get_apiserver_ext_certfile():
+    default = '/etc/contrail/ssl/external/certs/contrail.pem'
+    return get_from_testbed_dict('cfgm','certfile', default)
+
+
+def get_apiserver_ext_keyfile():
+    default = '/etc/contrail/ssl/external/private/contrail.key'
+    return get_from_testbed_dict('cfgm','keyfile', default)
+
+
+def get_apiserver_ext_cafile():
+    default = '/etc/contrail/ssl/external/certs/contrail_ca.pem'
+    return get_from_testbed_dict('cfgm','cafile', default)
+
+
+def get_apiserver_ext_cert_bundle():
+    return '/etc/contrail/ssl/external/certs/contrailcertbundle.pem'
+
+
 def keystone_ssl_enabled():
     ssl = False
     auth_protocol = get_from_testbed_dict('keystone', 'auth_protocol', 'http')
