@@ -247,6 +247,9 @@ env.ostypes = {
 #live_migration = True
 #Fix uid/gid for nova/libvirt-qemu so the ids are same across all nodes.
 #nova_uid_fix = True
+#live_migration_scope = 'disabled'
+#live_migration_scope = 'enabled'
+#live_migration_scope = 'global'
 
 #Following are NFS based live migration configuration
 #Enable this for External NFS server based live migration
