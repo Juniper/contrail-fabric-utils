@@ -244,11 +244,11 @@ def setup_master_storage(mode):
 
 @task
 @EXECUTE_TASK
-@roles('storage-master')
+@roles('openstack')
 def setup_nfs_live_migration(mode):
     """Provisions nfs vm for live migration and live migration related configuration."""
     host_string = env.host_string
-    if host_string == env.roledefs['storage-master'][0]:
+    if host_string == env.roledefs['openstack'][0]:
         storage_host_entries=[]
         storage_pass_list=[]
         storage_host_list=[]
@@ -277,6 +277,7 @@ def setup_nfs_live_migration(mode):
         cfm = env.roledefs['cfgm'][0]
         cfm_ip = get_data_ip(cfm)[0]
 
+        live_migration_scope = get_live_migration_scope()
         # if mode is 'setup_lm', just setup openstack nova live-migration
         # configuration alone. Ignore all NFS live-migration settings from
         # testbed.py.
@@ -285,6 +286,11 @@ def setup_nfs_live_migration(mode):
             no_nfs = 1
         else:
             no_nfs = 0
+            if mode == 'setup_global':
+                live_migration_scope = 'enabled'
+            else:
+                if live_migration_scope == 'global' and mode == 'setup':
+                    mode = 'setup_global'
 
         for entry in env.roledefs['openstack']:
             for sthostname, sthostentry in zip(get_all_hostnames(),
@@ -321,8 +327,8 @@ def setup_nfs_live_migration(mode):
                 # nfs-live-migration - NFS Livemigration configuration (Image path, subnet, host)
                 # storage-os-hosts - storage openstack hosts (except storage-master)
                 # storage-os-host-tokens - storage openstack hosts passwd list
-                cmd= "PASSWORD=%s setup-vnc-livemigration --storage-setup-mode %s --storage-master %s --storage-master-token %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s --nfs-live-migration %s  --storage-os-hosts %s --storage-os-host-tokens %s --fix-nova-uid %s" \
-                    %(storage_master_password, mode, storage_master_ip, storage_master_password, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), get_nfs_live_migration_opts(no_nfs), ' '.join(storage_os_host_list), ' '.join(storage_os_pass_list), get_nova_uid_fix_opt())
+                cmd= "PASSWORD=%s setup-vnc-livemigration --storage-setup-mode %s --storage-master %s --storage-master-token %s --storage-hostnames %s --storage-hosts %s --storage-host-tokens %s --storage-disk-config %s --storage-directory-config %s --live-migration %s --nfs-live-migration %s  --storage-os-hosts %s --storage-os-host-tokens %s --fix-nova-uid %s --live-migration-scope %s" \
+                    %(storage_master_password, mode, storage_master_ip, storage_master_password, ' '.join(storage_hostnames), ' '.join(storage_host_list), ' '.join(storage_pass_list), ' '.join(get_storage_disk_config()), ' '.join(get_storage_directory_config()), get_live_migration_opts(), get_nfs_live_migration_opts(no_nfs), ' '.join(storage_os_host_list), ' '.join(storage_os_pass_list), get_nova_uid_fix_opt(), live_migration_scope)
                 print cmd
                 sudo(cmd)
 #end setup_nfs_live_migration_services
