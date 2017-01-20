@@ -2,7 +2,7 @@ import tempfile
 
 from fabfile.config import *
 from fabfile.templates import openstack_haproxy, collector_haproxy
-from fabfile.tasks.helpers import enable_haproxy
+from fabfile.tasks.helpers import enable_haproxy, ping_test
 from fabfile.tasks.rabbitmq import purge_node_from_rabbitmq_cluster
 from fabfile.utils.fabos import (
         detect_ostype, get_as_sudo, is_package_installed,
@@ -884,12 +884,16 @@ def purge_node_from_keepalived_cluster(del_ctrl_ip, role_to_purge):
             sudo('mv /etc/keepalived/keepalived.conf /etc/keepalived/keepalived.conf.removed')
             sudo("chkconfig keepalived off")
         elif role_to_purge == 'openstack' and\
+             get_contrail_internal_vip() != None and\
              get_contrail_internal_vip() != get_openstack_internal_vip():
-            # Case where there are two VIPs for OS and Contrail and one of them
-            # should be active.
+            # Case where there are two VIPs for OS and Contrail separately, 
+            # then reset the keepalived config for cfgm alone.
             setup_keepalived_node('cfgm')
         elif role_to_purge == 'cfgm' and\
+             get_openstack_internal_vip() != None and\
              get_contrail_internal_vip() != get_openstack_internal_vip():
+            # Case where there are two VIPs for OS and Contrail separately, 
+            # then reset the keepalived config for openstack alone.
             setup_keepalived_node('openstack')
         else:
             raise RuntimeError("Invalid options for removing keepalived node from a cluster")
