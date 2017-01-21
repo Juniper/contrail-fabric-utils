@@ -1475,6 +1475,26 @@ def set_allow_unsupported_sfp():
 @task
 @EXECUTE_TASK
 @roles('all')
+def populate_hosts_file():
+    execute("populate_hosts_file_node", env.host_string)
+
+@task
+def populate_hosts_file_node(*args):
+    # Provisioning scripts require host names to add and remove 
+    # nodes to a cluster. Add all the host names in the /etc/hosts file
+    # if not already present.
+    for host_string in args:
+        with settings(host_string=host_string):
+            host_name = sudo('hostname -s')
+            ctrl_ip = hstr_to_ip(get_control_host_string(host_string))
+        for every_host in env.roledefs['all']:
+            with settings(host_string=every_host, warn_only=True):
+                if sudo('grep %s /etc/hosts' % host_name).failed:
+                     sudo("echo '%s     %s' >> /etc/hosts" % (ctrl_ip, host_name))
+
+@task
+@EXECUTE_TASK
+@roles('all')
 def setup_common():
     execute("setup_common_node", env.host_string)
 
@@ -1482,6 +1502,7 @@ def setup_common():
 def setup_common_node(*args):
     for host_string in args:
         execute("setup_ntp_node", host_string)
+        execute("populate_hosts_file_node", host_string)
 
 @task
 @roles('build')
