@@ -310,6 +310,12 @@ def purge_node_from_rabbitmq_cluster(del_rabbitmq_node, role):
         # We are not managing the RabbitMQ server. No-op.
         return
 
+    if get_contrail_internal_vip() != get_openstack_internal_vip() and\
+       role == 'cfgm':
+        # Openstack and Contrail are in two different nodes. Cfgm
+        # rabbitmq will point to the Openstack node. No-op.
+        return
+
     env.roledefs['rabbit'] = env.roledefs[role]
     del_rabbitmq_ip = hstr_to_ip(del_rabbitmq_node)
     del_rabbitmq_ctrl_ip = hstr_to_ip(get_control_host_string(del_rabbitmq_node))
