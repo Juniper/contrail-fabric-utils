@@ -370,6 +370,9 @@ def frame_vnc_control_cmd(host_string, cmd='setup-vnc-control'):
     cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
     control_host = get_control_host_string(host_string)
     tgt_ip = hstr_to_ip(control_host)
+    config_db_host_list=[]
+    for entry in env.roledefs['database']:
+        config_db_host_list.append(hstr_to_ip(get_control_host_string(entry)))
     collector_host_list=[]
     for entry in env.roledefs['collector']:
         collector_host_list.append(get_control_host_string(entry))
@@ -388,6 +391,7 @@ def frame_vnc_control_cmd(host_string, cmd='setup-vnc-control'):
     cmd += ' --self_ip %s' % tgt_ip
     cmd += ' --cfgm_ip %s' % cfgm_ip
     cmd += ' --collector_ip %s' % collector_ip
+    cmd += ' --config_dbs %s' % ' '.join(config_db_host_list)
 
     return cmd
 
