@@ -24,6 +24,8 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     database_ip_list = [hstr_to_ip(db_host) for db_host in database_host_list]
     zookeeper_ip_list = [hstr_to_ip(get_control_host_string(config_host))\
                                     for config_host in env.roledefs['cfgm']]
+    collector_ip_list = [hstr_to_ip(get_control_host_string(config_host))\
+                                    for config_host in env.roledefs['collector']]
     database_host=get_control_host_string(host_string)
     database_host_password=get_env_passwords(host_string)
     tgt_ip = hstr_to_ip(database_host)
@@ -54,6 +56,7 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
         cmd += " --seed_list %s" % (hstr_to_ip(get_control_host_string(
                                        env.roledefs['database'][0])))
     cmd += " --zookeeper_ip_list %s" % ' '.join(zookeeper_ip_list)
+    cmd += " --collector_ip_list %s" % ' '.join(collector_ip_list)
     if parent_cmd in ['setup-vnc-database',
                       'update-zoo-servers',
                       'upgrade-vnc-database']:
@@ -156,9 +159,11 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
             hindex = cfgm_host_list.index(cfgm_host)
             hindex = hindex % len(env.roledefs['collector'])
             collector_host = get_control_host_string(
-                                 env.roledefs['collector'][hindex])
+                                 env.roledefs['collector'][hindex]) 
             collector_ip = hstr_to_ip(collector_host)
- 
+
+    collector_ip_list = [hstr_to_ip(get_control_host_string(entry))\
+                          for entry in collector_host_list]
     zookeeper_ip_list = [hstr_to_ip(get_control_host_string(config_host))\
                          for config_host in env.roledefs['cfgm']]
     control_ip_list = []
@@ -173,6 +178,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cmd += " --self_ip %s" % tgt_ip
     cmd += " --cfgm_index %d" % (cfgm_host_list.index(cfgm_host) + 1)
     cmd += " --collector_ip %s" % (collector_ip)
+    cmd += " --collector_ip_list %s" % ' '.join(collector_ip_list)
     cmd += " --cassandra_ip_list %s" % ' '.join(get_config_db_ip_list())
     cmd += " --zookeeper_ip_list %s" % ' '.join(zookeeper_ip_list)
     if control_ip_list:
@@ -372,22 +378,13 @@ def frame_vnc_control_cmd(host_string, cmd='setup-vnc-control'):
     tgt_ip = hstr_to_ip(control_host)
     collector_host_list=[]
     for entry in env.roledefs['collector']:
-        collector_host_list.append(get_control_host_string(entry))
+        collector_host_list.append(hstr_to_ip(get_control_host_string(entry)))
     control_host_list=[]
     for entry in env.roledefs['control']:
         control_host_list.append(get_control_host_string(entry))
-    # Prefer local collector node
-    if control_host in collector_host_list:
-        collector_ip = tgt_ip
-    else:
-        # Select based on index
-        hindex = control_host_list.index(control_host)
-        hindex = hindex % len(env.roledefs['collector'])
-        collector_host = get_control_host_string(env.roledefs['collector'][hindex])
-        collector_ip = hstr_to_ip(collector_host)
     cmd += ' --self_ip %s' % tgt_ip
     cmd += ' --cfgm_ip %s' % cfgm_ip
-    cmd += ' --collector_ip %s' % collector_ip
+    cmd += ' --collectors %s' % ' '.join(collector_host_list)
 
     return cmd
 
