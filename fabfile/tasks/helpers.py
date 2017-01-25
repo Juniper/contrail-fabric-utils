@@ -1070,45 +1070,6 @@ def setup_coremask_node(*args):
                 raise RuntimeError("Error: Core mask %s for host %s is invalid." \
                     %(coremask, host_string))
 
-@task
-def setup_uio_driver(*args):
-    """Setup UIO driver to use for DPDK (igb_uio, uio_pci_generic or vfio-pci)
-    USAGE: fab setup_uio_driver:user@host1,user@host2,...
-    """
-    vrouter_agent_file = '/etc/contrail/contrail-vrouter-agent.conf'
-
-    for host_string in args:
-        dpdk = getattr(env, 'dpdk', None)
-        if dpdk:
-            if host_string in dpdk:
-                if 'uio_driver' in dpdk[host_string]:
-                    uio_driver = dpdk[host_string]['uio_driver']
-                else:
-                    print "No UIO driver defined for host %s, skipping..." \
-                        %(host_string)
-                    return
-            else:
-                print "No host %s defined in the dpdk section, skipping..." \
-                    %(host_string)
-                return
-        else:
-            print "No env.dpdk section in testbed file, skipping the configuration..."
-            return
-
-        if not uio_driver:
-            raise RuntimeError("UIO driver for host %s is not defined." \
-                % host_string)
-
-        with settings(host_string=host_string):
-            if sudo('modprobe %s' %(uio_driver), quiet=True).succeeded:
-                print "Setting UIO driver to %s for host %s..." % (uio_driver,
-                    host_string)
-                sudo('sed -i.bak \'s/physical_uio_driver=.*/physical_uio_driver=%s/\' %s' \
-                    %(uio_driver, vrouter_agent_file))
-            else:
-                raise RuntimeError("Error: invalid UIO driver %s for host %s" \
-                    %(uio_driver, host_string))
-
 @roles('openstack')
 @task
 def increase_ulimits():
@@ -1475,6 +1436,26 @@ def set_allow_unsupported_sfp():
 @task
 @EXECUTE_TASK
 @roles('all')
+def populate_hosts_file():
+    execute("populate_hosts_file_node", env.host_string)
+
+@task
+def populate_hosts_file_node(*args):
+    # Provisioning scripts require host names to add and remove 
+    # nodes to a cluster. Add all the host names in the /etc/hosts file
+    # if not already present.
+    for host_string in args:
+        with settings(host_string=host_string):
+            host_name = sudo('hostname -s')
+            ctrl_ip = hstr_to_ip(get_control_host_string(host_string))
+        for every_host in env.roledefs['all']:
+            with settings(host_string=every_host, warn_only=True):
+                if sudo('grep %s /etc/hosts' % host_name).failed:
+                     sudo("echo '%s     %s' >> /etc/hosts" % (ctrl_ip, host_name))
+
+@task
+@EXECUTE_TASK
+@roles('all')
 def setup_common():
     execute("setup_common_node", env.host_string)
 
@@ -1482,6 +1463,7 @@ def setup_common():
 def setup_common_node(*args):
     for host_string in args:
         execute("setup_ntp_node", host_string)
+        execute("populate_hosts_file_node", host_string)
 
 @task
 @roles('build')
@@ -1716,3 +1698,38 @@ def is_rpm_equal_or_higher(reference):
         return True
     else:
         return False
+
+@task
+def increase_vrouter_limit_node(*args):
+    """Increase the maximum number of mpls label and nexthop on tsn node"""
+    vrouter_module_params_dict = getattr(env, 'vrouter_module_params', None)
+    if vrouter_module_params_dict:
+        for host_string in args:
+             if host_string in vrouter_module_params_dict:
+                 if getattr(env, 'dpdk', None):
+                     if host_string in env.dpdk:
+                         dpdk_increase_vrouter_limit(host_string)
+                 else:
+                     cmd = "options vrouter"
+                     cmd += " vr_mpls_labels=%s" % vrouter_module_params_dict[host_string].setdefault('mpls_labels', '5120')
+                     cmd += " vr_nexthops=%s" % vrouter_module_params_dict[host_string].setdefault('nexthops', '65536')
+                     cmd += " vr_vrfs=%s" % vrouter_module_params_dict[host_string].setdefault('vrfs', '5120')
+                     cmd += " vr_bridge_entries=%s" % vrouter_module_params_dict[host_string].setdefault('macs', '262144')
+                     cmd += " vr_flow_entries=%s" % vrouter_module_params_dict[host_string].setdefault('flow_entries', '524288')
+                     with settings(host_string=host_string, warn_only=True):
+                         sudo("echo %s > %s" %(cmd, '/etc/modprobe.d/vrouter.conf'))
+
+# end increase_vrouter_limit_node
+
+def dpdk_increase_vrouter_limit(host_string):
+    """Increase the maximum number of mpls label and nexthop on tsn node"""
+    vrouter_file = '/etc/contrail/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
+    vrouter_module_params_dict = getattr(env, 'vrouter_module_params', None)
+    cmd = "--vr_mpls_labels %s " % vrouter_module_params_dict[host_string].setdefault('mpls_labels', '5120')
+    cmd += "--vr_nexthops %s " % vrouter_module_params_dict[host_string].setdefault('nexthops', '65536')
+    cmd += "--vr_vrfs %s " % vrouter_module_params_dict[host_string].setdefault('vrfs', '5120')
+    cmd += "--vr_bridge_entries %s " % vrouter_module_params_dict[host_string].setdefault('macs', '262144')
+    cmd += "--vr_flow_entries %s " % vrouter_module_params_dict[host_string].setdefault('flow_entries', '524288')
+    with settings(host_string=host_string, warn_only=True):
+        sudo('sed -i \'s#\(^command=.*$\)#\\1 %s#\' %s' %(cmd, vrouter_file))
+# end dpdk_increase_vrouter_limit

@@ -4,6 +4,7 @@ import textwrap
 import json
 import socket
 from time import sleep
+
 from fabric.contrib.files import exists
 
 from fabfile.config import *
@@ -29,14 +30,13 @@ from fabfile.tasks.vmware import provision_vcenter, provision_dvs_fab,\
 from fabfile.utils.cluster import get_vgw_details, get_orchestrator,\
         get_vmware_details, get_tsn_nodes, get_toragent_nodes,\
         get_esxi_vms_and_hosts, get_mode, is_contrail_node,\
-        create_esxi_vrouter_map_file, update_esxi_vrouter_map_file,\
-        get_qos_nodes, get_qos_niantic_nodes
+        create_esxi_vrouter_map_file
 from fabfile.tasks.esxi_defaults import apply_esxi_defaults
 from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
         setup_apiserver_ssl_certs_node, copy_keystone_ssl_certs_to_node,
         copy_apiserver_ssl_certs_to_node, copy_vnc_api_lib_ini_to_node,
         copy_certs_for_neutron_node, copy_certs_for_heat)
-
+from fabfile.utils.ns_agilio_vrouter import *
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
 
@@ -643,11 +643,10 @@ def setup_cfgm_node(*args):
     fixup_restart_haproxy_in_all_cfgm(nworkers)
 
     for host_string in args:
-        with settings(host_string=host_string):
-            with settings(warn_only=True):
-                if detect_ostype() == 'ubuntu':
-                    if not is_xenial_or_above():
-                        sudo('rm /etc/init/supervisor-config.override')
+        with  settings(host_string=host_string):
+            if detect_ostype() == 'ubuntu':
+                with settings(warn_only=True):
+                    sudo('rm /etc/init/supervisor-config.override')
                     sudo('rm /etc/init/neutron-server.override')
 
             # Frame the command line to provision config node
@@ -704,11 +703,11 @@ def fixup_ceilometer_conf_common():
     sudo("openstack-config --set %s DEFAULT rabbit_host %s" % (conf_file, amqp_server_ip))
     if get_openstack_internal_vip():
         sudo("openstack-config --set %s notification workload_partitioning %s" %
-            (conf_file, "True"))
+                    (conf_file, "True"))
         sudo("openstack-config --set %s compute workload_partitioning %s" %
-            (conf_file, "True"))
+                    (conf_file, "True"))
         sudo("openstack-config --set %s coordination backend_url %s%s%s" %
-            (conf_file, "kazoo://", env.roledefs['database'][0], ":2181"))
+                (conf_file, "kazoo://", env.roledefs['database'][0], ":2181"))
     sudo("openstack-config --set %s DEFAULT rabbit_port %s" % (conf_file,
 	get_openstack_amqp_port()))
     value = "/var/log/ceilometer"
@@ -1382,192 +1381,12 @@ def setup_collector_node(*args):
             if apiserver_ssl_enabled():
                 execute("copy_apiserver_ssl_certs_to_node", host_string)
             if detect_ostype() == 'ubuntu':
-                if not is_xenial_or_above():
-                    with settings(warn_only=True):
-                        sudo('rm /etc/init/supervisor-analytics.override')
+                with settings(warn_only=True):
+                    sudo('rm /etc/init/supervisor-analytics.override')
             with cd(INSTALLER_DIR):
                 print cmd
                 sudo(cmd)
 #end setup_collector_node
-
-@task
-@hosts(get_qos_nodes())
-def setup_qos_queuing():
-    '''Generate [QOS] section in contrail-vrouter-agent.conf
-       Run qosmap.py script.
-    '''
-    if (get_qos_nodes()):
-        execute("setup_qos_queuing_on_node", env.host_string)
-
-@task
-def setup_qos_queuing_on_node(*args):
-    '''Write zeros to xps_cpu files for all tx queues disabling Xmit-Packet-Steering
-       and run qosmap.py script on the node.
-    '''
-    default_hw_queue = False
-    agent_conf = "/etc/contrail/contrail-vrouter-agent.conf"
-    conf_file = "contrail-vrouter-agent.conf"
-    qos_logical_queue = []
-    queue_id = []
-    intf_list = []
-    qos_info = getattr(env, 'qos', None)
-    if qos_info is None:
-        print 'Info: qos block is not defined in testbed file. Exiting'
-        return True
-
-    for compute_host_string in args:
-        qos_info_compute = qos_info[compute_host_string]
-        for nic_queue in qos_info_compute:
-            if 'default' not in nic_queue.keys():
-                qos_logical_queue.append(str(nic_queue['logical_queue']).strip('[]').replace(" ",""))
-                queue_id.append(nic_queue['hardware_q_id'])
-            else:
-                default_nic_queue = nic_queue
-                default_hw_queue = True
-        if default_hw_queue:
-            if 'logical_queue' in default_nic_queue.keys():
-                qos_logical_queue.append(str(default_nic_queue['logical_queue']).strip('[]').replace(" ",""))
-            queue_id.append(default_nic_queue['hardware_q_id'])
-
-        if queue_id != None:
-            qos_str = ""
-            qos_str += "[QOS]\n"
-            num_sections = len(qos_logical_queue)
-            if(len(qos_logical_queue) == len(queue_id) and default_hw_queue):
-                num_sections = num_sections - 1
-            for i in range(num_sections):
-                qos_str += '[%s%s]\n' %("QUEUE-", queue_id[i])
-                qos_str += "# Logical nic queues for qos config\n"
-                qos_str += "logical_queue=[%s]\n\n" % qos_logical_queue[i].replace(",",", ")
-
-            if (default_hw_queue):
-                qos_str += '[%s%s]\n' %("QUEUE-", queue_id[-1])
-                qos_str += "# This is the default hardware queue\n"
-                qos_str += "default_hw_queue= true\n\n"
-                qos_str += "# Logical nic queues for qos config\n"
-
-                if(len(qos_logical_queue) == len(queue_id)):
-                    qos_str += "logical_queue=[%s]\n\n" % qos_logical_queue[-1].replace(",",", ")
-                else:
-                    qos_str += "logical_queue=[ ]\n\n"
-
-        with settings(host_string=compute_host_string):
-            ltemp_dir = tempfile.mkdtemp()
-            get(agent_conf, ltemp_dir)
-            local("sed -i -e '/^\[QOS\]/d' -e '/^\[QUEUE-/d' -e '/^logical_queue/d' %s/%s" % (ltemp_dir, conf_file))
-            local("sed -i -e '/^\# Logical nic queues/d' -e '/^# This is the default/d' -e '/^default_hw_queue/d' %s/%s" % (ltemp_dir, conf_file))
-            put('%s/%s' % (ltemp_dir, conf_file), agent_conf, use_sudo=True)
-            local('rm -rf %s' % (ltemp_dir))
-            sudo("echo '%s' >> %s" %(qos_str, agent_conf))
-
-        bond_info = getattr(testbed, 'bond', None)
-        if ((bond_info) and (compute_host_string in bond_info)):
-                intf_list = bond_info[compute_host_string]['member']
-        else:
-            with settings(host_string=compute_host_string):
-                physical_interface = sudo("openstack-config --get /etc/contrail/contrail-vrouter-agent.conf VIRTUAL-HOST-INTERFACE physical_interface")
-                intf_list.append(physical_interface)
-
-        with settings(host_string=compute_host_string):
-            intf_list = ' '.join(intf_list)
-            with cd("/opt/contrail/utils"):
-                sudo("python qosmap.py --interface_list %s " % intf_list)
-        sudo("service contrail-vrouter-agent restart")
-
-@task
-@hosts(get_qos_niantic_nodes())
-def setup_qos_scheduling():
-    '''Generate [QOS-NIANTIC] section in contrail-vrouter-agent.conf
-       Run qosmap.py script
-    '''
-    if (get_qos_niantic_nodes()):
-        execute("setup_qos_scheduling_on_node", env.host_string)
-
-@task
-def setup_qos_scheduling_on_node(*args):
-    '''Write zeros to xps_cpu files for all tx queues disabling Xmit-Packet-Steering
-       and run qosmap.py script on the node.
-    '''
-    agent_conf = "/etc/contrail/contrail-vrouter-agent.conf"
-    conf_file = "contrail-vrouter-agent.conf"
-    priority_id = []
-    priority_bandwidth = []
-    priority_scheduling = []
-    intf_list = []
-    priority_info = getattr(env, 'qos_niantic', None)
-    if priority_info is None:
-        print 'Info: qos niantic block is not defined in testbed file. Exiting'
-        return True
-
-    hosts = getattr(testbed, 'control_data', None)
-    if hosts:
-        for host in hosts:
-            if ((hosts[host].has_key('vlan')) and (host in args)):
-                print 'Vlan configuration found for device %s on compute %s .' % (hosts[host]['device'], host),\
-                      'Skipping setup: Qos queueing is not supported for interface having a Vlan sub interface .'
-                return True
-
-    for compute_host_string in args:
-        priority_info_compute = priority_info[compute_host_string]
-        for priority in priority_info_compute:
-            priority_id.append(priority['priority_id'])
-            priority_scheduling.append(priority['scheduling'])
-            if priority['scheduling'] != 'strict':
-                priority_bandwidth.append(priority['bandwidth'])
-            else:
-                priority_bandwidth.append('0')
-        if priority_id != None:
-            priority_group_str = ""
-            priority_group_str += "[QOS-NIANTIC]\n"
-            for i in range(len(priority_id)):
-                priority_group_str += '[%s%s]\n' %("PG-", priority_id[i])
-                priority_group_str += "# Scheduling algorithm for priority group (strict/rr)\n"
-                priority_group_str += "scheduling=" + priority_scheduling[i] + "\n\n"
-                priority_group_str += "# Total hardware queue bandwidth used by priority group\n"
-                priority_group_str += "bandwidth=" + priority_bandwidth[i] + "\n\n"
-
-        with settings(host_string=compute_host_string):
-                ltemp_dir = tempfile.mkdtemp()
-                get(agent_conf, ltemp_dir)
-                local("sed -i -e '/^\[QOS-NIANTIC\]/d' -e '/^\[PG-/d' -e '/^scheduling/d' -e '/^bandwidth/d' %s/%s" % (ltemp_dir, conf_file))
-                local("sed -i -e '/^# Scheduling algorithm for/d' -e '/^# Total hardware queue bandwidth/d' %s/%s" % (ltemp_dir, conf_file))
-                put('%s/%s' % (ltemp_dir, conf_file), agent_conf, use_sudo=True)
-                local('rm -rf %s' % (ltemp_dir))
-                sudo("echo '%s' >> %s" %(priority_group_str, agent_conf))
-
-        bond_info = getattr(testbed, 'bond', None)
-        if ((bond_info) and (compute_host_string in bond_info)):
-                intf_list = bond_info[compute_host_string]['member']
-        else:
-            with settings(host_string=compute_host_string):
-                physical_interface = sudo("openstack-config --get /etc/contrail/contrail-vrouter-agent.conf VIRTUAL-HOST-INTERFACE physical_interface")
-                intf_list.append(physical_interface)
-
-        with settings(host_string=compute_host_string):
-            intf_list = ' '.join(intf_list)
-            with cd("/opt/contrail/utils"):
-                sudo("python qosmap.py --interface_list %s " % intf_list)
-
-@task
-@hosts(get_qos_nodes())
-def setup_xps_cpu():
-    '''Disable xmit-Packet-Steering .
-    '''
-    if (get_qos_nodes()):
-        execute("setup_xps_cpu_on_node", env.host_string)
-
-@task
-def setup_xps_cpu_on_node(*args):
-    '''
-       Set qos_enabled flag to true in agent_param on reboot
-       qosmap.py sets xps_cpu file to zeros if qos_enabled is set.
-    '''
-
-    conf_file = "/etc/contrail/agent_param"
-
-    for compute_host_string in args:
-        with settings(host_string=compute_host_string, warn_only=True):
-            sudo("sed -i -e 's/^qos_enabled.*/qos_enabled=true/' %s" % (conf_file))
 
 @task
 @roles('database')
@@ -1620,10 +1439,9 @@ def setup_database_node(*args):
         cmd = frame_vnc_database_cmd(host_string)
         # Execute the provision database script
         with settings(host_string=host_string):
-            with settings(warn_only=True):
-                if detect_ostype() == 'ubuntu':
-                    if not is_xenial_or_above():
-                        sudo('rm /etc/init/supervisor-database.override')
+            if detect_ostype() == 'ubuntu':
+                with settings(warn_only=True):
+                    sudo('rm /etc/init/supervisor-database.override')
             with cd(INSTALLER_DIR):
                 sudo(cmd)
 #end setup_database
@@ -1675,8 +1493,7 @@ def setup_webui_node(*args):
         with settings(host_string=host_string):
             with settings(warn_only=True):
                 if detect_ostype() == 'ubuntu':
-                    if not is_xenial_or_above():
-                        sudo('rm /etc/init/supervisor-webui.override')
+                    sudo('rm /etc/init/supervisor-webui.override')
             with cd(INSTALLER_DIR):
                 sudo(cmd)
 #end setup_webui
@@ -1708,12 +1525,11 @@ def setup_control_node(*args):
     for host_string in args:
         fixup_irond_config(host_string)
         cmd = frame_vnc_control_cmd(host_string)
-        with settings(host_string=host_string):
-            with settings(warn_only=True):   
-                if detect_ostype() == 'ubuntu':
-                    if not is_xenial_or_above():
-                        sudo('rm /etc/init/supervisor-control.override')
-                        sudo('rm /etc/init/supervisor-dns.override')
+        with  settings(host_string=host_string):
+            if detect_ostype() == 'ubuntu':
+                with settings(warn_only=True):
+                    sudo('rm /etc/init/supervisor-control.override')
+                    sudo('rm /etc/init/supervisor-dns.override')
             with cd(INSTALLER_DIR):
                 sudo(cmd)
                 if detect_ostype() in ['centos', 'redhat', 'fedora', 'centoslinux']:
@@ -1762,9 +1578,7 @@ def setup_agent_config_in_node(*args):
     if restart_service:
         for host_string in args:
             with settings(host_string=host_string):
-                if detect_ostype() == 'ubuntu':
-                    if not is_xenial_or_above():
-                        out = sudo("service supervisor-vrouter restart")
+                out = sudo("service supervisor-vrouter restart")
 
 # end setup_agent_config_in_node
 
@@ -1850,21 +1664,18 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
         # Setup hugepages if necessary
         setup_hugepages_node(host_string)
 
+        # Setup vrouter module params
+        increase_vrouter_limit_node(host_string)
+
         # Setup affinity masks for vRouter and qemu if necessary
         setup_coremask_node(host_string)
         setup_vm_coremask_node(False, host_string)
-
-        # Setup vr_mpls_labels, vr_nexthops, vr_vrfs, vr_bridge_entries
-        # if necessary
-        dpdk_increase_vrouter_limit()
 
         # Execute the script to provision compute node.
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
                 with settings(warn_only=True):
-                    if detect_ostype() == 'ubuntu':
-                        if not is_xenial_or_above():
-                            sudo('rm /etc/init/supervisor-vrouter.override')
+                    sudo('rm /etc/init/supervisor-vrouter.override')
                     # Fix /dev/vhost-net permissions. It is required for
                     # multiqueue operation
                     sudo('echo \'KERNEL=="vhost-net", GROUP="kvm", MODE="0660"\' > /etc/udev/rules.d/vhost-net.rules')
@@ -1876,26 +1687,33 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
                 print cmd
                 sudo(cmd)
 
-        # Setup UIO driver
-        setup_uio_driver(host_string)
+        ns_agilio_vrouter_dict = getattr(env, 'ns_agilio_vrouter', None)
+        bond_dict = getattr(testbed, 'bond', None)
+        control_data_dict = getattr(testbed, 'control_data', None)
 
+        # Execute ns_agilio_vrouter offload provisioning
+        if ns_agilio_vrouter_dict:
+            if detect_ostype() == 'ubuntu':
+                if env.roledefs['compute']:
+                    if env.host_string in env.roledefs['compute']:
+                        # env.host_string going into provisioning will always be a compute node
+                        # ns_agilio_vrouter will always be defined at this point
+                        # provisioning requires control_data to be defined
+                        # provisioning will use bond dictionary if defined
+                        ns_agilio_vrouter_prov = \
+                            ProvisionNsAgilioVrouter(env.host_string, \
+                                                     ns_agilio_vrouter_dict, \
+                                                     bond_dict, \
+                                                     control_data_dict)
+                        ns_agilio_vrouter_prov.setup()
+                else:
+                    fabric.utils.abort("Compute node role not defined")
+
+            else:
+                fabric.utils.abort("OS Type: %s is not currently \
+                                    supported by NS Agilio vRouter \
+                                    acceleration" % detect_ostype())
 #end setup_vrouter
-
-@task
-@EXECUTE_TASK
-def prov_alarm():
-    cfgm_host = env.roledefs['cfgm'][0]
-    cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
-    cfgm_host_password = get_env_passwords(cfgm_host)
-    with settings(cd(UTILS_DIR), host_string=cfgm_host,
-            password=cfgm_host_password):
-        cmd = "python provision_alarm.py"
-        cmd += " --api_server_ip %s" % cfgm_ip
-        cmd += " %s" % get_mt_opts()
-        if apiserver_ssl_enabled():
-            cmd += " --api_server_use_ssl True"
-        sudo(cmd)
-#end prov_alarm_node
 
 @task
 @EXECUTE_TASK
@@ -2282,13 +2100,7 @@ def add_tsn_node(restart=True,*args):
             nova_conf_file = '/etc/contrail/contrail-vrouter-agent.conf'
             sudo("openstack-config --set %s DEFAULT agent_mode tsn" % nova_conf_file)
             if restart:
-                if detect_ostype() == 'ubuntu':
-                    if not is_xenial_or_above():
-                        sudo("service contrail-vrouter-agent restart")
-                        sudo("service contrail-vrouter-nodemgr restart")
-                    else:
-                        sudo("service supervisor-vrouter restart")
-                        
+                sudo("service supervisor-vrouter restart")
 
 @hosts(get_toragent_nodes())
 @task
@@ -2837,7 +2649,6 @@ def setup_all(reboot='True'):
     execute('restart_openstack_on_demand')
     execute('setup_vrouter')
     execute('prov_config')
-    execute('prov_alarm')
     execute('prov_database')
     execute('prov_analytics')
     execute('prov_control_bgp')
@@ -2847,9 +2658,7 @@ def setup_all(reboot='True'):
     execute('setup_remote_syslog')
     execute('add_tsn', restart=False)
     execute('add_tor_agent', restart=False)
-    execute('increase_vrouter_limit')
     execute('setup_vm_coremask')
-    execute('setup_xps_cpu')
     if get_openstack_internal_vip():
         execute('setup_cluster_monitors')
     if reboot == 'True':
@@ -2885,7 +2694,6 @@ def setup_without_openstack(manage_nova_compute='yes', config_nova='yes', reboot
     execute('verify_webui')
     execute('setup_vrouter', manage_nova_compute, config_nova)
     execute('prov_config')
-    execute('prov_alarm')
     execute('prov_database')
     execute('prov_analytics')
     execute('prov_control_bgp')
@@ -2924,7 +2732,6 @@ def setup_without_openstack_and_compute():
     execute('setup_webui')
     execute('verify_webui')
     execute('prov_config')
-    execute('prov_alarm')
     execute('prov_database')
     execute('prov_analytics')
     execute('prov_control_bgp')
@@ -2958,7 +2765,6 @@ def setup_contrail_analytics_components(manage_nova_compute='no', reboot='False'
     execute('setup_webui')
     execute('verify_webui')
     execute('prov_config')
-    execute('prov_alarm')
     execute('prov_database')
     execute('prov_analytics')
     execute('setup_remote_syslog')
@@ -3378,7 +3184,7 @@ def add_esxi_to_vcenter(*args):
                   with settings(host_string=host_string):
                       (hosts, clusters, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list)
                       provision_vcenter(vcenter_server, hosts, clusters, vms)
-                      update_esxi_vrouter_map_file(host)
+                      create_esxi_vrouter_map_file(vcenter_server_name, vcenter_server, env.host_string)
                       sudo("service contrail-vcenter-plugin restart")
                       provision_vcenter_features(vcenter_server, esxi_info, host_list)
                       break
@@ -3503,37 +3309,4 @@ def setup_zones():
     """Setup availability zones."""
     setup_esx_zone()
 #end setup_zones
-
-@task
-def increase_vrouter_limit():
-    """Increase the maximum number of mpls label and nexthop on tsn node"""
-    vrouter_module_params_dict = getattr(env, 'vrouter_module_params', None)
-    if vrouter_module_params_dict:
-        for host_string in vrouter_module_params_dict:
-             cmd = "options vrouter"
-             cmd += " vr_mpls_labels=%s" % vrouter_module_params_dict[host_string].setdefault('mpls_labels', '5120')
-             cmd += " vr_nexthops=%s" % vrouter_module_params_dict[host_string].setdefault('nexthops', '65536')
-             cmd += " vr_vrfs=%s" % vrouter_module_params_dict[host_string].setdefault('vrfs', '5120')
-             cmd += " vr_bridge_entries=%s" % vrouter_module_params_dict[host_string].setdefault('macs', '262144')
-             with settings(host_string=host_string, warn_only=True):
-                 sudo("echo %s > %s" %(cmd, '/etc/modprobe.d/vrouter.conf'))
-
-# end increase_vrouter_limit
-
-
-@task
-def dpdk_increase_vrouter_limit():
-    """Increase the maximum number of mpls label and nexthop on tsn node"""
-    vrouter_file = '/etc/contrail/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
-    vrouter_module_params_dict = getattr(env, 'vrouter_module_params', None)
-    if vrouter_module_params_dict:
-        for host_string in vrouter_module_params_dict:
-             cmd = "--vr_mpls_labels %s " % vrouter_module_params_dict[host_string].setdefault('mpls_labels', '5120')
-             cmd += "--vr_nexthops %s " % vrouter_module_params_dict[host_string].setdefault('nexthops', '65536')
-             cmd += "--vr_vrfs %s " % vrouter_module_params_dict[host_string].setdefault('vrfs', '5120')
-             cmd += "--vr_bridge_entries %s " % vrouter_module_params_dict[host_string].setdefault('macs', '262144')
-             with settings(host_string=host_string, warn_only=True):
-                 sudo('sed -i \'s#\(^command=.*$\)#\\1 %s#\' %s'\
-                         %(cmd, vrouter_file))
-# end dpdk_increase_vrouter_limit();
 
