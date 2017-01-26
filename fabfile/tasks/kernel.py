@@ -22,6 +22,19 @@ def set_grub_default_node(*args, **kwargs):
             print '[%s]: Updated Default Grub to (%s)' % (host_string, value)
 
 @task
+def set_grub_default_cmdline_node(*args, **kwargs):
+    '''Set default cmdline options given list of nodes'''
+    value = kwargs.get('value')
+    for host_string in args:
+        with settings(host_string=host_string):
+            dist, version, extra = get_linux_distro()
+            if 'ubuntu' in dist.lower():
+                sudo("sed -i \'s/^GRUB_CMDLINE_LINUX_DEFAULT=.*/GRUB_CMDLINE_LINUX_DEFAULT=\"%s\"/g\' /etc/default/grub" % value)
+                sudo('update-grub')
+                sudo("grep '^GRUB_CMDLINE_LINUX_DEFAULT=\"%s\"' /etc/default/grub" % value)
+            print '[%s]: Updated Default Grub cmdline to (%s)' % (host_string, value)
+
+@task
 @roles('all')
 def set_grub_default(value='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-100-generic'):
     '''Set default kernel version to bootup for all nodes'''
@@ -147,6 +160,13 @@ def upgrade_kernel_node(*args):
                              "kernel-headers-3.10.0-327.10.1.el7.x86_64"], disablerepo=False)
                 default_grub='CentOS Linux (3.10.0-327.10.1.el7.x86_64) 7 (Core)'
                 execute('set_grub_default_node', host_string, value=default_grub)
+
+            if 'ubuntu' in dist.lower():
+                ns_agilio_vrouter_dict = getattr(env, 'ns_agilio_vrouter', None)
+                if ns_agilio_vrouter_dict:
+                    if host_string in ns_agilio_vrouter_dict:
+                        execute('set_grub_default_cmdline_node', host_string, value='intel_iommu=on iommu=pt intremap=on')
+
 
 @task
 @EXECUTE_TASK

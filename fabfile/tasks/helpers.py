@@ -79,6 +79,99 @@ def reboot_node(waitup, *args):
                 sys.exit(1)
 # end compute_reboot
 
+@task
+def reboot_generic_node(waitup, *args):
+    for host_string in args:
+        user, hostip = host_string.split('@')
+        with settings(hide('running'), host_string=host_string, warn_only=True):
+            try:
+                sudo("reboot --force", timeout=5)
+            except CommandTimeout:
+                pass
+
+        print 'Reboot issued; Waiting for the node (%s) to go down...' % hostip
+        common.wait_until_host_down(wait=300, host=hostip)
+        if waitup == 'no':
+            return
+        print 'Node (%s) is down... Waiting for node to come back' % hostip
+        sys.stdout.write('.')
+        count = 0
+        while not verify_sshd(hostip,
+                          user,
+                          get_env_passwords(host_string)):
+            sys.stdout.write('.')
+            sleep(2)
+            count+=1
+            if count <=1000:
+                continue
+            else:
+                print 'Timed out waiting for node to come back up'
+                sys.exit(1)
+
+def check_kernel_params():
+    '''Check kernel cmdline parameters against GRUB_CMDLINE_LINUX_DEFAULT
+    Returns True if there is a param in grub not in kernel cmdline else False
+    '''
+
+    os_type = detect_ostype()
+    if os_type in ['ubuntu']:
+        grub_default_out = sudo('grep -P \'^GRUB_CMDLINE_LINUX_DEFAULT=\' /etc/default/grub')
+        running_cmdline_out = sudo('cat /proc/cmdline')
+        # single entry list to get parmas in quotes
+        grub_default_params = re.findall('"([^"]*)"', grub_default_out)
+        # break down params
+        grub_default_params = grub_default_params[0].split(" ")
+
+        for p in grub_default_params:
+            if not p in running_cmdline_out:
+                return True
+
+    return False
+
+
+@task
+def reboot_on_kernel_update_generic_node(reboot='True', *args):
+    '''When kernel package is upgraded as a part of any depends,
+       system needs to be rebooted so new kernel is effective
+    '''
+    all_nodes = args
+    # moving current node to last to reboot current node at last
+    if env.roledefs['build'] in all_nodes:
+        all_nodes.remove(env.roledefs['build']).append(env.roledefs['build'])
+
+    for node in all_nodes:
+        with settings(host_string=node):
+            os_type = detect_ostype()
+        if os_type in ['ubuntu']:
+            nodes_version_info_act = execute('get_package_installation_time', os_type,
+                                         '*linux-image-[0-9]*-generic')
+            # replace minor version with '-generic'
+            nodes_version_info = {}
+            for key, values in nodes_version_info_act.items():
+                nodes_version_info[key] = [(index0, ".".join(index1.split('.')[:-1]) + '-generic') \
+                                           for index0, index1 in values]
+        elif os_type in ['centos', 'redhat', 'fedora', 'centoslinux']:
+            nodes_version_info = execute('get_package_installation_time', os_type, 'kernel')
+        else:
+            print '[%s]: WARNING: Unsupported OS type (%s)' % (env.host_string, os_type)
+
+        with settings(host_string=node):
+            uname_out = sudo('uname -r')
+            if node in nodes_version_info.keys():
+                versions_info = nodes_version_info[node]
+                # skip reboot if latest kernel version is same as
+                # current kernel version in the node
+                if uname_out != versions_info[-1][1] or check_kernel_params():
+                    print '[%s]: Node is booted with old kernel, Reboot required' % node
+                    if reboot == 'True':
+                        execute("reboot_generic_node", "yes", node)
+                    else:
+                        print '[%s]: WARNING:: Reboot is skipped as Reboot=False is set. ' \
+                              'Reboot manually before setup to avoid misconfiguration!' % node
+                else:
+                    print '[%s]: Node is already booted with new kernel' % node
+
+
 def reimage_virtual_nodes(host, count):
     with settings(
             host_string='%s@%s' % (
