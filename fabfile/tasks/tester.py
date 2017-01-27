@@ -341,7 +341,7 @@ def setup_test_env():
                 if os.environ.has_key('GUESTVM_IMAGE'):
                     pkg = pkg + ' pexpect'
                 if ui_browser:
-                    pkg = pkg + ' pyvirtualdisplay selenium'
+                    pkg = pkg + ' pyvirtualdisplay selenium==2.53.6'
                 if exists('/opt/contrail/api-venv/bin/activate'):
                     sudo('source /opt/contrail/api-venv/bin/activate && \
                         pip install --upgrade unittest2 && \
