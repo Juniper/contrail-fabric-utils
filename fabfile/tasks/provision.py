@@ -118,7 +118,7 @@ def fixup_restart_haproxy_in_all_cfgm(nworkers):
 global
         tune.maxrewrite 1024
 
-listen contrail-config-stats :5937
+$__contrail_config_stats__
    mode http
    stats enable
    stats uri /
@@ -133,7 +133,7 @@ $__contrail_api_frontend__
     default_backend    contrail-api-backend
     timeout client 3m
 
-frontend  contrail-discovery *:5998
+$__contrail_disc_frontend_servers__
     default_backend    contrail-discovery-backend
 
 backend quantum-server-backend
@@ -165,6 +165,7 @@ $__rabbitmq_config__
 #contrail-config-marker-end
 """)
 
+    contrail_config_stats = 'listen contrail-config-stats :5937'
     q_listen_port = 9697
     q_server_lines = ''
     q_frontend = 'frontend  quantum-server *:9696'
@@ -174,6 +175,7 @@ $__rabbitmq_config__
     api_frontend = 'frontend  contrail-api *:8082'
     api_ssl_forwarding = ''
     api_server_lines = ''
+    disc_frontend_servers_lines = 'frontend  contrail-discovery *:5998'
     disc_listen_port = 9110
     disc_server_lines = ''
     tor_agent_ha_config = ''
@@ -221,6 +223,16 @@ listen  rabbitmq 0.0.0.0:5673
     if 'toragent' in env.roledefs.keys() and 'tor_agent' in env.keys():
         tor_agent_ha_config = get_all_tor_agent_haproxy_config()
 
+    if is_xenial_or_above():
+        contrail_config_stats = """listen contrail-config-stats
+    bind  :5937"""
+        q_frontend = """frontend  quantum-server
+    bind *:9696"""
+        api_frontend = """frontend  contrail-api
+    bind *:8082"""
+        disc_frontend_servers_lines = """frontend  contrail-discovery
+    bind *:5998"""
+
     # contail-api SSL termination
     if apiserver_ssl_enabled():
         q_frontend = """frontend  quantum-server
@@ -246,6 +258,7 @@ listen  rabbitmq 0.0.0.0:5673
 
     for host_string in env.roledefs['cfgm']:
         haproxy_config = template.safe_substitute({
+            '__contrail_config_stats__': contrail_config_stats,
             '__contrail_quantum_servers__': q_server_lines,
             '__quantum_server_frontend__': q_frontend,
             '__quantum_ssl_forwarding__': q_ssl_forwarding,
@@ -253,6 +266,7 @@ listen  rabbitmq 0.0.0.0:5673
             '__contrail_api_frontend__': api_frontend,
             '__contrail_api_ssl_forwarding__': api_ssl_forwarding,
             '__contrail_api_backend_servers__': api_server_lines,
+            '__contrail_disc_frontend_servers__': disc_frontend_servers_lines,
             '__contrail_disc_backend_servers__': disc_server_lines,
             '__contrail_hap_user__': 'haproxy',
             '__contrail_hap_passwd__': get_haproxy_token('cfgm'),
