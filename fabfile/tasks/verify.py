@@ -31,7 +31,7 @@ def verify_service(service, initd_service=False):
 def verify_database():
     if not is_xenial_or_above():
         verify_service("supervisor-database")
-        verify_service("contrail-database", initd_service=False)
+    verify_service("contrail-database", initd_service=True)
 
 @task
 @roles('webui')
