@@ -23,7 +23,7 @@ def set_grub_default_node(*args, **kwargs):
 
 @task
 @roles('all')
-def set_grub_default(value='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-85-generic'):
+def set_grub_default(value='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-100-generic'):
     '''Set default kernel version to bootup for all nodes'''
     execute('set_grub_default_node', env.host_string, value=value)
 
@@ -43,7 +43,7 @@ def upgrade_kernel_all(*tgzs, **kwargs):
             default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-34-generic'
         elif version == '14.04':
             if kernel_ver is None:
-                kernel_ver='3.13.0-85'
+                kernel_ver='3.13.0-100'
             (package, os_type) = ('linux-image-'+kernel_ver+'-generic', 'ubuntu')
             default_grub='Advanced options for Ubuntu>Ubuntu, with Linux '+kernel_ver+'-generic'
         elif 'centos linux' in dist.lower() and version.startswith('7'):
@@ -137,7 +137,7 @@ def upgrade_kernel_node(*args, **kwargs):
                 if 'version' in kwargs:
                     kernel_ver = kwargs.get('version')
                 else:
-                    kernel_ver = "3.13.0-85"
+                    kernel_ver = "3.13.0-100"
                 print "Installing "+kernel_ver+" kernel headers"
                 apt_install(["linux-headers-"+kernel_ver,
                              "linux-headers-"+kernel_ver+"-generic"])
@@ -180,6 +180,6 @@ def migrate_compute_kernel_node(*args, **kwargs):
             if 'version' in kwargs:
                 kernel_ver = kwargs.get('version')
             else:
-                kernel_ver = "3.13.0-85"
+                kernel_ver = "3.13.0-100"
             sudo('apt-get -o Dpkg::Options::="--force-overwrite" -y install contrail-vrouter-'+kernel_ver+'-generic')
             upgrade_kernel_node(host_string, **kwargs)
