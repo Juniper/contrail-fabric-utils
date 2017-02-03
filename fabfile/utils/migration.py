@@ -80,3 +80,6 @@ def get_nova_uid_fix_opt():
         nova_uid_fix_opt = "enabled"
     return nova_uid_fix_opt
 #end get_nova_uid_fix_opt
+
+def get_live_migration_scope():
+    return getattr(testbed, 'live_migration_scope', 'disabled')
