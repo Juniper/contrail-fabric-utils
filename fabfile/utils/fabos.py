@@ -113,7 +113,10 @@ def get_release(pkg='contrail-install-packages', use_install_repo=False):
             cmd = "dpkg --info /opt/contrail/contrail_install_repo/%s*.deb | grep Version: | cut -d' ' -f3 | cut -d'-' -f1" %pkg
         else:
             cmd = "dpkg -s %s | grep Version: | cut -d' ' -f2 | cut -d'-' -f1" %pkg
-    pkg_ver = sudo(cmd)
+    # In case of nodes, where the expected pkg is not installed, Errors
+    # should be ignored and return None.
+    with settings(warn_only=True):
+        pkg_ver = sudo(cmd)
     if 'is not installed' in pkg_ver or 'is not available' in pkg_ver or 'No such file or directory' in pkg_ver:
         print "Package %s not installed." % pkg
         return None
