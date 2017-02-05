@@ -13,7 +13,7 @@ class OpenStackSetupError(Exception):
 def verify_service(service, initd_service=False):
     for x in xrange(10):
         with settings(warn_only=True):
-            output = sudo("service %s status | head -10" % service)
+            output = sudo("service %s status" % service)
         if initd_service:
             if output.succeeded or re.search('Active:.*active', output):
                 return
