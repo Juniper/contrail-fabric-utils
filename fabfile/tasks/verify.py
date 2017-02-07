@@ -10,11 +10,15 @@ import re
 class OpenStackSetupError(Exception):
     pass
 
-def verify_service(service, initd_service=False):
+def verify_service(service, check_return_code=False):
     for x in xrange(10):
         with settings(warn_only=True):
-            output = sudo("service %s status" % service)
-        if initd_service:
+            if is_xenial_or_above():
+                output = sudo("systemctl is-active %s" % service)
+                check_return_code = True
+            else:
+                output = sudo("service %s status" % service)
+        if check_return_code:
             if output.succeeded or re.search('Active:.*active', output):
                 return
             else:
@@ -31,7 +35,7 @@ def verify_service(service, initd_service=False):
 def verify_database():
     if not is_xenial_or_above():
         verify_service("supervisor-database")
-    verify_service("contrail-database", initd_service=True)
+    verify_service("contrail-database", check_return_code=True)
 
 @task
 @roles('webui')
@@ -66,7 +70,7 @@ def verify_openstack():
 def verify_cfgm():
     verify_service("zookeeper")
     if manage_config_db():
-        verify_service("contrail-database", initd_service=True)
+        verify_service("contrail-database", check_return_code=True)
     if not is_xenial_or_above():
         verify_service("supervisor-config")
     verify_service("contrail-api")

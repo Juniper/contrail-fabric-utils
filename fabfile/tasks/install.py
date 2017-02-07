@@ -39,13 +39,16 @@ def disable_sysv_auto_generation():
 @parallel(pool_size=20)
 @roles('all')
 def install_xenial_prerequisites():
+    services_list = []
     contrail_systemd_services = run("ls -l /etc/systemd/system | grep .service | grep contrail | awk '{print $9}'")
-    services_list = contrail_systemd_services.split('\r\n')
+    if contrail_systemd_services:
+        services_list = contrail_systemd_services.split('\r\n')
 
     nova_systemd_services = run("ls -l /etc/systemd/system | grep .service | grep nova | awk '{print $9}'")
-    nova_services_list =  nova_systemd_services.split('\r\n')
-    for svc in nova_services_list:
-         services_list.append(svc)
+    if nova_systemd_services:
+        nova_services_list =  nova_systemd_services.split('\r\n')
+        for svc in nova_services_list:
+            services_list.append(svc)
 
     other_services = ['cassandra.service', 'ifmap.service', 'zookeeper.service']
     for svc in other_services:
