@@ -22,6 +22,8 @@ from fabfile.tasks.helpers import reboot_node
 from fabfile.utils.analytics import is_ceilometer_install_supported, \
     is_ceilometer_compute_install_supported, \
     is_ceilometer_contrail_plugin_install_supported
+from fabric.utils import abort, warn
+import fabric.state
 
 SERVICE_NAMES = {
     'keystone' : {'centos' : 'openstack-keystone',
@@ -1131,3 +1133,67 @@ def create_install_repo_ns_agilio_vrouter():
         if env.host_string in ns_agilio_vrouter_dict:
             create_install_repo_ns_agilio_vrouter_node(env.host_string)
 
+@task
+def install_ns_agilio_nic_node(*args):
+    """Installs depends for ns-agilio-nic support in one or list of nodes.
+    Configures kernel and kernel command line parameters for ns-agilio-nic support.
+    Updates ns-agilio-nic programmables when needed.
+    Multiple reboots may be required. Power cycle by user may be required.
+    """
+
+    for host_string in args:
+        with settings(host_string=host_string):
+            # Update system kernel - required for ns agilio nic operation
+            execute("upgrade_kernel_node", host_string)
+            execute("reboot_on_kernel_update_generic_node", "True", host_string)
+            if host_string in fabric.state.connections:
+                fabric.state.connections[host_string].get_transport().close()
+
+            # Install ns-agilio-vrouter-depends-packages
+            create_install_repo_ns_agilio_vrouter_node(host_string)
+
+            # Install ns agilio board support packages and drivers
+            sudo("apt-get install -y " +
+                 "build-essential bison flex gawk autoconf libtool " +
+                 "libdb5.3-dev libftdi-dev libjansson-dev libusb-1.0 " +
+                 "libusb-1.0-0-dev python python-dev dkms tcl tcl-dev ")
+            sudo("apt-get install -y nfp-bsp nfp-bsp-dkms")
+
+            # Automated ns agilio nic programmable flashing
+            out = sudo("/opt/netronome/update/ns-agilio-pgrm-upd.sh -a")
+            if "SYSTEM REBOOT REQUIRED" in out:
+                # Auto reboot
+                execute("reboot_generic_node", "yes", host_string)
+                if host_string in fabric.state.connections:
+                    fabric.state.connections[host_string].get_transport().close()
+            elif "SYSTEM POWER CYCLE REQUIRED" in out:
+                # WARN
+                msg = "Automated NS Agilio NIC firmware flashing successfully completed.\n"
+                msg += "A Power Cycle of the host %s is required to continue.\n" % (host_string)
+                msg += "Please Power Cycle the host %s before running any additional commands." % (host_string)
+                warn(msg)
+            elif "CONTACT NETRONOME SUPPORT" in out:
+                # ERROR
+                msg = "An error occured during automated NS Agilio NIC firmware flashing.\n"
+                msg += "Additional information can be found in syslog.\n"
+                msg += "Please contact Netronome Support (support@netronome.com)."
+                msg += "PLEASE DO NOT REBOOT OR POWER CYCLE!"
+                abort(msg)
+
+            # Install ns agilio core nic additional package and drivers
+            sudo("apt-get install ns-agilio-core-nic")
+
+@task
+@roles('compute')
+def install_ns_agilio_nic():
+    """Installs depends for ns-agilio-nic support on nodes configured
+    with ns agilio vrouter mode. Configures kernel and kernel command
+    line parameters for ns-agilio-nic support. Updates ns-agilio-nic
+    programmables when needed. Multiple reboots may be required.
+    Power cycle by user may be required.
+    """
+
+    ns_agilio_vrouter_dict = getattr(env, 'ns_agilio_vrouter', None)
+    if ns_agilio_vrouter_dict:
+        if env.host_string in ns_agilio_vrouter_dict:
+            install_ns_agilio_nic_node(env.host_string)
