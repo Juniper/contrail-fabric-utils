@@ -441,6 +441,25 @@ def get_keystone_cert_bundle():
     return '/etc/keystone/ssl/certs/keystonecertbundle.pem'
 
 
+def get_keystone_ext_certfile():
+    default = '/etc/keystone/ssl/external/certs/keystone.pem'
+    return get_from_testbed_dict('keystone','certfile', default)
+
+
+def get_keystone_ext_keyfile():
+    default = '/etc/keystone/ssl/external/private/keystone.key'
+    return get_from_testbed_dict('keystone','keyfile', default)
+
+
+def get_keystone_ext_cafile():
+    default = '/etc/keystone/ssl/external/certs/keystone_ca.pem'
+    return get_from_testbed_dict('keystone','cafile', default)
+
+
+def get_keystone_ext_cert_bundle():
+    return '/etc/keystone/ssl/external/certs/keystonecertbundle.pem'
+
+
 def get_apiserver_ext_certfile():
     default = '/etc/contrail/ssl/external/certs/contrail.pem'
     return get_from_testbed_dict('cfgm','certfile', default)

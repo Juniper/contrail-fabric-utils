@@ -1202,6 +1202,10 @@ def setup_openstack_node(*args):
             # Certs are already created in setup_ha task
             if keystone_ssl_enabled() and not get_openstack_internal_vip():
                 execute("setup_keystone_ssl_certs_node", host_string)
+                if get_openstack_external_vip():
+                    execute("setup_keystone_ssl_certs_node", host_string,
+                            openstack_ip=get_openstack_external_vip(),
+                            vip='external')
             with cd(INSTALLER_DIR):
                 sudo(cmd)
 #end setup_openstack_node

@@ -416,6 +416,35 @@ def setup_keepalived_node(role):
                                            external_virtual_router_id)
         sudo(cmd)
 
+def get_keystone_frontends(network='internal'):
+    space = ' ' * 3
+    if network == 'internal':
+        bind = '%s bind  %:5000 ssl crt /etc/keystone/ssl/certs/keystonecertbundle.pem' % (get_openstack_internal_vip(), space)
+        bind_admin = '%s bind  %:35357 ssl crt /etc/keystone/ssl/certs/keystonecertbundle.pem' % (get_openstack_internal_vip(), space)
+    elif network == 'external':
+        bind = '%s bind  %:5000 ssl crt /etc/keystone/ssl/external/certs/keystonecertbundle.pem' % (get_openstack_external_vip(), space)
+        bind_admin = '%s bind  %:35357 ssl crt /etc/keystone/ssl/external/certs/keystonecertbundle.pem' % (get_openstack_external_vip(), space)
+        keystone_frontend_lines = [
+                'frontend openstack-keystone',
+                bind,
+                '%s option http-server-close' % space,
+                '%s option forwardfor' % space,
+                '%s reqadd X-Forwarded-Proto:\ https' % space,
+                '%s reqadd X-Forwarded-Port:\ 5000' % space,
+                ]
+        keystone_frontend = '\n'.join(keystone_frontend_lines)
+        keystone_admin_frontend_lines = [
+                'frontend openstack-keystone-admin',
+                bind_admin,
+                '%s option http-server-close' % space,
+                '%s option forwardfor' % space,
+                '%s reqadd X-Forwarded-Proto:\ https' % space,
+                '%s reqadd X-Forwarded-Port:\ 35357' % space,
+                ]
+        keystone_admin_frontend = '\n'.join(keystone_admin_frontend_lines)
+
+    return keystone_frontend, keystone_admin_frontend
+
 @task
 @EXECUTE_TASK
 @roles('openstack')
@@ -424,7 +453,9 @@ def fixup_restart_haproxy_in_openstack():
 
 @task
 def fixup_restart_haproxy_in_openstack_node(*args):
+    keystone_frontend_ext = ''
     keystone_frontend = 'frontend openstack-keystone *:5000'
+    keystone_admin_frontend_ext = ''
     keystone_admin_frontend = 'frontend openstack-keystone-admin *:35357'
     keystone_server_lines = ''
     keystone_admin_server_lines = ''
@@ -442,24 +473,13 @@ def fixup_restart_haproxy_in_openstack_node(*args):
     space = ' ' * 3 
 
     if keystone_ssl_enabled():
-        keystone_frontend_lines = [
-                'frontend openstack-keystone',
-                '%s bind  *:5000 ssl crt /etc/keystone/ssl/certs/keystonecertbundle.pem' % space,
-                '%s option http-server-close' % space,
-                '%s option forwardfor' % space,
-                '%s reqadd X-Forwarded-Proto:\ https' % space,
-                '%s reqadd X-Forwarded-Port:\ 5000' % space,
-                ]
-        keystone_frontend = '\n'.join(keystone_frontend_lines)
-        keystone_admin_frontend_lines = [
-                'frontend openstack-keystone-admin',
-                '%s bind  *:35357 ssl crt /etc/keystone/ssl/certs/keystonecertbundle.pem' % space,
-                '%s option http-server-close' % space,
-                '%s option forwardfor' % space,
-                '%s reqadd X-Forwarded-Proto:\ https' % space,
-                '%s reqadd X-Forwarded-Port:\ 35357' % space,
-                ]
-        keystone_admin_frontend = '\n'.join(keystone_admin_frontend_lines)
+        keystone_frontend, keystone_admin_frontend = get_keystone_frontends(network='internal')
+        if get_openstack_external_vip():
+            keystone_frontend_ext, keystone_admin_frontend_ext = get_keystone_frontends(network='external')
+            backend = '\n%s default_backend    keystone-backend' % space
+            keystone_frontend_ext += backend
+            keystone_admin_frontend_ext += backend
+
 
     for host_string in env.roledefs['openstack']:
         server_index = env.roledefs['openstack'].index(host_string) + 1
@@ -526,6 +546,8 @@ def fixup_restart_haproxy_in_openstack_node(*args):
 
     for host_string in env.roledefs['openstack']:
         haproxy_config = openstack_haproxy.template.safe_substitute({
+            '__keystone_frontend_ext__' : keystone_frontend_ext,
+            '__keystone_admin_frontend_ext__' : keystone_admin_frontend_ext,
             '__keystone_frontend__' : keystone_frontend,
             '__keystone_backend_servers__' : keystone_server_lines,
             '__keystone_admin_frontend__' : keystone_admin_frontend,
