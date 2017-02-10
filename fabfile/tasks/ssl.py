@@ -14,7 +14,9 @@ from fabfile.utils.host import (
         get_apiserver_cert_bundle, get_control_host_string,
         get_keystone_cert_bundle, get_apiserver_ext_keyfile,
         get_apiserver_ext_cafile, get_apiserver_ext_certfile,
-        get_apiserver_ext_cert_bundle
+        get_apiserver_ext_cert_bundle, get_keystone_ext_certfile,
+        get_keystone_ext_keyfile, get_keystone_ext_cafile,
+        get_keystone_ext_cert_bundle
         )
 from fabfile.utils.fabos import get_as_sudo, get_openstack_services
 
@@ -22,19 +24,34 @@ from fabfile.utils.fabos import get_as_sudo, get_openstack_services
 @task
 @EXECUTE_TASK
 @roles('openstack')
-def setup_keystone_ssl_certs():
-    execute('setup_keystone_ssl_certs_node', env.host_string)
+def setup_keystone_ssl_certs(vip='internal'):
+    execute('setup_keystone_ssl_certs_node', env.host_string, vip=vip)
 
 
 @task
-def setup_keystone_ssl_certs_node(*nodes):
-    default_certfile = '/etc/keystone/ssl/certs/keystone.pem'
-    default_keyfile = '/etc/keystone/ssl/private/keystone.key'
-    default_cafile = '/etc/keystone/ssl/certs/keystone_ca.pem'
-    keystonecertbundle = get_keystone_cert_bundle()
-    ssl_certs = ((get_keystone_certfile(), default_certfile),
-                 (get_keystone_keyfile(), default_keyfile),
-                 (get_keystone_cafile(), default_cafile))
+def setup_keystone_ssl_certs_node(*nodes, **kwargs):
+    vip = kwargs.get('vip', 'internal')
+    openstack_host = env.roledefs['openstack'][0]
+    openstack_ip = kwargs.get('openstack_ip',
+            get_openstack_internal_vip() or hstr_to_ip(get_control_host_string(openstack_host)))
+    if vip == 'external':
+        ssl_path = '/etc/keystone/ssl/external/'
+        default_certfile = '/etc/keystone/ssl/%s/certs/keystone.pem' % vip
+        default_keyfile = '/etc/keystone/ssl/%s/private/keystone.key' % vip
+        default_cafile = '/etc/keystone/ssl/%s/certs/keystone_ca.pem' % vip
+        ssl_certs = ((get_keystone_ext_certfile(), default_certfile),
+                     (get_keystone_ext_keyfile(), default_keyfile),
+                     (get_keystone_ext_cafile(), default_cafile))
+        keystonecertbundle = get_keystone_ext_cert_bundle()
+    else:
+        ssl_path = '/etc/keystone/ssl/'
+        default_certfile = '/etc/keystone/ssl/certs/keystone.pem'
+        default_keyfile = '/etc/keystone/ssl/private/keystone.key'
+        default_cafile = '/etc/keystone/ssl/certs/contrail_ca.pem'
+        ssl_certs = ((get_keystone_certfile(), default_certfile),
+                     (get_keystone_keyfile(), default_keyfile),
+                     (get_keystone_cafile(), default_cafile))
+        keystonecertbundle = get_keystone_cert_bundle()
     index = env.roledefs['openstack'].index(env.host_string) + 1
     for node in nodes:
         with settings(host_string=node, password=get_env_passwords(node)):
@@ -45,13 +62,10 @@ def setup_keystone_ssl_certs_node(*nodes):
                     sudo('rm -f %s' % keystonecertbundle)
             for ssl_cert, default in ssl_certs:
                 if ssl_cert == default:
-                    openstack_host = env.roledefs['openstack'][0]
                     if index == 1:
                         if not exists(ssl_cert, use_sudo=True):
                             print "Creating keystone SSL certs in first openstack node"
-                            sudo('create-keystone-ssl-certs.sh %s' % (
-                                    get_openstack_internal_vip() or
-                                    hstr_to_ip(get_control_host_string(openstack_host))))
+                            sudo('create-ssl-certs.sh %s %s contrail' % (openstack_ip_ip, ssl_path))
                     else:
                         with settings(host_string=openstack_host,
                                       password=get_env_passwords(openstack_host)):
@@ -63,8 +77,8 @@ def setup_keystone_ssl_certs_node(*nodes):
                             tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
                             get_as_sudo(ssl_cert, tmp_fname)
                         print "Copy to this(%s) openstack node" % env.host_string 
-                        sudo('mkdir -p /etc/keystone/ssl/certs/')
-                        sudo('mkdir -p /etc/keystone/ssl/private/')
+                        sudo('mkdir -p %scerts/' % ssl_path)
+                        sudo('mkdir -p %sprivate/' % ssl_path)
                         put(tmp_fname, ssl_cert, use_sudo=True)
                         os.remove(tmp_fname)
                 elif os.path.isfile(ssl_cert): 
@@ -78,14 +92,14 @@ def setup_keystone_ssl_certs_node(*nodes):
             if not exists(keystonecertbundle, use_sudo=True):
                 ((certfile, _), (keyfile, _), (cafile, _)) = ssl_certs
                 sudo('cat %s %s > %s' % (certfile, cafile, keystonecertbundle))
-            sudo("chown -R keystone:keystone /etc/keystone/ssl")
+            sudo("chown -R keystone:keystone %s" % ssl_path)
 
 
 @task
 @EXECUTE_TASK
 @roles('cfgm')
 def setup_apiserver_ssl_certs(vip='internal'):
-    execute('setup_apiserver_ssl_certs_node', env.host_string)
+    execute('setup_apiserver_ssl_certs_node', env.host_string, vip=vip)
 
 
 @task

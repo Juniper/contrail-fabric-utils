@@ -7,6 +7,10 @@ listen contrail-openstack-stats :5936
    stats uri /
    stats auth $__contrail_hap_user__:$__contrail_hap_passwd__
 
+$__keystone_frontend_ext__
+
+$__keystone_admin_frontend_ext__
+
 $__keystone_frontend__
     default_backend    keystone-backend
 
