@@ -74,7 +74,6 @@ def verify_cfgm():
     if not is_xenial_or_above():
         verify_service("supervisor-config")
     verify_service("contrail-api")
-    verify_service("contrail-discovery")
     verify_service("contrail-schema")
     if get_orchestrator is 'openstack':
        verify_service("contrail-svc-monitor")
