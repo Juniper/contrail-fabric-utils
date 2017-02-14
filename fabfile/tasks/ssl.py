@@ -12,9 +12,8 @@ from fabfile.utils.host import (
         get_env_passwords, get_openstack_internal_vip,
         get_contrail_internal_vip, hstr_to_ip,
         get_apiserver_cert_bundle, get_control_host_string,
-        get_keystone_cert_bundle, get_apiserver_ext_keyfile,
-        get_apiserver_ext_cafile, get_apiserver_ext_certfile,
-        get_apiserver_ext_cert_bundle
+        get_keystone_cert_bundle, get_openstack_external_vip,
+        get_contrail_external_vip
         )
 from fabfile.utils.fabos import get_as_sudo
 
@@ -49,9 +48,17 @@ def setup_keystone_ssl_certs_node(*nodes):
                     if index == 1:
                         if not exists(ssl_cert, use_sudo=True):
                             print "Creating keystone SSL certs in first openstack node"
-                            sudo('create-keystone-ssl-certs.sh %s' % (
+                            subject_alt_names_mgmt = [hstr_to_ip(host)
+                                                      for host in env.roledefs['openstack']]
+                            subject_alt_names_ctrl = [hstr_to_ip(get_control_host_string(host))
+                                                      for host in env.roledefs['openstack']]
+                            subject_alt_names = subject_alt_names_mgmt + subject_alt_names_ctrl
+                            if get_openstack_external_vip():
+                                subject_alt_names.append(get_openstack_external_vip())
+                            sudo('create-keystone-ssl-certs.sh %s %s' % (
                                     get_openstack_internal_vip() or
-                                    hstr_to_ip(get_control_host_string(openstack_host))))
+                                    hstr_to_ip(get_control_host_string(openstack_host)),
+                                    ','.join(subject_alt_names)))
                     else:
                         with settings(host_string=openstack_host,
                                       password=get_env_passwords(openstack_host)):
@@ -84,34 +91,19 @@ def setup_keystone_ssl_certs_node(*nodes):
 @task
 @EXECUTE_TASK
 @roles('cfgm')
-def setup_apiserver_ssl_certs(vip='internal'):
+def setup_apiserver_ssl_certs():
     execute('setup_apiserver_ssl_certs_node', env.host_string)
 
 
 @task
-def setup_apiserver_ssl_certs_node(*nodes, **kwargs):
-    vip = kwargs.get('vip', 'internal')
-    cfgm_host = env.roledefs['cfgm'][0]
-    cfgm_ip = kwargs.get('cfgm_ip',
-            get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host)))
-    if vip == 'external':
-        ssl_path = '/etc/contrail/ssl/external/'
-        default_certfile = '/etc/contrail/ssl/%s/certs/contrail.pem' % vip
-        default_keyfile = '/etc/contrail/ssl/%s/private/contrail.key' % vip
-        default_cafile = '/etc/contrail/ssl/%s/certs/contrail_ca.pem' % vip
-        ssl_certs = ((get_apiserver_ext_certfile(), default_certfile),
-                     (get_apiserver_ext_keyfile(), default_keyfile),
-                     (get_apiserver_ext_cafile(), default_cafile))
-        contrailcertbundle = get_apiserver_ext_cert_bundle()
-    else:
-        ssl_path = '/etc/contrail/ssl/'
-        default_certfile = '/etc/contrail/ssl/certs/contrail.pem'
-        default_keyfile = '/etc/contrail/ssl/private/contrail.key'
-        default_cafile = '/etc/contrail/ssl/certs/contrail_ca.pem'
-        ssl_certs = ((get_apiserver_certfile(), default_certfile),
-                     (get_apiserver_keyfile(), default_keyfile),
-                     (get_apiserver_cafile(), default_cafile))
-        contrailcertbundle = get_apiserver_cert_bundle()
+def setup_apiserver_ssl_certs_node(*nodes):
+    default_certfile = '/etc/contrail/ssl/certs/contrail.pem'
+    default_keyfile = '/etc/contrail/ssl/private/contrail.key'
+    default_cafile = '/etc/contrail/ssl/certs/contrail_ca.pem'
+    contrailcertbundle = get_apiserver_cert_bundle()
+    ssl_certs = ((get_apiserver_certfile(), default_certfile),
+                 (get_apiserver_keyfile(), default_keyfile),
+                 (get_apiserver_cafile(), default_cafile))
     index = env.roledefs['cfgm'].index(env.host_string) + 1
     for node in nodes:
         with settings(host_string=node, password=get_env_passwords(node)):
@@ -122,10 +114,19 @@ def setup_apiserver_ssl_certs_node(*nodes, **kwargs):
                     sudo('rm -f %s' % contrailcertbundle)
             for ssl_cert, default in ssl_certs:
                 if ssl_cert == default:
+                    cfgm_host = env.roledefs['cfgm'][0]
                     if index == 1:
                         if not exists(ssl_cert, use_sudo=True):
                             print "Creating apiserver SSL certs in first cfgm node"
-                            sudo('create-ssl-certs.sh %s %s contrail' % (cfgm_ip, ssl_path))
+                            subject_alt_names_mgmt = [hstr_to_ip(host)
+                                                      for host in env.roledefs['cfgm']]
+                            subject_alt_names_ctrl = [hstr_to_ip(get_control_host_string(host))
+                                                      for host in env.roledefs['cfgm']]
+                            subject_alt_names = subject_alt_names_mgmt + subject_alt_names_ctrl
+                            if get_contrail_external_vip():
+                                subject_alt_names.append(get_contrail_external_vip())
+                            cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
+                            sudo('create-api-ssl-certs.sh %s %s' % (cfgm_ip, subject_alt_names))
                     else:
                         with settings(host_string=cfgm_host,
                                       password=get_env_passwords(cfgm_host)):
@@ -137,8 +138,8 @@ def setup_apiserver_ssl_certs_node(*nodes, **kwargs):
                             tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
                             get_as_sudo(ssl_cert, tmp_fname)
                         print "Copy to this(%s) cfgm node" % env.host_string 
-                        sudo('mkdir -p %scerts/' % ssl_path)
-                        sudo('mkdir -p %sprivate/' % ssl_path)
+                        sudo('mkdir -p /etc/contrail/ssl/certs/')
+                        sudo('mkdir -p /etc/contrail/ssl/private/')
                         put(tmp_fname, ssl_cert, use_sudo=True)
                         os.remove(tmp_fname)
                 elif os.path.isfile(ssl_cert): 
@@ -151,7 +152,7 @@ def setup_apiserver_ssl_certs_node(*nodes, **kwargs):
             if not exists(contrailcertbundle, use_sudo=True):
                 ((certfile, _), (keyfile, _), (cafile, _)) = ssl_certs
                 sudo('cat %s %s > %s' % (certfile, cafile, contrailcertbundle))
-            sudo("chown -R contrail:contrail %s" % ssl_path)
+            sudo("chown -R contrail:contrail /etc/contrail/ssl")
 
 
 @task
