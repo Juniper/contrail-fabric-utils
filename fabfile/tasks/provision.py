@@ -2020,7 +2020,7 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         cmd += " --tor_ovs_protocol %s" % toragent_dict[host_string][i]['tor_ovs_protocol']
         cmd += " --tor_agent_ovs_ka %s" % tor_agent_ovs_ka
         # HA arguments
-        internal_vip = get_openstack_internal_vip()
+        internal_vip = get_contrail_internal_vip()
         if internal_vip:
             # Highly availbale setup
             cmd += " --discovery_server_ip %s" % internal_vip
