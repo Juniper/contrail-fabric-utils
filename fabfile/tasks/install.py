@@ -1134,7 +1134,43 @@ def create_install_repo_ns_agilio_vrouter():
             create_install_repo_ns_agilio_vrouter_node(env.host_string)
 
 @task
-def install_ns_agilio_nic_node(*args):
+def register_ns_agilio_vrouter_depends_packages(pkg, *args):
+    """Registers the ns-agilio-vrouter-depends-packages with contrail static repo
+    """
+
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            if pkg.endswith('.deb'):
+                pkgname = local("dpkg -I %s | grep -Po '^\s+Package:\s+\K.*'" % pkg, capture=True)
+                pkg_version = local("dpkg -I %s | grep -Po '^\s+Version:\s+\K.*'" % pkg, capture=True)
+            else:
+                abort("The pkg %s is not yet supported. File extension should be .deb" % pkg)
+
+            if pkgname:
+                versions = get_pkg_version_release(pkgname)
+                # Check if the samve version of the package is installed
+                if versions and pkg_version in versions:
+                    print "Package (%s) already installed in the node (%s)." % (pkg, host_string)
+                    continue
+
+            # Remove old package
+            sudo("cd /opt/contrail/contrail_packages_ns_agilio_vrouter && ./remove.sh")
+            sudo("rm /opt/contrail/contrail_install_repo/ns-agilio-vrouter-depends-packages*.deb")
+            sudo("apt-get remove -y %s || dpkg -r %s" % (pkgname, pkgname))
+            sudo("rm -rf /opt/contrail/contrail_install_repo_ns_agilio_vrouter")
+
+            # copy and register new package
+            pkg_filename = os.path.basename(pkg)
+            temp_dir= tempfile.mkdtemp()
+            sudo("mkdir -p %s" % temp_dir)
+            put(pkg, "%s/%s" % (temp_dir, pkg_filename), use_sudo=True)
+            sudo("mv %s/%s /opt/contrail/contrail_install_repo" % (temp_dir, pkg_filename))
+            sudo("cd /opt/contrail/contrail_install_repo && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz")
+            sudo("apt-get update")
+
+
+@task
+def install_ns_agilio_nic_node(pkg, *args):
     """Installs depends for ns-agilio-nic support in one or list of nodes.
     Configures kernel and kernel command line parameters for ns-agilio-nic support.
     Updates ns-agilio-nic programmables when needed.
@@ -1143,6 +1179,10 @@ def install_ns_agilio_nic_node(*args):
 
     for host_string in args:
         with settings(host_string=host_string):
+            if pkg:
+                execute('create_installer_repo')
+                execute("register_ns_agilio_vrouter_depends_packages", pkg, host_string)
+
             # Update system kernel - required for ns agilio nic operation
             execute("upgrade_kernel_node", host_string)
             execute("reboot_on_kernel_update_generic_node", "True", host_string)
@@ -1185,7 +1225,7 @@ def install_ns_agilio_nic_node(*args):
 
 @task
 @roles('compute')
-def install_ns_agilio_nic():
+def install_ns_agilio_nic(pkg=None):
     """Installs depends for ns-agilio-nic support on nodes configured
     with ns agilio vrouter mode. Configures kernel and kernel command
     line parameters for ns-agilio-nic support. Updates ns-agilio-nic
@@ -1194,6 +1234,24 @@ def install_ns_agilio_nic():
     """
 
     ns_agilio_vrouter_dict = getattr(env, 'ns_agilio_vrouter', None)
-    if ns_agilio_vrouter_dict:
-        if env.host_string in ns_agilio_vrouter_dict:
-            install_ns_agilio_nic_node(env.host_string)
+    bond_info = getattr(testbed, 'bond', None)
+    control_data_info = getattr(testbed, 'control_data', None)
+
+    install_ns_agilio_nic_package = False
+
+    if ns_agilio_vrouter_dict and env.host_string in ns_agilio_vrouter_dict:
+        install_ns_agilio_nic_package = True
+    else:
+        if control_data_info and env.host_string in control_data_info:
+            if 'device' in control_data_info[env.host_string]:
+                if 'nfp' in control_data_info[env.host_string]['device']:
+                    install_ns_agilio_nic_package = True
+        if bond_info and env.host_string in bond_info:
+            if 'member' in bond_info[env.host_string]:
+                for dev in bond_info[env.host_string]['member']:
+                    if 'nfp' in dev:
+                        install_ns_agilio_nic_package = True
+
+    if install_ns_agilio_nic_package:
+        execute("install_ns_agilio_nic_node", pkg, env.host_string)
+
