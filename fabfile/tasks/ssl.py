@@ -126,7 +126,7 @@ def setup_apiserver_ssl_certs_node(*nodes):
                             if get_contrail_external_vip():
                                 subject_alt_names.append(get_contrail_external_vip())
                             cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
-                            sudo('create-api-ssl-certs.sh %s %s' % (cfgm_ip, subject_alt_names))
+                            sudo('create-api-ssl-certs.sh %s %s' % (cfgm_ip, ','.join(subject_alt_names)))
                     else:
                         with settings(host_string=cfgm_host,
                                       password=get_env_passwords(cfgm_host)):
