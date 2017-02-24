@@ -794,7 +794,7 @@ def ping_hostip(hostip='127.0.0.0'):
             output=local(cmd,capture=True)
         except:
             pass
-    if " 100% packet loss" in output:
+    if " 100% packet loss" in str(output):
         output=0
     else:
         output=1
