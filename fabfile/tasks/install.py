@@ -50,7 +50,7 @@ def install_xenial_prerequisites():
         for svc in nova_services_list:
             services_list.append(svc)
 
-    other_services = ['cassandra.service', 'ifmap.service', 'zookeeper.service']
+    other_services = ['cassandra.service', 'zookeeper.service']
     for svc in other_services:
          services_list.append(svc)
 

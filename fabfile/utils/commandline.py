@@ -151,16 +151,15 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     collector_host_list = [get_control_host_string(entry)\
                           for entry in env.roledefs['collector']]
     collector_ip = None
-    if cmd != 'update-ifmap-users':
-        if cfgm_host in collector_host_list:
-            collector_ip = tgt_ip
-        else:
-            # Select based on index
-            hindex = cfgm_host_list.index(cfgm_host)
-            hindex = hindex % len(env.roledefs['collector'])
-            collector_host = get_control_host_string(
-                                 env.roledefs['collector'][hindex]) 
-            collector_ip = hstr_to_ip(collector_host)
+    if cfgm_host in collector_host_list:
+        collector_ip = tgt_ip
+    else:
+        # Select based on index
+        hindex = cfgm_host_list.index(cfgm_host)
+        hindex = hindex % len(env.roledefs['collector'])
+        collector_host = get_control_host_string(
+                             env.roledefs['collector'][hindex])
+        collector_ip = hstr_to_ip(collector_host)
 
     collector_ip_list = [hstr_to_ip(get_control_host_string(entry))\
                           for entry in collector_host_list]

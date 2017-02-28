@@ -934,11 +934,6 @@ def purge_node_from_control_cluster(del_ctrl_node):
     with settings(warn_only = True):
         execute('prov_control_bgp_node', env.roledefs['control'][0], oper = 'del', tgt_node=del_ctrl_node)
 
-    for host_string in env.roledefs['cfgm']:
-        with settings(host_string=host_string):
-            cmd = frame_vnc_config_cmd(del_ctrl_node, cmd = 'update-ifmap-users')
-            sudo(cmd)
-
 @task
 @roles('build')
 def purge_node_from_database(del_db_node):

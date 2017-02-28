@@ -399,7 +399,6 @@ def cfgm_status():
     sudo("service contrail-discovery status")
     if get_orchestrator is 'openstack':
        sudo("service contrail-svc-monitor status")
-    sudo("service ifmap status")
 #end cfgm_status
 
 @roles('cfgm')
