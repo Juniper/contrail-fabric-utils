@@ -151,7 +151,7 @@ class sr_iov_fab(object):
             self.vcenter_base.connect_to_vcenter()
             dvs = self.vcenter_base.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], self.dvs_name)
             self.vcenter_base.set_dvs_mtu(dvs, self.datacenter_mtu)
-            self.add_dvPort_group(self.vcenter_base.service_instance, dvs, self.dvportgroup_name)
+            self.add_dvPort_group(self.vcenter_base.service_instance, dvs, self.dvportgroup_name, 3)
             for host in self.host_list:
                 if ('sr_iov_nics' in self.esxi_info[host]['contrail_vm']):
                     vm_name = "ContrailVM" + "-" + self.datacenter_name + "-" + self.esxi_info[host]['ip']
@@ -481,35 +481,34 @@ class Vcenter(object):
 
         self.datacenter_name = vcenter_params['datacenter_name']
         self.datacenter_mtu = vcenter_params['datacenter_mtu']
-        self.cluster_name = vcenter_params['cluster_name']
-
-        self.dvswitch_name = vcenter_params['dvswitch_name']
-        self.dvswitch_version = vcenter_params['dvswitch_version']
-        self.dvportgroup_name = vcenter_params['dvportgroup_name']
-        self.dvportgroup_num_ports = vcenter_params['dvportgroup_num_ports']
-
+        self.dv_switches = vcenter_params['dv_switches']
+        self.clusters = vcenter_params['clusters']
         self.hosts = vcenter_params['hosts']
         self.vms = vcenter_params['vms']
-        self.clusters = vcenter_params['clusters']
 
         try:
             self.vcenter_base.connect_to_vcenter()
             datacenter = self.create_datacenter(dcname=self.datacenter_name)
-            for cluster_name in self.clusters:
-                 cluster=self.create_cluster(cluster_name,datacenter)
+            for cluster in self.clusters:
+                 cluster=self.create_cluster(cluster,datacenter)
             network_folder = datacenter.networkFolder
 	    for host_info in self.hosts:
-                self.add_host(host_info[4],host_info[0],host_info[3],host_info[1],host_info[2])
-            dvs = self.vcenter_base.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], self.dvswitch_name)
-            if dvs:
-                dvs = self.reconfigure_dvSwitch(self.vcenter_base.service_instance, self.clusters, self.dvswitch_name)
-            else:
-                dvs=self.create_dvSwitch(self.vcenter_base.service_instance, network_folder, self.clusters, self.dvswitch_name, self.dvswitch_version)
-                self.configure_hosts_on_dvSwitch(self.vcenter_base.service_instance, network_folder, self.clusters, self.dvswitch_name)
-            self.vcenter_base.set_dvs_mtu(dvs, self.datacenter_mtu)
-            self.add_dvPort_group(self.vcenter_base.service_instance,dvs, self.dvportgroup_name)
-            for vm_info_list in self.vms:
-                self.add_vm_to_dvpg(self.vcenter_base.service_instance, vm_info_list, dvs, self.dvportgroup_name)
+                 self.add_host(host_info[4],host_info[0],host_info[3],host_info[1],host_info[2])
+            for dvs_info in self.dv_switches: 
+                 dvswitch_name = dvs_info[0]
+                 dvswitch_version = dvs_info[1]
+                 dvs = self.vcenter_base.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], dvswitch_name)
+                 if dvs:
+                     dvs = self.reconfigure_dvSwitch(self.vcenter_base.service_instance, self.clusters, dvswitch_name)
+                 else:
+                     dvs=self.create_dvSwitch(self.vcenter_base.service_instance, network_folder, self.clusters, dvswitch_name, dvswitch_version)
+                     self.configure_hosts_on_dvSwitch(self.vcenter_base.service_instance, network_folder, self.clusters, dvswitch_name)
+                     self.vcenter_base.set_dvs_mtu(dvs, self.datacenter_mtu)
+                     dvportgroup_name = dvs_info[2]
+                     dvportgroup_num_ports = dvs_info[3]
+                     self.add_dvPort_group(self.vcenter_base.service_instance, dvs, dvportgroup_name, dvportgroup_num_ports)
+                     for vm_info_list in self.vms:
+                          self.add_vm_to_dvpg(self.vcenter_base.service_instance, vm_info_list, dvs, dvportgroup_name)
 
         except self.pyVmomi.vmodl.MethodFault as error:
             print "Caught vmodl fault : " + error.msg
@@ -585,7 +584,7 @@ class Vcenter(object):
         host_network_system.AddPortGroup(portgrp=port_group_spec)
         print "Successfully created PortGroup ", pg_name
 
-    def add_dvPort_group(self, si,dv_switch, dv_port_name):
+    def add_dvPort_group(self, si,dv_switch, dv_port_name, dv_port_num_ports):
         dv_pg = self.vcenter_base.get_obj([self.pyVmomi.vim.dvs.DistributedVirtualPortgroup], dv_port_name)
         if dv_pg is not None:
             print("dv port group already exists")
@@ -593,7 +592,7 @@ class Vcenter(object):
         else:
             dv_pg_spec = self.pyVmomi.vim.dvs.DistributedVirtualPortgroup.ConfigSpec()
             dv_pg_spec.name = dv_port_name
-            dv_pg_spec.numPorts = int(self.dvportgroup_num_ports)
+            dv_pg_spec.numPorts = int(dv_port_num_ports)
             dv_pg_spec.type = self.pyVmomi.vim.dvs.DistributedVirtualPortgroup.PortgroupType.earlyBinding
             dv_pg_spec.defaultPortConfig = self.pyVmomi.vim.dvs.VmwareDistributedVirtualSwitch.VmwarePortConfigPolicy()
             dv_pg_spec.defaultPortConfig.securityPolicy = self.pyVmomi.vim.dvs.VmwareDistributedVirtualSwitch.SecurityPolicy()
@@ -815,7 +814,7 @@ def _wait_for_task (task):
         time.sleep(2)
     return task.info.state == vim.TaskInfo.State.success
 
-def cleanup_vcenter(vcenter_info):
+def cleanup_vcenter(vcenter_info, datacenter):
     from pyVim import connect
     from pyVmomi import vim
     port = vcenter_info.get('port', 443)
@@ -828,11 +827,11 @@ def cleanup_vcenter(vcenter_info):
 
     items = content.viewManager.CreateContainerView(content.rootFolder, [vim.Datacenter], True).view
     for obj in items:
-        if obj.name == vcenter_info['datacenter']:
+        if obj.name == datacenter:
             dc = obj
             break
     else:
-        print 'Datacenter %s does not exist' % vcenter_info['datacenter']
+        print 'Datacenter %s does not exist' % datacenter
         return
 
     clusters = content.viewManager.CreateContainerView(dc,

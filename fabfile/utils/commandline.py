@@ -257,11 +257,29 @@ def frame_vnc_vcenter_plugin_cmd(host_string, cmd="setup-vcenter-plugin"):
         for v in vcenter_info.keys():
              if get_orchestrator() == 'vcenter':
                  vcenter_server = vcenter_info[v]
+                 datacenters = get_vcenter_datacenters(vcenter_server)
+                 for dc in datacenters:
+                      datacenter = dc
+                      dc_info = vcenter_server['datacenters'][dc]
+                      for dvs in dc_info['dv_switches'].keys():
+                           dv_switch = dvs
+                           break
+                      break
                  break
              else:
-                 if host_string.split('@')[1] == vcenter_info[v]['vcenter_compute']:
-                     vcenter_server = vcenter_info[v]
-                     break
+                 vcenter_server = vcenter_info[v]
+                 datacenters = get_vcenter_datacenters(vcenter_server)
+                 for dc in datacenters:
+                     dc_info = vcenter_server['datacenters'][dc]
+                     vcenter_compute_nodes = get_vcenter_compute_nodes(dc_info)
+                     if host_string.split('@')[1] in vcenter_compute_nodes:
+                         vcenter_server = vcenter_info[v]
+                         datacenter = dc
+                         for dvs in dc_info['dv_switches'].keys():
+                             dvs_info = dc_info['dv_switches'][dvs]
+                             if host_string.split('@')[1] == dvs_info['vcenter_compute']:
+                                 dv_switch = dvs
+                                 break
 
     zookeeper_ip_list = [hstr_to_ip(get_control_host_string(config_host))
             for config_host in env.roledefs['cfgm']]
@@ -274,8 +292,8 @@ def frame_vnc_vcenter_plugin_cmd(host_string, cmd="setup-vcenter-plugin"):
     cmd += " --vcenter_url %s" % vcenter_server['server']
     cmd += " --vcenter_username %s" % vcenter_server['username']
     cmd += " --vcenter_password %s" % vcenter_server['password']
-    cmd += " --vcenter_datacenter %s" % vcenter_server['datacenter']
-    cmd += " --vcenter_dvswitch %s" % vcenter_server['dv_switch']['dv_switch_name']
+    cmd += " --vcenter_datacenter %s" % datacenter
+    cmd += " --vcenter_dvswitch %s" % dv_switch
     if 'ipfabricpg' in vcenter_server.keys():
         cmd += " --vcenter_ipfabricpg %s" % vcenter_server['ipfabricpg']
     else:
@@ -376,13 +394,21 @@ def frame_vnc_webui_cmd(host_string, cmd="setup-vnc-webui"):
         else:
            for v in vcenter_info:
                 vcenter_server = vcenter_info[v]
+                datacenters = get_vcenter_datacenters(vcenter_server)
+                for dc in datacenters:
+                      datacenter = dc
+                      dc_info = vcenter_server['datacenters'][dc]
+                      for dvs in dc_info['dv_switches'].keys():
+                           dv_switch = dvs
+                           break
+                      break
                 break
         # vcenter provisioning parameters
         cmd += " --vcenter_ip %s" % vcenter_server['server']
         cmd += " --vcenter_port %s" % vcenter_server['port']
         cmd += " --vcenter_auth %s" % vcenter_server['auth']
-        cmd += " --vcenter_datacenter %s" % vcenter_server['datacenter']
-        cmd += " --vcenter_dvswitch %s" % vcenter_server['dv_switch']['dv_switch_name']
+        cmd += " --vcenter_datacenter %s" % datacenter
+        cmd += " --vcenter_dvswitch %s" % dv_switch
 
     return cmd
 
@@ -546,24 +572,36 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
             vcenter_info = getattr(env, 'vcenter_servers', None)
             for v in vcenter_info.keys():
                  vcenter_server = vcenter_info[v]
-                 if compute_mgmt_ip == vcenter_server['vcenter_compute']:
-                     cmd += " --vcenter_server %s" % vcenter_server['server']
-                     cmd += " --vcenter_username %s" % vcenter_server['username']
-                     cmd += " --vcenter_password %s" % vcenter_server['password']
-                     cluster_list = vcenter_server['cluster']
-                     cluster_list_now = ""
-                     for cluster in cluster_list:
-                        cluster_list_now += cluster
-                        cluster_list_now += ","
-                     cluster_list_now = cluster_list_now.rstrip(',')
-                     cmd += " --vcenter_cluster %s" % cluster_list_now
-                     cmd += " --vcenter_dvswitch %s" % vcenter_server['dv_switch']['dv_switch_name']
+                 datacenters = get_vcenter_datacenters(vcenter_server)
+                 for dc in datacenters: 
+                     dc_info = vcenter_server['datacenters'][dc]
+                     vcenter_compute_nodes = get_vcenter_compute_nodes(dc_info)
+                     if compute_mgmt_ip in vcenter_compute_nodes:
+                         vcenter_compute_node = compute_mgmt_ip
+                         cmd += " --vcenter_server %s" % vcenter_server['server']
+                         cmd += " --vcenter_username %s" % vcenter_server['username']
+                         cmd += " --vcenter_password %s" % vcenter_server['password']
+
+                         for dvs in dc_info['dv_switches'].keys():
+                              dvs_info = dc_info['dv_switches'][dvs]
+                              if vcenter_compute_node == dvs_info['vcenter_compute']:
+                                  dv_switch = dvs
+                                  cluster_list = dvs_info['clusters']
+                                  break
+
+                         cluster_list_now = ""
+                         for cluster in cluster_list:
+                              cluster_list_now += cluster
+                              cluster_list_now += ","
+                         cluster_list_now = cluster_list_now.rstrip(',')
+                         cmd += " --vcenter_cluster %s" % cluster_list_now
+                         cmd += " --vcenter_dvswitch %s" % dv_switch
 
     # Contrail with vmware as orchestrator
     esxi_data = get_vmware_details(host_string)
     if esxi_data:
         apply_esxi_defaults(esxi_data)
-        datacenter_mtu = get_vmware_datacenter_mtu(esxi_data['vcenter_server'])
+        datacenter_mtu = get_vcenter_datacenter_mtu(esxi_data['vcenter_server'])
         cmd += " --vmware %s" % esxi_data['ip']
         cmd += " --vmware_username %s" % esxi_data['username']
         cmd += " --vmware_passwd %s" % esxi_data['password']

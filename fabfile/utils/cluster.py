@@ -209,14 +209,15 @@ def get_vmware_details(compute_host_string):
                  continue
     return None
 
-def get_vmware_datacenter_mtu(vcenter_server_string):
+def get_vcenter_datacenter_mtu(vcenter_server_name):
     vcenter_data = {}
     datacenter_mtu = 1500
     vcenter_info = getattr(env, 'vcenter_servers', None)
-    if vcenter_server_string in vcenter_info.keys():
-        vcenter_server = vcenter_info[vcenter_server_string]
+    if vcenter_server_name in vcenter_info.keys():
+        vcenter_server = vcenter_info[vcenter_server_name]
         if 'datacenter_mtu' in vcenter_server.keys():
             datacenter_mtu = vcenter_server['datacenter_mtu']
+
     return datacenter_mtu
 
 def get_esxi_ssl_thumbprint(esxi_data):
@@ -234,7 +235,6 @@ def get_esxi_ssl_thumbprint(esxi_data):
 def get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list):
     hosts = []
     vms = []
-    clusters = []
     for host in host_list:
          with settings(host=host):
                if host in esxi_info.keys():
@@ -243,7 +243,7 @@ def get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, p
                    ssl_thumbprint = get_esxi_ssl_thumbprint(esxi_data)
                    esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint,esxi_data['cluster']
                    hosts.append(esx_list)
-                   modified_vm_name = vm_name+"-"+vcenter_server['datacenter']+"-"+esxi_data['ip']
+                   modified_vm_name = vm_name+"-"+esxi_data['datacenter']+"-"+esxi_data['ip']
                    for host_string in compute_list:
                        try: 
                            if host_string == esxi_data['contrail_vm']['host']:
@@ -256,8 +256,45 @@ def get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, p
                else:
                    print 'Info: esxi_hosts block does not have the esxi host.Exiting'
                    return
-    clusters = vcenter_server['cluster']
-    return (hosts,clusters,vms)
+    return (hosts,vms)
+
+def get_vcenter_datacenters(server):
+    datacenters = []
+    for dc in server['datacenters'].keys():
+         datacenters.append(dc)
+
+    return datacenters 
+
+def get_vcenter_clusters(datacenter):
+    clusters = []
+    for dvs in datacenter['dv_switches'].keys():
+         dvs_info = datacenter['dv_switches'][dvs]
+         for cluster in dvs_info['clusters']:
+              clusters.append(cluster)
+
+    return clusters
+
+def get_vcenter_dvswitches(datacenter):
+    dv_switches = []
+    for dvs in datacenter['dv_switches'].keys():
+         dvs_info = datacenter['dv_switches'][dvs]
+         dv_switch_name = dvs
+         dv_switch_version = dvs_info['dv_switch_version']
+         dv_portgroup_name = dvs_info['dv_port_group']['dv_portgroup_name']
+         dv_portgroup_num_ports = dvs_info['dv_port_group']['number_of_ports']
+
+         dvs_info_list = dv_switch_name, dv_switch_version, dv_portgroup_name, dv_portgroup_num_ports
+         dv_switches.append(dvs_info_list)
+
+    return dv_switches 
+
+def get_vcenter_compute_nodes(datacenter):
+    vcenter_compute_nodes = []
+    for dvs in datacenter['dv_switches'].keys():
+         dvs_info = datacenter['dv_switches'][dvs]
+         vcenter_compute_nodes.append(dvs_info['vcenter_compute'])
+
+    return vcenter_compute_nodes 
 
 def create_esxi_vrouter_map_file(vcenter_server_name, vcenter_server, host_string):
     #create the static esxi:vrouter map file
@@ -273,8 +310,14 @@ def create_esxi_vrouter_map_file(vcenter_server_name, vcenter_server, host_strin
 
     with settings(host_string=host_string, warn_only=True):
          tmp_fname = "/tmp/ESXiToVRouterIp-%s" %(host_string)
+
+         # Get all clusters managed by this server.
+         for dc in vcenter_server['datacenters'].keys():
+              dc_info = vcenter_server['datacenters'][dc]
+              clusters = get_vcenter_clusters(dc_info)
+
          for esxi_host in esxi_hosts:
-             if esxi_info[esxi_host]['cluster'] in vcenter_server['cluster']:
+             if esxi_info[esxi_host]['cluster'] in clusters:
                 esxi_ip = esxi_info[esxi_host]['ip']
                 vrouter_ip_string = esxi_info[esxi_host]['contrail_vm']['host']
                 vrouter_ip = vrouter_ip_string.split('@')[1]
