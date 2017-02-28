@@ -11,7 +11,7 @@ from vcenter_prov import dvs_fab as dvs_fab
 from vcenter_prov import vcenter_fab as vcenter_fab
 from vcenter_prov import pci_fab as pci_fab
 from vcenter_prov import sr_iov_fab as sr_iov_fab
-from fabfile.utils.cluster import get_mode
+from fabfile.utils.cluster import get_mode, get_vcenter_datacenter_mtu
 from fabfile.utils.install import get_setup_vcenter_pkg
 
 def configure_esxi_network(esxi_info):
@@ -129,7 +129,7 @@ def create_esxi_compute_vm (esxi_host, vcenter_info, power_on):
             vm_name = esxi_host['contrail_vm']['name']
         if mode is 'vcenter':
             name = "ContrailVM"
-            vm_name = name+"-"+vcenter_info['datacenter']+"-"+esxi_host['ip']
+            vm_name = name+"-"+esxi_host['datacenter']+"-"+esxi_host['ip']
         vm_store = datastore + '/' + vm_name + '/'
 
         vmx_file = create_vmx(esxi_host, vm_name)
@@ -182,7 +182,7 @@ def _template_substitute_write(template, vals, filename):
 #end _template_substitute_write
 
 @task
-def provision_vcenter_features(vcenter_info, esxi_info, host_list):
+def provision_vcenter_features(vcenter_info, esxi_info, host_list, datacenter, clusters):
     pkgs = get_setup_vcenter_pkg()
     apt_install(pkgs)
     vcenter_params = {}
@@ -191,8 +191,8 @@ def provision_vcenter_features(vcenter_info, esxi_info, host_list):
     vcenter_params['vcenter_username'] = vcenter_info['username']
     vcenter_params['vcenter_password'] = vcenter_info['password']
 
-    vcenter_params['cluster_name'] = vcenter_info['cluster']
-    vcenter_params['datacenter_name'] = vcenter_info['datacenter']
+    vcenter_params['datacenter_name'] = datacenter
+    vcenter_params['cluster_name'] = clusters
 
     vcenter_params['esxi_info'] = esxi_info
     vcenter_params['host_list'] = host_list
@@ -275,28 +275,21 @@ def deprovision_vcenter(vcenter_info):
     cleanup_vcenter(vcenter_info)
 
 @task
-def provision_vcenter(vcenter_info, hosts, clusters, vms):
+def provision_vcenter(vcenter_info, datacenter, datacenter_mtu, dv_switches, clusters, hosts, vms):
         pkgs = get_setup_vcenter_pkg()
         apt_install(pkgs)
+
         vcenter_params = {}
         vcenter_params['server'] = vcenter_info['server']
         vcenter_params['username'] = vcenter_info['username']
         vcenter_params['password'] = vcenter_info['password']
 
-        vcenter_params['datacenter_name'] = vcenter_info['datacenter']
-        vcenter_params['datacenter_mtu'] = vcenter_info['datacenter_mtu']
-        vcenter_params['cluster_name'] = vcenter_info['cluster']
-        vcenter_params['dvswitch_name'] = vcenter_info['dv_switch']['dv_switch_name']
-        if 'dv_switch_version' in vcenter_info['dv_switch']:
-            vcenter_params['dvswitch_version'] = vcenter_info['dv_switch']['dv_switch_version']
-        else:
-            vcenter_params['dvswitch_version'] = None
-        vcenter_params['dvportgroup_name'] = vcenter_info['dv_port_group']['dv_portgroup_name']
-        vcenter_params['dvportgroup_num_ports'] = vcenter_info['dv_port_group']['number_of_ports']
-
+        vcenter_params['datacenter_name'] = datacenter
+        vcenter_params['datacenter_mtu'] = datacenter_mtu
+        vcenter_params['dv_switches'] = dv_switches
+        vcenter_params['clusters'] = clusters
         vcenter_params['hosts'] = hosts
         vcenter_params['vms'] = vms
-        vcenter_params['clusters'] = clusters
 
         Vcenter(vcenter_params)
 #end provision_vcenter
