@@ -428,7 +428,7 @@ def frame_vnc_control_cmd(host_string, cmd='setup-vnc-control'):
     cmd += ' --self_ip %s' % tgt_ip
     cmd += ' --cfgm_ip %s' % cfgm_ip
     cmd += ' --collectors %s' % ' '.join(collector_host_list)
-    cmd += ' --rabbit_server_list %s' % ' '.join(config_host_list)
+    cmd += ' --rabbit_server_list %s' % ' '.join(get_amqp_servers())
     cmd += ' --config_db_list %s' % ' '.join(get_config_db_ip_list())
 
     return cmd
