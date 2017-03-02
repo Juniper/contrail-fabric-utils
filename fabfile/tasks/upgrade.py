@@ -1,7 +1,7 @@
 from fabfile.config import *
 from distutils.version import LooseVersion
 
-from fabfile.tasks.install import pkg_install, install_contrail_vcenter_plugin
+from fabfile.tasks.install import pkg_install, install_contrail_vcenter_plugin, apt_install
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 from fabfile.utils.cluster import get_toragent_nodes, get_tsn_nodes
 from fabfile.utils.commandline import *
@@ -12,6 +12,8 @@ from fabfile.utils.install import get_compute_pkgs, get_openstack_pkgs,\
 from fabfile.tasks.vmware import provision_vcenter_features
 from fabfile.utils.analytics import \
     is_ceilometer_contrail_plugin_install_supported
+from fabfile.tasks.services import *
+from fabfile.utils.ns_agilio_vrouter import *
 
 @task
 @EXECUTE_TASK
@@ -317,3 +319,98 @@ def upgrade_without_openstack(from_rel, pkg):
     """Upgrades all the  contrail packages in all nodes except openstack node as per the role definition.
     """
     execute('upgrade_contrail', from_rel, pkg, orch='no')
+
+
+@task
+@roles('build')
+def upgrade_ns_agilio_contrail(from_rel, pkg, orch='yes'):
+    """Upgrades all the SmartNIC pkgs in all SmartNIC compute nodes.
+    """
+    execute('upgrade_ns_agilio_compute', from_rel, pkg)
+
+
+@task
+@EXECUTE_TASK
+@roles('compute')
+def upgrade_ns_agilio_compute(from_rel, pkg):
+    """Upgrades the SmartNIC compute pkgs in all SmartNIC nodes defined in compute."""
+    execute("upgrade_ns_agilio_compute_node", from_rel, pkg, env.host_string)
+
+
+@task
+def upgrade_ns_agilio_compute_node(from_rel, ns_pkg, *args, **kwargs):
+    """Upgrades SmartNIC pkgs in one or list of nodes. USAGE:fab upgrade_ns_agilio_compute_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        with settings(host_string=host_string):
+            ns_agilio_vrouter_dict = getattr(env, 'ns_agilio_vrouter', None)
+            bond_info = getattr(testbed, 'bond', None)
+            control_data_info = getattr(testbed, 'control_data', None)
+            control_iface = control_data_info[host_string]['device']
+
+            upgrade_ns_agilio_contrail = False
+
+            if ns_agilio_vrouter_dict and host_string in ns_agilio_vrouter_dict:
+                upgrade_ns_agilio_contrail = True
+            else:
+                if control_data_info and host_string in control_data_info:
+                    if 'device' in control_data_info[host_string]:
+                        if 'nfp' in control_data_info[host_string]['device']:
+                            upgrade_ns_agilio_contrail = True
+                if bond_info and host_string in bond_info:
+                    if 'member' in bond_info[host_string]:
+                        for dev in bond_info[host_string]['member']:
+                            if 'nfp' in dev:
+                                upgrade_ns_agilio_contrail = True
+
+            if not upgrade_ns_agilio_contrail:
+                print "Node has no SmartNIC in testbed. SKIPPING."
+                return
+
+            # bring down vrouter
+            with settings(warn_only=True):
+                execute(stop_nova_openstack_compute)
+                execute(stop_contrail_vrouter_agent)
+                execute(stop_virtiorelayd)
+                sudo('ifdown vhost0')
+
+            # copy and install ns_pkg. Installs BSP and flashes if needed
+            execute('install_ns_agilio_nic', ns_pkg)
+
+            # bring down vrouter (in case of reboot)
+            with settings(warn_only=True):
+                execute(stop_nova_openstack_compute)
+                execute(stop_contrail_vrouter_agent)
+                execute(stop_virtiorelayd)
+                sudo('ifdown vhost0')
+
+            # install additional packages
+            manage_nova_compute = kwargs.get('manage_nova_compute', 'yes')
+            pkgs = get_compute_pkgs(manage_nova_compute=manage_nova_compute)
+            ostype = detect_ostype()
+
+            if ostype == 'ubuntu':
+                sudo('echo "manual" >> /etc/init/supervisor-vrouter.override')
+                apt_install(pkgs)
+            else:
+                abort('%s OS not supported. Cannot upgrade_ns_agilio_compute_node' % ostype)
+
+            # Execute ns_agilio_vrouter offload provisioning
+            if ns_agilio_vrouter_dict:
+                if env.roledefs['compute']:
+                    if env.host_string in env.roledefs['compute']:
+                        ns_agilio_vrouter_prov = \
+                            ProvisionNsAgilioVrouter(host_string, \
+                                                     ns_agilio_vrouter_dict, \
+                                                     bond_info, \
+                                                     control_data_info)
+                        ns_agilio_vrouter_prov.setup()
+                else:
+                    abort("Compute node role not defined")
+
+            # bring up vrouter and reload agilio vrouter
+            sudo('ifdown %s' % control_iface) # down and up to reload firmware
+            sudo('ifup %s' % control_iface)
+            sudo('ifup vhost0')
+            execute(start_virtiorelayd)
+            execute(start_contrail_vrouter_agent)
+            execute(start_nova_openstack_compute)
