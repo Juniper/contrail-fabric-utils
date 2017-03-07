@@ -9,10 +9,49 @@ from fabric.utils import abort
 from fabric.contrib.files import exists
 
 from fabfile.config import *
-from fabfile.utils.fabos import get_as_sudo
+from fabfile.utils.fabos import get_as_sudo, detect_ostype
 import tempfile
 
 from iface_parser import IfaceParser
+
+def ns_agilio_nic_pkg_deps_list():
+    pkgs = []
+    if detect_ostype() in ['ubuntu']:
+       pkgs = ["build-essential", "bison", "flex", "gawk",
+         "autoconf", "libtool", "libdb5.3-dev", "libftdi-dev",
+         "libjansson-dev", "libusb-1.0", "libusb-1.0-0-dev",
+         "python", "python-dev", "dkms", "tcl", "tcl-dev",
+         "nfp-bsp", "nfp-bsp-dkms"]
+
+    return pkgs
+
+def ns_agilio_nic_pkg_list():
+    pkgs = []
+    if detect_ostype() in ['ubuntu']:
+        pkgs = ["ns-agilio-core-nic"]
+    return pkgs
+
+def is_ns_agilio_node(host_string):
+    ns_agilio_vrouter_dict = getattr(env, 'ns_agilio_vrouter', None)
+    bond_info = getattr(testbed, 'bond', None)
+    control_data_info = getattr(testbed, 'control_data', None)
+
+    valid_node = False
+
+    if ns_agilio_vrouter_dict and host_string in ns_agilio_vrouter_dict:
+        valid_node = True
+    else:
+        if control_data_info and host_string in control_data_info:
+            if 'device' in control_data_info[host_string]:
+                if 'nfp' in control_data_info[host_string]['device']:
+                    valid_node = True
+        if bond_info and host_string in bond_info:
+            if 'member' in bond_info[host_string]:
+                for dev in bond_info[host_string]['member']:
+                    if 'nfp' in dev:
+                        valid_node =  True
+
+    return valid_node
 
 class ProvisionNsAgilioVrouter():
 
