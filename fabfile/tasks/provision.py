@@ -2380,13 +2380,17 @@ def add_tor_agent_by_index(index, node_info, restart=True):
         cmd += " --tsn_ip %s" % toragent_dict[host_string][i]['tor_tsn_ip']
         cmd += " --tor_ovs_protocol %s" % toragent_dict[host_string][i]['tor_ovs_protocol']
         cmd += " --tor_agent_ovs_ka %s" % tor_agent_ovs_ka
-        # HA arguments
-        internal_vip = get_contrail_internal_vip()
-        if internal_vip:
-            # Highly availbale setup
-            cmd += " --discovery_server_ip %s" % internal_vip
-        else:
-            cmd += " --discovery_server_ip %s" % hstr_to_ip(get_control_host_string(env.roledefs['cfgm'][0]))
+        
+        # Configure list of collectors and controllers
+        collector_host_list=[]
+        for entry in env.roledefs['collector']:
+            collector_host_list.append(hstr_to_ip(get_control_host_string(entry)))
+        cmd += ' --collectors %s' % ' '.join(collector_host_list)
+        control_host_list=[]
+        for entry in env.roledefs['control']:
+            control_host_list.append(hstr_to_ip(get_control_host_string(entry)))
+        cmd += ' --control-nodes %s' % ' '.join(control_host_list)
+
         # Execute the provision toragent script
         with cd(INSTALLER_DIR):
             sudo(cmd)
