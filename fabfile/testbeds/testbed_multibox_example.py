@@ -646,8 +646,8 @@ env.ostypes = {
 # OPTIONAL vrouter limit parameter
 # ==================================
 #env.vrouter_module_params = {
-#     host4:{'mpls_labels':'131072', 'nexthops':'131072', 'vrfs':'65536', 'macs':'262144'},
-#     host5:{'mpls_labels':'131072', 'nexthops':'131072', 'vrfs':'65536', 'macs':'262144'}
+#     host4:{'flow_entries':'4000000','mpls_labels':'131072', 'nexthops':'131072', 'vrfs':'65536', 'macs':'262144'},
+#     host5:{'flow_entries':'4000000','mpls_labels':'131072', 'nexthops':'131072', 'vrfs':'65536', 'macs':'262144'}
 #}
 # OPTIONAL md5 key enabling
 # There are 2 ways of enabling BGP md5 key on node apart from the webui.

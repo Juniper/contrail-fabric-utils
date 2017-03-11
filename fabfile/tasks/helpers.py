@@ -1791,3 +1791,39 @@ def is_rpm_equal_or_higher(reference):
         return True
     else:
         return False
+
+@task
+def increase_vrouter_limit_node(*args):
+    """Increase the maximum number of mpls label and nexthop on tsn node"""
+    vrouter_module_params_dict = getattr(env, 'vrouter_module_params', None)
+    if vrouter_module_params_dict:
+        for host_string in args:
+             if host_string in vrouter_module_params_dict:
+                 if getattr(env, 'dpdk', None):
+                     if host_string in env.dpdk:
+                         dpdk_increase_vrouter_limit(host_string)
+                 else:
+                     cmd = "options vrouter"
+                     cmd += " vr_mpls_labels=%s" % vrouter_module_params_dict[host_string].setdefault('mpls_labels', '5120')
+                     cmd += " vr_nexthops=%s" % vrouter_module_params_dict[host_string].setdefault('nexthops', '65536')
+                     cmd += " vr_vrfs=%s" % vrouter_module_params_dict[host_string].setdefault('vrfs', '5120')
+                     cmd += " vr_bridge_entries=%s" % vrouter_module_params_dict[host_string].setdefault('macs', '262144')
+                     cmd += " vr_flow_entries=%s" % vrouter_module_params_dict[host_string].setdefault('flow_entries', '524288')
+                     with settings(host_string=host_string, warn_only=True):
+                         sudo("echo %s > %s" %(cmd, '/etc/modprobe.d/vrouter.conf'))
+
+# end increase_vrouter_limit_node
+
+def dpdk_increase_vrouter_limit(host_string):
+    """Increase the maximum number of mpls label and nexthop on tsn node"""
+    vrouter_file = '/etc/contrail/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
+    vrouter_module_params_dict = getattr(env, 'vrouter_module_params', None)
+    cmd = "--vr_mpls_labels %s " % vrouter_module_params_dict[host_string].setdefault('mpls_labels', '5120')
+    cmd += "--vr_nexthops %s " % vrouter_module_params_dict[host_string].setdefault('nexthops', '65536')
+    cmd += "--vr_vrfs %s " % vrouter_module_params_dict[host_string].setdefault('vrfs', '5120')
+    cmd += "--vr_bridge_entries %s " % vrouter_module_params_dict[host_string].setdefault('macs', '262144')
+    cmd += "--vr_flow_entries %s " % vrouter_module_params_dict[host_string].setdefault('flow_entries', '524288')
+    with settings(host_string=host_string, warn_only=True):
+        sudo('sed -i \'s#\(^command=.*$\)#\\1 %s#\' %s' %(cmd, vrouter_file))
+# end dpdk_increase_vrouter_limit
+

@@ -1647,13 +1647,12 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
         # Setup hugepages if necessary
         setup_hugepages_node(host_string)
 
+        # Setup vrouter module params
+        increase_vrouter_limit_node(host_string)
+
         # Setup affinity masks for vRouter and qemu if necessary
         setup_coremask_node(host_string)
         setup_vm_coremask_node(False, host_string)
-
-        # Setup vr_mpls_labels, vr_nexthops, vr_vrfs, vr_bridge_entries
-        # if necessary
-        dpdk_increase_vrouter_limit()
 
         # Execute the script to provision compute node.
         with  settings(host_string=host_string):
@@ -2642,7 +2641,6 @@ def setup_all(reboot='True'):
     execute('setup_remote_syslog')
     execute('add_tsn', restart=False)
     execute('add_tor_agent', restart=False)
-    execute('increase_vrouter_limit')
     execute('setup_vm_coremask')
     if get_openstack_internal_vip():
         execute('setup_cluster_monitors')
@@ -3294,37 +3292,4 @@ def setup_zones():
     """Setup availability zones."""
     setup_esx_zone()
 #end setup_zones
-
-@task
-def increase_vrouter_limit():
-    """Increase the maximum number of mpls label and nexthop on tsn node"""
-    vrouter_module_params_dict = getattr(env, 'vrouter_module_params', None)
-    if vrouter_module_params_dict:
-        for host_string in vrouter_module_params_dict:
-             cmd = "options vrouter"
-             cmd += " vr_mpls_labels=%s" % vrouter_module_params_dict[host_string].setdefault('mpls_labels', '5120')
-             cmd += " vr_nexthops=%s" % vrouter_module_params_dict[host_string].setdefault('nexthops', '65536')
-             cmd += " vr_vrfs=%s" % vrouter_module_params_dict[host_string].setdefault('vrfs', '5120')
-             cmd += " vr_bridge_entries=%s" % vrouter_module_params_dict[host_string].setdefault('macs', '262144')
-             with settings(host_string=host_string, warn_only=True):
-                 sudo("echo %s > %s" %(cmd, '/etc/modprobe.d/vrouter.conf'))
-
-# end increase_vrouter_limit
-
-
-@task
-def dpdk_increase_vrouter_limit():
-    """Increase the maximum number of mpls label and nexthop on tsn node"""
-    vrouter_file = '/etc/contrail/supervisord_vrouter_files/contrail-vrouter-dpdk.ini'
-    vrouter_module_params_dict = getattr(env, 'vrouter_module_params', None)
-    if vrouter_module_params_dict:
-        for host_string in vrouter_module_params_dict:
-             cmd = "--vr_mpls_labels %s " % vrouter_module_params_dict[host_string].setdefault('mpls_labels', '5120')
-             cmd += "--vr_nexthops %s " % vrouter_module_params_dict[host_string].setdefault('nexthops', '65536')
-             cmd += "--vr_vrfs %s " % vrouter_module_params_dict[host_string].setdefault('vrfs', '5120')
-             cmd += "--vr_bridge_entries %s " % vrouter_module_params_dict[host_string].setdefault('macs', '262144')
-             with settings(host_string=host_string, warn_only=True):
-                 sudo('sed -i \'s#\(^command=.*$\)#\\1 %s#\' %s'\
-                         %(cmd, vrouter_file))
-# end dpdk_increase_vrouter_limit();
 
