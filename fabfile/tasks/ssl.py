@@ -192,16 +192,21 @@ def use_keystone_ssl_certs_in_node(*nodes):
             ssl_certs = (get_keystone_certfile(),
                          get_keystone_cafile())
             for ssl_cert in ssl_certs:
-                src = os.path.join(cert_path, os.path.basename(ssl_cert).replace('keystone', 'contrail'))
+                src = os.path.join(cert_path, os.path.basename(ssl_cert))
                 dst = os.path.join(cert_path, os.path.basename(ssl_cert).replace('keystone', 'contrail'))
                 sudo("cp %s %s" % (src, dst))
 
             key_path = '/etc/contrail/ssl/private/'
             ssl_key = get_keystone_keyfile()
-            src_key = os.path.join(key_path, os.path.basename(ssl_key).replace('keystone', 'contrail'))
+            src_key = os.path.join(key_path, os.path.basename(ssl_key))
             dst_key = os.path.join(key_path, os.path.basename(ssl_key).replace('keystone', 'contrail'))
             sudo("cp %s %s" % (src_key, dst_key))
 
+            certfile = '/etc/contrail/ssl/certs/contrail.pem'
+            cafile = '/etc/contrail/ssl/certs/contrail_ca.pem'
+            contrailcertbundle = get_apiserver_cert_bundle()
+            sudo('cat %s %s > %s' % (certfile, cafile, contrailcertbundle))
+            sudo("chown -R contrail:contrail /etc/contrail/ssl")
 
 
 @task
