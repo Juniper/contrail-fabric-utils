@@ -456,3 +456,69 @@ def reboot_nodes_atlast(*args):
                 sudo('reboot --force', timeout=3)
             except CommandTimeout:
                 pass
+
+
+@task
+def remove_install_repo_ns_agilio_vrouter_node(*args):
+    """Removes contrail install ns agilio vrouter repo in one or list of nodes.
+    USAGE:fab remove_install_ns_agilio_vrouter_node:user@1.1.1.1,user@2.2.2.2
+    """
+    for host_string in args:
+        with settings(host_string=host_string, warn_only=True):
+            if is_ns_agilio_node(host_string):
+                sudo("/opt/contrail/contrail_packages_ns_agilio_vrouter/remove.sh")
+
+                sudo("apt-get remove -y ns-agilio-vrouter-depends-packages")
+
+@task
+@roles('compute')
+def remove_install_repo_ns_agilio_vrouter():
+    """Removes contrail install ns_agilio_vrouter repo on compute nodes
+    configured with ns agilio vrouter mode.
+    """
+    if is_ns_agilio_node(env.host_string):
+        remove_install_repo_ns_agilio_vrouter_node(env.host_string)
+
+
+@task
+def uninstall_ns_agilio_nic_node(*args):
+    """Uninstalls depends for ns-agilio-nic support in one or list of nodes.
+    NOTE: This will leave existing kernel paramters in place"""
+
+    for host_string in args:
+        with settings(host_string=host_string):
+            if not is_ns_agilio_node(host_string):
+                return
+            # Uninstall ns agilio core nic additional package and drivers
+            ns_agilio_nic_pkgs = ns_agilio_nic_pkg_list()
+            sudo("apt-get remove -y %s" % " ".join(ns_agilio_nic_pkgs))
+
+            # Uninstall ns agilio board support packages and drivers
+            ns_agilio_nic_deps_pkgs = ns_agilio_nic_pkg_deps_list()
+            if 'python' in ns_agilio_nic_deps_pkgs:
+                ns_agilio_nic_deps_pkgs.remove('python')
+            if 'python-dev' in ns_agilio_nic_deps_pkgs:
+                ns_agilio_nic_deps_pkgs.remove('python-dev')
+
+            sudo("apt-get remove -y %s" % " ".join(ns_agilio_nic_deps_pkgs))
+
+            # remove install repo(s)
+            execute('remove_install_repo_ns_agilio_vrouter')
+
+            # remove old packages
+            with settings(host_string=host_string, warn_only=True):
+                sudo("rm /opt/contrail/contrail_install_repo/ns-agilio-vrouter-depends-packages*.deb")
+                sudo("rm -rf /opt/contrail/contrail_install_repo_ns_agilio_vrouter")
+                sudo("cd /opt/contrail/contrail_install_repo && dpkg-scanpackages . /dev/null | gzip -9c > Packages.gz")
+                sudo("apt-get update")
+
+
+@task
+@roles('compute')
+def uninstall_ns_agilio_nic():
+    """Uninstalls depends for ns-agilio-nic support on nodes configured
+    with ns agilio vrouter mode.
+    """
+
+    if is_ns_agilio_node(env.host_string):
+        execute("uninstall_ns_agilio_nic_node", env.host_string)
