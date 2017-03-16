@@ -526,3 +526,43 @@ def restart_openstack_on_demand():
     '''
     if detect_ostype() in ['centoslinux'] and get_openstack_sku() in ['kilo']:
         execute('restart_openstack_node', env.host_string)
+
+
+@task
+@roles('compute')
+def stop_contrail_vrouter_agent():
+    os_type = detect_ostype()
+    if os_type in ['ubuntu']:
+        sudo('service contrail-vrouter-agent stop')
+    else:
+        abort('OS %s is not supported. (contrail-vrouter-agent stop)' % os_type)
+
+
+@task
+@roles('compute')
+def start_contrail_vrouter_agent():
+    os_type = detect_ostype()
+    if os_type in ['ubuntu']:
+        sudo('service contrail-vrouter-agent start')
+    else:
+        abort('OS %s is not supported. (contrail-vrouter-agent start)' % os_type)
+
+
+@task
+@roles('compute')
+def stop_virtiorelayd():
+    os_type = detect_ostype()
+    if os_type in ['ubuntu']:
+        sudo('service virtiorelayd stop')
+    else:
+        abort('OS %s is not supported. (virtiorelayd stop)' % os_type)
+
+
+@task
+@roles('compute')
+def start_virtiorelayd():
+    os_type = detect_ostype()
+    if os_type in ['ubuntu']:
+        sudo('service virtiorelayd start')
+    else:
+        abort('OS %s is not supported. (virtiorelayd start)' % os_type)
