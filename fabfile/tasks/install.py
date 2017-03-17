@@ -1130,7 +1130,7 @@ def create_install_repo_ns_agilio_vrouter():
     """Creates contrail install ns_agilio_vrouter repo on compute nodes
     configured with ns agilio vrouter mode.
     """
-    if is_ns_agilio_node(host_string):
+    if is_ns_agilio_node(env.host_string):
         create_install_repo_ns_agilio_vrouter_node(env.host_string)
 
 @task
