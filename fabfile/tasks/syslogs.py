@@ -61,6 +61,9 @@ def install_pkg(pkgs):
 @roles('collector')
 @task
 def get_cassandra_logs(duration = None):
+    if env.host_string != env.roledefs['collector'][0]:
+        print 'No need to get cassandra logs on this host'
+        return
     sudo("rm -f /var/log/cassandra_log_*")
     a = dt.now().strftime("%Y_%m_%d_%H_%M_%S")
     d = env.host_string
@@ -77,7 +80,7 @@ def get_cassandra_logs(duration = None):
         print "Duration value is %s . Collecting Cassandra logs for %s" %(uptime_min,uptime_min)
     cmd = "/usr/bin/contrail-logs --last %s --all" %(uptime_min)
     with settings(warn_only=True):
-        sudo("%s >> /var/log/cassandra_log_%s_%s.log" %(cmd,e,a))
+        sudo("%s -o /var/log/cassandra_log_%s_%s.log" %(cmd,e,a))
         sudo("gzip /var/log/cassandra_log_*" )
         print "\nCassandra logs are saved in /var/log/cassandra_log_%s_%s.log.gz of %s" %( e, a , e )
 #end get_cassandra_logs
@@ -117,9 +120,8 @@ def attach_logs_cores(bug_id, timestamp=None, duration=None, analytics_log='yes'
         folder='%s/%s' %(bug_id, time_str)
     local('mkdir -p %s' % ( folder ) )
     execute(tar_logs_cores)
-    if analytics_log is 'yes': 
+    if analytics_log == 'yes':
         execute(get_cassandra_logs,duration)
-        execute(get_cassandra_db_files)
     with hide('everything'):
         for host in env.roledefs['all']:
             with settings( host_string=host, password=get_env_passwords(host),
@@ -130,7 +132,6 @@ def attach_logs_cores(bug_id, timestamp=None, duration=None, analytics_log='yes'
                 get('/var/log/contrail_version*.log','%s/' %( folder ) )
                 if analytics_log is 'yes':
                     get('/var/log/cassandra_log*.gz','%s/' %( folder ) )
-                    get('/var/cassandra_log/cassandra_file*.tgz','%s/' %( folder ) ) 
 
     print "\nAll logs and cores are saved in %s of %s" %(folder, env.host) 
 #end attach_logs_cores
