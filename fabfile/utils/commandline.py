@@ -436,7 +436,6 @@ def frame_vnc_control_cmd(host_string, cmd='setup-vnc-control'):
 def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
                           manage_nova_compute='yes', configure_nova='yes'):
     orch = get_orchestrator()
-    ncontrols = len(env.roledefs['control'])
     cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
     cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
     cfgm_user = env.roledefs['cfgm'][0].split('@')[0]
@@ -461,7 +460,6 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
     cmd += " --cfgm_ip %s" % cfgm_ip
     cmd += " --cfgm_user %s" % cfgm_user
     cmd += " --cfgm_passwd %s" % cfgm_passwd
-    cmd += " --ncontrols %s" % ncontrols
     cmd += " --amqp_server_ip %s" % amqp_server_ip
     cmd += " --service_token %s" % get_service_token()
     cmd += " --orchestrator %s" % get_orchestrator()
