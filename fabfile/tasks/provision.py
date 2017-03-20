@@ -2081,8 +2081,15 @@ def prov_metadata_services_node(host_string, oper = 'add'):
             return
 
         if orch is 'openstack':
-            openstack_host = get_control_host_string(env.roledefs['openstack'][0])
-            ipfabric_service_ip = get_openstack_internal_vip() or hstr_to_ip(openstack_host)
+            if 'openstack' in env.roledefs and len(env.roledefs['openstack']) > 0:
+                openstack_host = get_control_host_string(env.roledefs['openstack'][0])
+                ipfabric_service_ip = hstr_to_ip(openstack_host)
+
+            internal_vip = get_openstack_internal_vip()
+            if internal_vip:
+                ipfabric_service_ip = internal_vip
+            if not ipfabric_service_ip:
+                raise RuntimeError('Both Internal VIP and Openstack IP are missing')
             ipfabric_service_port = '8775'
         elif orch is 'vcenter':
             ipfabric_service_ip = get_authserver_ip()
@@ -2859,14 +2866,15 @@ def setup_all(reboot='True'):
 
 @roles('build')
 @task
-def setup_without_openstack(manage_nova_compute='yes', config_nova='yes', reboot='True'):
+def setup_without_openstack(manage_nova_compute='yes', config_nova='yes', reboot='True', setup_vrouter='yes'):
     """Provisions required contrail packages in all nodes as per the role definition except the openstack.
        User has to provision the openstack node with their custom openstack pakckages.
        If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute will be skipped in the compute node.
+       If setup_vrouter = no; vrouter provisioning will be skipped in compute nodes
        If config_nova = no; No nova config related configuration will executed on nova.conf file.
     """
     execute('setup_common')
-    execute('setup_ha')
+    execute('setup_ha_without_openstack')
     execute('setup_rabbitmq_cluster')
     execute('increase_limits')
     execute('setup_database')
@@ -2879,7 +2887,8 @@ def setup_without_openstack(manage_nova_compute='yes', config_nova='yes', reboot
     execute('verify_collector')
     execute('setup_webui')
     execute('verify_webui')
-    execute('setup_vrouter', manage_nova_compute, config_nova)
+    if setup_vrouter == 'yes':
+        execute('setup_vrouter', manage_nova_compute, config_nova)
     execute('prov_config')
     execute('prov_alarm')
     execute('prov_database')
