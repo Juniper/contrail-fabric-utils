@@ -230,6 +230,7 @@ def copy_certs_for_heat_node(*nodes):
                 sudo("usermod -a -G contrail heat")
             else:
                 execute('copy_apiserver_ssl_certs_to_node', node)
+                execute('copy_keystone_ssl_certs_to_node', node)
                 execute('copy_vnc_api_lib_ini_to_node', node)
                 sudo("chown -R heat:heat /etc/contrail")
             for svc in services:
