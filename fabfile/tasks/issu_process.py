@@ -22,6 +22,26 @@ issu_process_bash_path="/opt/contrail/utils/issu_process.sh"
 
 @task
 @roles('compute')
+def issu_contrail_switch_collector_in_compute():
+    """Migrate the contrail compute nodes to new collector."""
+    execute("issu_contrail_switch_collector_in_compute_node", env.host_string)
+
+@task
+def issu_contrail_switch_collector_in_compute_node(*args):
+    for host in args:
+        collector_list = ''
+        with settings(host_string=host):
+            for i in range(0, len(env.roledefs['collector'])):
+                collector_list += "%s:8086 " %(hstr_to_ip(get_control_host_string(env.roledefs['collector'][i])))
+            import glob
+            file_list = glob.glob('/etc/contrail/contrail-tor-agent*.conf')
+            file_list.append('/etc/contrail/contrail-vrouter-agent.conf')
+            for cfile in file_list:
+                run('openstack-config --set %s DEFAULT collectors %s' % (cfile, collector_list))
+            run('openstack-config --set /etc/contrail/contrail-vrouter-nodemgr.conf COLLECTOR server_list %s' % (collector_list))
+
+@task
+@roles('compute')
 def issu_contrail_switch_compute(discovery_ip):
     """Migrate the contrail compute nodes to new discovery."""
     execute("issu_contrail_switch_compute_node", discovery_ip, env.host_string)
