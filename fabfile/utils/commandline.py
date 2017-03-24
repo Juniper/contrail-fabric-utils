@@ -591,6 +591,9 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     cmd += " --zookeeper_ip_list %s" % (' '.join(zookeeper_ip_list))
     cmd += " --amqp_ip_list %s" % ' '.join(get_amqp_servers())
     cmd += " --amqp_port %s" % get_amqp_port()
+    amqp_password = get_amqp_password()
+    if amqp_password:
+        cmd += " --amqp_password %s" % amqp_password
     cmd += " --cfgm_ip %s" % cfgm_ip
     if apiserver_ssl_enabled():
         cmd += " --apiserver_insecure %s" % get_apiserver_insecure_flag()
