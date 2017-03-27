@@ -3210,6 +3210,12 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
         print "No op for esxi host -- %s" %env.host_string
         return
 
+    for dc in vcenter_server['datacenters']:
+        dc_info = vcenter_server['datacenters'][dc]
+        dvs = dc_info['dv_switches']:
+        if 'dv_switch_fab' in dvs.keys():
+             dv_switch_fab = True
+
     if host in esxi_info.keys():
          if 'contrail_vm' not in esxi_info[host]:
              return #For vcenter gateway, contrail_vm not present in esxi info
@@ -3229,7 +3235,7 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
                  esxi_info[host]['datacenter_mtu'] = get_vcenter_datacenter_mtu(vcenter_info)
                  std_switch = True
                  power_on = True
-             elif 'dv_switch_fab' in vcenter_info.keys():
+             elif dv_switch_fab == True:
                  std_switch = False
                  power_on = False
              else:
@@ -3287,10 +3293,9 @@ def prov_esxi(*args):
 
         for dc in vcenter_server['datacenters']:
             dc_info = vcenter_server['datacenters'][dc]
-            for dvs in dc_info['dv_switches']:
-                dvs_info = dc_info['dv_switches'][dvs]
-                if 'dv_switch_fab' in dvs_info.keys():
-                    dv_switch_fab = True
+            dvs = dc_info['dv_switches']:
+            if 'dv_switch_fab' in dvs.keys():
+                 dv_switch_fab = True
 
         for h in host_list:
             mode = get_mode(esxi_info[h]['contrail_vm']['host'])
