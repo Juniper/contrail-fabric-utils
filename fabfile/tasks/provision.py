@@ -3230,7 +3230,7 @@ def create_contrailvm(host_list, host_string, esxi_info, vcenter_info):
                  esxi_info[host]['datacenter_mtu'] = get_vcenter_datacenter_mtu(vcenter_info)
                  std_switch = True
                  power_on = True
-             elif 'dv_switch_fab' in vcenter_info.keys():
+             elif is_dv_switch_fab_configured():
                  std_switch = False
                  power_on = False
              else:
@@ -3286,13 +3286,6 @@ def prov_esxi(*args):
         pci_fab = False
         sr_iov_fab = False
 
-        for dc in vcenter_server['datacenters']:
-            dc_info = vcenter_server['datacenters'][dc]
-            for dvs in dc_info['dv_switches']:
-                dvs_info = dc_info['dv_switches'][dvs]
-                if 'dv_switch_fab' in dvs_info.keys():
-                    dv_switch_fab = True
-
         for h in host_list:
             mode = get_mode(esxi_info[h]['contrail_vm']['host'])
             if mode == 'vcenter':
@@ -3303,7 +3296,7 @@ def prov_esxi(*args):
                     sr_iov_fab = True
                 elif 'fabric_vswitch' in esxi_info[h].keys():
                     std_switch = True
-                elif dv_switch_fab == True:
+                elif is_dv_switch_fab_configured():
                     esxi_info[h]['fabric_vswitch'] = None
                     dv_switch_fab = True
                 else:
@@ -3390,6 +3383,9 @@ def add_esxi_to_vcenter(*args):
                            dc_mtu = dc_info['datacenter_mtu']
                            dv_switches = get_vcenter_dvswitches(dc_info)
                            clusters = get_vcenter_clusters(dc_info)
+                           if not clusters:
+                              print 'Error: multiple clusters per datacenter not supported in Mitaka'
+                              return
                            if 'vcenter_compute' in env.roledefs:
                                dvs_list = dc_info['dv_switches']
                                for dvs in dvs_list:
@@ -3435,6 +3431,9 @@ def setup_vcenter():
              dc_mtu = dc_info['datacenter_mtu']
              dv_switches = get_vcenter_dvswitches(dc_info)
              clusters = get_vcenter_clusters(dc_info)
+             if not clusters:
+                 print 'Error: multiple clusters per datacenter not supported in Mitaka'
+                 return
 
              esxi_hosts = []
              for host in esxi_host_list:
