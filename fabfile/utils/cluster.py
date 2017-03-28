@@ -2,7 +2,7 @@ from distutils.version import LooseVersion
 
 from fabric.api import env, settings, run
 
-from fabos import detect_ostype, get_release, get_build
+from fabos import detect_ostype, get_release, get_build, is_mitaka_or_above
 from fabfile.config import *
 from fabfile.utils.config import get_value
 from collections import OrderedDict
@@ -269,6 +269,9 @@ def get_vcenter_clusters(datacenter):
     clusters = []
     for dvs in datacenter['dv_switches'].keys():
          dvs_info = datacenter['dv_switches'][dvs]
+         if is_mitaka_or_above:
+             if len(dvs_info['clusters']) > 1:
+                 return None
          for cluster in dvs_info['clusters']:
               clusters.append(cluster)
 
@@ -296,6 +299,19 @@ def get_vcenter_compute_nodes(datacenter):
 
     return vcenter_compute_nodes 
 
+def is_dv_switch_fab_configured():
+    dv_switch_fab = False
+    vcenter_info = getattr(env, 'vcenter_servers', None)
+    for v in vcenter_info.keys():
+        vcenter_server = vcenter_info[v]
+        for dc in vcenter_server['datacenters']:
+            dc_info = vcenter_server['datacenters'][dc]
+            dvs = dc_info['dv_switches']
+            if 'dv_switch_fab' in dvs.keys():
+                dv_switch_fab = True
+
+    return dv_switch_fab
+
 def create_esxi_vrouter_map_file(vcenter_server_name, vcenter_server, host_string):
     #create the static esxi:vrouter map file
     esxi_info = getattr(testbed, 'esxi_hosts', None)
@@ -315,6 +331,8 @@ def create_esxi_vrouter_map_file(vcenter_server_name, vcenter_server, host_strin
          for dc in vcenter_server['datacenters'].keys():
               dc_info = vcenter_server['datacenters'][dc]
               clusters = get_vcenter_clusters(dc_info)
+              if not clusters:
+                  print 'Error: multiple clusters per datacenter not supported in Mitaka'
 
          for esxi_host in esxi_hosts:
              if esxi_info[esxi_host]['cluster'] in clusters:

@@ -573,9 +573,13 @@ env.ostypes = {
 #username is the vcenter username credentials
 #password is the vcenter password credentials
 #auth is the autentication type used to talk to vcenter, http or https
-#datacenter is the datacenter name we are operating on
+#datacenters is the list ofdatacenters we are operating on
 #datacenter_mtu is the mtu size across the datacenter
-#cluster is the clustername we are operating on
+#dv_switches list of dv_switches in the datacenter
+#       contains distributed switch related params for overlay network
+#       dv_switch_name and dvswitch_version(compatibility with esxi os version)
+#dv_port_group section contains distributed port group info for overlay network
+#       dv_portgroup_name and the number of ports the group has
 #dv_switch_fab section contains distributed switch related params for fab network
 #       dv_switch_name
 #dv_port_group_fab section contains distributed port group params for fab network
@@ -584,38 +588,49 @@ env.ostypes = {
 #       dv_switch_name
 #dv_port_group_sr_iov section contains distributed port group params for sr-iov based fab network
 #       dv_portgroup_name and the number of ports the group has
-#dvswitch section contains distributed switch related params for overlay network
-#       dv_switch_name and dvswitch_version(compatibility with esxi os version)
-#dvportgroup section contains distributed port group info for overlay network
-#       dv_portgroup_name and the number of ports the group has
-####################################################################################
-#env.vcenter = {
+#vcenter_compute the vcenter_compute node ip, needed only if orchestrator is 'openstack'
+#clusters the list of clusters managed by the dv_switch
+#       for mitaka, has to be a single cluster in the list
+###################################################################################
+#env.vcenter_servers = {
+#   'vcenter1': {
 #        'server':'127.0.0.1',
 #        'port': '443',
 #        'username': 'administrator@vsphere.local',
 #        'password': 'Contrail123!',
 #        'auth': 'https',
-#        'datacenter': 'kd_dc',
-#        'datacenter_mtu': '1500',
-#        'cluster': ['kd_cluster_1','kd_cluster_2'],
-#        'dv_switch_fab': {'dv_switch_name': 'dvs-lag'},
-#        'dv_port_group_fab': {
-#                'dv_portgroup_name': 'fab-pg',
-#                'number_of_ports': '3',
-#         },
-#        'dv_switch_sr_iov': {'dv_switch_name': 'dvs-sr-iov'},
-#        'dv_port_group_sr_iov': {
-#                'dv_portgroup_name': 'sr-iov-pg',
-#                'number_of_ports': '2',
-#         },
-#        'dv_switch': {
-#                'dv_switch_name': 'kd_dvswitch',
-#                'dv_switch_version': '6.0.0',
-#         },
-#        'dv_port_group': {
-#                'dv_portgroup_name': 'kd_dvportgroup',
-#                'number_of_ports': '3',
-#         },
+#        'datacenters': {
+#            'dc1': {
+#                'datacenter_mtu': '1500',
+#                'dv_switches': {
+#                     'dvs1': {
+#                         'dv_switch_version': '5.5.0',
+#                         'dv_port_group': {
+#                              'dv_portgroup_name': 'dvportgroup1', 
+#                              'number_of_ports': '3',
+#                          },
+#                          'vcenter_compute': '10.0.0.1'
+#                          'clusters': ['cluster1', 'cluster2'] 
+#                           #for mitaka, has to be a single cluster in the list
+#                     },
+#                },
+#                'dv_switch_fab': {
+#                     'dv_switch_name': 'dvs-lag',
+#                     'dv_port_group_fab': {
+#                         'dv_portgroup_name': 'fab-pg',
+#                         'number_of_ports': '3',
+#                     },
+#                },
+#                'dv_switch_sr_iov': {
+#                     'dv_switch_name': 'dvs-sr-iov',
+#                     'dv_port_group_sr_iov': {
+#                          'dv_portgroup_name': 'sr-iov-pg',
+#                          'number_of_ports': '2',
+#                     },
+#                },
+#            },
+#        },
+#   },
 #}
 #
 ######################################################################################
@@ -635,6 +650,8 @@ env.ostypes = {
 #    uplink_nic: the nic used for underlay
 #                 optional, defaults to None
 #    data_store: the datastore on esxi where the vmdk is copied to
+#    vcenter_server: name of the vcenter server where the DC is configured
+#    datacenter: name of the datacenter on which the host is added
 #    cluster: name of the cluster to which this esxi is added
 #    contrail_vm information:
 #        mac: the virtual mac address for the contrail vm
@@ -642,19 +659,21 @@ env.ostypes = {
 #        pci_devices: pci_devices information
 #            nic: pci_id of the pass-through interfaces
 #        sr_iov_nics: virtual functions enabled physical interface's name
+#        mode: set to "vcenter" for ContrailVM
 #        vmdk: the absolute path of the contrail-vmdk used to spawn vm
 #              optional, if vmdk_download_path is specified
 #        vmdk_download_path: download path of the contrail-vmdk.vmdk used to spawn vm
 #                            optional, if vmdk is specified
-#        ntp_server: ntp server ip for the contrail vm
 ######################################################################################
 #esxi_hosts = {
-#       'esxi': {
+#       'esxi1': {
 #             'ip': '1.1.1.1',
 #             'username': 'root',
 #             'password': 'c0ntrail123',
 #             'datastore': "/vmfs/volumes/ds1",
-#             'cluster': "kd_cluster_1",
+#             'vcenter_server': 'vcenter1',
+#             'datacenter': 'dc1',
+#             'cluster': "cluster1",
 #             'contrail_vm': {
 #                   'mac': "00:50:56:05:ba:ba",
 #                   'host': "root@2.2.2.2",
@@ -662,9 +681,10 @@ env.ostypes = {
 #                        nic: ["04:00.0", "04:00.1"],
 #                    },
 #                   'sr_iov_nics': ["vmnic0"],
+#                   'mode': "vcenter" 
 #                   'vmdk_download_path': "http://10.84.5.100/vmware/vmdk/ContrailVM-disk1.vmdk",
 #             }
-#       }
+#       },
 #}
 ######################################################################################
 

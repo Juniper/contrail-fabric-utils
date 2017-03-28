@@ -206,10 +206,11 @@ def provision_dvs_fab(vcenter_info, esxi_info, host_list):
     apt_install(pkgs)
     dvs_params = {}
 
-    for dc in vcenter_info:
-        for dvs in dc['dv_switches']:
+    for dc in vcenter_info['datacenters']:
+        dc_info = vcenter_info['datacenters'][dc]
+        for dvs in dc_info['dv_switches']:
             if dvs == 'dv_switch_fab':
-               dv_switch_fab = dc['dv_switches'][dvs]
+               dv_switch_fab = dc_info['dv_switches'][dvs]
                break
         break
 
