@@ -1109,6 +1109,16 @@ def join_ha_cluster(new_ctrl_host):
             execute('prov_control_bgp')
             execute('prov_external_bgp')
 
+        # If the new node does not run OS and Contrail components
+        # together, we need to set the system params for the 
+        # new node if they are hosting any of the Contrail components.
+        if (get_openstack_internal_vip() != get_contrail_internal_vip()) and
+            new_ctrl_host in env.roledefs['database'] or
+            new_ctrl_host in env.roledefs['collector'] or
+            new_ctrl_host in env.roledefs['cfgm'] or
+            new_ctrl_host in env.roledefs['control']:
+            execute('increase_limits_node', new_ctrl_host)
+
         execute('setup_remote_syslog')
  
 @task
