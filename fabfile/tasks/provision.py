@@ -1841,36 +1841,10 @@ def setup_only_vrouter_node(manage_nova_compute='yes', configure_nova='yes', *ar
                                     manage_nova_compute=manage_nova_compute,
                                     configure_nova=configure_nova)
 
-        # Setup hugepages if necessary
-        setup_hugepages_node(host_string)
-
-        # Setup vrouter module params
-        increase_vrouter_limit_node(host_string)
-
-        # Setup affinity masks for vRouter and qemu if necessary
-        setup_coremask_node(host_string)
-        setup_vm_coremask_node(False, host_string)
-
-        # Execute the script to provision compute node.
         with  settings(host_string=host_string):
-            if detect_ostype() == 'ubuntu':
-                with settings(warn_only=True):
-                    if detect_ostype() == 'ubuntu':
-                        if not is_xenial_or_above():
-                            sudo('rm /etc/init/supervisor-vrouter.override')
-                    # Fix /dev/vhost-net permissions. It is required for
-                    # multiqueue operation
-                    sudo('echo \'KERNEL=="vhost-net", GROUP="kvm", MODE="0660"\' > /etc/udev/rules.d/vhost-net.rules')
-                    # The vhost-net module has to be loaded at startup to
-                    # ensure the correct permissions while the qemu is being
-                    # launched
-                    sudo('echo "vhost-net" >> /etc/modules')
             with cd(INSTALLER_DIR):
                 print cmd
                 sudo(cmd)
-
-        # Setup UIO driver
-        setup_uio_driver(host_string)
 
 #end setup_vrouter
 
