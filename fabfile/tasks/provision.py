@@ -2616,6 +2616,10 @@ def delete_tor_agent_by_index(index, node_info, restart=True, remove_cacert=Fals
         if exists(tor_ini_file_name, use_sudo=True):
             remove_file(tor_ini_file_name)
 
+        tor_service_file_name = '/lib/systemd/system/' + tor_process_name + '.service'
+        if exists(tor_service_file_name, use_sudo=True):
+            remove_file(tor_service_file_name)
+
         # Remove tor-agent init file
         tor_init_file = '/etc/init.d/' + tor_process_name
         if exists(tor_init_file, use_sudo=True):
