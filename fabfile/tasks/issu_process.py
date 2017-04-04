@@ -37,8 +37,8 @@ def issu_contrail_switch_collector_in_compute_node(*args):
             file_list = glob.glob('/etc/contrail/contrail-tor-agent*.conf')
             file_list.append('/etc/contrail/contrail-vrouter-agent.conf')
             for cfile in file_list:
-                run('openstack-config --set %s DEFAULT collectors %s' % (cfile, collector_list))
-            run('openstack-config --set /etc/contrail/contrail-vrouter-nodemgr.conf COLLECTOR server_list %s' % (collector_list))
+                run('openstack-config --set %s DEFAULT collectors "%s"' % (cfile, collector_list))
+            run('openstack-config --set /etc/contrail/contrail-vrouter-nodemgr.conf COLLECTOR server_list "%s"' % (collector_list))
 
 @task
 @roles('compute')
