@@ -44,6 +44,27 @@ def issu_contrail_switch_collector_in_compute_node(*args):
                 run('openstack-config --set %s DEFAULT collectors "%s"' % (cfile, collector_list))
             run('openstack-config --set /etc/contrail/contrail-vrouter-nodemgr.conf COLLECTOR server_list "%s"' % (collector_list))
 
+
+@task
+@roles('compute')
+def issu_contrail_switch_collector_in_compute_revert():
+    """Revert the Migrate of the contrail compute nodes to new collector."""
+    execute("issu_contrail_switch_collector_in_compute_node_revert", env.host_string)
+
+@task
+def issu_contrail_switch_collector_in_compute_node_revert(*args):
+    for host in args:
+        with settings(host_string=host, warn_only=True):
+            file_list = sudo('ls /etc/contrail/contrail-tor-agent*')
+            if file_list.succeeded:
+                file_list = file_list.split()
+            else:
+                file_list = []
+            file_list.append('/etc/contrail/contrail-vrouter-agent.conf')
+            for cfile in file_list:
+                run('openstack-config --del %s DEFAULT collectors' % (cfile))
+            run('openstack-config --del /etc/contrail/contrail-vrouter-nodemgr.conf COLLECTOR server_list')
+
 @task
 @roles('compute')
 def issu_contrail_switch_compute(discovery_ip):
