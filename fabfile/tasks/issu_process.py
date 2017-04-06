@@ -33,7 +33,8 @@ def issu_contrail_switch_collector_in_compute_node(*args):
         with settings(host_string=host):
             for i in range(0, len(env.roledefs['collector'])):
                 collector_list += "%s:8086 " %(hstr_to_ip(get_control_host_string(env.roledefs['collector'][i])))
-            file_list = sudo('ls /etc/contrail/contrail-tor-agent*')
+            with settings(warn_only=True):
+                file_list = sudo('ls /etc/contrail/contrail-tor-agent*')
             if file_list.succeeded:
                 file_list = file_list.split()
             else:
