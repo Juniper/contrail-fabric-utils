@@ -15,7 +15,8 @@ from fabfile.utils.install import get_compute_ceilometer_pkgs,\
      get_compute_pkgs, get_ceilometer_plugin_pkgs, get_openstack_pkgs, \
      get_openstack_ceilometer_pkgs, create_yum_repo_from_tgz_node, \
      create_apt_repo_from_tgz_node, get_config_pkgs, get_vcenter_plugin_pkg, \
-     get_vcenter_compute_pkgs, get_vcenter_plugin_depend_pkgs
+     get_vcenter_compute_pkgs, get_vcenter_plugin_depend_pkgs, \
+     get_net_driver_pkgs
 from fabfile.utils.host import get_from_testbed_dict,\
     get_openstack_internal_vip, get_hypervisor, get_env_passwords
 from fabfile.tasks.helpers import reboot_node
@@ -579,6 +580,30 @@ def install_only_vrouter_node(manage_nova_compute='yes', *args):
 @task
 @EXECUTE_TASK
 @roles('all')
+def install_net_driver():
+    """Installs network drives that are packaged with contrail
+    """
+    execute("install_net_driver_node", env.host_string)
+
+@task
+def install_net_driver_node(*args):
+    """Installs network drives that are packaged with contrail
+       on a single node. Called during a add_vrouter_node
+    """
+    for host_string in args:
+        with  settings(host_string=host_string):
+            ostype = detect_ostype()
+            pkgs = get_net_driver_pkgs()
+
+            if ostype == 'ubuntu':
+                apt_install(pkgs)
+                # Update initrd to add the new drivers
+                # if necessary.
+                sudo('update-initramfs -k all -u')
+
+@task
+@EXECUTE_TASK
+@roles('all')
 def create_installer_repo():
     """Execute setup.sh corresponding to contrail-installer-packages in
        all nodes
@@ -903,6 +928,7 @@ def install_contrail(*tgzs, **kwargs):
     if 'vcenter_compute' in env.roledefs:
         execute(install_vcenter_compute)
     execute(install_vrouter)
+    execute(install_net_driver)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
@@ -939,6 +965,7 @@ def install_without_openstack(*tgzs, **kwargs):
     execute(install_webui)
     if install_vrouter == 'yes':
         execute('install_vrouter', manage_nova_compute)
+    execute(install_net_driver)
     if getattr(env, 'interface_rename', True):
         print "Installing interface Rename package and rebooting the system."
         execute(install_interface_name, reboot)
