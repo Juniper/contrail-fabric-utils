@@ -17,7 +17,8 @@ from fabric.contrib import files
 #
 # Note that fabfile/testbeds/testbed.py MUST NOT be added to the repository.
 if hasattr(env, 'mytestbed'):
-    testbed = __import__('fabfile.testbeds.%s' % env.mytestbed)
+    _temp = __import__('fabfile.testbeds.%s' % env.mytestbed)
+    testbed = eval('_temp.testbeds.%s' %env.mytestbed)
 else:
     import testbeds.testbed as testbed
 
