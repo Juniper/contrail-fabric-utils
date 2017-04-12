@@ -6,6 +6,7 @@ import datetime
 from netaddr import *
 from time import sleep, strftime
 
+import importlib
 from fabric.api import *
 from fabric.state import output, connections
 from fabric.operations import get, put
@@ -17,7 +18,7 @@ from fabric.contrib import files
 #
 # Note that fabfile/testbeds/testbed.py MUST NOT be added to the repository.
 if hasattr(env, 'mytestbed'):
-    testbed = __import__('fabfile.testbeds.%s' % env.mytestbed)
+    testbed = importlib.import_module('fabfile.testbeds.%s' % env.mytestbed)
 else:
     import testbeds.testbed as testbed
 
