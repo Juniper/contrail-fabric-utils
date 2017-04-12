@@ -184,6 +184,17 @@ def get_compute_ceilometer_pkgs():
 
     return pkgs
 
+def get_net_driver_pkgs():
+    """ Returns the list of network driver packages used in
+        all the nodes
+    """
+    pkgs = []
+    ostype = detect_ostype()
+    if ostype == 'ubuntu':
+        pkgs = ['i40e-dkms', 'bnxt-en-dkms']
+
+    return pkgs
+
 @task
 def create_yum_repo_from_tgz_node(tgz, *args, **kwargs):
     '''Untar given tgz file and create a local yum repo'''
