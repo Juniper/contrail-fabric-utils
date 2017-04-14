@@ -1,7 +1,8 @@
 from fabfile.config import *
 from distutils.version import LooseVersion
 
-from fabfile.tasks.install import pkg_install, install_contrail_vcenter_plugin
+from fabfile.tasks.install import pkg_install, install_contrail_vcenter_plugin, \
+      install_net_driver_node
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 from fabfile.utils.cluster import get_toragent_nodes, get_tsn_nodes
 from fabfile.utils.commandline import *
@@ -186,6 +187,13 @@ def upgrade_compute(from_rel, pkg):
     execute("upgrade_compute_node", from_rel, pkg, env.host_string)
 
 @task
+@EXECUTE_TASK
+@roles('all')
+def upgrade_driver_all(from_rel, pkg):
+    """Upgrades the contrail build driver pkgs in all nodes."""
+    execute("install_net_driver_node", env.host_string)
+
+@task
 def upgrade_compute_node(from_rel, pkg, *args, **kwargs):
     """Upgrades compute pkgs in one or list of nodes. USAGE:fab upgrade_compute_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
@@ -288,6 +296,7 @@ def upgrade_contrail(from_rel, pkg, orch='yes'):
     execute('upgrade_control', from_rel, pkg)
     execute('upgrade_webui', from_rel, pkg)
     execute('upgrade_compute', from_rel, pkg)
+    execute('upgrade_driver_all', from_rel, pkg)
     if 'vcenter_compute' in env.roledefs:
         execute('upgrade_vcenter_compute', from_rel, pkg)
     # Adding config, database and analytics nodes to api-server
