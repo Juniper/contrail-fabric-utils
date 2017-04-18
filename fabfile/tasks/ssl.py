@@ -228,7 +228,8 @@ def copy_keystone_ssl_certs_to_node(*nodes):
                 sudo("mkdir -p /etc/contrail/ssl/certs/")
                 put(tmp_fname, cert_file, use_sudo=True)
                 os.remove(tmp_fname)
-                sudo("chown -R contrail:contrail /etc/contrail/ssl")
+                with settings(warn_only=True):
+                    sudo("chown -R contrail:contrail /etc/contrail/ssl")
 
 
 @task
