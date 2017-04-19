@@ -15,7 +15,7 @@ from fabfile.utils.host import (
         get_keystone_cert_bundle, get_openstack_external_vip,
         get_contrail_external_vip
         )
-from fabfile.utils.fabos import get_as_sudo
+from fabfile.utils.fabos import get_as_sudo, detect_ostype
 
 
 @task
@@ -275,8 +275,12 @@ def copy_certs_for_heat():
 
 @task
 def copy_certs_for_heat_node(*nodes):
+    services = ['heat-api', 'heat-engine', 'heat-api-cfn']
     for node in nodes:
         with settings(host_string=node, password=get_env_passwords(node)):
+            os_type = detect_ostype()
+            if os_type in ['redhat', 'centos', 'centoslinux']:
+                services = ['openstack-heat-api', 'openstack-heat-engine', 'openstack-heat-api-cfn']
             if node in env.roledefs['cfgm']:
                 sudo("usermod -a -G contrail heat")
             else:
@@ -284,7 +288,7 @@ def copy_certs_for_heat_node(*nodes):
                 execute('copy_keystone_ssl_certs_to_node', node)
                 execute('copy_vnc_api_lib_ini_to_node', node)
                 sudo("chown -R heat:heat /etc/contrail")
-            for svc in ['heat-api', 'heat-engine', 'heat-api-cfn']:
+            for svc in services:
                 sudo("service %s restart" % svc)
 
 
