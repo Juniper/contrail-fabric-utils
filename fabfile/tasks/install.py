@@ -1165,13 +1165,19 @@ def update_config_option(role, file_path, section, option, value, service):
 # end update_config_option
 
 @task
-def update_js_config(role, file_path, service):
+def update_js_config(role, file_path, service, container=None):
     """Task to update config of any section in a js file
        USAGE:fab update_js_config:openstack,/etc/contrail/config.global.js,contrail-webui
     """
-    cmd1 = "echo 'config.session = {};' >> " + file_path
-    cmd2 = "echo 'config.session.timeout = 86400 * 1000;' >> " + file_path
-    cmd3 = "service " + service + " restart"
+    if container:
+       cmd = "docker exec -it controller bash "
+       cmd1 = cmd + "-c \"echo config.session = \{\}\; >> "  + file_path + "\""
+       cmd2 = cmd + "-c \"echo config.session.timeout = 86400 \* 1000\; >> " + file_path + "\""
+       cmd3 = cmd + "service " + service + " restart"
+    else:
+       cmd1 = "echo 'config.session = {};' >> " + file_path
+       cmd2 = "echo 'config.session.timeout = 86400 * 1000;' >> " + file_path
+       cmd3 = "service " + service + " restart"
     for host in env.roledefs[role]:
         with settings(host_string=host, password=get_env_passwords(host)):
             sudo(cmd1)
