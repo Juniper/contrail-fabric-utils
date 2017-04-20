@@ -1247,10 +1247,10 @@ def setup_contrail_horizon_node(*args):
     pattern = 'LOGOUT_URL.*'
     if detect_ostype() == 'ubuntu':
         line = '''LOGOUT_URL='/horizon/auth/logout/' '''
-        web_restart = 'service apache2 restart'
+        horizon_svc_name = 'apache2'
     else:
         line = '''LOGOUT_URL='/dashboard/auth/logout/' '''
-        web_restart = 'service httpd restart'
+        horizon_svc_name = 'httpd'
 
     insert_line_to_file(pattern = pattern, line = line, file_name = file_name)
 
@@ -1276,7 +1276,9 @@ def setup_contrail_horizon_node(*args):
                 sudo('sed -i "/\'LOCATION\'.*/a\       \'KEY_FUNCTION\': hash_key," %s' % file_name)
         sudo("sed -i -e 's/OPENSTACK_HOST = \"127.0.0.1\"/OPENSTACK_HOST = \"%s\"/' %s" % (internal_vip,file_name))
 
-    sudo(web_restart)
+    sudo("service %s stop" % (horizon_svc_name))
+    sleep(5)
+    sudo("service %s start" % (horizon_svc_name))
 #end setup_contrail_horizon_node
 
 @task
