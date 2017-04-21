@@ -5,6 +5,7 @@ from fabric.api import env, settings, run
 from fabos import detect_ostype, get_release, get_build, is_mitaka_or_above
 from fabfile.config import *
 from fabfile.utils.config import get_value
+from fabfile.utils.interface import get_data_ip
 from collections import OrderedDict
 
 def get_all_hostnames():
