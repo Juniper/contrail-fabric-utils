@@ -23,8 +23,6 @@ def add_vrouter_node(*args):
         with settings(host_string=host_string):
             execute("create_install_repo_node", env.host_string)
             dpdk = getattr(env, 'dpdk', None)
-            if dpdk and env.host_string in dpdk:
-                execute("create_install_repo_dpdk_node", env.host_string)
             execute("install_vrouter_node", env.host_string)
             execute("install_net_driver_node", env.host_string)
             if getattr(env, 'interface_rename', True):

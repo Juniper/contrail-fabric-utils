@@ -759,31 +759,6 @@ def create_install_repo_node(*args):
                 else:
                     raise RuntimeError('/opt/contrail/contrail_packages/setup.sh is not available')
 
-@task
-def create_install_repo_dpdk_node(*args):
-    """Creates contrail install dpdk repo in one or list of nodes.
-    USAGE:fab create_install_repo_dpdk_node:user@1.1.1.1,user@2.2.2.2
-    """
-    for host_string in args:
-        with settings(host_string=host_string, warn_only=True):
-            # Install/uprgade dpdk-depends-packages
-            sudo("apt-get install dpdk-depends-packages")
-
-            # Setup repo. Script handles automatically case when repo is
-            # already in /etc/apt/sources.list
-            sudo("/opt/contrail/contrail_packages_dpdk/setup.sh")
-
-@task
-@roles('compute')
-def create_install_repo_dpdk():
-    """Creates contrail install dpdk repo on compute nodes configured with
-    DPDK mode.
-    """
-    dpdk = getattr(env, 'dpdk', None)
-    if dpdk:
-        if env.host_string in dpdk:
-            create_install_repo_dpdk_node(env.host_string)
-
 @roles('build')
 @task
 def install_orchestrator():
@@ -959,7 +934,6 @@ def install_contrail(*tgzs, **kwargs):
             execute('disable_sysv_auto_generation')
     execute('create_installer_repo')
     execute(create_install_repo, *tgzs, **kwargs)
-    execute(create_install_repo_dpdk)
     execute(install_database)
     execute('install_orchestrator')
     execute(install_cfgm)
@@ -1001,7 +975,6 @@ def install_without_openstack(*tgzs, **kwargs):
     reboot = kwargs.get('reboot', 'True')
     execute('create_installer_repo')
     execute(create_install_repo_without_openstack, *tgzs, **kwargs)
-    execute(create_install_repo_dpdk)
     execute(install_database, False)
     execute(install_cfgm)
     execute(install_control)
