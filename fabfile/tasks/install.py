@@ -633,11 +633,12 @@ def install_net_driver_node(*args):
             ostype = detect_ostype()
             pkgs = get_net_driver_pkgs()
 
-            if ostype == 'ubuntu':
-                apt_install(pkgs)
-                # Update initrd to add the new drivers
-                # if necessary.
-                sudo('update-initramfs -k all -u')
+            if get_orchestrator() is not 'vcenter':
+                if ostype == 'ubuntu':
+                    apt_install(pkgs)
+                    # Update initrd to add the new drivers
+                    # if necessary.
+                    sudo('update-initramfs -k all -u')
 
 @task
 @EXECUTE_TASK
