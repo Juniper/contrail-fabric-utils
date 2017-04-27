@@ -550,9 +550,11 @@ def export_testbed_details(filename='testbed_vars'):
     authserver_ip = get_authserver_ip()
     keystone_admin_user, keystone_admin_password = get_authserver_credentials()
     admin_tenant = get_admin_tenant_name()
-    api_server_host_string = testbed.env.roledefs['cfgm'][0]
-    api_server_host_ip = testbed.env.roledefs['cfgm'][0].split('@')[1]
-    api_server_host_user = testbed.env.roledefs['cfgm'][0].split('@')[0]
+    config_list = testbed.env.roledefs.get('contrail-controller') or \
+        testbed.env.roledefs.get('cfgm')
+    api_server_host_string = config_list[0]
+    api_server_host_ip = config_list[0].split('@')[1]
+    api_server_host_user = config_list[0].split('@')[0]
     api_server_host_password = get_env_passwords(api_server_host_string)
     public_network_rt = getattr(testbed, 'public_vn_rtgt', None)
     public_network_subnet = getattr(testbed, 'public_vn_subnet', None)
