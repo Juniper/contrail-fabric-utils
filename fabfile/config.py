@@ -36,6 +36,9 @@ env.roledefs['rabbit'] = []
 if not env.roledefs.get('openstack', None):
     env.roledefs['openstack'] = []
 
+if env.roledefs.get('contrail-controller'):
+    env.roledefs['cfgm'] = env.roledefs.get('contrail-controller')
+
 class Logger(object):
     def __init__(self, filename="fabric.log"):
         self.terminal = sys.stdout
