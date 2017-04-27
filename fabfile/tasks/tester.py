@@ -550,6 +550,7 @@ def export_testbed_details(filename='testbed_vars'):
     authserver_ip = get_authserver_ip()
     keystone_admin_user, keystone_admin_password = get_authserver_credentials()
     admin_tenant = get_admin_tenant_name()
+
     api_server_host_string = testbed.env.roledefs['cfgm'][0]
     api_server_host_ip = testbed.env.roledefs['cfgm'][0].split('@')[1]
     api_server_host_user = testbed.env.roledefs['cfgm'][0].split('@')[0]
@@ -604,6 +605,7 @@ def run_rally(task_args_file=None):
 def install_pkgs_on_roles(role_names, package_names, disablerepo=False):
     ''' Install ubuntu/centos packages on all nodes with specific role
     '''
+    import pdb; pdb.set_trace()
     pkgs =  package_names.split(',')
     roles =  role_names.split(',')
     execute('pkg_install', pkgs, disablerepo=disablerepo, roles=roles)

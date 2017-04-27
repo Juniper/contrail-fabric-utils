@@ -36,6 +36,14 @@ env.roledefs['rabbit'] = []
 if not env.roledefs.get('openstack', None):
     env.roledefs['openstack'] = []
 
+if env.roledefs.get('contrail-controller'):
+    env.roledefs['cfgm'] = env.roledefs.get('contrail-controller')
+    env.roledefs['webui'] = env.roledefs.get('contrail-controller')
+    env.roledefs['control'] = env.roledefs.get('contrail-controller')
+    env.roledefs['database'] = env.roledefs.get('contrail-analyticsdb')
+    env.roledefs['collector'] = env.roledefs.get('contrail-analytics')
+    env.roledefs['compute'] = env.roledefs.get('contrail-compute')
+
 class Logger(object):
     def __init__(self, filename="fabric.log"):
         self.terminal = sys.stdout
