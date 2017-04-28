@@ -1,7 +1,7 @@
 import re
 
 from fabfile.config import *
-from fabfile.utils.fabos import detect_ostype
+from fabfile.utils.fabos import detect_ostype, get_linux_distro
 
 @task
 @EXECUTE_TASK
@@ -18,8 +18,15 @@ def install_test_repo_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             os_type = detect_ostype().lower()
+            os_type, version, extra = get_linux_distro()
             if os_type in ['ubuntu']:
-                print 'No test-repo availabe'
+                if 'trusty' in extra :
+                    put('fabfile/contraillabs/repo/trusty_test.repo',
+                        '/etc/apt/sources.list.d/')
+                if 'xenial' in extra :
+                    put('fabfile/contraillabs/repo/xenial_test.repo',
+                        '/etc/apt/sources.list.d/')
+                sudo('apt-get update')
             if os_type in ['centos', 'centoslinux']:
                 put('fabfile/contraillabs/repo/centos_el7_test.repo',
                     '/etc/yum.repos.d/contrail_test.repo')
