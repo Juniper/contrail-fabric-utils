@@ -2789,6 +2789,45 @@ def setup_vm_coremask_node(q_coremask, *args):
                 raise RuntimeError("Error: setting QEMU core mask %s for host %s failed." \
                     %(vr_coremask, host_string))
 
+
+@roles('openstack')
+@task
+def install_provision_heat():
+    """
+    Install contrail-heat package on openstack nodes and
+    provision them
+    """
+    # check if package is available if not raise error
+    print "INFO: FAIL if contrail-heat package is not available"
+    sudo('yum list --show-duplicates contrail-heat')
+    sudo("yum install -y contrail-heat")
+    auth_protocol = get_authserver_protocol()
+    if auth_protocol == 'https':
+        sudo("openstack-config --set /etc/heat/heat.conf clients_contrail use_ssl True")
+    cfgm_host = get_control_host_string(env.roledefs['cfgm'][0])
+    cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(cfgm_host)
+
+    ks_admin_user, ks_admin_password = get_authserver_credentials()
+    contrail_plugin_dirs = ["/usr/lib/python2.7/dist-packages/vnc_api/gen/heat/resources",
+                            "/usr/lib/python2.7/dist-packages/contrail_heat/resources"]
+    with settings(warn_only=True):
+        existing_plugin_dirs = sudo("openstack-config --get /etc/heat/heat.conf DEFAULT plugin_dirs")
+        if existing_plugin_dirs.succeeded:
+            plugin_dirs = contrail_plugin_dirs + existing_plugin_dirs.split(',')
+        else:
+            plugin_dirs = contrail_plugin_dirs
+
+    sudo("openstack-config --set /etc/heat/heat.conf clients_contrail api_server %s" % cfgm_ip)
+    sudo("openstack-config --set /etc/heat/heat.conf clients_contrail user %s" % ks_admin_user)
+    sudo("openstack-config --set /etc/heat/heat.conf clients_contrail password %s" % ks_admin_password)
+    sudo("openstack-config --set /etc/heat/heat.conf clients_contrail tenant %s" % get_admin_tenant_name())
+    sudo("openstack-config --set /etc/heat/heat.conf clients_contrail api_base_url /")
+    sudo("openstack-config --set /etc/heat/heat.conf clients_contrail auth_host_ip %s" % get_authserver_ip())
+    sudo("openstack-config --set /etc/heat/heat.conf DEFAULT plugin_dirs %s" % ",".join(plugin_dirs))
+    sudo("service openstack-heat-engine restart")
+    sudo("service openstack-heat-api restart")
+
+
 @roles('build')
 @task
 def setup_all(reboot='True'):
