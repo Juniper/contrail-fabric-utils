@@ -15,13 +15,17 @@ class vcenter_base(object):
         self.vcenter_server = vcenter_base_params['vcenter_server']
         self.vcenter_username = vcenter_base_params['vcenter_username']
         self.vcenter_password = vcenter_base_params['vcenter_password']
-
+       
     def connect_to_vcenter(self):
         from pyVim import connect
+
+        ssl = __import__("ssl")
+        context = ssl._create_unverified_context()
+
         self.service_instance = connect.SmartConnect(host=self.vcenter_server,
                                         user=self.vcenter_username,
                                         pwd=self.vcenter_password,
-                                        port=443)
+                                        port=443, sslContext=context)
         self.content = self.service_instance.RetrieveContent()
         atexit.register(connect.Disconnect, self.service_instance)
 
