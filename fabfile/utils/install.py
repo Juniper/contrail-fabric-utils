@@ -10,6 +10,7 @@ from fabfile.utils.host import (get_hypervisor, get_openstack_internal_vip,
         manage_config_db)
 from fabfile.utils.cluster import is_lbaas_enabled, get_orchestrator
 from fabfile.config import *
+from fabfile.utils.fabos import is_xenial_or_above
 
 
 def get_openstack_pkgs():
@@ -120,7 +121,11 @@ def get_vcenter_plugin_pkg():
 def get_vcenter_compute_pkgs():
     pkgs = ['nova-compute', 'nova-compute-kvm',
             'python-novaclient', 'python-bitstring',
-            'contrail-utils', 'openjdk-7-jre-headless'] 
+            'contrail-utils']
+    if is_xenial_or_above():
+        pkgs += ['openjdk-8-jre-headless'] 
+    else:
+        pkgs += ['openjdk-7-jre-headless']
 
     return pkgs
 
