@@ -2662,7 +2662,7 @@ def setup_all(reboot='True'):
 
 @roles('build')
 @task
-def setup_without_openstack(manage_nova_compute='yes', config_nova='yes', reboot='True'):
+def setup_without_openstack(manage_nova_compute='yes', config_nova='yes', setup_vrouter='yes', reboot='True'):
     """Provisions required contrail packages in all nodes as per the role definition except the openstack.
        User has to provision the openstack node with their custom openstack pakckages.
        If manage_nova_compute = no; Only vrouter services is provisioned, nova-compute will be skipped in the compute node.
