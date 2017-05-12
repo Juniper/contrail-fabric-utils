@@ -2,7 +2,7 @@ from distutils.version import LooseVersion
 
 from fabric.api import env, settings, run
 
-from fabos import detect_ostype, get_release, get_build, is_mitaka_or_above
+from fabos import detect_ostype, get_release, get_build, get_openstack_sku
 from fabfile.config import *
 from fabfile.utils.config import get_value
 from fabfile.utils.interface import get_data_ip
@@ -270,8 +270,10 @@ def get_vcenter_clusters(datacenter):
     clusters = []
     for dvs in datacenter['dv_switches'].keys():
          dvs_info = datacenter['dv_switches'][dvs]
-         if is_mitaka_or_above:
+         openstack_sku = get_openstack_sku(use_install_repo=True)
+         if openstack_sku in ['mitaka', 'newton']:
              if len(dvs_info['clusters']) > 1:
+                 print 'Error: Multiple clusters per datacenter not supported'
                  return None
          for cluster in dvs_info['clusters']:
               clusters.append(cluster)
@@ -333,7 +335,7 @@ def create_esxi_vrouter_map_file(vcenter_server_name, vcenter_server, host_strin
               dc_info = vcenter_server['datacenters'][dc]
               clusters = get_vcenter_clusters(dc_info)
               if not clusters:
-                  print 'Error: multiple clusters per datacenter not supported in Mitaka'
+                  print 'Error: clusters not defined'
 
          for esxi_host in esxi_hosts:
              if esxi_info[esxi_host]['cluster'] in clusters:
