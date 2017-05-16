@@ -1184,7 +1184,7 @@ def install_ns_agilio_nic_node(pkg, *args):
             if not is_ns_agilio_node(host_string):
                 return
             if pkg:
-                execute('create_installer_repo')
+                execute("create_installer_repo_node", host_string)
                 execute("register_ns_agilio_vrouter_depends_packages", pkg, host_string)
 
             # Update system kernel - required for ns agilio nic operation

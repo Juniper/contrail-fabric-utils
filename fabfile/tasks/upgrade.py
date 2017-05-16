@@ -15,6 +15,9 @@ from fabfile.utils.analytics import \
 from fabfile.tasks.services import *
 from fabfile.utils.ns_agilio_vrouter import *
 
+from fabfile.tasks.uninstall import uninstall_ns_agilio_nic_node
+from fabfile.tasks.install import install_ns_agilio_nic_node
+
 @task
 @EXECUTE_TASK
 @roles('openstack')
@@ -359,9 +362,10 @@ def upgrade_ns_agilio_compute_node(from_rel, ns_pkg, *args, **kwargs):
                 execute(stop_contrail_vrouter_agent)
                 execute(stop_virtiorelayd)
                 sudo('ifdown vhost0')
-
+	    with settings(warn_only=True):
+                uninstall_ns_agilio_nic_node(host_string)
             # copy and install ns_pkg. Installs BSP and flashes if needed
-            execute('install_ns_agilio_nic', ns_pkg)
+            install_ns_agilio_nic_node(ns_pkg, host_string)
 
             # bring down vrouter (in case of reboot)
             with settings(warn_only=True):
@@ -398,6 +402,12 @@ def upgrade_ns_agilio_compute_node(from_rel, ns_pkg, *args, **kwargs):
             sudo('ifdown %s' % control_iface) # down and up to reload firmware
             sudo('ifup %s' % control_iface)
             sudo('ifup vhost0')
+
+	    with settings(warn_only=True):
+                execute(stop_nova_openstack_compute)
+                execute(stop_contrail_vrouter_agent)
+                execute(stop_virtiorelayd)
+
             execute(start_virtiorelayd)
             execute(start_contrail_vrouter_agent)
             execute(start_nova_openstack_compute)

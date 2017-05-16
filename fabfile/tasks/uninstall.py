@@ -479,7 +479,6 @@ def remove_install_repo_ns_agilio_vrouter():
     if is_ns_agilio_node(env.host_string):
         remove_install_repo_ns_agilio_vrouter_node(env.host_string)
 
-
 @task
 def uninstall_ns_agilio_nic_node(*args):
     """Uninstalls depends for ns-agilio-nic support in one or list of nodes.
@@ -503,7 +502,7 @@ def uninstall_ns_agilio_nic_node(*args):
             sudo("apt-get remove -y %s" % " ".join(ns_agilio_nic_deps_pkgs))
 
             # remove install repo(s)
-            execute('remove_install_repo_ns_agilio_vrouter')
+            execute('remove_install_repo_ns_agilio_vrouter_node',host_string)
 
             # remove old packages
             with settings(host_string=host_string, warn_only=True):
