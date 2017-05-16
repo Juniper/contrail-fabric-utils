@@ -552,6 +552,15 @@ def start_contrail_vrouter_agent():
 @roles('compute')
 def stop_virtiorelayd():
     os_type = detect_ostype()
+    ns_agilio_vrouter_dict = getattr(env, 'ns_agilio_vrouter', None)
+    host_string = sudo('hostname')
+    upgrade_ns_agilio_contrail = False
+    for key in ns_agilio_vrouter_dict.iterkeys():
+        if host_string in key:
+            upgrade_ns_agilio_contrail = True
+    if not upgrade_ns_agilio_contrail:
+        print "Node has no SmartNIC in testbed. SKIPPING."
+        return
     if os_type in ['ubuntu']:
         sudo('service virtiorelayd stop')
     else:
@@ -562,6 +571,15 @@ def stop_virtiorelayd():
 @roles('compute')
 def start_virtiorelayd():
     os_type = detect_ostype()
+    ns_agilio_vrouter_dict = getattr(env, 'ns_agilio_vrouter', None)
+    host_string = sudo('hostname')
+    upgrade_ns_agilio_contrail = False
+    for key in ns_agilio_vrouter_dict.iterkeys():
+        if host_string in key:
+            upgrade_ns_agilio_contrail = True
+    if not upgrade_ns_agilio_contrail:
+        print "Node has no SmartNIC in testbed. SKIPPING."
+        return
     if os_type in ['ubuntu']:
         sudo('service virtiorelayd start')
     else:
