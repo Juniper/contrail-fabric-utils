@@ -580,6 +580,8 @@ def fixup_restart_haproxy_in_openstack_node(*args):
             #apache2 is restarted later from barbican-server-setup.sh after
             #updating secondary port in apache barbican conf file
             sudo("service apache2 stop")
+            #Stop openstack services before starting haproxy
+            stop_openstack()
             sudo("chkconfig haproxy on")
             enable_haproxy()
             sudo("service haproxy restart")
@@ -816,6 +818,14 @@ def start_openstack():
         openstack_services = get_openstack_services()
         for openstack_service in openstack_services['services']:
             sudo('service %s start' % openstack_service)
+
+@task
+@roles('openstack')
+def stop_openstack():
+    with settings(warn_only=True):
+        openstack_services = get_openstack_services()
+        for openstack_service in openstack_services['services']:
+            sudo('service %s stop' % openstack_service)
 
 @task
 @roles('build')
@@ -1144,6 +1154,7 @@ def setup_ha():
         if keystone_ssl_enabled():
             execute("setup_keystone_ssl_certs")
         execute('fixup_restart_haproxy_in_openstack')
+        execute('start_openstack')
         execute('setup_glance_images_loc')
         execute('fix_memcache_conf')
         execute('tune_tcp')
