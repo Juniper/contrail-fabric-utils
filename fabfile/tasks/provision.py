@@ -3390,7 +3390,7 @@ def add_esxi_to_vcenter(*args):
                            dv_switches = get_vcenter_dvswitches(dc_info)
                            clusters = get_vcenter_clusters(dc_info)
                            if not clusters:
-                              print 'Error: multiple clusters per datacenter not supported in Mitaka'
+                              print 'Error: clusters not defined'
                               return
                            if 'vcenter_compute' in env.roledefs:
                                dvs_list = dc_info['dv_switches']
@@ -3438,7 +3438,7 @@ def setup_vcenter():
              dv_switches = get_vcenter_dvswitches(dc_info)
              clusters = get_vcenter_clusters(dc_info)
              if not clusters:
-                 print 'Error: multiple clusters per datacenter not supported in Mitaka'
+                 print 'Error: clusters in not defined'
                  return
 
              esxi_hosts = []
