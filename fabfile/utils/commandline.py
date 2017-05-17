@@ -243,7 +243,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     if internal_vip:
         # Highly available openstack setup
         cmd += ' --internal_vip %s' % (internal_vip)
-    else:
+    elif get_orchestrator() == 'openstack':
         openstack_ctrl_ip = hstr_to_ip(get_control_host_string(env.roledefs['openstack'][0]))
         cmd += ' --openstack_ctrl_ip %s' % (openstack_ctrl_ip)
     if contrail_internal_vip:
