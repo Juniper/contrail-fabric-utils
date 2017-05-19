@@ -32,39 +32,6 @@ SERVICE_NAMES = {
 @task
 @parallel(pool_size=20)
 @roles('all')
-def disable_sysv_auto_generation():
-    _SYSTEMCTL_SKIP_REDIRECT=1
-    'export _SYSTEMCTL_SKIP_REDIRECT'
-
-@task
-@parallel(pool_size=20)
-@roles('all')
-def install_xenial_prerequisites():
-    services_list = []
-    contrail_systemd_services = run("ls -l /etc/systemd/system | grep .service | grep contrail | awk '{print $9}'")
-    if contrail_systemd_services:
-        services_list = contrail_systemd_services.split('\r\n')
-
-    nova_systemd_services = run("ls -l /etc/systemd/system | grep .service | grep nova | awk '{print $9}'")
-    if nova_systemd_services:
-        nova_services_list =  nova_systemd_services.split('\r\n')
-        for svc in nova_services_list:
-            services_list.append(svc)
-
-    other_services = ['cassandra.service', 'zookeeper.service']
-    for svc in other_services:
-         services_list.append(svc)
-
-    run("systemctl daemon-reload")
-    for svc in services_list:
-         svc_file = "/etc/systemd/system/%s" % svc
-         if os.path.exists(svc_file):
-             run("systemctl enable %s" % svc_file)
-             run("systemctl start %s" % svc.split('.')[0])
-
-@task
-@parallel(pool_size=20)
-@roles('all')
 def install_rpm_all(rpm):
     """Installs any rpm in all nodes."""
     execute('install_pkg_node', rpm, env.host_string)
@@ -930,9 +897,6 @@ def install_contrail(*tgzs, **kwargs):
     """
     reboot = kwargs.get('reboot', 'True')
     execute('pre_check')
-    if detect_ostype() == 'ubuntu':
-        if is_xenial_or_above():
-            execute('disable_sysv_auto_generation')
     execute('create_installer_repo')
     execute(create_install_repo, *tgzs, **kwargs)
     execute(install_database)
@@ -950,9 +914,6 @@ def install_contrail(*tgzs, **kwargs):
         execute(install_interface_name, reboot)
         #Clear the connections cache
         connections.clear()
-    if detect_ostype() == 'ubuntu':
-        if is_xenial_or_above():
-            execute(install_xenial_prerequisites)
     execute('reboot_on_kernel_update', reboot)
 
 @roles('build')
