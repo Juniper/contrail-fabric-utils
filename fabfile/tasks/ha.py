@@ -6,7 +6,7 @@ from fabfile.tasks.helpers import enable_haproxy, ping_test
 from fabfile.tasks.rabbitmq import purge_node_from_rabbitmq_cluster
 from fabfile.utils.fabos import (
         detect_ostype, get_as_sudo, is_package_installed,
-        get_openstack_services
+        get_openstack_services, is_xenial_or_above
         )
 from fabfile.utils.host import (
         get_authserver_ip, get_control_host_string, hstr_to_ip,
@@ -599,6 +599,14 @@ def fixup_restart_haproxy_in_collector():
 def fixup_restart_haproxy_in_collector_node(*args):
     contrail_analytics_api_server_lines = ''
     space = ' ' * 3
+    if is_xenial_or_above():
+        contrail_collector_stats = """listen contrail-collector-stats
+    bind  :5938"""
+        contrail_analytics_api = """frontend  contrail-analytics-api
+    bind *:8081"""
+    else:
+        contrail_collector_stats = 'listen contrail-collector-stats :5938'
+        contrail_analytics_api = 'frontend  contrail-analytics-api *:8081'
 
     for host_string in env.roledefs['collector']:
         server_index = env.roledefs['collector'].index(host_string) + 1
@@ -610,6 +618,8 @@ def fixup_restart_haproxy_in_collector_node(*args):
 
     for host_string in env.roledefs['collector']:
         haproxy_config = collector_haproxy.template.safe_substitute({
+            '__contrail_collector_stats__': contrail_collector_stats,
+            '__contrail_analytics_api__': contrail_analytics_api,
             '__contrail_analytics_api_backend_servers__' : contrail_analytics_api_server_lines,
             '__contrail_hap_user__': 'haproxy',
             '__contrail_hap_passwd__': 'contrail123',
