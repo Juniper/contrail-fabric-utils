@@ -1,13 +1,13 @@
 import string
 
 template = string.Template("""#contrail-collector-marker-start
-listen contrail-collector-stats :5938
+$__contrail_collector_stats__
    mode http
    stats enable
    stats uri /
    stats auth $__contrail_hap_user__:$__contrail_hap_passwd__
 
-frontend  contrail-analytics-api *:8081
+$__contrail_analytics_api__
     default_backend    contrail-analytics-api
 
 backend contrail-analytics-api
