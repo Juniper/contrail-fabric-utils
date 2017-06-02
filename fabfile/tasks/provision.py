@@ -3353,7 +3353,7 @@ def cleanup_vcenter():
         for dc in datacenters:
              deprovision_vcenter(vcenter_server, dc)
 
-@roles('build')
+@hosts(env.roledefs['cfgm'][0])
 @task
 def add_esxi_to_vcenter(*args):
     vcenter_info = getattr(env, 'vcenter_servers', None)
@@ -3392,24 +3392,14 @@ def add_esxi_to_vcenter(*args):
                            if not clusters:
                               print 'Error: clusters not defined'
                               return
-                           if 'vcenter_compute' in env.roledefs:
-                               dvs_list = dc_info['dv_switches']
-                               for dvs in dvs_list:
-                                   dvs_info = dvs_list[dvs] 
-                                   if esxi_data['cluster'] in dvs_info['clusters']:
-                                       vcenter_compute = dvs_info['vcenter_compute']
-                                       host_string = vcenter_compute
-                           else:
-                               host_string = env.roledefs['cfgm'][0]
-                           with settings(host_string=host_string):
-                                 (hosts, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list)
-                                 provision_vcenter(vcenter_server, dc_name, dc_mtu, dv_switches, clusters, hosts, vms)
-                                 update_esxi_vrouter_map_file(host)
-                                 sudo("service contrail-vcenter-plugin restart")
-                                 provision_vcenter_features(vcenter_server, esxi_info, host_list, dc, clusters)
-                                 break
+                           (hosts, vms) = get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, password_list)
+                           provision_vcenter(vcenter_server, dc_name, dc_mtu, dv_switches, clusters, hosts, vms)
+                           update_esxi_vrouter_map_file(host)
+                           sudo("service contrail-vcenter-plugin restart")
+                           provision_vcenter_features(vcenter_server, esxi_info, host_list, dc, clusters)
+                           break
 
-@roles('build')
+@hosts(env.roledefs['cfgm'][0])
 @task
 def setup_vcenter():
     vcenter_info = getattr(env, 'vcenter_servers', None)
