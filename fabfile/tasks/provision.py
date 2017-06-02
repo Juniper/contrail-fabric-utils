@@ -3353,7 +3353,7 @@ def cleanup_vcenter():
         for dc in datacenters:
              deprovision_vcenter(vcenter_server, dc)
 
-@roles('build')
+@hosts(env.roledefs['cfgm'][0])
 @task
 def add_esxi_to_vcenter(*args):
     vcenter_info = getattr(env, 'vcenter_servers', None)
@@ -3409,7 +3409,7 @@ def add_esxi_to_vcenter(*args):
                                  provision_vcenter_features(vcenter_server, esxi_info, host_list, dc, clusters)
                                  break
 
-@roles('build')
+@hosts(env.roledefs['cfgm'][0])
 @task
 def setup_vcenter():
     vcenter_info = getattr(env, 'vcenter_servers', None)
