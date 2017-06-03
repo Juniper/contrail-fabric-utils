@@ -1,7 +1,7 @@
 import string
 
 template = string.Template("""#contrail-openstack-marker-start
-listen contrail-openstack-stats :5936
+$__contrail_openstack_stats__
    mode http
    stats enable
    stats uri /
@@ -59,7 +59,7 @@ backend keystone-admin-backend
 
 $__keystone_admin_backend_servers__
 
-frontend openstack-glance *:9292
+$__openstack_glance__
     default_backend    glance-backend
 
 backend glance-backend
@@ -84,7 +84,7 @@ backend glance-backend
     default-server error-limit 1 on-error mark-down
 $__glance_backend_servers__
 
-frontend openstack-heat-api *:8004 
+$__openstack_heat_api__
     default_backend    heat-api-backend 
 backend heat-api-backend 
     option tcpka 
@@ -105,7 +105,7 @@ backend heat-api-backend
     default-server error-limit 1 on-error mark-down 
 $__heat_backend_servers__
 
-frontend openstack-cinder *:8776
+$__openstack_cinder__
     default_backend  cinder-backend
 
 backend cinder-backend
@@ -115,7 +115,7 @@ backend cinder-backend
     balance   roundrobin
 $__cinder_backend_servers__
 
-frontend ceph-rest-api-server *:5005
+$__ceph_rest_api_server__
     default_backend  ceph-rest-api-server-backend
 
 backend ceph-rest-api-server-backend
@@ -126,7 +126,7 @@ backend ceph-rest-api-server-backend
 $__ceph_restapi_backend_servers__
 
 
-frontend openstack-nova-api *:8774
+$__openstack_nova_api__
     default_backend  nova-api-backend
 
 backend nova-api-backend
@@ -152,7 +152,7 @@ backend nova-api-backend
 
 $__nova_api_backend_servers__
 
-frontend openstack-nova-meta *:8775
+$__openstack_nova_meta__
     default_backend  nova-meta-backend
 
 backend nova-meta-backend
@@ -178,7 +178,7 @@ backend nova-meta-backend
 
 $__nova_meta_backend_servers__
 
-frontend openstack-nova-vnc *:6080
+$__openstack_nova_vnc__
     default_backend  nova-vnc-backend
 
 backend nova-vnc-backend
@@ -188,7 +188,7 @@ backend nova-vnc-backend
     balance  roundrobin
     $__nova_vnc_backend_servers__
 
-frontend openstack-barbican *:9311
+$__openstack_barbican__
     default_backend    barbican-backend
 
 backend barbican-backend
@@ -214,7 +214,7 @@ backend barbican-backend
 
 $__barbican_backend_servers__
 
-listen memcached 0.0.0.0:11222
+$__memcache__
    mode tcp
    balance roundrobin
    option tcplog
@@ -227,7 +227,7 @@ listen memcached 0.0.0.0:11222
    timeout server 0
 $__memcached_servers__
 
-listen  rabbitmq 0.0.0.0:5673
+$__rabbitmq__
     mode tcp
     maxconn 10000
     balance leastconn
@@ -240,7 +240,7 @@ listen  rabbitmq 0.0.0.0:5673
     timeout server-fin 60s
 $__rabbitmq_servers__
 
-listen  mysql 0.0.0.0:33306
+$__mysql__
     mode tcp
     balance leastconn
     option tcpka
