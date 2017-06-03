@@ -27,9 +27,7 @@ backend keystone-backend
     http-check expect ! rstatus ^5
     default-server error-limit 1 on-error mark-down
 
-    option tcp-check
-    tcp-check connect port 6000
-    default-server error-limit 1 on-error mark-down
+$__keystone_tcp_check_lines__
 
 $__keystone_backend_servers__
 
@@ -53,9 +51,7 @@ backend keystone-admin-backend
     http-check expect ! rstatus ^5
     default-server error-limit 1 on-error mark-down
 
-    option tcp-check
-    tcp-check connect port 35358
-    default-server error-limit 1 on-error mark-down
+$__keystone_admin_tcp_check_lines__
 
 $__keystone_admin_backend_servers__
 
@@ -79,9 +75,7 @@ backend glance-backend
     http-check expect ! rstatus ^5
     default-server error-limit 1 on-error mark-down
 
-    option tcp-check
-    tcp-check connect port 9393
-    default-server error-limit 1 on-error mark-down
+$__glance_tcp_check_lines__
 $__glance_backend_servers__
 
 $__openstack_heat_api__
@@ -100,9 +94,7 @@ backend heat-api-backend
     tcp-check send Host:localhost 
     http-check expect ! rstatus ^5 
     default-server error-limit 1 on-error mark-down 
-    option tcp-check 
-    tcp-check connect port 8005 
-    default-server error-limit 1 on-error mark-down 
+$__heat_api_tcp_check_lines__
 $__heat_backend_servers__
 
 $__openstack_cinder__
@@ -146,9 +138,7 @@ backend nova-api-backend
     http-check expect ! rstatus ^5
     default-server error-limit 1 on-error mark-down
 
-    option tcp-check
-    tcp-check connect port 9774
-    default-server error-limit 1 on-error mark-down
+$__nova_api_tcp_check_lines__
 
 $__nova_api_backend_servers__
 
@@ -172,9 +162,7 @@ backend nova-meta-backend
     http-check expect ! rstatus ^5
     default-server error-limit 1 on-error mark-down
 
-    option tcp-check
-    tcp-check connect port 9775
-    default-server error-limit 1 on-error mark-down
+$__nova_meta_tcp_check_lines__
 
 $__nova_meta_backend_servers__
 
@@ -208,9 +196,7 @@ backend barbican-backend
     http-check expect ! rstatus ^5
     default-server error-limit 1 on-error mark-down
 
-    option tcp-check
-    tcp-check connect port 6000
-    default-server error-limit 1 on-error mark-down
+$__barbican_tcp_check_lines__ 
 
 $__barbican_backend_servers__
 
