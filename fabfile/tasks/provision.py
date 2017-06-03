@@ -548,6 +548,11 @@ def fixup_restart_haproxy_in_all_compute():
 def  fixup_restart_haproxy_in_all_openstack():
     openstack_haproxy_template = string.Template("""
 #contrail-openstack-marker-start
+listen contrail-openstack-stats :5936
+   mode http
+   stats enable
+   stats uri /
+   stats auth $__contrail_hap_user__:$__contrail_hap_passwd__
 
 $__contrail_quantum_stanza__
 
