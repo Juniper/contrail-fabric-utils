@@ -453,6 +453,13 @@ def fixup_restart_haproxy_in_openstack_node(*args):
     bind 0.0.0.0:33306"""
        contrail_openstack_stats = """listen contrail-openstack-stats
     bind  :5936"""
+       keystone_tcp_check_lines = ''
+       keystone_admin_tcp_check_lines = ''
+       glance_tcp_check_lines = ''
+       heat_api_tcp_check_lines = ''
+       nova_api_tcp_check_lines = ''
+       nova_meta_tcp_check_lines = ''
+       barbican_tcp_check_lines = ''
     else:
        keystone_frontend = 'frontend openstack-keystone *:5000'
        keystone_admin_frontend = 'frontend openstack-keystone-admin *:35357'
@@ -468,6 +475,27 @@ def fixup_restart_haproxy_in_openstack_node(*args):
        rabbitmq = 'listen  rabbitmq 0.0.0.0:5673'
        mysql = 'listen  mysql 0.0.0.0:33306'
        contrail_openstack_stats = 'listen contrail-openstack-stats :5936'
+       keystone_tcp_check_lines = """option tcp-check
+    tcp-check connect port 6000
+    default-server error-limit 1 on-error mark-down"""
+       keystone_admin_tcp_check_lines = """option tcp-check
+    tcp-check connect port 35358
+    default-server error-limit 1 on-error mark-down"""
+       glance_tcp_check_lines = """option tcp-check
+    tcp-check connect port 9393
+    default-server error-limit 1 on-error mark-down"""
+       heat_api_tcp_check_lines = """option tcp-check
+    tcp-check connect port 8005
+    default-server error-limit 1 on-error mark-down"""
+       nova_api_tcp_check_lines = """option tcp-check
+    tcp-check connect port 9774
+    default-server error-limit 1 on-error mark-down"""
+       nova_meta_tcp_check_lines = """option tcp-check
+    tcp-check connect port 9775
+    default-server error-limit 1 on-error mark-down"""
+       barbican_tcp_check_lines = """    option tcp-check
+    tcp-check connect port 6000
+    default-server error-limit 1 on-error mark-down"""
 
     keystone_server_lines = ''
     keystone_admin_server_lines = ''
@@ -598,6 +626,13 @@ def fixup_restart_haproxy_in_openstack_node(*args):
             '__contrail_hap_user__': 'haproxy',
             '__contrail_hap_passwd__': get_haproxy_token('openstack'),
             '__contrail_openstack_stats__': contrail_openstack_stats,
+            '__keystone_tcp_check_lines__': keystone_tcp_check_lines,
+            '__keystone_admin_tcp_check_lines__': keystone_admin_tcp_check_lines,
+            '__glance_tcp_check_lines__': glance_tcp_check_lines,
+            '__heat_api_tcp_check_lines__': heat_api_tcp_check_lines,
+            '__nova_api_tcp_check_lines__': nova_api_tcp_check_lines, 
+            '__nova_meta_tcp_check_lines__': nova_meta_tcp_check_lines,
+            '__barbican_tcp_check_lines__': barbican_tcp_check_lines,
             })
 
     for host_string in args:
@@ -1207,6 +1242,7 @@ def setup_ha_without_openstack():
     if get_contrail_internal_vip():
         print "Contrail HA setup, provisioning contrail HA."
         execute('setup_contrail_keepalived')
+        execute('stop_collector')
         execute('fixup_restart_haproxy_in_collector')
 
 @task
@@ -1217,6 +1253,7 @@ def setup_ha():
     if get_contrail_internal_vip():
         print "Contrail HA setup, provisioning contrail HA."
         execute('setup_keepalived')
+        execute('stop_collector')
         execute('fixup_restart_haproxy_in_collector')
 
     if get_openstack_internal_vip():
