@@ -187,8 +187,9 @@ def setup_cluster_monitors():
 def setup_cluster_monitors_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
-            sudo("service contrail-hamon restart")
-            sudo("chkconfig contrail-hamon on")
+            if not is_xenial_or_above():
+                sudo("service contrail-hamon restart")
+                sudo("chkconfig contrail-hamon on")
 
 @task
 def join_galera_cluster(new_ctrl_host):
@@ -956,10 +957,11 @@ def purge_node_from_openstack_cluster(del_openstack_node):
         # If CMON is running in the node to be purged, stop it.
         # Invalidate the config.
         with settings(host_string=del_openstack_node, warn_only=True):
-            sudo("service contrail-hamon stop")
-            sudo("service cmon stop")
-            sudo("chkconfig contrail-hamon off")
-            sudo("mv /etc/cmon.cnf /etc/cmon.cnf.removed")
+            if not is_xenial_or_above():
+                sudo("service contrail-hamon stop")
+                sudo("service cmon stop")
+                sudo("chkconfig contrail-hamon off")
+                sudo("mv /etc/cmon.cnf /etc/cmon.cnf.removed")
 
     del_openstack_node_ip = hstr_to_ip(del_openstack_node)
     del_openstack_ctrl_ip = hstr_to_ip(get_control_host_string(del_openstack_node))
