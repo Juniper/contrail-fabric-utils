@@ -187,8 +187,9 @@ def setup_cluster_monitors():
 def setup_cluster_monitors_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
-            sudo("service contrail-hamon restart")
-            sudo("chkconfig contrail-hamon on")
+            if not is_xenial_or_above():
+                sudo("service contrail-hamon restart")
+                sudo("chkconfig contrail-hamon on")
 
 @task
 def join_galera_cluster(new_ctrl_host):
@@ -424,8 +425,79 @@ def fixup_restart_haproxy_in_openstack():
 
 @task
 def fixup_restart_haproxy_in_openstack_node(*args):
-    keystone_frontend = 'frontend openstack-keystone *:5000'
-    keystone_admin_frontend = 'frontend openstack-keystone-admin *:35357'
+    if is_xenial_or_above():
+       keystone_frontend = """frontend openstack-keystone
+    bind *:5000"""
+       keystone_admin_frontend = """frontend openstack-keystone-admin
+    bind *:35357"""
+       openstack_glance = """frontend openstack-glance 
+    bind *:9292"""
+       openstack_heat_api = """frontend openstack-heat-api 
+    bind *:8004"""
+       openstack_cinder = """frontend openstack-cinder 
+    bind *:8776"""
+       ceph_rest_api_server = """frontend ceph-rest-api-server 
+    bind *:5005"""
+       openstack_nova_api = """frontend openstack-nova-api 
+    bind *:8774"""
+       openstack_nova_meta = """frontend openstack-nova-meta 
+    bind *:8775"""
+       openstack_nova_vnc = """frontend openstack-nova-vnc
+    bind *:6080"""
+       openstack_barbican = """frontend openstack-barbican
+    bind *:9311"""
+       memcache = """listen memcached 
+    bind 0.0.0.0:11222"""
+       rabbitmq = """listen  rabbitmq 
+    bind 0.0.0.0:5673"""
+       mysql = """listen  mysql
+    bind 0.0.0.0:33306"""
+       contrail_openstack_stats = """listen contrail-openstack-stats
+    bind  :5936"""
+       keystone_tcp_check_lines = ''
+       keystone_admin_tcp_check_lines = ''
+       glance_tcp_check_lines = ''
+       heat_api_tcp_check_lines = ''
+       nova_api_tcp_check_lines = ''
+       nova_meta_tcp_check_lines = ''
+       barbican_tcp_check_lines = ''
+    else:
+       keystone_frontend = 'frontend openstack-keystone *:5000'
+       keystone_admin_frontend = 'frontend openstack-keystone-admin *:35357'
+       openstack_glance = 'frontend openstack-glance *:9292'
+       openstack_heat_api = 'frontend openstack-heat-api *:8004' 
+       openstack_cinder = 'frontend openstack-cinder *:8776'
+       ceph_rest_api_server = 'frontend ceph-rest-api-server *:5005'
+       openstack_nova_api = 'frontend openstack-nova-api *:8774'
+       openstack_nova_meta = 'frontend openstack-nova-meta *:8775'
+       openstack_nova_vnc = 'frontend openstack-nova-vnc *:6080'
+       openstack_barbican = 'frontend openstack-barbican *:9311'
+       memcache = 'listen memcached 0.0.0.0:11222'
+       rabbitmq = 'listen  rabbitmq 0.0.0.0:5673'
+       mysql = 'listen  mysql 0.0.0.0:33306'
+       contrail_openstack_stats = 'listen contrail-openstack-stats :5936'
+       keystone_tcp_check_lines = """option tcp-check
+    tcp-check connect port 6000
+    default-server error-limit 1 on-error mark-down"""
+       keystone_admin_tcp_check_lines = """option tcp-check
+    tcp-check connect port 35358
+    default-server error-limit 1 on-error mark-down"""
+       glance_tcp_check_lines = """option tcp-check
+    tcp-check connect port 9393
+    default-server error-limit 1 on-error mark-down"""
+       heat_api_tcp_check_lines = """option tcp-check
+    tcp-check connect port 8005
+    default-server error-limit 1 on-error mark-down"""
+       nova_api_tcp_check_lines = """option tcp-check
+    tcp-check connect port 9774
+    default-server error-limit 1 on-error mark-down"""
+       nova_meta_tcp_check_lines = """option tcp-check
+    tcp-check connect port 9775
+    default-server error-limit 1 on-error mark-down"""
+       barbican_tcp_check_lines = """    option tcp-check
+    tcp-check connect port 6000
+    default-server error-limit 1 on-error mark-down"""
+
     keystone_server_lines = ''
     keystone_admin_server_lines = ''
     glance_server_lines = ''
@@ -530,6 +602,17 @@ def fixup_restart_haproxy_in_openstack_node(*args):
             '__keystone_backend_servers__' : keystone_server_lines,
             '__keystone_admin_frontend__' : keystone_admin_frontend,
             '__keystone_admin_backend_servers__' : keystone_admin_server_lines,
+            '__openstack_glance__' : openstack_glance,
+            '__openstack_heat_api__' : openstack_heat_api,
+            '__openstack_cinder__' : openstack_cinder,
+            '__ceph_rest_api_server__' : ceph_rest_api_server,
+            '__openstack_nova_api__' : openstack_nova_api,
+            '__openstack_nova_meta__' : openstack_nova_meta,
+            '__openstack_nova_vnc__' : openstack_nova_vnc,
+            '__openstack_barbican__' : openstack_barbican,
+            '__memcache__' : memcache,
+            '__rabbitmq__' : rabbitmq,
+            '__mysql__' : mysql,
             '__glance_backend_servers__' : glance_server_lines,
             '__heat_backend_servers__' : heat_server_lines,
             '__cinder_backend_servers__' : cinder_server_lines,
@@ -543,6 +626,14 @@ def fixup_restart_haproxy_in_openstack_node(*args):
             '__mysql_servers__' : mysql_server_lines,
             '__contrail_hap_user__': 'haproxy',
             '__contrail_hap_passwd__': get_haproxy_token('openstack'),
+            '__contrail_openstack_stats__': contrail_openstack_stats,
+            '__keystone_tcp_check_lines__': keystone_tcp_check_lines,
+            '__keystone_admin_tcp_check_lines__': keystone_admin_tcp_check_lines,
+            '__glance_tcp_check_lines__': glance_tcp_check_lines,
+            '__heat_api_tcp_check_lines__': heat_api_tcp_check_lines,
+            '__nova_api_tcp_check_lines__': nova_api_tcp_check_lines, 
+            '__nova_meta_tcp_check_lines__': nova_meta_tcp_check_lines,
+            '__barbican_tcp_check_lines__': barbican_tcp_check_lines,
             })
 
     for host_string in args:
@@ -752,6 +843,10 @@ def setup_cmon_schema_node(*args):
         print "Single Openstack cluster, skipping cmon schema  setup."
         return
 
+    if is_xenial_or_above():
+        print "CMON not enabled in Ubuntu 16.04"
+        return    
+
     for host_string in args:
         openstack_host_list = [get_control_host_string(openstack_host)\
                                for openstack_host in env.roledefs['openstack']]
@@ -862,10 +957,11 @@ def purge_node_from_openstack_cluster(del_openstack_node):
         # If CMON is running in the node to be purged, stop it.
         # Invalidate the config.
         with settings(host_string=del_openstack_node, warn_only=True):
-            sudo("service contrail-hamon stop")
-            sudo("service cmon stop")
-            sudo("chkconfig contrail-hamon off")
-            sudo("mv /etc/cmon.cnf /etc/cmon.cnf.removed")
+            if not is_xenial_or_above():
+                sudo("service contrail-hamon stop")
+                sudo("service cmon stop")
+                sudo("chkconfig contrail-hamon off")
+                sudo("mv /etc/cmon.cnf /etc/cmon.cnf.removed")
 
     del_openstack_node_ip = hstr_to_ip(del_openstack_node)
     del_openstack_ctrl_ip = hstr_to_ip(get_control_host_string(del_openstack_node))
@@ -1148,6 +1244,7 @@ def setup_ha_without_openstack():
     if get_contrail_internal_vip():
         print "Contrail HA setup, provisioning contrail HA."
         execute('setup_contrail_keepalived')
+        execute('stop_collector')
         execute('fixup_restart_haproxy_in_collector')
 
 @task
@@ -1158,6 +1255,7 @@ def setup_ha():
     if get_contrail_internal_vip():
         print "Contrail HA setup, provisioning contrail HA."
         execute('setup_keepalived')
+        execute('stop_collector')
         execute('fixup_restart_haproxy_in_collector')
 
     if get_openstack_internal_vip():

@@ -1,7 +1,9 @@
 import os
 from fabfile.config import *
 from misc import zoolink
-from fabfile.utils.fabos import detect_ostype, get_openstack_services, get_openstack_sku
+from fabfile.utils.fabos import (
+       detect_ostype, get_openstack_services, get_openstack_sku,
+       is_xenial_or_above)
 from fabfile.utils.cluster import get_orchestrator
 from fabric.contrib.files import exists
 from fabfile.utils.host import hstr_to_ip, manage_config_db
@@ -153,7 +155,17 @@ def stop_collector():
 def stop_collector_node(*args):
     for host_string in args:
         with  settings(host_string=host_string, warn_only=True):
-            sudo('service supervisor-analytics stop')
+            if is_xenial_or_above():
+                for svc in ['contrail-analytics-api',
+                            'contrail-alarm-gen',
+                            'contrail-analytics-nodemgr',
+                            'contrail-collector',
+                            'contrail-topology',
+                            'contrail-snmp-collector']:
+                    sudo('service %s stop' % svc)
+            else:
+                sudo('service supervisor-analytics stop')
+
 @task
 @roles('compute')
 def stop_vrouter():

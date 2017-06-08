@@ -548,11 +548,12 @@ def fixup_restart_haproxy_in_all_compute():
 def  fixup_restart_haproxy_in_all_openstack():
     openstack_haproxy_template = string.Template("""
 #contrail-openstack-marker-start
-listen contrail-openstack-stats :5936
-   mode http
-   stats enable
-   stats uri /
-   stats auth $__contrail_hap_user__:$__contrail_hap_passwd__
+
+$__contrail_openstack_stats__
+    mode http
+    stats enable
+    stats uri /
+    stats auth $__contrail_hap_user__:$__contrail_hap_passwd__
 
 $__contrail_quantum_stanza__
 
@@ -605,11 +606,18 @@ $__contrail_quantum_servers__
                 local('grep -q "tune.bufsize 16384" %s || sed -i "/^global/a\\        tune.bufsize 16384" %s' % (tmp_fname, tmp_fname))
                 local('grep -q "tune.maxrewrite 1024" %s || sed -i "/^global/a\\        tune.maxrewrite 1024" %s' % (tmp_fname, tmp_fname))
 
+            if xenial_or_above() == 1:
+                contrail_openstack_stats = """listen contrail-openstack-stats
+                bind  :5936"""
+            else:
+                contrail_openstack_stats = 'listen contrail-openstack-stats :5936'
+
             # ...generate new ones
             openstack_haproxy = openstack_haproxy_template.safe_substitute({
                 '__contrail_hap_user__': 'haproxy',
                 '__contrail_hap_passwd__': 'contrail123',
                 '__contrail_quantum_stanza__': q_stanza,
+                '__contrail_openstack_stats__': contrail_openstack_stats,
                 })
             cfg_file = open(tmp_fname, 'a')
             cfg_file.write(openstack_haproxy)
