@@ -547,7 +547,7 @@ def export_testbed_details(filename='testbed_vars'):
     '''
     # TODO 
     # Need to be able to export entire testbed details if need be
-    auth_server_ip = ''
+    authserver_ip = ''
     orch = getattr(env, 'orchestrator', None)
     if orch != 'kubernetes':
         authserver_ip = get_authserver_ip()
