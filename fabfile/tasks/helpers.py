@@ -654,6 +654,27 @@ def add_basic_images(image=None):
 
 #end add_basic_images
 
+@hosts(*env.roledefs['openstack'][0:1])
+@task
+def add_basic_flavors(flavor=None):
+    flavors = [ ("m1.tiny", "1", "1",  "512"),
+               ("m1.small", "1", "20",  "2048"),
+               ("m1.medium", "1", "40",  "4096"),
+               ("m1.large", "1", "80",  "8192"),
+               ("m1.xlarge", "1", "160",  "16384")
+               ]
+
+    flavors_present = run("(source /etc/contrail/openstackrc; openstack flavor list)")
+
+    for (name, vcpus, disk, ram) in flavors:
+        if (flavor is not None and flavor != name
+                or name in flavors_present):
+            if name in flavors_present:
+                print "%s already present, not adding it" % name
+            continue
+        run("(source /etc/contrail/openstackrc; openstack flavor create --public '"+name+"' --id auto --ram '"+ram+"' --disk '"+disk+"' --vcpus '"+vcpus+"')")
+#end add_basic_flavors
+
 @roles('compute')
 @task
 def virsh_cleanup():
