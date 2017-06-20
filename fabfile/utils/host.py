@@ -66,6 +66,19 @@ def get_haproxy_token(role='cfgm'):
     return haproxy_token
 
 
+def get_ifmap_token():
+    haproxy_token = get_from_testbed_dict('cfgm', 'ifmap_token', None)
+    if not ifmap_token:
+        ifmap_token_file = "/etc/contrail/ifmap.token"
+        with settings(host_string=env.roledefs[role][0], warn_only=True):
+            if sudo("sudo ls %s" % ifmap_token_file).failed:
+                sudo("mkdir -p /etc/contrail/")
+                sudo("openssl rand -hex 10 > %s" % ifmap_token_file)
+                sudo("chmod 400 %s" % ifmap_token_file)
+            ifmap_token = sudo("cat %s" % ifmap_token_file)
+    return ifmap_token
+
+
 def get_service_dbpass():
     return get_from_testbed_dict('openstack','service_dbpass', 'c0ntrail123')
 

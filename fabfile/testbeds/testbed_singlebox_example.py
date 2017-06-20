@@ -247,6 +247,8 @@ env.ostypes = {
 # amqp_port : Port of the customer deployed AMQP servers.
 # haproxy_token : Password of the haproxy user(haproxy) running in cfgm nodes,
 #                 Default is auto generated(/etc/contrail/haproxy.token)
+# ifmap_token : Password of the ifmap users running in cfgm nodes,
+#                 Default is auto generated(/etc/contrail/ifmap.token)
 # manage_db : Manage seperate cassandra DB for config objects in config(cfgm) node.
 #              Defaults to 'yes'.
 # keyfile  : Specify local remote(cfgm node) path to key file
@@ -262,6 +264,7 @@ env.ostypes = {
 #    'amqp_hosts' : ['10.10.10.1', '10.10.10.2'],
 #    'amqp_port' : '5672',
 #    'haproxy_token' : 'secret123',
+#    'ifmap_token' : 'secret123',
 #    'manage_db' : 'no',
 #    'auth_protocol'   : 'http',                  #Default is http
 #    'insecure'        : 'True',                   #Default is False
