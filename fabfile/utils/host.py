@@ -51,6 +51,20 @@ def get_service_token():
             service_token = sudo("sudo cat /etc/contrail/service.token")
     return service_token
 
+
+def get_ifmap_token():
+    ifmap_token = get_from_testbed_dict('cfgm', 'ifmap_token', None)
+    if not ifmap_token:
+        ifmap_token_file = "/etc/contrail/ifmap.token"
+        with settings(host_string=env.roledefs['cfgm'][0], warn_only=True):
+            if sudo("sudo ls %s" % ifmap_token_file).failed:
+                sudo("mkdir -p /etc/contrail/")
+                sudo("openssl rand -hex 10 > %s" % ifmap_token_file)
+                sudo("chmod 400 %s" % ifmap_token_file)
+            ifmap_token = sudo("cat %s" % ifmap_token_file)
+    return ifmap_token
+
+
 def copy_openstackrc(role='compute'):
     openstackrc = "/etc/contrail/openstackrc"
     temprc = "/tmp/openstackrc"

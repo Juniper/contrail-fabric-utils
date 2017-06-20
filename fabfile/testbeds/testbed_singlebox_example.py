@@ -227,6 +227,13 @@ env.ostypes = {
 #    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
 #}
 
+#Config node related config knobs
+# ifmap_token : Password of the ifmap users running in cfgm nodes,
+#                 Default is auto generated(/etc/contrail/ifmap.token)
+#env.cfgm = {
+#    'ifmap_token' : 'secret123',
+#}
+
 # Neutron specific configuration 
 #env.neutron = {
 #   'protocol': 'http', # Default is http

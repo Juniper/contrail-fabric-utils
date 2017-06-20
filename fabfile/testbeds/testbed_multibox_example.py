@@ -312,6 +312,13 @@ env.ostypes = {
 #    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
 #}
 
+#Config node related config knobs
+# ifmap_token : Password of the ifmap users running in cfgm nodes,
+#                 Default is auto generated(/etc/contrail/ifmap.token)
+#env.cfgm = {
+#    'ifmap_token' : 'secret123',
+#}
+
 # Link-Local Metadata Service
 # By default fab scripts will retrieve metadata secret from openstack node.
 # To override, Specify Metadata proxy secret from Openstack node
