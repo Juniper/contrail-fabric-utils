@@ -175,6 +175,7 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cmd += " --collector_ip %s" % (collector_ip)
     cmd += " --cassandra_ip_list %s" % ' '.join(get_config_db_ip_list())
     cmd += " --zookeeper_ip_list %s" % ' '.join(zookeeper_ip_list)
+    cmd += " --ifmap_password %s" % get_ifmap_token()
     if control_ip_list:
         cmd += " --control_ip_list %s" % ' '.join(control_ip_list)
     cmd += " --quantum_port %s" % quantum_port
@@ -397,6 +398,7 @@ def frame_vnc_control_cmd(host_string, cmd='setup-vnc-control'):
     cmd += ' --self_ip %s' % tgt_ip
     cmd += ' --cfgm_ip %s' % cfgm_ip
     cmd += ' --collector_ip %s' % collector_ip
+    cmd += " --ifmap_password %s" % get_ifmap_token()
 
     return cmd
 

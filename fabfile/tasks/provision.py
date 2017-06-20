@@ -1676,25 +1676,10 @@ def setup_control():
     if env.roledefs['control']:
         execute("setup_control_node", env.host_string)
 
-def fixup_irond_config(control_host_string):
-    control_ip = hstr_to_ip(get_control_host_string(control_host_string))
-    for config_host_string in env.roledefs['cfgm']:
-        with settings(host_string=config_host_string):
-            pfl = "/etc/ifmap-server/basicauthusers.properties"
-            # replace control-node and dns proc creds
-            sudo("sed -i -e '/%s:/d' -e '/%s.dns:/d' %s" \
-                      %(control_ip, control_ip, pfl))
-            sudo("echo '%s:%s' >> %s" \
-                      %(control_ip, control_ip, pfl))
-            sudo("echo '%s.dns:%s.dns' >> %s" \
-                      %(control_ip, control_ip, pfl))
-# end fixup_irond_config
-
 @task
 def setup_control_node(*args):
     """Provisions control services in one or list of nodes. USAGE: fab setup_control_node:user@1.1.1.1,user@2.2.2.2"""
     for host_string in args:
-        fixup_irond_config(host_string)
         cmd = frame_vnc_control_cmd(host_string)
         with  settings(host_string=host_string):
             if detect_ostype() == 'ubuntu':
