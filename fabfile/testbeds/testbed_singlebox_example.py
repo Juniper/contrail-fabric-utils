@@ -237,9 +237,12 @@ env.ostypes = {
 #Config node related config knobs
 #amqp_hosts : List of customer deployed AMQP servers to be used by config services.
 #amqp_port : Port of the customer deployed AMQP servers.
+# ifmap_token : Password of the ifmap users running in cfgm nodes,
+#                 Default is auto generated(/etc/contrail/ifmap.token)
 #env.cfgm = {
 #    'amqp_hosts' : ['10.10.10.1', '10.10.10.2']
 #    'amqp_port' : '5672'
+#    'ifmap_token' : 'secret123',
 #}
 
 # Neutron specific configuration 
