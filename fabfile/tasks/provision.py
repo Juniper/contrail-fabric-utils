@@ -1322,7 +1322,30 @@ def setup_redis_server_node(*args):
                         sudo("service %s restart" % (redis_svc_name))
 #end setup_redis_server_node
 
-
+@task
+def setup_kafka_server_node(*args):
+    """Provisions redis server in one or list of nodes.
+       USAGE: fab setup_kafka_server_node:user@1.1.1.1,user@2.2.2.2"""
+    for host_string in args:
+        with settings(host_string=host_string):
+            kafka_svc_name = 'kafka'
+            kafka_conf_file = '/usr/share/kafka/config/server.properties'
+        
+            if sudo("service %s status" % (kafka_svc_name)).succeeded:
+                database_host_list = [get_control_host_string(entry)\
+                                for entry in env.roledefs['database']]
+                database_number = len(database_host_list)
+                if database_number > 0:
+                    with settings(warn_only=True):
+                        sudo("service %s stop" % (kafka_svc_name))
+                        sudo("sed -i -e '/^default.replication.factor=/d' %s" % (kafka_conf_file))
+                        if database_number == 1:
+                           factor = 1
+                        else:
+                           factor = 2
+                        sudo("echo default.replication.factor=%s >> %s" % (factor, kafka_conf_file))
+                        sudo("service %s start" % (kafka_svc_name))
+#end setup_kafka_server_node
 @task
 @EXECUTE_TASK
 @roles('vcenter_compute')
@@ -1364,6 +1387,8 @@ def setup_collector_node(*args):
     for host_string in args:
         # Setup redis server
         execute("setup_redis_server_node", host_string)
+        # Setup kafka server
+        execute("setup_kafka_server_node", host_string)
         # Frame the command line to provision collector
         cmd = frame_vnc_collector_cmd(host_string)
         # Execute the provision collector script
