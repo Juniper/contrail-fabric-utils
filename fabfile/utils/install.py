@@ -81,6 +81,12 @@ def get_compute_pkgs(manage_nova_compute='yes'):
             pkgs.append('contrail-nova-vif')
         else:
             pkgs.append('contrail-vmware-vrouter')
+
+    if ostype in ['centos', 'redhat', 'fedora', 'centoslinux']:
+        # As per LP #1701069, install contrail-vrouter/contrail-vrouter-init
+        # explicitly
+        pkgs += ['contrail-vrouter', 'contrail-vrouter-init']
+
     # Append lbaas dependent packages if haproxy is enabled..
     if getattr(testbed, 'haproxy', False):
         pkgs.append('haproxy')
