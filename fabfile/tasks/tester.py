@@ -59,6 +59,7 @@ def setup_test_env():
         'vcenter_servers':[],
         'sriov':[],
         'dpdk':[],
+        'ns_agilio_vrouter':[],
     }
 
     sample_ini_file = env.test_repo_dir + '/' + 'sanity_params.ini.sample'
@@ -221,6 +222,11 @@ def setup_test_env():
     #get dpdk info
     if env.has_key('dpdk'):
         sanity_testbed_dict['dpdk'].append(env.dpdk)
+
+    #get ns_agilio_vrouter info
+    if env.has_key('ns_agilio_vrouter'):
+        sanity_testbed_dict['ns_agilio_vrouter'].append(env.ns_agilio_vrouter)
+
     # for every host_string
     with settings(host_string = cfgm_host):
         repo_dir_name = env.test_repo_dir.split('/')[-1]
