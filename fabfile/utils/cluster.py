@@ -3,6 +3,7 @@ from distutils.version import LooseVersion
 from fabric.api import env, settings, run
 
 from fabos import detect_ostype, get_release, get_build
+from fabos import detect_ostype, get_release, get_build, is_juno_or_above
 from fabfile.config import *
 from fabfile.utils.config import get_value
 from fabfile.utils.interface import get_data_ip
@@ -394,19 +395,9 @@ def get_metadata_secret():
 
         if not metadata_secret:
             with settings(host_string=openstack_host):
-                ostype = detect_ostype()
-                # For Juno, use service_metadata_proxy metadata_proxy_shared_secret
+                # From Juno, use service_metadata_proxy metadata_proxy_shared_secret
                 # from neutron section in /etc/nova/nova.conf
-                if ostype.lower() in ['centos', 'redhat', 'centoslinux']:
-                    api_version = sudo("rpm -q --queryformat='%{VERSION}' openstack-nova-api")
-                    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
-                elif ostype.lower() in ['ubuntu']:
-                    api_version = sudo("dpkg-query -W -f='${VERSION}' nova-api")
-                    is_juno_or_higher = LooseVersion(api_version) >= LooseVersion('2014.2.2')
-                else:
-                    raise RuntimeError("Unknown ostype (%s)" % ostype)
-
-                if is_juno_or_higher:
+                if is_juno_or_above():
                     status, secret = get_value('/etc/nova/nova.conf',
                                                'neutron',
                                                'service_metadata_proxy',
