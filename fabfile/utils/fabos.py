@@ -78,9 +78,17 @@ def is_mitaka_or_above():
         return True
 #end is_mitaka_or_above
 
+def is_juno_or_above():
+    openstack_sku = get_openstack_sku()
+    if openstack_sku in ['havana', 'icehouse']:
+        return False
+    else:
+        return True
+#end is_juno_or_above
+
 def get_release(pkg='contrail-install-packages', use_install_repo=False):
     pkg_ver = None
-    dist = detect_ostype() 
+    dist = detect_ostype()
     print "Dist is %s" % dist
     if dist in ['centos', 'fedora', 'redhat', 'centoslinux']:
         if use_install_repo:
