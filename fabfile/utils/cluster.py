@@ -3,6 +3,7 @@ from distutils.version import LooseVersion
 from fabric.api import env, settings, run
 
 from fabos import detect_ostype, get_release, get_build
+from fabos import detect_ostype, get_release, get_build, is_liberty_or_above
 from fabfile.config import *
 from fabfile.utils.config import get_value
 from fabfile.utils.interface import get_data_ip
@@ -406,7 +407,7 @@ def get_metadata_secret():
                 else:
                     raise RuntimeError("Unknown ostype (%s)" % ostype)
 
-                if is_juno_or_higher:
+                if is_juno_or_higher or is_liberty_or_above():
                     status, secret = get_value('/etc/nova/nova.conf',
                                                'neutron',
                                                'service_metadata_proxy',
