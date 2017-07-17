@@ -80,7 +80,12 @@ def restore_repo(merge=True):
     esxi_hosts = getattr(testbed, 'esxi_hosts', None)
     if esxi_hosts:
         for esxi in esxi_hosts:
-            if env.host_string == esxi_hosts[esxi]['contrail_vm']['host']:
+            try:
+                if env.host_string == esxi_hosts[esxi]['contrail_vm']['host']:
+                    return
+            except Exception as e:
+                #For vrouter gateway,contrail-vm does not exist
+                print ('Vrouter gateway setup.contrail_vm does not exist.restore repo skipped..')
                 return
     execute('restore_repo_node', env.host_string)
 
