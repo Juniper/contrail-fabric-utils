@@ -37,7 +37,7 @@ def issu_contrail_switch_collector_in_compute_node(*args):
     host_num = random.randint(0,num_collectors-1)
     for host in args:
         collector_list = ''
-        with settings(host_string=host):
+        with settings(host_string=host, warn_only=True):
             for i in range(0, max_collectors):
                 collector_list += "%s:8086 " %(hstr_to_ip(get_control_host_string(env.roledefs['collector'][host_num])))
                 host_num = (host_num + 1) % num_collectors
