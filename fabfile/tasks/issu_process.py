@@ -30,7 +30,7 @@ def issu_contrail_switch_collector_in_compute():
 def issu_contrail_switch_collector_in_compute_node(*args):
     for host in args:
         collector_list = ''
-        with settings(host_string=host):
+        with settings(host_string=host, warn_only=True):
             for i in range(0, len(env.roledefs['collector'])):
                 collector_list += "%s:8086 " %(hstr_to_ip(get_control_host_string(env.roledefs['collector'][i])))
             with settings(warn_only=True):
