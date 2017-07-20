@@ -3138,9 +3138,10 @@ def setup_interface_node(*args):
                     raise AttributeError('Bond members are not defined for'+ \
                                          ' host %s, device %s' %(host, device))
                 bond_members = " ".join(bondinfo[host]['member'])
-                del bondinfo[host]['member']; del bondinfo[host]['name']
+                bondopts = deepcopy(bondinfo[host])
+                del bondopts['member']; del bondopts['name']
                 cmd += ' --members %s --bond-opts \'%s\''%(bond_members,
-                                             json.dumps(bondinfo[host]))
+                                             json.dumps(bondopts))
             if hosts[host].has_key('vlan'):
                 cmd += ' --vlan %s' %hosts[host]['vlan']
             if (get_control_host_string(host) == host) and hosts[host].has_key('gw'):
