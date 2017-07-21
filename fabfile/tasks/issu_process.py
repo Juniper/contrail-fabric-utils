@@ -294,7 +294,10 @@ def issu_contrail_downgrade_compute_node(from_rel, pkg, *args):
                 sudo('contrail-version')
                 #This is a rollback scenario, so installation should be triggered from oldcfg.
                 #Here the assumption is oldcfgm is the oldbuild node.
-                sudo("fab -f /opt/contrail/utils/fabfile upgrade_compute_node:%s,%s,%s,manage_nova_compute='no',configure_nova='no'" %(from_rel,pkg,host))
+                if version >= 3:
+                    sudo("fab -f /opt/contrail/utils/fabfile upgrade_compute_node:%s,%s,%s,manage_nova_compute='no',configure_nova='no'" %(from_rel,pkg,host))
+                else:
+                    sudo("fab -f /opt/contrail/utils/fabfile upgrade_compute_node:%s,%s,%s" %(from_rel,pkg,host))
             sudo('contrail-version')
 
 @task
