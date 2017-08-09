@@ -44,7 +44,7 @@ def stop_and_disable_qpidd_node(*args):
 @roles('database')
 def stop_database():
     """stops the contrail database services."""
-    #sudo('service supervisord-contrail-database  stop')
+    sudo('service contrail-database  stop')
     sudo('service supervisor-database  stop')
 
 @task
@@ -111,7 +111,7 @@ def start_cfgm_db_node(*args):
 @roles('database')
 def start_database():
     """Starts the contrail database services."""
-    #sudo('service supervisord-contrail-database  start')
+    sudo('service contrail-database  start')
     sudo('service supervisor-database  start')
 
 @task
