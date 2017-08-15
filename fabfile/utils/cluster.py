@@ -226,9 +226,7 @@ def get_esxi_ssl_thumbprint(esxi_data):
                     warn_only = True, shell = '/bin/sh -l -c'):
           # Do not change to sudo, It should be run/sudo will not work in eski hosts.
           out = run('openssl x509 -in /etc/vmware/ssl/rui.crt -fingerprint -sha1 -noout')
-          out = out.split()
-          out = out[7].split('=')
-          ssl_thumbprint = out[1]
+          ssl_thumbprint = re.split('\\b=\\b',out)[-1]
           print 'ssl thumbprint of the ESXi host %s is %s' % (esxi_data['ip'], ssl_thumbprint)
     return ssl_thumbprint
 
