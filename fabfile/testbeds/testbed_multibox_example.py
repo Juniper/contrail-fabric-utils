@@ -742,3 +742,10 @@ env.ostypes = {
 #rally_git_url = 'https://github.com/hkumarmk/rally'
 #rally_git_branch = 'network_plus'
 #rally_task_args = {'cxt_tenants': 1, 'cxt_users_per_tenant': 4, 'cxt_network': True, 'base_network_load_objects': 20000, 'load_type': 'constant', 'times': 2}
+
+# List of control nodes per compute node
+# spcae seperated string of control nodes
+# env.compute_controller_list = {
+#   host1 : '10.204.216.66 10.204.217.7',
+#   host2 : '10.204.216.67 10.204.217.79',
+# }
