@@ -7,6 +7,7 @@ from fabfile.config import *
 from fabfile.utils.config import get_value
 from fabfile.utils.interface import get_data_ip
 from collections import OrderedDict
+import re
 
 def get_all_hostnames():
     if isinstance(env.hostnames.get('all', None), list):
