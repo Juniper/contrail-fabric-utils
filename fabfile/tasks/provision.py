@@ -2830,6 +2830,7 @@ def setup_all(reboot='True'):
     execute('fixup_mongodb_conf')
     execute('setup_mongodb_ceilometer_cluster')
     execute('setup_orchestrator')
+    execute('stop_zookeeper')
     execute('setup_cfgm')
     execute('verify_cfgm')
     if apiserver_ssl_enabled():
