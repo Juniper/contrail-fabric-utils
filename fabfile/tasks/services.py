@@ -9,6 +9,12 @@ from fabfile.utils.host import get_control_host_string
 
 @task
 @roles('cfgm')
+def stop_zookeeper():
+    with settings(warn_only=True):
+        sudo('service zookeeper stop')
+
+@task
+@roles('cfgm')
 def stop_rabbitmq():
     openstack_services = get_openstack_services()
     with settings(warn_only=True):
