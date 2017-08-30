@@ -64,6 +64,8 @@ def get_compute_pkgs(manage_nova_compute='yes'):
             pkgs = [contrail_vrouter_pkg, 'contrail-vmware-vrouter']
         else:
             pkgs = [contrail_vrouter_pkg, 'contrail-openstack-vrouter']
+            if env.host_string in getattr(env, 'dpdk', []):
+                pkgs.append('dpdk-depends-packages')
 
     # Append only vrouter and contrail vrouter dependent packages
     # no need to append the contrail-openstack-vrouter, which when
