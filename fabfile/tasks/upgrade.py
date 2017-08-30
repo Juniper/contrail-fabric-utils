@@ -248,6 +248,11 @@ def upgrade_compute_node(from_rel, pkg, *args, **kwargs):
             cmd += ' -T %s' % get_release()
             cmd += ' -R %s' % ' '.join(roles)
             sudo(cmd)
+            # Execute setup script in case dpdk-depends package was upgraded
+            dpdk = getattr(env, 'dpdk', {})
+            if host_string in dpdk:
+                sudo("/opt/contrail/contrail_packages_dpdk/setup.sh")
+                pkg_install(["contrail-dpdk-kernel-modules-dkms"])
 
 @roles('build')
 @task

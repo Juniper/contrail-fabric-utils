@@ -176,7 +176,10 @@ def migrate_compute_kernel_node(*args, **kwargs):
         with settings(host_string=host_string):
             out = sudo('service supervisor-vrouter status')
             if 'stop' not in out:
-                sudo('service supervisor-vrouter stop')
+                # vhost0 shouldn't go down when using DPDK, so don't stop
+                dpdk = getattr(env, 'dpdk', {})
+                if host_string not in dpdk:
+                    sudo('service supervisor-vrouter stop')
             if 'version' in kwargs:
                 kernel_ver = kwargs.get('version')
             else:

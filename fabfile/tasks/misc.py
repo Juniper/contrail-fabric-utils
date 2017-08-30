@@ -122,7 +122,9 @@ def replace_vrouter_ko():
         out = sudo(cmd, warn_only=True)
         #No change in Kernel version so no need to reboot the box.
         if out.succeeded:
-            execute('replace_vrouter_ko_node', env.host_string)
+            dpdk = getattr(env, 'dpdk', {})
+            if env.host_string not in dpdk:
+                execute('replace_vrouter_ko_node', env.host_string)
         else:
             execute("reboot_node", 'yes', env.host_string)
     else:
