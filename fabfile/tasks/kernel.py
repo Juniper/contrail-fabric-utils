@@ -169,17 +169,24 @@ def upgrade_kernel_node(*args, **kwargs):
 def migrate_compute_kernel(**kwargs):
     execute('create_install_repo_node', env.host_string)
     execute('migrate_compute_kernel_node', env.host_string, **kwargs)
+    dpdk = getattr(env, 'dpdk', {})
+    if env.host_string in dpdk:
+        reboot_nodes(env.host_string)
 
 @task
 def migrate_compute_kernel_node(*args, **kwargs):
+    dpdk = getattr(env, 'dpdk', {})
     for host_string in args:
         with settings(host_string=host_string):
             out = sudo('service supervisor-vrouter status')
             if 'stop' not in out:
-                sudo('service supervisor-vrouter stop')
+                # vhost0 shouldn't go down when using DPDK, so don't stop
+                if host_string not in dpdk:
+                    sudo('service supervisor-vrouter stop')
             if 'version' in kwargs:
                 kernel_ver = kwargs.get('version')
             else:
                 kernel_ver = "3.13.0-110"
-            sudo('apt-get -o Dpkg::Options::="--force-overwrite" -y install contrail-vrouter-'+kernel_ver+'-generic')
+            if host_string not in dpdk:
+                sudo('apt-get -o Dpkg::Options::="--force-overwrite" -y install contrail-vrouter-'+kernel_ver+'-generic')
             upgrade_kernel_node(host_string, **kwargs)
