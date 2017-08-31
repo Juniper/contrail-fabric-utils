@@ -167,6 +167,19 @@ def get_priority_group_details(compute_host_string):
     priority_details = (set_priority, priority_id, priority_bandwidth, priority_scheduling)
     return priority_details
 
+def get_compute_migrate_nodes():
+    """Identify the list if compute nodes with build host as last in the list.
+    """
+    compute_list = []
+    for hstr in env.roledefs['compute']:
+        if hstr == testbed.host_build:
+            continue
+        compute_list.append(hstr)
+    if testbed.host_build in env.roledefs['compute']:
+        compute_list.append(testbed.host_build)
+
+    return compute_list
+
 def get_qos_nodes():
     """Identifies the list of nodes to be provisioned for
        Qos in testbed.py.
