@@ -165,7 +165,7 @@ def upgrade_kernel_node(*args, **kwargs):
 
 @task
 @EXECUTE_TASK
-@roles('compute')
+@hosts(get_compute_migrate_nodes())
 def migrate_compute_kernel(**kwargs):
     execute('create_install_repo_node', env.host_string)
     execute('migrate_compute_kernel_node', env.host_string, **kwargs)
