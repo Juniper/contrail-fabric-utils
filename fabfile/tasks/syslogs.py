@@ -22,15 +22,18 @@ def tar_logs_cores():
     sudo ("cd /var/log/temp_log/ ; tar czf /var/log/logs_%s_%s.tgz *"%(e, a))
     if not check_file_exists('/usr/bin/gdb'):
         install_pkg(['gdb'])
+    core_folder = '/var/crashes'
     with settings(warn_only=True):
-        if "core" in sudo("ls -lrt /var/crashes"):
-            output = sudo("ls -lrt /var/crashes")
+        if "core" in sudo("ls -lrt %s" % (core_folder)):
+            output = sudo("ls -lrt %s" % (core_folder))
             core_list = output.split('\n')
             for corename in core_list:
                 if "core" in corename:
                     core = corename.split()[8]
                     name = core.split('.')[1]
-                    rname = sudo("ls /usr/bin/%s*" %name)
+                    binary_name_cmd = 'strings %s/%s | grep "^/usr/bin/%s" | head -1' %(
+                        core_folder, core, name)
+                    rname = sudo(binary_name_cmd)
                     if check_file_exists(rname):
                         name = sudo("basename %s" %rname)
                     core_new = core.rstrip('\r')
