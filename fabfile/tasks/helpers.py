@@ -1795,3 +1795,18 @@ def dpdk_increase_vrouter_limit(host_string):
         sudo('sed -i \'s#\(^command=.*$\)#\\1 %s#\' %s' %(cmd, vrouter_file))
 # end dpdk_increase_vrouter_limit
 
+@task
+@roles('all')
+def cleanup_dockers():
+    try:
+        for host in env.roledefs["all"]:
+            if host not in env.roledefs['compute']:
+                print "Stopping and deleting all containers.."
+                run('docker stop $(docker ps -q)')
+                run('docker rm $(docker ps -a -q)')
+                print "Deleting all docker images.."
+                run('docker rmi $(docker images -q)')
+    except Exception as e:
+        print "%s"%e
+        pass #Handling exception for vcenter
+# end cleanup_dockers
