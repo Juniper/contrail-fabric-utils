@@ -1801,10 +1801,8 @@ def cleanup_dockers():
     try:
         for host in env.roledefs["all"]:
             if host not in env.roledefs['compute']:
-                print "Stopping and deleting all containers.."
-                run('docker stop $(docker ps -q)')
-                run('docker rm $(docker ps -a -q)')
-                print "Deleting all docker images.."
+                print "Deleting all containers and docker images.."
+                run('docker rm -f $(docker ps -a -q)')
                 run('docker rmi $(docker images -q)')
     except Exception as e:
         print "%s"%e
