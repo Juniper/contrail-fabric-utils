@@ -1094,7 +1094,10 @@ def update_config_option(role, file_path, section, option, value, service):
         with settings(host_string=host, password=get_env_passwords(host)):
             ostype = detect_ostype()
             service_name = SERVICE_NAMES.get(service, {}).get(ostype, service)
-            cmd2 = "service " + service_name + " restart"
+            if get_openstack_sku() in ['newton', 'ocata'] and service_name == 'keystone':
+                cmd2 = '/etc/init.d/apache2 restart'
+            else:
+                cmd2 = "service " + service_name + " restart"
             sudo(cmd1)
             sudo(cmd2)
 # end update_config_option
