@@ -143,7 +143,8 @@ env.ostypes = {
 
 #following parameter allows to specify minimum amount of disk space in the analytics
 #database partition, if configured amount of space is not present, it will fail provisioning
-#minimum_diskGB = 256
+#analyticsdb_minimum_diskgb = 256
+#configdb_minimum_diskgb = 20
 
 #OPTIONAL BONDING CONFIGURATION
 #==============================
