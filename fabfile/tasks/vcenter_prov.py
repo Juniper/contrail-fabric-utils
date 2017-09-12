@@ -499,7 +499,7 @@ class Vcenter(object):
                  cluster=self.create_cluster(cluster_name,datacenter)
             network_folder = datacenter.networkFolder
 	    for host_info in self.hosts:
-                self.add_host(host_info[4],host_info[0],host_info[3],host_info[1],host_info[2])
+                self.add_host(host_info[4],host_info[0],host_info[3],host_info[1],host_info[2],host_info[5])
             dvs = self.vcenter_base.get_obj([self.pyVmomi.vim.DistributedVirtualSwitch], self.dvswitch_name)
             if dvs:
                 dvs = self.reconfigure_dvSwitch(self.vcenter_base.service_instance, self.clusters, self.dvswitch_name)
@@ -530,7 +530,8 @@ class Vcenter(object):
             cluster = host_folder.CreateClusterEx(name=cluster_name, spec=cluster_spec)
             return cluster
 
-    def add_host(self, cluster_name, hostname, sslthumbprint, username, password):
+    def add_host(self, cluster_name, hostip, sslthumbprint, username, password,hostname):
+        hostname = hostname if hostname else hostip
         host = self.vcenter_base.get_obj([self.pyVmomi.vim.HostSystem], hostname)
         if host is not None:
             print("host already exists")
@@ -734,7 +735,8 @@ class Vcenter(object):
         else:
             add_hosts = []
             for host_info in self.hosts:
-                host = self.vcenter_base.get_obj([self.pyVmomi.vim.HostSystem], host_info[0])
+                host = host_info[5] if host_info[5] else host_info[0]
+                host = self.vcenter_base.get_obj([self.pyVmomi.vim.HostSystem], host)
                 add_hosts.append(host)
 
             for each_host in dvs.config.host:

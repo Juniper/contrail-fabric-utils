@@ -254,7 +254,11 @@ def get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, p
                    esxi_data = esxi_info[host]
                    vm_name = "ContrailVM"
                    ssl_thumbprint = get_esxi_ssl_thumbprint(esxi_data)
-                   esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint,esxi_data['cluster']
+                   esx_list=esxi_data['ip'],esxi_data['username'],\
+                            esxi_data['password'],\
+                            ssl_thumbprint,\
+                            esxi_data['cluster'],\
+                            esxi_data.get('name',None)
                    hosts.append(esx_list)
                    modified_vm_name = vm_name+"-"+vcenter_server['datacenter']+"-"+esxi_data['ip']
                    for host_string in compute_list:
