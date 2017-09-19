@@ -474,7 +474,7 @@ def add_images(image=None):
     images = [ ("turnkey-redmine-12.0-squeeze-x86.vmdk", "redmine-web"),
                ("turnkey-redmine-12.0-squeeze-x86-mysql.vmdk", "redmine-db"),
                ("ubuntu.img", "ubuntu"),
-               ("traffic/ubuntu-traffic.img", "ubuntu-traffic"),
+               ("converts/ubuntu-traffic.vmdk", "ubuntu-traffic"),
                ("vsrx/junos-vsrx-12.1-in-network.img", "nat-service"),
                ("vsrx/junos-vsrx-12.1-transparent.img", "vsrx-bridge"),
                ("ubuntu-netperf.img", "ubuntu-netperf"),
