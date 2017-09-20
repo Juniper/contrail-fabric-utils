@@ -829,10 +829,18 @@ def cleanup_vcenter(vcenter_info, datacenter):
     from pyVim import connect
     from pyVmomi import vim
     port = vcenter_info.get('port', 443)
-    service_instance = connect.SmartConnect(host=vcenter_info['server'],
-                                            user=vcenter_info['username'],
-                                            pwd=vcenter_info['password'],
-                                            port=port)
+    try:
+        ssl = __import__("ssl")
+        context = ssl._create_unverified_context()
+        service_instance = connect.SmartConnect(host=vcenter_info['server'],
+                            user=vcenter_info['username'],
+                            pwd=vcenter_info['password'],
+                            port=port, sslContext=context)
+    except Exception as e:
+        service_instance = connect.SmartConnect(host=vcenter_info['server'],
+                            user=vcenter_info['username'],
+                            pwd=vcenter_info['password'],
+                            port=port) 
     content = service_instance.RetrieveContent()
     atexit.register(connect.Disconnect, service_instance)
 
