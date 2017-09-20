@@ -8,6 +8,11 @@ from fabfile.utils.config import get_value
 from fabfile.utils.interface import get_data_ip
 from collections import OrderedDict
 
+from string import whitespace
+
+def remove_white_space(s):
+    return s.translate(None, whitespace)
+
 def get_all_hostnames():
     if isinstance(env.hostnames.get('all', None), list):
         # Maintaining backward compatability with old testbed.py
@@ -244,7 +249,7 @@ def get_esxi_vms_and_hosts(esxi_info, vcenter_server, host_list, compute_list, p
                    ssl_thumbprint = get_esxi_ssl_thumbprint(esxi_data)
                    esx_list=esxi_data['ip'],esxi_data['username'],esxi_data['password'],ssl_thumbprint,esxi_data['cluster']
                    hosts.append(esx_list)
-                   modified_vm_name = vm_name+"-"+vcenter_server['datacenter']+"-"+esxi_data['ip']
+                   modified_vm_name = remove_white_space(vm_name+"-"+vcenter_server['datacenter']+"-"+esxi_data['ip'])
                    for host_string in compute_list:
                        try: 
                            if host_string == esxi_data['contrail_vm']['host']:

@@ -11,7 +11,7 @@ from vcenter_prov import dvs_fab as dvs_fab
 from vcenter_prov import vcenter_fab as vcenter_fab
 from vcenter_prov import pci_fab as pci_fab
 from vcenter_prov import sr_iov_fab as sr_iov_fab
-from fabfile.utils.cluster import get_mode
+from fabfile.utils.cluster import get_mode,remove_white_space
 from fabfile.utils.install import get_setup_vcenter_pkg
 
 def configure_esxi_network(esxi_info):
@@ -65,7 +65,7 @@ def create_vmx (esxi_host, vm_name):
     vm_pg = esxi_host['vm_port_group']
     data_pg = esxi_host.get('data_port_group', None)
     mode = get_mode(esxi_host['contrail_vm']['host'])
-    vm_name = vm_name
+    vm_name = remove_white_space(vm_name)
     vm_mac = esxi_host['contrail_vm']['mac']
     assert vm_mac, "MAC address for contrail-compute-vm must be specified"
 
@@ -129,23 +129,23 @@ def create_esxi_compute_vm (esxi_host, vcenter_info, power_on):
             vm_name = esxi_host['contrail_vm']['name']
         if mode is 'vcenter':
             name = "ContrailVM"
-            vm_name = name+"-"+vcenter_info['datacenter']+"-"+esxi_host['ip']
+            vm_name = remove_white_space(name+"-"+vcenter_info['datacenter']+"-"+esxi_host['ip'])
         vm_store = datastore + '/' + vm_name + '/'
 
         vmx_file = create_vmx(esxi_host, vm_name)
-        vmid = run("vim-cmd vmsvc/getallvms | grep %s | awk \'{print $1}\'" % vm_name)
+        vmid = run("vim-cmd vmsvc/getallvms | grep '%s' | awk \'{print $1}\'" % vm_name)
         if vmid:
-            run("vim-cmd vmsvc/power.off %s" % vmid)
-            run("vim-cmd vmsvc/unregister %s" % vmid)
+            run("vim-cmd vmsvc/power.off '%s'" % vmid)
+            run("vim-cmd vmsvc/unregister '%s'" % vmid)
 
-        run("rm -rf %s" % vm_store)
-        out = run("mkdir -p %s" % vm_store)
+        run("rm -rf '%s'" % vm_store)
+        out = run("mkdir -p '%s'" % vm_store)
         if out.failed:
-            raise Exception("Unable create %s on esxi host %s:%s" % (vm_store,
+            raise Exception("Unable create '%s' on esxi host %s:%s" % (vm_store,
                                      esxi_host['ip'], out))
         dst_vmx = vm_store + vm_name + '.vmx'
         out = put(vmx_file, dst_vmx)
-        os.remove(vmx_file)
+        os.remove("%s"%vmx_file)
         if out.failed:
             raise Exception("Unable to copy %s to %s on %s:%s" % (vmx_file,
                                      vm_store, esxi_host['ip'], out))
@@ -155,7 +155,7 @@ def create_esxi_compute_vm (esxi_host, vcenter_info, power_on):
             raise Exception("Unable to create vmdk on %s:%s" %
                                       (esxi_host['ip'], out))
         run('rm ' + src_vmdk)
-        out = run("vim-cmd solo/registervm " + dst_vmx)
+        out = run("vim-cmd solo/registervm  '%s'" %(dst_vmx))
         if out.failed:
             raise Exception("Unable to register VM %s on %s:%s" % (vm_name,
                                       esxi_host['ip'], out))
