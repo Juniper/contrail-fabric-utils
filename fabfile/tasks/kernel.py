@@ -44,8 +44,8 @@ def upgrade_kernel_all(*tgzs, **kwargs):
             (package, os_type) = ('linux-image-3.13.0-40-generic', 'ubuntu')
             default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-40-generic'
         elif 'centos' in dist.lower() and version.startswith('6'):
-            (package, os_type) = ('kernel-2.6.32-696.3.1.el6.centos.plus.x86_64', 'centos')
-            default_grub='2.6.32-696.3.1.el6.centos.plus.x86_64'
+            (package, os_type) = ('kernel-2.6.32-696.10.2.el6.centos.plus.x86_64', 'centos')
+            default_grub='2.6.32-696.10.2.el6.centos.plus.x86_64'
         else:
             raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
                                " kernel upgrade." % (dist, version, extra))
@@ -76,7 +76,7 @@ def upgrade_kernel_without_openstack(*tgzs, **kwargs):
         dist, version, extra = get_linux_distro()
 
     if 'centos' in dist.lower() and version.startswith('6'):
-        (package, os_type) = ('kernel-2.6.32-696.3.1.el6.centos.plus.x86_64', 'centoslinux')
+        (package, os_type) = ('kernel-2.6.32-696.10.2.el6.centos.plus.x86_64', 'centoslinux')
     else:
         raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
                            " kernel upgrade." % (dist, version, extra))
@@ -136,10 +136,10 @@ def upgrade_kernel_node(*args):
                              "kernel-tools-libs-3.10.0-229.el7.x86_64",
                              "kernel-headers-3.10.0-229.el7.x86_64"], disablerepo=False)
             elif 'centos' in dist.lower() and version.startswith('6'):
-                print "Upgrading Centos kernel to version 2.6.32-696.3.1.el6.centos.plus.x86_64"
-                pkg_install(["kernel-2.6.32-696.3.1.el6.centos.plus.x86_64",
-                             "kernel-headers-2.6.32-696.3.1.el6.centos.plus.x86_64"], disablerepo=False)
-                default_grub='2.6.32-696.3.1.el6.centos.plus.x86_64'
+                print "Upgrading Centos kernel to version 2.6.32-696.10.2.el6.centos.plus.x86_64"
+                pkg_install(["kernel-2.6.32-696.10.2.el6.centos.plus.x86_64",
+                             "kernel-headers-2.6.32-696.10.2.el6.centos.plus.x86_64"], disablerepo=False)
+                default_grub='2.6.32-696.10.2.el6.centos.plus.x86_64'
                 execute('set_grub_default_node', host_string, value=default_grub)
 
 @task
