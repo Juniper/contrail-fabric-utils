@@ -278,8 +278,6 @@ def provision_sr_iov_fab(vcenter_info, esxi_info, host_list):
 
 @task
 def deprovision_vcenter(vcenter_info, datacenter):
-    pkgs = get_setup_vcenter_pkg()
-    apt_install(pkgs)
     cleanup_vcenter(vcenter_info, datacenter)
 
 @task
