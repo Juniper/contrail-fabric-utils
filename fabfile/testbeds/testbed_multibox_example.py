@@ -192,6 +192,11 @@ env.ostypes = {
 #database partition, if configured amount of space is not present, it will fail provisioning
 #minimum_diskGB = 256
 
+#The following parameter can be used to specify the number of contrail-alarm-gen
+#instances per analytics-node. By default, one instance of contrail-alarm-gen
+#runs per analytics-node.
+#alarm_gen_num_instances = 1
+
 #OPTIONAL BONDING CONFIGURATION
 #==============================
 #Inferface Bonding
