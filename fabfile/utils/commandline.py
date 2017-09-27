@@ -595,6 +595,9 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     if analytics_redis_password is not None:
         cmd += "--redis_password %s " % analytics_redis_password
     cmd += "--kafka_enabled %s" % get_kafka_enabled()
+    alarm_gen_num_instances = get_alarm_gen_num_instances()
+    if alarm_gen_num_instances is not None:
+        cmd += " --alarm_gen_num_instances %d " % alarm_gen_num_instances
     orchestrator = get_orchestrator()
     if orchestrator == 'openstack':
         # Pass keystone arguments in case for openstack orchestrator

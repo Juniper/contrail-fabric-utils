@@ -146,3 +146,7 @@ def get_cassandra_user():
 def get_cassandra_password():
      return getattr(testbed, 'cassandra_password', None)
 #end cassandra configuration
+
+def get_alarm_gen_num_instances():
+    return getattr(testbed, 'alarm_gen_num_instances', None)
+# end get_alarm_gen_num_instances
