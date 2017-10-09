@@ -1,40 +1,71 @@
 import re
 
 from fabfile.config import *
-from fabfile.utils.fabos import detect_ostype, get_linux_distro
+from fabfile.utils.fabos import detect_ostype, get_linux_distro,\
+        get_contrail_containers, put_to_container, run_in_container
+from fabfile.utils.cluster import get_orchestrator
 
 @task
 @EXECUTE_TASK
 @roles('all')
 def install_test_repo():
-    '''Installs test repo which contains packages specific to
-       execute contrail test scripts
     '''
-    execute('install_test_repo_node', env.host_string)
+    Installs test repo which contains packages specific to
+    execute contrail test scripts
+    '''
+    containers = get_contrail_containers()
+    for container in containers:
+        execute('install_test_repo_node', container, env.host_string)
+    if env.host_string in env.roledefs['compute'] and \
+            'openstack' in get_orchestrator():
+        execute('install_test_repo_node', None, env.host_string)
+
 
 @task
-def install_test_repo_node(*args):
+def install_test_repo_node(container=None, *args):
     '''Installs test repo in given node'''
     for host_string in args:
-        with settings(host_string=host_string):
-            os_type = detect_ostype().lower()
-            os_type, version, extra = get_linux_distro()
-            if os_type in ['ubuntu']:
-                if 'trusty' in extra :
-                    put('fabfile/contraillabs/repo/trusty_test.repo',
-                        '/etc/apt/sources.list.d/')
-                if 'xenial' in extra :
-                    put('fabfile/contraillabs/repo/xenial_test.repo',
-                        '/etc/apt/sources.list.d/')
-                sudo('apt-get update')
-            if os_type in ['centos', 'centoslinux']:
-                put('fabfile/contraillabs/repo/centos_el7_test.repo',
-                    '/etc/yum.repos.d/contrail_test.repo')
-                run('yum clean all')
-            if os_type in ['redhat']:
-                put('fabfile/contraillabs/repo/el7_test.repo',
-                    '/etc/yum.repos.d/contrail_test.repo')
-                run('yum clean all')
+        with settings(host_string=host_string, warn_only=True):
+            trusty_repo = 'fabfile/contraillabs/repo/trusty_test.list'
+            xenial_repo = 'fabfile/contraillabs/repo/xenial_test.list'
+            ubuntu_repo_dest = '/etc/apt/sources.list.d/test_repo.list'
+            el7_repo = 'fabfile/contraillabs/repo/centos_el7_test.repo'
+            rh_repo = 'fabfile/contraillabs/repo/el7_test.repo'
+            rh_repo_dest = '/etc/yum.repos.d/contrail_test.repo'
+            if container:
+                os_type, version, extra = get_linux_distro(container=container)
+                os_type = os_type.lower()
+                extra = extra.lower()
+                if os_type in ['ubuntu']:
+                    if 'trusty' in extra :
+                        put_to_container(container, trusty_repo, ubuntu_repo_dest)
+                    if 'xenial' in extra :
+                        put_to_container(container, xenial_repo, ubuntu_repo_dest)
+                    run_in_container(container, 'apt-get update')
+                if os_type in ['centos', 'centoslinux']:
+                    put_to_container(container, el7_repo, rh_repo_dest)
+                    run_in_container(container, 'yum clean all')
+                if os_type in ['redhat']:
+                    put_to_container(container, rh_repo, rh_repo_dest)
+                    run_in_container(container, 'yum clean all')
+            else:
+                os_type, version, extra = get_linux_distro()
+                os_type = os_type.lower()
+                extra = extra.lower()
+                if os_type in ['ubuntu']:
+                    if 'trusty' in extra :
+                        put(trusty_repo, ubuntu_repo_dest)
+                    if 'xenial' in extra :
+                        put(xenial_repo, ubuntu_repo_dest)
+                    sudo('apt-get update')
+                if os_type in ['centos', 'centoslinux']:
+                    put(el7_repo, rh_repo_dest)
+                    sudo('yum clean all')
+                if os_type in ['redhat']:
+                    put(rh_repo, rh_repo_dest)
+                    sudo('yum clean all')
+            # endif
+
 
 
 @task
