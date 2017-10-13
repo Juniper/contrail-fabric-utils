@@ -15,13 +15,17 @@ def install_pkg(tgt_host, pkg_file):
         sudo("rpm -iv --force %s" %(pkg_file.split('/')[-1]))
 #end _install_pkg
 
-def get_linux_distro():
-    linux_distro = "python -c 'from platform import linux_distribution; print linux_distribution()'"
-    (dist, version, extra) = ast.literal_eval(sudo(linux_distro))
+def get_linux_distro(container=None):
+    linux_distro = 'python -c "from platform import linux_distribution; print linux_distribution()"'
+    if container:
+        output = run_in_container(container, linux_distro)
+    else:
+        output = sudo(linux_distro)
+    (dist, version, extra) = ast.literal_eval(output)
     return (dist, version, extra)
 
-def detect_ostype():
-    (dist, version, extra) = get_linux_distro()
+def detect_ostype(container=None):
+    (dist, version, extra) = get_linux_distro(container=container)
     if version.startswith('16.04') and 'xenial' in extra:
         dist = dist
     elif extra is not None and 'xen' in extra:
@@ -261,3 +265,74 @@ def get_openstack_services():
         return openstack_services_systemd
     else:
         return openstack_services_sysv
+
+def get_container_name(host, role):
+    containers = env.get('test', {}).get('containers', {})
+    if host in containers:
+        return containers[host].get(role)
+    return role
+
+def run_in_container(container,
+                     cmd,
+                     shell_prefix=None,
+                     detach=None,
+                     pty=True,
+                     as_sudo=True):
+    shell_prefix = shell_prefix or '/bin/bash -c '
+    if as_sudo:
+        method = sudo
+    else:
+        method = run
+    updated_cmd = ''
+    updated_cmd += ' -d ' if detach else ''
+    updated_cmd += ' --privileged '
+    updated_cmd += ' -it ' if pty else ''
+    updated_cmd += container
+    updated_cmd = 'docker exec %s %s \'%s\'' % (updated_cmd,
+                                                shell_prefix,
+                                                cmd)
+    output = method(updated_cmd, pty=pty)
+    return output
+# end run_in_container
+
+def get_running_contrail_containers():
+    cmd = 'docker ps 2>/dev/null |grep contrail | awk \'{print $NF}\''
+    containers = sudo(cmd).split('\n')
+    return containers
+
+
+def get_contrail_containers():
+    roles = ['agent', 'controller', 'analytics', 'analyticsdb',
+            'contrail-kube-manager', 'contrail-lb']
+    # Get custom container names if any
+    container_names = []
+    for role in roles:
+        custom_name = env.get('test', {}).get('containers', {}).get(env.host_string, {}).get(role, role)
+        container_names.append(custom_name)
+    curr_containers = get_running_contrail_containers()
+    ret_list = [x for x in container_names if x in curr_containers]
+
+    return ret_list
+# end get_contrail_containers
+
+def put_to_container(container, src, dest):
+	'''
+	dest is the path inside the container
+	'''
+	tmp_file = run('mktemp')
+	put(src, tmp_file)
+	sudo('docker cp %s %s:%s' %(tmp_file, container, dest))
+	sudo('rm -rf %s' %(tmp_file))
+# end put_to_container
+
+def get_from_container(container, src, dest):
+	'''
+	src is the path inside the container
+	dest the path on the local host
+	'''
+	tmp_file = run('mktemp')
+	sudo('docker cp %s:%s %s' %(container, src, tmp_file))
+	get(tmp_file, dest)
+	sudo('rm -rf %s' %(tmp_file))
+# end get_from_container
+

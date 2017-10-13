@@ -492,3 +492,4 @@ def is_contrail_node(node):
     with settings(host_string=node, warn_only=True):
         package_info = get_build('contrail-setup')
     return True if package_info else False
+

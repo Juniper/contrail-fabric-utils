@@ -2,7 +2,7 @@ import paramiko
 from netaddr import *
 from copy import deepcopy
 
-from fabric.api import env, sudo, get, put
+from fabric.api import env, sudo, get, put, run
 from fabric.context_managers import settings
 
 from fabfile.config import testbed
@@ -492,3 +492,4 @@ def apiserver_ssl_enabled():
 
 def get_apiserver_insecure_flag():
     return get_from_testbed_dict('cfgm', 'insecure', 'False')
+
