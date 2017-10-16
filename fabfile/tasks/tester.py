@@ -250,7 +250,7 @@ def setup_test_env():
         stack_domain = 'default-domain'
         webserver_host = '10.204.216.50'
         webserver_user = 'bhushana'
-        webserver_password = 'bhu@123'
+        webserver_password = os.getenv('WEBSERVER_PASSWORD')
         webserver_log_path = '/home/bhushana/Documents/technical/logs/'
         webserver_report_path = '/home/bhushana/Documents/technical/sanity'
         webroot = 'Docs/logs'
