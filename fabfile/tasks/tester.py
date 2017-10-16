@@ -224,9 +224,9 @@ def setup_test_env():
         # Few hardcoded variables for sanity environment 
         # can be removed once we move to python3 and configparser
         stack_domain = 'default-domain'
-        webserver_host = '10.204.216.50'
-        webserver_user = 'bhushana'
-        webserver_password = 'bhu@123'
+        webserver_host = os.getenv('WEBSERVER_HOST')
+        webserver_user = os.getenv('WEBSERVER_USER')
+        webserver_password = os.getenv('WEBSERVER_PASSWORD')
         webserver_log_path = '/home/bhushana/Documents/technical/logs/'
         webserver_report_path = '/home/bhushana/Documents/technical/sanity'
         webroot = 'Docs/logs'
