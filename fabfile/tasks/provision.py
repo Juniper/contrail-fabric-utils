@@ -1140,7 +1140,8 @@ def setup_redis_server_node(*args):
                     check_svc_started = False
 
                 sudo("service %s stop" % (redis_svc_name))
-                sudo("sed -i -e '/^[ ]*bind/s/^/#/' %s" % (redis_conf_file))
+                host_ip = hstr_to_ip(get_control_host_string(host_string))
+                sudo("sed -i -e 's/^[ ]*bind.*/bind %s 127.0.0.1/' %s" % (host_ip, redis_conf_file))
                 # Set the lua-time-limit to 15000 milliseconds
                 sudo("sed -i -e 's/lua-time-limit.*/lua-time-limit 15000/' %s" % (redis_conf_file))
                 # If redis passwd specified, add that to the conf file
