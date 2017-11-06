@@ -175,15 +175,12 @@ def get_priority_group_details(compute_host_string):
 def get_compute_migrate_nodes():
     """Identify the list if compute nodes with build host as last in the list.
     """
-    compute_list = []
-    for hstr in env.roledefs['compute']:
-        if hstr == testbed.host_build:
-            continue
-        compute_list.append(hstr)
-    if testbed.host_build in env.roledefs['compute']:
-        compute_list.append(testbed.host_build)
-
-    return compute_list
+    build_hosts = env.roledefs.get('build') or []
+    compute_hosts = list(env.roledefs.get('compute') or [])
+    for host in set(compute_hosts).intersection(build_hosts):
+        compute_hosts.remove(host)
+        compute_hosts.append(host)
+    return compute_hosts
 
 def get_qos_nodes():
     """Identifies the list of nodes to be provisioned for
