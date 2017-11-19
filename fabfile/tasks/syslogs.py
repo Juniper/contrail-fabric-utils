@@ -47,10 +47,10 @@ def check_cores_on_host(hostname):
     run('contrail-version > %s' %(contrail_version_log))
     output = run("ls -lrt %s" % (core_folder))
 
-    if "core" in output:
+    if "core.contrail" in output:
         core_list = output.split('\n')
         for corename in core_list:
-            if "core" in corename:
+            if "core.contrail" in corename:
                 core = corename.split()[8]
                 name = core.split('.')[1]
                 binary_name_cmd = 'strings %s/%s | grep "^/usr/bin/%s" | head -1' %(
@@ -81,10 +81,10 @@ def check_cores_on_containers(hostname):
         sudo('docker cp %s:%s /var/log/' %(container, contrail_version_log))
         output = run_in_container(container, "ls -lrt %s" % (core_folder))
 
-        if "core" in output:
+        if "core.contrail" in output:
             core_list = output.split('\n')
             for corename in core_list:
-                if "core" in corename:
+                if "core.contrail" in corename:
                     core = corename.split()[8]
                     name = core.split('.')[1]
                     binary_name_cmd = 'strings %s/%s | grep "^/usr/bin/%s" | head -1' %(
