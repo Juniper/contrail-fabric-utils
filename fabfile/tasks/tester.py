@@ -344,6 +344,7 @@ def setup_test_env():
                     pkg = pkg + ' pyvirtualdisplay selenium==2.53.6'
                 if exists('/opt/contrail/api-venv/bin/activate'):
                     sudo('source /opt/contrail/api-venv/bin/activate && \
+                        pip install python-subunit && \
                         pip install --upgrade unittest2 && \
                         pip install --upgrade %s' %pkg)
                 else:
@@ -351,6 +352,7 @@ def setup_test_env():
                     # Avoid "TypeError: dist must be a Distribution instance"
                     sudo("pip install linecache2")
 
+                    sudo("pip install python-subunit")
                     sudo("pip install --upgrade unittest2")
                     sudo("pip install --upgrade %s" %pkg)
                 if not exists('/usr/bin/ant'):
