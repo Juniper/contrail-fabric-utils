@@ -1085,7 +1085,7 @@ def install_rally():
 #end install_rally
 
 @task
-def update_config_option(role, file_path, section, option, value, service):
+def update_config_option(role, file_path, section, option, value, service, sku):
     """Task to update config option of any section in a conf file
        USAGE:fab update_config_option:openstack,/etc/keystone/keystone.conf,token,expiration,86400,keystone
     """
@@ -1094,10 +1094,14 @@ def update_config_option(role, file_path, section, option, value, service):
         with settings(host_string=host, password=get_env_passwords(host)):
             ostype = detect_ostype()
             service_name = SERVICE_NAMES.get(service, {}).get(ostype, service)
-            if get_openstack_sku() in ['newton', 'ocata'] and service_name == 'keystone':
-                cmd2 = '/etc/init.d/apache2 restart'
-            else:
-                cmd2 = "service " + service_name + " restart"
+            cmd2 = "service " + service_name + " restart"
+            if service == 'keystone':
+                if sku == 'newton':
+                    cmd2 = '/etc/init.d/apache2 restart'
+                elif sku == 'ocata':
+                    cmd1 = "sed -i 's/\[token\]/\[token\]\\nexpiration=86400/' \
+                           /etc/kolla/keystone/keystone.conf < /etc/kolla/keystone/keystone.conf"
+                    cmd2 = 'docker restart ' + service_name
             sudo(cmd1)
             sudo(cmd2)
 # end update_config_option
