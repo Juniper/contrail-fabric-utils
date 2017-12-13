@@ -750,3 +750,26 @@ env.ostypes = {
 #   host1 : '10.204.216.66 10.204.217.7',
 #   host2 : '10.204.216.67 10.204.217.79',
 # }
+
+# Resource backup and restore for graceful restart of a compute node
+# ==============================================================================
+# resource_backup_restore: Enable backup and restore of config and resource files
+# backup_idle_timeout: vrouter agent avoids generating backup file if change is detected within time
+# restore_audit_timeout:  Audit time for config/resource read from file
+# backup_file_count: Number of backup files
+# For enabling backup and restore set resource_backup_restore to true and define
+# timeout values and backup file count for the compute node as shown below.
+# env.resource_backup_restore = {
+#   host1: {'resource_backup_restore': True, 'backup_idle_timeout': 10000, 'restore_audit_timeout': 15000, 'backup_file_count': 3},
+#   host2: {'resource_backup_restore': True, 'backup_idle_timeout': 20000, 'restore_audit_timeout': 25000, 'backup_file_count': 5},
+#}
+
+# Huge pages support in Vrouter kernel module
+# ================================================
+# To allow vrouter to use hugepages for flow and bridge tables on a compute
+# define number of 1G hugepages optionally define number of 2M pages to be used on the node.
+# env.vrouter_kmod_hugepages = {
+#   host1: {'vrouter_1G_hugepages': 4, 'vrouter_2M_hugepages': 20},
+#   host2: {'vrouter_1G_hugepages': 5, 'vrouter_2M_hugepages': 40},
+#   host3: {'vrouter_1G_hugepages': 2}
+# }
