@@ -23,6 +23,7 @@ from fabfile.utils.cluster import get_orchestrator
 from fabfile.tasks.provision import fixup_restart_haproxy_in_all_cfgm
 from fabfile.utils.commandline import frame_vnc_database_cmd, frame_vnc_config_cmd
 from fabfile.tasks.services import restart_openstack
+import sys
 
 @task
 @EXECUTE_TASK
@@ -393,6 +394,9 @@ def setup_keepalived_node(role):
         external_vip = get_contrail_external_vip()
         internal_virtual_router_id = get_contrail_internal_virtual_router_id()
         external_virtual_router_id = get_contrail_external_virtual_router_id()
+
+    if external_vip and mgmt_ip == self_ip:
+        sys.exit("\nERROR: mgmt_self_ip and self_ip cannot be the same when setting up external_vip")
 
     keepalived_host_list = [get_control_host_string(keepalived_host)\
                            for keepalived_host in env.roledefs[role]]
