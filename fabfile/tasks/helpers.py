@@ -223,9 +223,9 @@ def all_sm_reimage(build_param=None,smgr_client='/cs-shared/server-manager/clien
         sleep(30)
     else:
         if esxi_hosts:
-            for esxi in esxi_hosts:
-                if 'contrail_vm' in esxi:#In vcenter gateway,contrail_vm not there
-                    hosts.remove(esxi_hosts[esxi]['contrail_vm']['host'])
+            for k,v in esxi_hosts.items():
+                if 'contrail_vm' in v:#In vcenter gateway,contrail_vm not there
+                    hosts.remove(v['contrail_vm']['host'])
         for host in hosts:
             hostname = get_hostname(host)
             if build_param is not None:
