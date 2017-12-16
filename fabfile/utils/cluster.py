@@ -294,10 +294,13 @@ def create_esxi_vrouter_map_file(vcenter_server_name, vcenter_server, host_strin
          tmp_fname = "/tmp/ESXiToVRouterIp-%s" %(host_string)
          for esxi_host in esxi_hosts:
              if esxi_info[esxi_host]['cluster'] in vcenter_server['cluster']:
-                esxi_ip = esxi_info[esxi_host]['ip']
+                if esxi_info[esxi_host]['name']:
+                   esxi = esxi_info[esxi_host]['name']
+                else:
+                   esxi = esxi_info[esxi_host]['ip']
                 vrouter_ip_string = esxi_info[esxi_host]['contrail_vm']['host']
                 vrouter_ip = vrouter_ip_string.split('@')[1]
-                local("echo '%s:%s' >> %s" %(esxi_ip, vrouter_ip, tmp_fname))
+                local("echo '%s:%s' >> %s" %(esxi, vrouter_ip, tmp_fname))
          put(tmp_fname, "/etc/contrail/ESXiToVRouterIp.map", use_sudo=True)
          local("rm %s" %(tmp_fname))
 
