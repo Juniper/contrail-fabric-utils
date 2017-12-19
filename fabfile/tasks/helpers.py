@@ -1639,15 +1639,14 @@ def all_sm_reimage_status(attempts=180, interval=10, node=None, contrail_role='a
         nodes = env.roledefs[contrail_role][:]
         esxi_hosts = getattr(testbed, 'esxi_hosts', None)
         if esxi_hosts:
-            for esxi in esxi_hosts:
-                try:
-                    nodes.remove(esxi_hosts[esxi]['contrail_vm']['host'])
-                    nodes.append(esxi_hosts[esxi]['username']+'@'+esxi_hosts[esxi]['ip'])
-                except Exception as e:
-                    print "%s"%e
-                    pass #Handing exception for vcenter gateway
-                         #Entry for contrail_vm not there in testbed.py
-
+            try:
+                for k,v in esxi_hosts.items():
+                    if 'contrail_vm' in v:#In vcenter gateway,contrail_vm not there
+                        nodes.remove(v['contrail_vm']['host'])
+            except Exception as e:
+                print "%s"%e
+                pass #Handing exception for vcenter gateway
+                     #Entry for contrail_vm not there in testbed.py
         # Skip checking for nodes which are vms
         vm_nodes = getattr(testbed, 'vm_node_details', None)
         if vm_nodes:
