@@ -45,6 +45,20 @@ try:
 except ImportError:
     pass
 
+""" Testbed validation task START"""
+enable_validation = getattr(env,'enable_validation', False)
+try:
+    from tasks.verify_testbed import *
+except ImportError:
+    enable_validation = False
+
+if enable_validation and env.tasks:
+    exclude_tasks = ['verify_testbed', 'show_testbed']
+    run_task =  env.tasks[0].split(':')[0]
+    if run_task not in exclude_tasks:
+        execute(pre_check_testbed, host=env.roledefs['build'][0])
+""" Testbed validation task END"""
+
 @task
 def help(task_name):
     try:
