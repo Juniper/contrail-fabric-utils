@@ -26,8 +26,11 @@ class vcenter_base(object):
         atexit.register(connect.Disconnect, self.service_instance)
 
     def wait_for_task(self, task, actionName='job', hideResult=False):
-         while task.info.state == (self.pyVmomi.vim.TaskInfo.State.running or self.pyVmomi.vim.TaskInfo.State.queued):
+         time.sleep(2)
+         state = task.info.state
+         while state == (self.pyVmomi.vim.TaskInfo.State.running or self.pyVmomi.vim.TaskInfo.State.queued):
              time.sleep(2)
+             state = task.info.state
          if task.info.state == self.pyVmomi.vim.TaskInfo.State.success:
              if task.info.result is not None and not hideResult:
                  out = '%s completed successfully, result: %s' % (actionName, task.info.result)

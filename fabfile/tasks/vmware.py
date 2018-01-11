@@ -124,7 +124,8 @@ def create_esxi_compute_vm (esxi_host, vcenter_info, power_on):
             if vmdk is None:
                 assert vmdk, "Contrail VM vmdk image or download path should be specified in testbed file"
             put(vmdk, src_vmdk)
-
+        #disable maintenance mode if enabled
+        run("esxcli system maintenanceMode set -e false")
         if mode is 'openstack':
             vm_name = esxi_host['contrail_vm']['name']
         if mode is 'vcenter':
