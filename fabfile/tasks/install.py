@@ -1102,6 +1102,19 @@ def update_config_option(role, file_path, section, option, value, service, sku):
                     cmd1 = "sed -i 's/\[token\]/\[token\]\\nexpiration=86400/' \
                            /etc/kolla/keystone/keystone.conf < /etc/kolla/keystone/keystone.conf"
                     cmd2 = 'docker restart ' + service_name
+                    cmd = "docker exec -it horizon "
+                    sudo_usr_path = "sudo /usr/share/openstack-dashboard/manage.py "
+                    cmd3 = cmd + "sudo sed -i -e\
+                                 's:/usr/share/openstack-dashboard/static:\
+                                 /var/lib/openstack-dashboard/static:g' \
+                                 /etc/apache2/conf-enabled/000-default.conf "
+                    cmd4 = cmd + sudo_usr_path + " collectstatic --noinput"
+                    cmd5 = cmd + sudo_usr_path + " compress"
+                    cmd6 = cmd + "service apache2 reload"
+                    sudo(cmd3)
+                    sudo(cmd4)
+                    sudo(cmd5)
+                    sudo(cmd6)
             sudo(cmd1)
             sudo(cmd2)
 # end update_config_option
