@@ -73,6 +73,8 @@ def check_cores_on_host(hostname):
 def check_cores_on_containers(hostname):
     containers = get_contrail_containers()
     core_folder = '/var/crashes'
+    cores_in_containers = { 'controller': ['contro', 'dns', 'named', 'api', 'device', 'schema', 'svc', 'webui'], 'analytics': [
+        'alarm', 'analyt', 'collec', 'query', 'snmp', 'topolo'], 'analyticsdb':['databa', 'kafka'] }
     for container in containers:
         contrail_version_log = '/var/log/contrail_version_%s_%s.log' %(
             hostname, container)
@@ -80,13 +82,21 @@ def check_cores_on_containers(hostname):
             contrail_version_log))
         sudo('docker cp %s:%s /var/log/' %(container, contrail_version_log))
         output = run_in_container(container, "ls -lrt %s" % (core_folder))
-
         if "core" in output:
             core_list = output.split('\n')
+            container_processes = cores_in_containers.get(container)
+
             for corename in core_list:
                 if "core" in corename:
                     core = corename.split()[8]
                     name = core.split('.')[1]
+                    check = False
+                    for process in container_processes:
+                        if process in name:
+                            check = True
+                            break
+                    if not check:
+                        continue
                     binary_name_cmd = 'strings %s/%s | grep "^/usr/bin/%s" | head -1' %(
                         core_folder, core, name)
                     rname = run_in_container(container, binary_name_cmd)
