@@ -71,24 +71,24 @@ env.hostnames = {
 }
 
 #Openstack admin password
-env.openstack_admin_password = 'secret123'
+env.openstack_admin_password = '<Password value>'
 
 # Passwords of each host
 # for passwordless login's no need to set env.passwords,
 # instead populate env.key_filename in testbed.py with public key.
 env.passwords = {
-    host1: 'secret',
-    host2: 'secret',
-    host3: 'secret',
-    host4: 'secret',
-    host5: 'secret',
-    host6: 'secret',
-    host7: 'secret',
-    host8: 'secret',
-    host9: 'secret',
-    host10: 'secret',
-    #  backup_node: 'secret',
-    host_build: 'secret',
+    host1: '<Password value>',
+    host2: '<Password value>',
+    host3: '<Password value>',
+    host4: '<Password value>',
+    host5: '<Password value>',
+    host6: '<Password value>',
+    host7: '<Password value>',
+    host8: '<Password value>',
+    host9: '<Password value>',
+    host10: '<Password value>',
+    #  backup_node: '<Password value>',
+    host_build: '<Password value>',
 }
 
 # SSH Public key file path for passwordless logins
@@ -305,9 +305,9 @@ env.ostypes = {
 #    'auth_port'       : '35357',                 #Default is 35357
 #    'admin_token'     : '33c57636fbc2c5552fd2',  #admin_token in keystone.conf
 #    'admin_user'      : 'admin',                 #Default is admin
-#    'admin_password'  : 'contrail123',           #Default is contrail123
-#    'nova_password'   : 'contrail123',           #Default is the password set in admin_password
-#    'neutron_password': 'contrail123',           #Default is the password set in admin_password
+#    'admin_password'  : '<Password value>',           #Default is <Password value>
+#    'nova_password'   : '<Password value>',           #Default is the password set in admin_password
+#    'neutron_password': '<Password value>',           #Default is the password set in admin_password
 #    'service_tenant'  : 'service',               #Default is service
 #    'admin_tenant'    : 'admin',                 #Default is admin
 #    'region_name'     : 'RegionOne',             #Default is RegionOne
@@ -354,7 +354,7 @@ env.ostypes = {
 #    'external_virtual_router_id' :  190,          #Default = 100
 #    'contrail_internal_virtual_router_id' :  200, #Default = 100
 #    'contrail_external_virtual_router_id' :  210, #Default = 100
-#    'haproxy_token' : 'secret123'
+#    'haproxy_token' : '<Password value>'
 #}
 
 # Openstack specific configuration options
@@ -364,7 +364,7 @@ env.ostypes = {
 # manage_amqp   : Default = 'no', if set to 'yes' provision's amqp in openstack nodes and
 #                 openstack services uses the amqp in openstack nodes instead of config nodes.
 #                 amqp_host is neglected if manage_amqp is set
-# service_dbpass: Default = 'c0ntrail123'; DB password of all openstack service users
+# service_dbpass: Default = '<DB PASSWORD VALUE>'; DB password of all openstack service users
 #
 #env.openstack = {
 #    'service_token' : '33c57636fbc2c5552fd2', #Common service token for for all openstack services
@@ -372,7 +372,7 @@ env.ostypes = {
 #    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
 #    'osapi_compute_workers' : 40,             #Default 40, For low memory system reduce the osapi compute workers thread.
 #    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
-#    'service_dbpass' : 'c0ntrail123',         #DB password of all openstack service users
+#    'service_dbpass' : '<DB PASSWORD VALUE>',         #DB password of all openstack service users
 #}
 
 #Config node related config knobs
@@ -394,7 +394,7 @@ env.ostypes = {
 #env.cfgm = {
 #    'amqp_hosts' : ['10.10.10.1', '10.10.10.2'],
 #    'amqp_port' : '5672',
-#    'haproxy_token' : 'secret123',
+#    'haproxy_token' : '<Password value>',
 #    'manage_db' : 'no',
 #    'auth_protocol'   : 'http',                  #Default is http
 #    'insecure'        : 'True',                   #Default is False
@@ -598,7 +598,7 @@ env.ostypes = {
 #        'server':'127.0.0.1',
 #        'port': '443',
 #        'username': 'administrator@vsphere.local',
-#        'password': 'Contrail123!',
+#        'password': '<Password value>!',
 #        'auth': 'https',
 #        'datacenters': {
 #            'dc1': {
@@ -670,7 +670,7 @@ env.ostypes = {
 #       'esxi1': {
 #             'ip': '1.1.1.1',
 #             'username': 'root',
-#             'password': 'c0ntrail123',
+#             'password': '<Password value>',
 #             'datastore': "/vmfs/volumes/ds1",
 #             'vcenter_server': 'vcenter1',
 #             'datacenter': 'dc1',

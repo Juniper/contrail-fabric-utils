@@ -13,7 +13,7 @@ ext_routers = []
 router_asn = 64512
 
 #Host from which the fab commands are triggered to install and provision
-host_build = 'vjoshi@10.204.216.56'
+host_build = 'root@10.204.216.56'
 
 #Role definition of the hosts.
 env.roledefs = {
@@ -30,7 +30,7 @@ env.roledefs = {
 }
 
 #Openstack admin password
-env.openstack_admin_password = 'contrail123'
+env.openstack_admin_password = '<Password value>'
 
 env.ostypes = { 
     host1:'ubuntu'
@@ -42,20 +42,20 @@ env.hostnames = {
     'all': ['nodec22']
 }
 
-env.password = 'c0ntrial123'
+env.password = '<Password value>'
 #Passwords of each host
 env.passwords = {
-    host1: 'c0ntrail123',
-#    host2: 'c0ntrail123',
+    host1: '<Password value>',
+#    host2: '<Password value>',
 
 
-    host_build: 'secret',
+    host_build: '<Password value>',
 }
 
 compute_vm = {
     host1: { 'esxi': {'ip': '10.204.216.35',
                       'username': 'root',
-                      'password': 'c0ntrail123',
+                      'password': '<password value>',
                       'uplink_nic': 'vmnic2',
                       'vswitch' : 'vSwitch0',
                       'vm_port_group' : 'contrail-compute1-fab-pg',
@@ -108,7 +108,7 @@ compute_vm = {
 
 #To Enable prallel execution of task in multiple nodes
 #do_parallel = True
-env.test_repo_dir='/homes/vjoshi/node22-17/test'
-env.mail_from='vjoshi@juniper.net'
-env.mail_to='vjoshi@juniper.net'
+env.test_repo_dir='<Path to test repo dir>'
+env.mail_from='<Email>'
+env.mail_to='<Email>'
 env.log_scenario='Single-Node Sanity'
