@@ -1,19 +1,19 @@
 from fabric.api import env
 
 #Management ip addresses of hosts in the cluster
-host1 = 'root@10.204.217.7'
-#host2 = 'root@10.204.217.57'
+host1 = 'root@1.1.1.7'
+#host2 = 'root@1.1.1.8'
 
 #External routers if any
 #for eg. 
-#ext_routers = [('mx1', '10.204.216.253')]
+#ext_routers = [('mx1', '1.1.1.253')]
 ext_routers = []
 
 #Autonomous system number
 router_asn = 64512
 
 #Host from which the fab commands are triggered to install and provision
-host_build = 'root@10.204.216.56'
+host_build = 'root@1.1.1.56'
 
 #Role definition of the hosts.
 env.roledefs = {
@@ -53,7 +53,7 @@ env.passwords = {
 }
 
 compute_vm = {
-    host1: { 'esxi': {'ip': '10.204.216.35',
+    host1: { 'esxi': {'ip': '1.1.1.35',
                       'username': 'root',
                       'password': '<password value>',
                       'uplink_nic': 'vmnic2',
@@ -80,12 +80,12 @@ compute_vm = {
 #====================================================
 #Control Interface
 #control = {
-#    host1 : { 'ip': '192.168.10.1/24', 'gw' : '192.168.10.254', 'device':'eth0' },
+#    host1 : { 'ip': 'x.x.x.1/24', 'gw' : 'x.x.x.254', 'device':'eth0' },
 #}
 
 #Data Interface
 #data = {
-#    host1 : { 'ip': '192.161.10.1/24', 'gw' : '192.161.10.254', 'device':'bond0' },
+#    host1 : { 'ip': 'x.x.x.1/24', 'gw' : 'x.x.x.254', 'device':'bond0' },
 #}
 
 #To disable installing contrail interface rename package
