@@ -6,7 +6,7 @@ host1 = 'root@<Mgmt IP Address>'
 
 #External routers if any
 #for eg. 
-#ext_routers = [('mx1', '10.204.216.253')]
+#ext_routers = [('mx1', '1.1.1.253')]
 ext_routers = []
 
 #Autonomous system number
@@ -156,14 +156,14 @@ env.ostypes = {
 #OPTIONAL SEPARATION OF MANAGEMENT AND CONTROL + DATA and OPTIONAL VLAN INFORMATION
 #==================================================================================
 #control_data = {
-#    host1 : { 'ip': '192.168.10.1/24', 'gw' : '192.168.10.254', 'device': 'bond0', 'vlan': '224' },
+#    host1 : { 'ip': 'x.x.x.1/24', 'gw' : 'x.x.x.254', 'device': 'bond0', 'vlan': '224' },
 #}
 
 #OPTIONAL STATIC ROUTE CONFIGURATION
 #===================================
 #static_route  = {
-#    host1 : [{ 'ip': '10.1.1.0', 'netmask' : '255.255.255.0', 'gw':'192.168.10.254', 'intf': 'bond0' },
-#             { 'ip': '10.1.2.0', 'netmask' : '255.255.255.0', 'gw':'192.168.10.254', 'intf': 'bond0' }],
+#    host1 : [{ 'ip': '1.1.1.0', 'netmask' : 'x.x.x.0', 'gw':'x.x.x.254', 'intf': 'bond0' },
+#             { 'ip': '1.1.2.0', 'netmask' : 'x.x.x.0', 'gw':'x.x.x.254', 'intf': 'bond0' }],
 #}
 
 #storage compute disk config
@@ -237,7 +237,7 @@ env.ostypes = {
 #
 #env.openstack = {
 #    'service_token' : '33c57636fbc2c5552fd2', #Common service token for for all openstack services
-#    'amqp_host' : '10.204.217.19',            #IP of AMQP Server to be used in openstack
+#    'amqp_host' : '1.1.1.19',            #IP of AMQP Server to be used in openstack
 #    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
 #    'osapi_compute_workers' : 40,             #Default 40, For low memory system reduce the osapi compute workers thread.
 #    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
@@ -261,7 +261,7 @@ env.ostypes = {
 #            If local path specifed, it will be copied to cfgm node(/etc/contrail/ssl/certs/apiserver.pem)
 #            If remote path in cfgm node specified, contrail-api.conf will point to the specified location
 #env.cfgm = {
-#    'amqp_hosts' : ['10.10.10.1', '10.10.10.2'],
+#    'amqp_hosts' : ['1.1.10.1', '1.1.10.2'],
 #    'amqp_port' : '5672',
 #    'haproxy_token' : '<Password value>',
 #    'manage_db' : 'no',
@@ -351,8 +351,8 @@ env.ostypes = {
 #gateway-routes: If any route is present then only those routes will be published
 #by VGW or Default route (0.0.0.0) will be published
 
-#env.vgw = {host1: {'vgw1':{'vn':'default-domain:admin:public:public', 'ipam-subnets': ['10.204.220.128/29', '10.204.220.136/29', 'gateway-routes': ['8.8.8.0/24', '1.1.1.0/24']}]},
-#                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}
+#env.vgw = {host1: {'vgw1':{'vn':'default-domain:admin:public:public', 'ipam-subnets': ['1.1.1.100/29', '1.1.1.150/29', 'gateway-routes': ['8.8.8.0/24', '1.1.1.0/24']}]},
+#                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['1.1.1.160/29']}
 #          }
 
 #Definition for the Key used
@@ -402,7 +402,7 @@ env.ostypes = {
 # tor_tsn_ip: TSN node ip
 # tor_agent_ovs_ka: Tor Agent OVSDB keepalive timer in milli seconds
 #env.tor_agent =
-#{host3:[{'tor_ip':'10.204.217.39','tor_agent_id':'1','tor_agent_name':'nodexx-1', 'tor_ovs_port':'9999','tor_ovs_protocol':'tcp','tor_tsn_ip':'10.204.221.35', 'tor_agent_ovs_ka':'10000'}]}
+#{host3:[{'tor_ip':'1.1.1.39','tor_agent_id':'1','tor_agent_name':'nodexx-1', 'tor_ovs_port':'9999','tor_ovs_protocol':'tcp','tor_tsn_ip':'1.1.1.35', 'tor_agent_ovs_ka':'10000'}]}
 
 # OPTIONAL DPDK CONFIGURATION
 # ===========================

@@ -4,20 +4,20 @@ os_username = 'admin'
 os_password = '<Password value>'
 os_tenant_name = 'demo'
 
-host1 = 'root@10.204.217.113'
-host2 = 'root@10.204.217.114'
-host3 = 'root@10.204.217.115'
-host4 = 'root@10.204.217.181'
-host5 = 'root@10.204.217.182'
-esx1 = 'root@10.204.217.116'
-esx2 = 'root@10.204.217.117'
+host1 = 'root@1.1.1.1'
+host2 = 'root@1.1.1.2'
+host3 = 'root@1.1.1.3'
+host4 = 'root@1.1.1.4'
+host5 = 'root@1.1.1.5'
+esx1 = 'root@1.1.1.10'
+esx2 = 'root@1.1.1.11'
 
-ext_routers = [('hooper', '192.168.192.253')]
+ext_routers = [('hooper', '1.1.1.253')]
 router_asn = 64512
 public_vn_rtgt = 2223
-public_vn_subnet = "10.204.221.176/28"
+public_vn_subnet = "1.1.1.100/28"
 
-host_build = '<Hostname>@10.204.216.49'
+host_build = 'root@1.1.1.6'
 
 env.roledefs = {
     'all': [host1, host2, host3, host4, host5],
@@ -36,11 +36,11 @@ env.hostnames = {
 }
 
 control_data = {
-    host1 : { 'ip': '192.168.192.1/24', 'gw' : '192.168.192.254', 'device':'eth3' },
-    host2 : { 'ip': '192.168.192.2/24', 'gw' : '192.168.192.254', 'device':'eth3' },
-    host3 : { 'ip': '192.168.192.3/24', 'gw' : '192.168.192.254', 'device':'eth3' },
-    host4 : { 'ip': '192.168.192.4/24', 'gw' : '192.168.192.254', 'device':'eth2' },
-    host5 : { 'ip': '192.168.192.5/24', 'gw' : '192.168.192.254', 'device':'eth2' },
+    host1 : { 'ip': 'x.x.x.1/24', 'gw' : 'x.x.x.254', 'device':'eth3' },
+    host2 : { 'ip': 'x.x.x.2/24', 'gw' : 'x.x.x.254', 'device':'eth3' },
+    host3 : { 'ip': 'x.x.x.3/24', 'gw' : 'x.x.x.254', 'device':'eth3' },
+    host4 : { 'ip': 'x.x.x.4/24', 'gw' : 'x.x.x.254', 'device':'eth2' },
+    host5 : { 'ip': 'x.x.x.5/24', 'gw' : 'x.x.x.254', 'device':'eth2' },
 }
 
 env.ostypes = {
@@ -65,7 +65,7 @@ env.passwords = {
 
 esxi_hosts = {
     'nodei4' : {
-        'ip' : '10.204.217.116',
+        'ip' : '1.1.1.4',
         'username' : 'root',
         'password' : '<Password value>',
         'uplink_nic' : 'vmnic0',
@@ -80,13 +80,13 @@ esxi_hosts = {
         'datastore' : '/vmfs/volumes/datastore1/',
         'contrail_vm' : {
             'name' : 'nodei4-compute-vm',
-            'mac' : '00:50:56:aa:aa:aa',
+            'mac' : 'aa:dd:ff:aa:aa:aa',
             'host' : host4,
             'vmdk' : '/cs-shared-test/images/Ubuntu-precise-12.04.3-LTS.vmdk',
         }
     },
     'nodei5' : {
-        'ip' : '10.204.217.117',
+        'ip' : '1.1.1.5',
         'username' : 'root',
         'password' : '<Password value>',
         'uplink_nic' : 'vmnic0',
@@ -101,7 +101,7 @@ esxi_hosts = {
         'datastore' : '/vmfs/volumes/datastore1/',
         'contrail_vm' : {
             'name' : 'nodei5-compute-vm',
-            'mac' : '00:50:56:aa:aa:ab',
+            'mac' : 'aa:cc:de:aa:aa:ab',
             'host' : host5,
             'vmdk' : '/cs-shared-test/images/Ubuntu-precise-12.04.3-LTS.vmdk',
         }

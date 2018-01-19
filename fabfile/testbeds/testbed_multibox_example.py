@@ -15,7 +15,7 @@ host10 = 'root@1.1.1.10'
 
 #External routers if any
 #for eg.
-#ext_routers = [('mx1', '10.204.216.253')]
+#ext_routers = [('mx1', '1.1.1.253')]
 ext_routers = []
 
 #Autonomous system number
@@ -204,27 +204,27 @@ env.ostypes = {
 #OPTIONAL SEPARATION OF MANAGEMENT AND CONTROL + DATA and OPTIONAL VLAN INFORMATION
 #==================================================================================
 #control_data = {
-#    host1 : { 'ip': '192.168.10.1/24', 'gw' : '192.168.10.254', 'device':'eth0', 'vlan': '224' },
-#    host2 : { 'ip': '192.168.10.2/24', 'gw' : '192.168.10.254', 'device':'bond0', 'vlan': '224' },
-#    host3 : { 'ip': '192.168.10.3/24', 'gw' : '192.168.10.254', 'device':'eth0', 'vlan': '224' },
-#    host4 : { 'ip': '192.168.10.4/24', 'gw' : '192.168.10.254', 'device':'eth3', 'vlan': '224' },
-#    host5 : { 'ip': '192.168.10.5/24', 'gw' : '192.168.10.254', 'device':'bond0', 'vlan': '224' },
-#    host6 : { 'ip': '192.168.10.6/24', 'gw' : '192.168.10.254', 'device':'eth0', 'vlan': '224' },
-#    host7 : { 'ip': '192.168.10.7/24', 'gw' : '192.168.10.254', 'device':'eth1', 'vlan': '224' },
-#    host8 : { 'ip': '192.168.10.8/24', 'gw' : '192.168.10.254', 'device':'eth1', 'vlan': '224' },
+#    host1 : { 'ip': 'x.x.x.1/24', 'gw' : 'x.x.x.254', 'device':'eth0', 'vlan': '224' },
+#    host2 : { 'ip': 'x.x.x.2/24', 'gw' : 'x.x.x.254', 'device':'bond0', 'vlan': '224' },
+#    host3 : { 'ip': 'x.x.x.3/24', 'gw' : 'x.x.x.254', 'device':'eth0', 'vlan': '224' },
+#    host4 : { 'ip': 'x.x.x.4/24', 'gw' : 'x.x.x.254', 'device':'eth3', 'vlan': '224' },
+#    host5 : { 'ip': 'x.x.x.5/24', 'gw' : 'x.x.x.254', 'device':'bond0', 'vlan': '224' },
+#    host6 : { 'ip': 'x.x.x.6/24', 'gw' : 'x.x.x.254', 'device':'eth0', 'vlan': '224' },
+#    host7 : { 'ip': 'x.x.x.7/24', 'gw' : 'x.x.x.254', 'device':'eth1', 'vlan': '224' },
+#    host8 : { 'ip': 'x.x.x.8/24', 'gw' : 'x.x.x.254', 'device':'eth1', 'vlan': '224' },
 #}
 
 #OPTIONAL Storage data network
 #==================================================================================
 #storage_data = {
-#    host1 : { 'ip': '192.168.11.1/24', 'gw' : '192.168.11.254', 'device':'eth3' },
-#    host2 : { 'ip': '192.168.11.2/24', 'gw' : '192.168.11.254', 'device':'eth3' },
-#    host3 : { 'ip': '192.168.11.3/24', 'gw' : '192.168.11.254', 'device':'eth4' },
-#    host4 : { 'ip': '192.168.11.4/24', 'gw' : '192.168.11.254', 'device':'eth3' },
-#    host5 : { 'ip': '192.168.11.5/24', 'gw' : '192.168.11.254', 'device':'bond0' },
-#    host6 : { 'ip': '192.168.11.6/24', 'gw' : '192.168.11.254', 'device':'eth3' },
-#    host7 : { 'ip': '192.168.11.7/24', 'gw' : '192.168.11.254', 'device':'eth4' },
-#    host8 : { 'ip': '192.168.11.8/24', 'gw' : '192.168.11.254', 'device':'eth3' },
+#    host1 : { 'ip': 'x.x.x.1/24', 'gw' : 'x.x.x.254', 'device':'eth3' },
+#    host2 : { 'ip': 'x.x.x.2/24', 'gw' : 'x.x.x.254', 'device':'eth3' },
+#    host3 : { 'ip': 'x.x.x.3/24', 'gw' : 'x.x.x.254', 'device':'eth4' },
+#    host4 : { 'ip': 'x.x.x.4/24', 'gw' : 'x.x.x.254', 'device':'eth3' },
+#    host5 : { 'ip': 'x.x.x.5/24', 'gw' : 'x.x.x.254', 'device':'bond0' },
+#    host6 : { 'ip': 'x.x.x.6/24', 'gw' : 'x.x.x.254', 'device':'eth3' },
+#    host7 : { 'ip': 'x.x.x.7/24', 'gw' : 'x.x.x.254', 'device':'eth4' },
+#    host8 : { 'ip': 'x.x.x.8/24', 'gw' : 'x.x.x.254', 'device':'eth3' },
 #}
 
 #OPTIONAL STATIC ROUTE CONFIGURATION
@@ -368,7 +368,7 @@ env.ostypes = {
 #
 #env.openstack = {
 #    'service_token' : '33c57636fbc2c5552fd2', #Common service token for for all openstack services
-#    'amqp_host' : '10.204.217.19',            #IP of AMQP Server to be used in openstack
+#    'amqp_host' : '2.2.2.19',            #IP of AMQP Server to be used in openstack
 #    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
 #    'osapi_compute_workers' : 40,             #Default 40, For low memory system reduce the osapi compute workers thread.
 #    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
@@ -392,7 +392,7 @@ env.ostypes = {
 #            If local path specifed, it will be copied to cfgm node(/etc/contrail/ssl/certs/apiserver.pem)
 #            If remote path in cfgm node specified, contrail-api.conf will point to the specified location
 #env.cfgm = {
-#    'amqp_hosts' : ['10.10.10.1', '10.10.10.2'],
+#    'amqp_hosts' : ['2.2.2.1', '2.2.2.2'],
 #    'amqp_port' : '5672',
 #    'haproxy_token' : '<Password value>',
 #    'manage_db' : 'no',
@@ -484,9 +484,9 @@ env.ostypes = {
 #by VGW or Default route (0.0.0.0) will be published
 
 
-#env.vgw = {host4: {'vgw1':{'vn':'default-domain:admin:public:public', 'ipam-subnets': ['10.204.220.128/29', '10.204.220.136/29', 'gateway-routes': ['8.8.8.0/24', '1.1.1.0/24']}]},
-#                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}},
-#           host5: {'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['10.204.220.144/29']}}
+#env.vgw = {host4: {'vgw1':{'vn':'default-domain:admin:public:public', 'ipam-subnets': ['1.1.1.100/29', '1.1.1.120/29', 'gateway-routes': ['8.8.8.0/24', '1.1.1.0/24']}]},
+#                   'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['1.1.1.130/29']}},
+#           host5: {'vgw2':{'vn':'default-domain:admin:public1:public1', 'ipam-subnets': ['1.1.1.140/29']}}
 #          }
 
 #Definition for the Key used
@@ -550,13 +550,13 @@ env.ostypes = {
 # tor_agent_ovs_ka: Tor Agent OVSDB keepalive timer in milli seconds
 #
 #env.tor_agent = {host10:[{
-#                    'tor_ip':'10.204.217.39',
+#                    'tor_ip':'1.1.1.39',
 #                    'tor_agent_id':'1',
 #                    'tor_agent_name':'nodexx-1',
 #                    'tor_type':'ovs',
 #                    'tor_ovs_port':'9999',
 #                    'tor_ovs_protocol':'tcp',
-#                    'tor_tsn_ip':'10.204.221.35',
+#                    'tor_tsn_ip':'1.1.1.35',
 #                    'tor_tsn_name':'nodec45',
 #                    'tor_name':'bng-contrail-qfx51-2',
 #                    'tor_tunnel_ip':'34.34.34.34',
@@ -676,14 +676,14 @@ env.ostypes = {
 #             'datacenter': 'dc1',
 #             'cluster': "cluster1",
 #             'contrail_vm': {
-#                   'mac': "00:50:56:05:ba:ba",
+#                   'mac': "aa:ca:12:23:34:12",
 #                   'host': "root@2.2.2.2",
 #                   'pci_devices': {
 #                        nic: ["04:00.0", "04:00.1"],
 #                    },
 #                   'sr_iov_nics': ["vmnic0"],
 #                   'mode': "vcenter" 
-#                   'vmdk_download_path': "http://10.84.5.100/vmware/vmdk/ContrailVM-disk1.vmdk",
+#                   'vmdk_download_path': "http://1.1.1.100/vmware/vmdk/ContrailVM-disk1.vmdk",
 #             }
 #       },
 #}
@@ -723,11 +723,11 @@ env.ostypes = {
 #    contrail-controller/src/config/utils/provision_control.py script with a newly added argument for md5
 # The below env dict is for first method specified, where you include a dict in testbed.py as shown below:
 #  env.md5 = {
-#     host1: 'juniper',
-#     host2: 'juniper',
-#     host3: 'juniper',
+#     host1: '<key value>',
+#     host2: '<key value>',
+#     host3: '<key value>',
 #  }
-# 'juniper' is the md5 key that will be configured on the nodes.
+# '<key value>' is the md5 key that will be configured on the nodes.
 ############################################################################################
 
 
@@ -747,8 +747,8 @@ env.ostypes = {
 # List of control nodes per compute node
 # spcae seperated string of control nodes
 # env.compute_controller_list = {
-#   host1 : '10.204.216.66 10.204.217.7',
-#   host2 : '10.204.216.67 10.204.217.79',
+#   host1 : '1.1.1.66 1.1.1.7',
+#   host2 : '1.1.1.67 1.1.1.79',
 # }
 
 # Resource backup and restore for graceful restart of a compute node
