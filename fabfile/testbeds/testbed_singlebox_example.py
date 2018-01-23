@@ -1,7 +1,7 @@
 from fabric.api import env
 
 #Management ip addresses of hosts in the cluster
-host1 = 'root@1.1.1.1'
+host1 = 'root@<Mgmt IP Address>'
 
 
 #External routers if any
@@ -13,7 +13,7 @@ ext_routers = []
 router_asn = 64512
 
 #Host from which the fab commands are triggered to install and provision
-host_build = 'root@1.1.1.1'
+host_build = 'root@<Mgmt IP Address>'
 
 
 #Role definition of the hosts.
@@ -44,7 +44,7 @@ env.roledefs = {
 }
 
 #Openstack admin password
-env.openstack_admin_password = 'secret123'
+env.openstack_admin_password = '<Password value>'
 
 #Hostnames
 # Deprecated 'all' key from release 3.0; Consider specifying the hostname for each host seperately as below
@@ -59,9 +59,9 @@ env.hostnames = {
 # for passwordless login's no need to set env.passwords,
 # instead populate env.key_filename in testbed.py with public key.
 env.passwords = {
-    host1: 'secret',
-  #  backup_node: 'secret',
-    host_build: 'secret',
+    host1: '<Password value>',
+  #  backup_node: '<Password value>',
+    host_build: '<Password value>',
 }
 
 # SSH Public key file path for passwordless logins
@@ -206,9 +206,9 @@ env.ostypes = {
 #    'auth_port'       : '35357',                 #Default is 35357
 #    'admin_token'     : '33c57636fbc2c5552fd2',  #admin_token in keystone.conf
 #    'admin_user'      : 'admin',                 #Default is admin
-#    'admin_password'  : 'contrail123',           #Default is contrail123
-#    'nova_password'   : 'contrail123',           #Default is the password set in admin_password
-#    'neutron_password': 'contrail123',           #Default is the password set in admin_password
+#    'admin_password'  : '<Password value>',      
+#    'nova_password'   : '<Nova Password value>', #Default is the password set in admin_password
+#    'neutron_password': '<Neutron Password value>',  #Default is the password set in admin_password
 #    'service_tenant'  : 'service',               #Default is service
 #    'admin_tenant'    : 'admin',                 #Default is admin
 #    'region_name'     : 'RegionOne',             #Default is RegionOne
@@ -233,7 +233,7 @@ env.ostypes = {
 # manage_amqp   : Default = 'no', if set to 'yes' provision's amqp in openstack nodes and
 #                 openstack services uses the amqp in openstack nodes instead of config nodes.
 #                 amqp_host is neglected if manage_amqp is set
-# service_dbpass: Default = 'c0ntrail123'; DB password of all openstack service users
+# service_dbpass: Default = '<DB Password>'; DB password of all openstack service users
 #
 #env.openstack = {
 #    'service_token' : '33c57636fbc2c5552fd2', #Common service token for for all openstack services
@@ -241,7 +241,7 @@ env.ostypes = {
 #    'manage_amqp' : 'yes',                    #Default no, Manage seperate AMQP for openstack services in openstack nodes.
 #    'osapi_compute_workers' : 40,             #Default 40, For low memory system reduce the osapi compute workers thread.
 #    'conductor_workers' : 40,                 #Default 40, For low memory system reduce the conductor workers thread.
-#    'service_dbpass' : 'c0ntrail123',         #DB password of all openstack service users
+#    'service_dbpass' : '<DB Password>',         #DB password of all openstack service users
 #}
 
 #Config node related config knobs
@@ -263,7 +263,7 @@ env.ostypes = {
 #env.cfgm = {
 #    'amqp_hosts' : ['10.10.10.1', '10.10.10.2'],
 #    'amqp_port' : '5672',
-#    'haproxy_token' : 'secret123',
+#    'haproxy_token' : '<Password value>',
 #    'manage_db' : 'no',
 #    'auth_protocol'   : 'http',                  #Default is http
 #    'insecure'        : 'True',                   #Default is False

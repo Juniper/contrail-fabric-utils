@@ -1,7 +1,7 @@
 from fabric.api import env
 
 os_username = 'admin'
-os_password = 'contrail123'
+os_password = '<Password value>'
 os_tenant_name = 'demo'
 
 host1 = 'root@10.204.217.113'
@@ -17,7 +17,7 @@ router_asn = 64512
 public_vn_rtgt = 2223
 public_vn_subnet = "10.204.221.176/28"
 
-host_build = 'stack@10.204.216.49'
+host_build = '<Hostname>@10.204.216.49'
 
 env.roledefs = {
     'all': [host1, host2, host3, host4, host5],
@@ -50,24 +50,24 @@ env.ostypes = {
     host4:'ubuntu',
     host5:'ubuntu',
 }
-env.password = 'c0ntrail123'
+env.password = '<Password value>'
 env.passwords = {
-    host1: 'c0ntrail123',
-    host2: 'c0ntrail123',
-    host3: 'c0ntrail123',
-    host4: 'c0ntrail123',
-    host5: 'c0ntrail123',
-    esx1: 'c0ntrail123',
-    esx2: 'c0ntrail123',
+    host1: '<Password value>',
+    host2: '<Password value>',
+    host3: '<Password value>',
+    host4: '<Password value>',
+    host5: '<Password value>',
+    esx1: '<Password value>',
+    esx2: '<Password value>',
 
-    host_build: 'stack@123',
+    host_build: '<Password value>',
 }
 
 esxi_hosts = {
     'nodei4' : {
         'ip' : '10.204.217.116',
         'username' : 'root',
-        'password' : 'c0ntrail123',
+        'password' : '<Password value>',
         'uplink_nic' : 'vmnic0',
         'fabric_vswitch' : 'vSwitch0',
         'fabric_port_group' : 'contrail-fab-pg',
@@ -88,7 +88,7 @@ esxi_hosts = {
     'nodei5' : {
         'ip' : '10.204.217.117',
         'username' : 'root',
-        'password' : 'c0ntrail123',
+        'password' : '<Password value>',
         'uplink_nic' : 'vmnic0',
         'fabric_vswitch' : 'vSwitch0',
         'fabric_port_group' : 'contrail-fab-pg',
