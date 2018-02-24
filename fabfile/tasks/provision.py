@@ -36,7 +36,7 @@ from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
         setup_apiserver_ssl_certs_node, copy_keystone_ssl_certs_to_node,
         copy_apiserver_ssl_certs_to_node, copy_vnc_api_lib_ini_to_node,
         copy_certs_for_neutron_node, copy_certs_for_heat,
-        use_keystone_ssl_certs_in_node)
+        use_keystone_ssl_certs_in_node, setup_discovery_ssl_certs_node)
 
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
@@ -132,7 +132,7 @@ $__contrail_api_frontend__
     default_backend    contrail-api-backend
     timeout client 3m
 
-frontend  contrail-discovery *:5998
+$__contrail_disc_frontend__
     default_backend    contrail-discovery-backend
 
 backend quantum-server-backend
@@ -154,6 +154,7 @@ $__contrail_api_backend_servers__
 backend contrail-discovery-backend
     option nolinger
     balance     roundrobin
+$__contrail_disc_ssl_forwarding__
 $__contrail_disc_backend_servers__
     #server  10.84.14.2 10.84.14.2:9110 check
     #server  10.84.14.2 10.84.14.2:9111 check
@@ -173,6 +174,8 @@ $__rabbitmq_config__
     api_ssl_forwarding = ''
     api_server_lines = ''
     disc_listen_port = 9110
+    disc_frontend = 'frontend  contrail-discovery *:5998'
+    disc_ssl_forwarding = ''
     disc_server_lines = ''
     tor_agent_ha_config = ''
     rabbitmq_config = """
@@ -232,6 +235,14 @@ listen  rabbitmq 0.0.0.0:5673
     http-request set-header X-Forwarded-Port %[dst_port]
     http-request add-header X-Forwarded-Proto https if { ssl_fc }"""
 
+    if discovery_ssl_enabled():
+        disc_frontend = """frontend  contrail-api
+    bind *:5998 ssl crt /etc/contrail/ssl/certs/discoverycertbundle.pem"""
+        disc_ssl_forwarding = """    option forwardfor
+    http-request set-header X-Forwarded-Port %[dst_port]
+    http-request add-header X-Forwarded-Proto https if { ssl_fc }"""
+
+
 
     for host_string in env.roledefs['cfgm']:
         haproxy_config = template.safe_substitute({
@@ -241,6 +252,8 @@ listen  rabbitmq 0.0.0.0:5673
             '__contrail_api_frontend__': api_frontend,
             '__contrail_api_ssl_forwarding__': api_ssl_forwarding,
             '__contrail_api_backend_servers__': api_server_lines,
+            '__contrail_disc_frontend__': disc_frontend,
+            '__contrail_disc_ssl_forwarding__': disc_ssl_forwarding,
             '__contrail_disc_backend_servers__': disc_server_lines,
             '__contrail_hap_user__': 'haproxy',
             '__contrail_hap_passwd__': get_haproxy_token('cfgm'),
@@ -627,6 +640,8 @@ def setup_cfgm_node(*args):
                 execute("copy_keystone_ssl_certs_to_node", host_string)
             if apiserver_ssl_enabled():
                 execute("copy_certs_for_neutron_node", host_string)
+            if discovery_ssl_enabled():
+                execute("setup_discovery_ssl_certs_node", host_string)
             enable_haproxy()
     nworkers = 1
     fixup_restart_haproxy_in_all_cfgm(nworkers)

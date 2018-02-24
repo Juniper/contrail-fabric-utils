@@ -70,6 +70,10 @@ def frame_vnc_database_cmd(host_string, cmd="setup-vnc-database"):
     if cassandra_user is not None:
         cmd += " --cassandra_user %s" % cassandra_user
         cmd += " --cassandra_password %s" % cassandra_password
+    if discovery_ssl_enabled():
+        cmd += " --discovery_certfile %s" % get_discovery_certfile()
+        cmd += " --discovery_keyfile %s" % get_discovery_keyfile()
+        cmd += " --discovery_cafile %s" % get_discovery_cafile()
 
     return cmd
 
@@ -193,6 +197,10 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
         cmd += " --apiserver_cafile %s" % get_apiserver_cafile()
         first_cfgm_ip = hstr_to_ip(cfgm_host_list[0])
         cmd += " --first_cfgm_ip %s" % first_cfgm_ip
+    if discovery_ssl_enabled():
+        cmd += " --discovery_certfile %s" % get_discovery_certfile()
+        cmd += " --discovery_keyfile %s" % get_discovery_keyfile()
+        cmd += " --discovery_cafile %s" % get_discovery_cafile()
     cmd += " --orchestrator %s" % orch
     if (len(env.roledefs['cfgm'])>2):
         cmd += " --seed_list %s" % ','.join(get_config_db_ip_list()[:2])
@@ -399,6 +407,10 @@ def frame_vnc_control_cmd(host_string, cmd='setup-vnc-control'):
     cmd += ' --cfgm_ip %s' % cfgm_ip
     cmd += ' --collector_ip %s' % collector_ip
     cmd += " --ifmap_password %s" % get_ifmap_token()
+    if discovery_ssl_enabled():
+        cmd += " --discovery_certfile %s" % get_discovery_certfile()
+        cmd += " --discovery_keyfile %s" % get_discovery_keyfile()
+        cmd += " --discovery_cafile %s" % get_discovery_cafile()
 
     return cmd
 
@@ -562,6 +574,10 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
     if dpdk:
         if host_string in dpdk:
             cmd += " --dpdk"
+    if discovery_ssl_enabled():
+        cmd += " --discovery_certfile %s" % get_discovery_certfile()
+        cmd += " --discovery_keyfile %s" % get_discovery_keyfile()
+        cmd += " --discovery_cafile %s" % get_discovery_cafile()
 
     return cmd
 
@@ -602,6 +618,10 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
         cmd += " --apiserver_certfile %s" % get_apiserver_certfile()
         cmd += " --apiserver_keyfile %s" % get_apiserver_keyfile()
         cmd += " --apiserver_cafile %s" % get_apiserver_cafile()
+    if discovery_ssl_enabled():
+        cmd += " --discovery_certfile %s" % get_discovery_certfile()
+        cmd += " --discovery_keyfile %s" % get_discovery_keyfile()
+        cmd += " --discovery_cafile %s" % get_discovery_cafile()
     cmd += " --self_collector_ip %s" % tgt_ip
     cmd += " --num_nodes %d " % ncollectors
     analytics_syslog_port = get_collector_syslog_port()
