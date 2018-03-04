@@ -13,7 +13,9 @@ from fabfile.utils.host import (
         get_contrail_internal_vip, hstr_to_ip,
         get_apiserver_cert_bundle, get_control_host_string,
         get_keystone_cert_bundle, get_openstack_external_vip,
-        get_contrail_external_vip
+        get_contrail_external_vip, get_discovery_cafile,
+        get_discovery_certfile, get_discovery_keyfile,
+        get_discovery_cert_bundle
         )
 from fabfile.utils.fabos import get_as_sudo, get_openstack_services
 
@@ -88,6 +90,108 @@ def setup_keystone_ssl_certs_node(*nodes):
             sudo("chown -R keystone:keystone /etc/keystone/ssl")
 
 
+@task
+@EXECUTE_TASK
+@roles('cfgm')
+def setup_discovery_ssl_certs():
+    execute('setup_discover_ssl_certs_node', env.host_string)
+
+@task
+def setup_discovery_ssl_certs_node(*nodes):
+    default_certfile = '/etc/contrail/ssl/certs/contrail.pem'
+    default_keyfile = '/etc/contrail/ssl/private/contrail.key'
+    default_cafile = '/etc/contrail/ssl/certs/contrail_ca.pem'
+    discoverycertbundle = get_discovery_cert_bundle()
+    ssl_certs = ((get_discovery_certfile(), default_certfile),
+                 (get_discovery_keyfile(), default_keyfile),
+                 (get_discovery_cafile(), default_cafile))
+    index = env.roledefs['cfgm'].index(env.host_string) + 1
+    for node in nodes:
+        with settings(host_string=node, password=get_env_passwords(node)):
+            for ssl_cert, default in ssl_certs:
+                if ssl_cert == default:
+                    # Clear old certificate
+                    sudo('rm -f %s' % ssl_cert)
+                    sudo('rm -f %s' % discoverycertbundle)
+            for ssl_cert, default in ssl_certs:
+                if ssl_cert == default:
+                    cfgm_host = env.roledefs['cfgm'][0]
+                    if index == 1:
+                        if not exists(ssl_cert, use_sudo=True):
+                            print "Creating discovery SSL certs in first cfgm node"
+                            subject_alt_names_mgmt = [hstr_to_ip(host)
+                                                      for host in env.roledefs['cfgm']]
+                            subject_alt_names_ctrl = [hstr_to_ip(get_control_host_string(host))
+                                                      for host in env.roledefs['cfgm']]
+                            subject_alt_names = subject_alt_names_mgmt + subject_alt_names_ctrl
+                            if get_contrail_external_vip():
+                                subject_alt_names.append(get_contrail_external_vip())
+                            cfgm_ip = get_contrail_internal_vip() or hstr_to_ip(get_control_host_string(cfgm_host))
+                            sudo('create-api-ssl-certs.sh %s %s' % (cfgm_ip, ','.join(subject_alt_names)))
+                    else:
+                        with settings(host_string=cfgm_host,
+                                      password=get_env_passwords(cfgm_host)):
+                            while not exists(ssl_cert, use_sudo=True):
+                                print "Wait for SSL certs to be created in first cfgm"
+                                sleep(0.1)
+                            print "Get SSL cert(%s) from first cfgm" % ssl_cert
+                            tmp_dir= tempfile.mkdtemp()
+                            tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
+                            get_as_sudo(ssl_cert, tmp_fname)
+                        print "Copy to this(%s) cfgm node" % env.host_string 
+                        sudo('mkdir -p /etc/contrail/ssl/certs/')
+                        sudo('mkdir -p /etc/contrail/ssl/private/')
+                        put(tmp_fname, ssl_cert, use_sudo=True)
+                        os.remove(tmp_fname)
+                elif os.path.isfile(ssl_cert): 
+                    print "Certificate (%s) exists locally" % ssl_cert
+                    put(ssl_cert, default, use_sudo=True)
+                elif exists(ssl_cert, use_sudo=True): 
+                    print "Certificate (%s) exists in cfgm node" % ssl_cert
+                else:
+                    raise RuntimeError("%s doesn't exists locally or in cfgm node" % ssl_cert)
+            if not exists(discoverycertbundle, use_sudo=True):
+                ((certfile, _), (keyfile, _), (cafile, _)) = ssl_certs
+                sudo('cat %s %s > %s' % (certfile, cafile, discoverycertbundle))
+            sudo("chown -R contrail:contrail /etc/contrail/ssl")
+
+
+@task
+@EXECUTE_TASK
+@roles('all')
+def copy_discovery_ssl_certs_to_all():
+    execute('copy_discovery_ssl_certs_to_node', env.host_string)
+
+
+@task
+def copy_discovery_ssl_certs_to_node(*nodes):
+    ssl_certs = (get_discovery_certfile(),
+                 get_discovery_cafile(),
+                 get_discovery_keyfile(),
+                 get_discovery_cert_bundle())
+    cfgm_host = env.roledefs['cfgm'][0]
+    for node in nodes:
+        with settings(host_string=node, password=get_env_passwords(node)):
+            for ssl_cert in ssl_certs:
+                cert_file = '/etc/contrail/ssl/certs/%s' % os.path.basename(ssl_cert)
+                if ssl_cert.endswith('.key'):
+                    cert_file = '/etc/contrail/ssl/private/%s' % os.path.basename(ssl_cert)
+                if node not in env.roledefs['cfgm']:
+                    # Clear old certificate
+                    sudo('rm -f %s' % cert_file)
+                if exists(cert_file, use_sudo=True):
+                    continue
+                with settings(host_string=cfgm_host,
+                              password=get_env_passwords(cfgm_host)):
+                    tmp_dir= tempfile.mkdtemp()
+                    tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
+                    get_as_sudo(ssl_cert, tmp_fname)
+                sudo("mkdir -p /etc/contrail/ssl/certs/")
+                sudo("mkdir -p /etc/contrail/ssl/private/")
+                put(tmp_fname, cert_file, use_sudo=True)
+                os.remove(tmp_fname)
+                with settings(warn_only=True):
+                   sudo("chown -R contrail:contrail /etc/contrail/ssl")
 @task
 @EXECUTE_TASK
 @roles('cfgm')

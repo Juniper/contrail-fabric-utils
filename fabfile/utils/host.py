@@ -222,6 +222,9 @@ def get_authserver_protocol():
 def get_apiserver_protocol():
     return get_from_testbed_dict('cfgm', 'auth_protocol', 'http')
 
+def get_discovery_protocol():
+    return get_from_testbed_dict('cfgm', 'discovery_auth_protocol', 'http')
+
 def get_keystone_version():
     return get_from_testbed_dict('keystone', 'version', 'v2.0')
 
@@ -466,6 +469,25 @@ def get_keystone_cert_bundle():
     return '/etc/keystone/ssl/certs/keystonecertbundle.pem'
 
 
+def get_discovery_certfile():
+    default = '/etc/contrail/ssl/certs/contrail.pem'
+    return get_from_testbed_dict('cfgm','certfile', default)
+
+
+def get_discovery_keyfile():
+    default = '/etc/contrail/ssl/private/contrail.key'
+    return get_from_testbed_dict('cfgm','keyfile', default)
+
+
+def get_discovery_cafile():
+    default = '/etc/contrail/ssl/certs/contrail_ca.pem'
+    return get_from_testbed_dict('cfgm','cafile', default)
+
+
+def get_discovery_cert_bundle():
+    return '/etc/contrail/ssl/certs/discoverycertbundle.pem'
+
+
 def get_apiserver_certfile():
     default = '/etc/contrail/ssl/certs/contrail.pem'
     return get_from_testbed_dict('cfgm','certfile', default)
@@ -493,7 +515,6 @@ def keystone_ssl_enabled():
     return ssl
 
 
-
 def apiserver_ssl_enabled():
     ssl = False
     auth_protocol = get_apiserver_protocol()
@@ -501,6 +522,13 @@ def apiserver_ssl_enabled():
         ssl = True
     return ssl
 
+
+def discovery_ssl_enabled():
+    ssl = False
+    auth_protocol = get_discovery_protocol()
+    if auth_protocol == 'https':
+        ssl = True
+    return ssl
 
 
 def get_apiserver_insecure_flag():

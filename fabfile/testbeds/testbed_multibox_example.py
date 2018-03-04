@@ -404,6 +404,7 @@ env.ostypes = {
 #    'ifmap_token' : 'secret123',
 #    'manage_db' : 'no',
 #    'auth_protocol'   : 'http',                  #Default is http
+#    'discovery_auth_protocol' : 'http',           Default is http
 #    'insecure'        : 'True',                   #Default is False
 #    'certfile'        : '/root/apiserver.pem',    #Default is '/etc/contrail/ssl/certs/apiserver.pem'
 #    'keyfile'         : '/root/apiserver_key.pem',#Default is '/etc/contrail/ssl/private/apiserver_key.pem'
