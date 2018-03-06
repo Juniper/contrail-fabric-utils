@@ -110,11 +110,6 @@ def setup_discovery_ssl_certs_node(*nodes):
         with settings(host_string=node, password=get_env_passwords(node)):
             for ssl_cert, default in ssl_certs:
                 if ssl_cert == default:
-                    # Clear old certificate
-                    sudo('rm -f %s' % ssl_cert)
-                    sudo('rm -f %s' % discoverycertbundle)
-            for ssl_cert, default in ssl_certs:
-                if ssl_cert == default:
                     cfgm_host = env.roledefs['cfgm'][0]
                     if index == 1:
                         if not exists(ssl_cert, use_sudo=True):

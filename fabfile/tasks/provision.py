@@ -239,7 +239,7 @@ listen  rabbitmq 0.0.0.0:5673
     http-request add-header X-Forwarded-Proto https if { ssl_fc }"""
 
     if discovery_ssl_enabled():
-        disc_frontend = """frontend  contrail-api
+        disc_frontend = """frontend  contrail-discovery
     bind *:5998 ssl crt /etc/contrail/ssl/certs/discoverycertbundle.pem"""
         disc_ssl_forwarding = """    option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
