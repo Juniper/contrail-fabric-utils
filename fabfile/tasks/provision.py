@@ -37,7 +37,7 @@ from fabfile.tasks.ssl import (setup_keystone_ssl_certs_node,
         copy_apiserver_ssl_certs_to_node, copy_vnc_api_lib_ini_to_node,
         copy_certs_for_neutron_node, copy_certs_for_heat,
         use_keystone_ssl_certs_in_node, setup_discovery_ssl_certs_node,
-        copy_discovery_ssl_certs_to_node)
+        copy_discovery_ssl_certs_to_node, cleanup_discovery_ssl_certs_node)
 
 
 FAB_UTILS_DIR = '/opt/contrail/utils/fabfile/utils/'
@@ -59,6 +59,8 @@ def bash_autocomplete_systemd():
 def setup_cfgm():
     """Provisions config services in all nodes defined in cfgm role."""
     if env.roledefs['cfgm']:
+        if discovery_ssl_enabled():
+            execute("cleanup_discovery_ssl_certs_node", env.host_string)
         execute("setup_cfgm_node", env.host_string)
     if discovery_ssl_enabled():
         execute("copy_discovery_ssl_certs_to_node", *env.roledefs['database'])
@@ -239,7 +241,7 @@ listen  rabbitmq 0.0.0.0:5673
     http-request add-header X-Forwarded-Proto https if { ssl_fc }"""
 
     if discovery_ssl_enabled():
-        disc_frontend = """frontend  contrail-api
+        disc_frontend = """frontend  contrail-discovery
     bind *:5998 ssl crt /etc/contrail/ssl/certs/discoverycertbundle.pem"""
         disc_ssl_forwarding = """    option forwardfor
     http-request set-header X-Forwarded-Port %[dst_port]
@@ -2844,7 +2846,6 @@ def install_provision_heat():
 @task
 def setup_all(reboot='True'):
     """Provisions required contrail services in all nodes as per the role definition.
-    """
     execute('setup_common')
     execute('setup_ha')
     execute('setup_rabbitmq_cluster')
@@ -2855,6 +2856,7 @@ def setup_all(reboot='True'):
     execute('setup_mongodb_ceilometer_cluster')
     execute('setup_orchestrator')
     execute('stop_zookeeper')
+    """
     execute('setup_cfgm')
     execute('verify_cfgm')
     if apiserver_ssl_enabled():
