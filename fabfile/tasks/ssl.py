@@ -15,7 +15,7 @@ from fabfile.utils.host import (
         get_keystone_cert_bundle, get_openstack_external_vip,
         get_contrail_external_vip, get_discovery_cafile,
         get_discovery_certfile, get_discovery_keyfile,
-        get_discovery_cert_bundle
+        get_discovery_cert_bundle, discovery_ssl_enabled
         )
 from fabfile.utils.fabos import get_as_sudo, get_openstack_services
 
@@ -110,11 +110,6 @@ def setup_discovery_ssl_certs_node(*nodes):
         with settings(host_string=node, password=get_env_passwords(node)):
             for ssl_cert, default in ssl_certs:
                 if ssl_cert == default:
-                    # Clear old certificate
-                    sudo('rm -f %s' % ssl_cert)
-                    sudo('rm -f %s' % discoverycertbundle)
-            for ssl_cert, default in ssl_certs:
-                if ssl_cert == default:
                     cfgm_host = env.roledefs['cfgm'][0]
                     if index == 1:
                         if not exists(ssl_cert, use_sudo=True):
@@ -154,6 +149,31 @@ def setup_discovery_ssl_certs_node(*nodes):
                 ((certfile, _), (keyfile, _), (cafile, _)) = ssl_certs
                 sudo('cat %s %s > %s' % (certfile, cafile, discoverycertbundle))
             sudo("chown -R contrail:contrail /etc/contrail/ssl")
+
+@task
+@EXECUTE_TASK
+@roles('cfgm')
+def cleanup_discovery_ssl_certs():
+    if discovery_ssl_enabled():
+        execute('cleanup_discover_ssl_certs_node', env.host_string)
+
+@task
+def cleanup_discovery_ssl_certs_node(*nodes):
+    default_certfile = '/etc/contrail/ssl/certs/contrail.pem'
+    default_keyfile = '/etc/contrail/ssl/private/contrail.key'
+    default_cafile = '/etc/contrail/ssl/certs/contrail_ca.pem'
+    discoverycertbundle = get_discovery_cert_bundle()
+    ssl_certs = ((get_discovery_certfile(), default_certfile),
+                 (get_discovery_keyfile(), default_keyfile),
+                 (get_discovery_cafile(), default_cafile))
+    index = env.roledefs['cfgm'].index(env.host_string) + 1
+    for node in nodes:
+        with settings(host_string=node, password=get_env_passwords(node)):
+            for ssl_cert, default in ssl_certs:
+                if ssl_cert == default:
+                    # Clear old certificate
+                    sudo('rm -f %s' % ssl_cert)
+                    sudo('rm -f %s' % discoverycertbundle)
 
 
 @task

@@ -410,7 +410,7 @@ def frame_vnc_control_cmd(host_string, cmd='setup-vnc-control'):
     if discovery_ssl_enabled():
         cmd += " --discovery_certfile %s" % get_discovery_certfile()
         cmd += " --discovery_keyfile %s" % get_discovery_keyfile()
-        cmd += " --discovery_cafile %s" % get_discovery_cafile()
+        cmd += " --discovery_cafile %s" % get_discovery_cert_bundle()
 
     return cmd
 
@@ -577,7 +577,7 @@ def frame_vnc_compute_cmd(host_string, cmd='setup-vnc-compute',
     if discovery_ssl_enabled():
         cmd += " --discovery_certfile %s" % get_discovery_certfile()
         cmd += " --discovery_keyfile %s" % get_discovery_keyfile()
-        cmd += " --discovery_cafile %s" % get_discovery_cafile()
+        cmd += " --discovery_cafile %s" % get_discovery_cert_bundle()
 
     return cmd
 
@@ -621,7 +621,7 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     if discovery_ssl_enabled():
         cmd += " --discovery_certfile %s" % get_discovery_certfile()
         cmd += " --discovery_keyfile %s" % get_discovery_keyfile()
-        cmd += " --discovery_cafile %s" % get_discovery_cafile()
+        cmd += " --discovery_cafile %s" % get_discovery_cert_bundle()
     cmd += " --self_collector_ip %s" % tgt_ip
     cmd += " --num_nodes %d " % ncollectors
     analytics_syslog_port = get_collector_syslog_port()
