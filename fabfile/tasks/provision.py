@@ -2846,6 +2846,7 @@ def install_provision_heat():
 @task
 def setup_all(reboot='True'):
     """Provisions required contrail services in all nodes as per the role definition.
+    """
     execute('setup_common')
     execute('setup_ha')
     execute('setup_rabbitmq_cluster')
@@ -2856,7 +2857,6 @@ def setup_all(reboot='True'):
     execute('setup_mongodb_ceilometer_cluster')
     execute('setup_orchestrator')
     execute('stop_zookeeper')
-    """
     execute('setup_cfgm')
     execute('verify_cfgm')
     if apiserver_ssl_enabled():
