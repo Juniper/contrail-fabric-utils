@@ -634,6 +634,8 @@ def setup_cfgm_node(*args):
     for host_string in args:
         # Enable settings for Ubuntu
         with  settings(host_string=host_string):
+            if config_cassandra_ssl_enabled():
+                execute("setup_config_cassandra_ssl_certs_node", host_string)
             if apiserver_ssl_enabled():
                 if (keystone_ssl_enabled() and
                         get_openstack_internal_vip() ==\
