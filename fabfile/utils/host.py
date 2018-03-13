@@ -506,6 +506,20 @@ def get_apiserver_cafile():
 def get_apiserver_cert_bundle():
     return '/etc/contrail/ssl/certs/contrailcertbundle.pem'
 
+def get_config_cassandra_certfile():
+    default = '/etc/contrail/ssl/cassandra/certs/cassandra.pem'
+    return get_from_testbed_dict('cfgm','cassandra_certfile', default)
+
+def get_config_cassandra_keyfile():
+    default = '/etc/contrail/ssl/cassandra/private/cassandra.key'
+    return get_from_testbed_dict('cfgm','cassandra_keyfile', default)
+
+def get_config_cassandra_cafile():
+    default = '/etc/contrail/ssl/cassandra/certs/cassandra_ca.pem'
+    return get_from_testbed_dict('cfgm','cassandra_cafile', default)
+
+def get_config_cassandra_cert_bundle():
+    return '/etc/contrail/ssl/cassandra/certs/cassandracertbundle.pem'
 
 def keystone_ssl_enabled():
     ssl = False
@@ -514,6 +528,9 @@ def keystone_ssl_enabled():
         ssl = True
     return ssl
 
+
+def config_cassandra_ssl_enabled():
+    return get_from_testbed_dict('cfgm','cassandra_ssl', False)
 
 def apiserver_ssl_enabled():
     ssl = False
@@ -533,3 +550,9 @@ def discovery_ssl_enabled():
 
 def get_apiserver_insecure_flag():
     return get_from_testbed_dict('cfgm', 'insecure', 'False')
+
+def get_config_db_hosts():
+    role = 'database'
+    if manage_config_db():
+        role = 'cfgm'
+    return env.roledefs[role]

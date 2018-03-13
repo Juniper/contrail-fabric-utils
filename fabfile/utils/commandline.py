@@ -201,6 +201,9 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
         cmd += " --discovery_certfile %s" % get_discovery_certfile()
         cmd += " --discovery_keyfile %s" % get_discovery_keyfile()
         cmd += " --discovery_cafile %s" % get_discovery_cafile()
+    if config_cassandra_ssl_enabled():
+        cmd += " --cassandra_ssl"
+        cmd += " --cassandra_ssl_cacert %s" % get_config_cassandra_cert_bundle()
     cmd += " --orchestrator %s" % orch
     if (len(env.roledefs['cfgm'])>2):
         cmd += " --seed_list %s" % ','.join(get_config_db_ip_list()[:2])
