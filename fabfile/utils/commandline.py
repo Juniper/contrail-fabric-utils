@@ -259,6 +259,11 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     minimum_diskGB = get_minimum_diskGB()
     if minimum_diskGB is not None:
         cmd += " --minimum_diskGB %s" % minimum_diskGB
+    if config_cassandra_ssl_enabled():
+        cassandra_ssl_options = get_config_cassandra_ssl([host_string])
+        cmd += (" --cassandra_ssl_options "
+               "keystore %s %s" % (cassandra_ssl_options[hstr_to_ip(host_string)],
+               " ".join(["%s %s" % (k,v) for k,v in cassandra_ssl_options.items()])))
     return cmd
 
 def frame_vnc_vcenter_plugin_cmd(host_string, cmd="setup-vcenter-plugin"):
