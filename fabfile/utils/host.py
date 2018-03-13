@@ -506,6 +506,20 @@ def get_apiserver_cafile():
 def get_apiserver_cert_bundle():
     return '/etc/contrail/ssl/certs/contrailcertbundle.pem'
 
+def get_config_cassandra_certfile():
+    default = '/etc/contrail/ssl/cassandra/certs/contrail.pem'
+    return get_from_testbed_dict('cfgm','cassandra_certfile', default)
+
+def get_config_cassandra_keyfile():
+    default = '/etc/contrail/ssl/cassandra/private/contrail.key'
+    return get_from_testbed_dict('cfgm','cassandra_keyfile', default)
+
+def get_config_cassandra_cafile():
+    default = '/etc/contrail/ssl/cassandra/certs/contrail_ca.pem'
+    return get_from_testbed_dict('cfgm','cassandra_cafile', default)
+
+def get_config_cassandra_cert_bundle():
+    return '/etc/contrail/ssl/cassandra/certs/contrailcertbundle.pem'
 
 def keystone_ssl_enabled():
     ssl = False
@@ -514,6 +528,9 @@ def keystone_ssl_enabled():
         ssl = True
     return ssl
 
+
+def config_cassandra_ssl_enabled():
+    return get_from_testbed_dict('cfgm','cassandra_ssl', False)
 
 def apiserver_ssl_enabled():
     ssl = False

@@ -212,6 +212,73 @@ def copy_discovery_ssl_certs_to_node(*nodes):
                 os.remove(tmp_fname)
                 with settings(warn_only=True):
                    sudo("chown -R contrail:contrail /etc/contrail/ssl")
+
+@task
+@EXECUTE_TASK
+@roles('build')
+def setup_config_cassandra_ssl_certs():
+    config_db_hosts = get_config_db_hosts()
+    for config_db_host in config_db_hosts:
+        execute('setup_cassandra_ssl_certs_node', config_db_host)
+
+@task
+def setup_config_cassandra_ssl_certs_node(*nodes):
+    default_certfile = '/etc/contrail/ssl/cassandra/certs/contrail.pem'
+    default_keyfile = '/etc/contrail/ssl/cassandra/private/contrail.key'
+    default_cafile = '/etc/contrail/ssl/cassandra/certs/contrail_ca.pem'
+    contrailcertbundle = get_apiserver_cert_bundle()
+    ssl_certs = ((get_apiserver_certfile(), default_certfile),
+                 (get_apiserver_keyfile(), default_keyfile),
+                 (get_apiserver_cafile(), default_cafile))
+    config_db_hosts = get_config_db_hosts()
+    config_db_ips = get_config_db_ip_list()
+    for node in nodes:
+        index = config_db_ips.index(node) + 1
+        with settings(host_string=node, password=get_env_passwords(node)):
+            for ssl_cert, default in ssl_certs:
+                if ssl_cert == default:
+                    # Clear old certificate
+                    sudo('rm -f %s' % ssl_cert)
+                    sudo('rm -f %s' % contrailcertbundle)
+            for ssl_cert, default in ssl_certs:
+                if ssl_cert == default:
+                    first_cassandra_host = config_db_hosts[0]
+                    if index == 1:
+                        if not exists(ssl_cert, use_sudo=True):
+                            print "Creating SSL certs in first Cassandra node"
+                            first_config_db_ip = config_db_ips[0]
+                            sudo('create-ssl-certs.sh %s %s ' % (
+                                first_config_db_ip,
+                                '/etc/contrail/ssl/cassandra/',
+                                'contrail_cassandra',
+                                ','.join(config_db_ips)))
+                    else:
+                        with settings(host_string=first_cassandra_host,
+                                      password=get_env_passwords(first_cassandra_host)):
+                            while not exists(ssl_cert, use_sudo=True):
+                                print "Wait for SSL certs to be created in first cassandra node"
+                                sleep(5)
+                            print "Get SSL cert(%s) from first cassandra node" % ssl_cert
+                            tmp_dir= tempfile.mkdtemp()
+                            tmp_fname = os.path.join(tmp_dir, os.path.basename(ssl_cert))
+                            get_as_sudo(ssl_cert, tmp_fname)
+                        print "Copy to this (%s) cassandra node" % node
+                        sudo('mkdir -p /etc/contrail/ssl/cassandra/certs/')
+                        sudo('mkdir -p /etc/contrail/ssl/cassandra/private/')
+                        put(tmp_fname, ssl_cert, use_sudo=True)
+                        os.remove(tmp_fname)
+                elif os.path.isfile(ssl_cert):
+                    print "Certificate (%s) exists locally" % ssl_cert
+                    put(ssl_cert, default, use_sudo=True)
+                elif exists(ssl_cert, use_sudo=True):
+                    print "Certificate (%s) exists already in node (%s)" % (ssl_cert, node)
+                else:
+                    raise RuntimeError("%s doesn't exists locally in cassandra node" % ssl_cert)
+            if not exists(contrailcertbundle, use_sudo=True):
+                ((certfile, _), (keyfile, _), (cafile, _)) = ssl_certs
+                sudo('cat %s %s > %s' % (certfile, cafile, contrailcertbundle))
+            sudo("chown -R contrail:contrail /etc/contrail/ssl/cassandra")
+
 @task
 @EXECUTE_TASK
 @roles('cfgm')
