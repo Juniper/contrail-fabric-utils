@@ -1,12 +1,17 @@
 import paramiko
 from netaddr import *
 from copy import deepcopy
+import os
+import sys
+import tempfile
+import time
 
 from fabric.api import env, sudo, get, put
 from fabric.context_managers import settings
 
 from fabfile.config import testbed
 from fabfile.utils.cluster import get_orchestrator
+from fabfile.utils.fabos import get_as_sudo
 
 def hstr_to_ip(host_string):
     return host_string.split('@')[1]
@@ -506,6 +511,101 @@ def get_apiserver_cafile():
 def get_apiserver_cert_bundle():
     return '/etc/contrail/ssl/certs/contrailcertbundle.pem'
 
+def update_cassandra_config(nodes, ssl_options):
+    for node in nodes:
+        with settings(host_string=node,
+                      password=get_env_passwords(node)):
+            args = " ".join(["%s=%s " %(k,v) for k,v in ssl_options.items()])
+            sudo('nodes=%s update_cassandra_configs=true %s '
+                 'create-cassandra-ssl-keys' % (map(hstr_to_ip, node), args))
+
+def retry_task(retry_count=5, retry_wait=5):
+    def retry_func(func):
+        def wrapper(*args, **kwargs):
+            for count in range(retry_count):
+                try:
+                    func(*args, **kwargs)
+                    break
+                except:
+                    print sys.exc_info()[1]
+                    print "WARN: Attepmt (%s) failed. Retrying (%s)..." % (count+1, count+2)
+                    time.sleep(retry_wait)
+                    if count == retry_count -1:
+                        raise RuntimeError("Retry Failed")
+        return wrapper
+    return retry_func
+
+def copy_cassandra_keys(nodes, ssl_options, from_node=None):
+    filenames = [ssl_options['truststore'],
+                 ssl_options['rootCa']]
+    conf_dir = ssl_options['config_dir']
+    if from_node:
+        conf_dir = tempfile.mkdtemp()
+        filenames1 = filenames + [ssl_options[hstr_to_ip(node)] for node in nodes]
+        with settings(host_string=from_node,
+                      password=get_env_passwords(from_node)):
+            for filename in filenames1:
+                get_as_sudo(filename,
+                            os.path.join(conf_dir, os.path.basename(filename)))
+    for node in nodes:
+        with settings(host_string=node,
+                      password=get_env_passwords(node)):
+            filenames2 = filenames + [ssl_options[hstr_to_ip(node)]]
+            sudo('mkdir -p %s' % ssl_options['config_dir'])
+            for filename in filenames2:
+                #check_cassandra_certs_exists(ssl_options, [node])
+                sudo('rm -f %s' % os.path.join(ssl_options['config_dir'],
+                                              os.path.basename(filename)))
+                put(os.path.join(conf_dir, os.path.basename(filename)),
+                    os.path.join(ssl_options['config_dir'],
+                                 os.path.basename(filename)),
+                    use_sudo=True)
+                sudo('chown -R cassandra:cassandra %s' % os.path.dirname(ssl_options['config_dir']))
+
+@retry_task(10,5)
+def check_cassandra_certs_exists(user_ssl, node_ips):
+    file_exists = lambda x: (True if os.path.isfile(x) else
+                            IOError('File (%s) not found' % x))
+    #truststore
+    file_exists(user_ssl['truststore'])
+    #rootCa
+    file_exists(user_ssl['rootCa'])
+    #keystore for each node
+    for node_ip in node_ips:
+        file_exists(user_ssl[node_ip])
+
+def get_config_cassandra_ssl(nodes):
+    #internal varibales
+    _ssl = {'user_certs': False,
+            }
+    #defaults
+    ssl = {'enabled': False,
+           'optional': False,
+           'config_dir': '/usr/local/lib/cassandra/conf',
+           'truststore': '/usr/local/lib/cassandra/conf/truststore.jks',
+           'rootCa': '/usr/local/lib/cassandra/conf/rootCa.crt',
+           'keystore_password': 'c0ntrail123',
+           'truststore_password': 'c0ntrail123',
+           'protocol': 'TLS',
+           'algorithm': 'SunX509',
+           'store_type': 'JKS',
+           'cipher_suites': ['TLS_RSA_WITH_AES_256_CBC_SHA']}
+    node_ips = map(hstr_to_ip, nodes)
+    ssl.update([(node_ip, os.path.join(ssl['config_dir'], '%s.jks' % node_ip))
+        for node_ip in node_ips])
+    user_ssl = get_from_testbed_dict('cfgm','cassandra_ssl', {})
+    enable = user_ssl.get('enabled', False)
+    if not enable:
+        return
+    if user_ssl:
+        if ('truststore' in user_ssl or
+            'rootCa' in user_ssl or
+            set(node_ips) & set(user_ssl.keys())):
+            _ssl['user_certs'] = True
+            check_cassandra_certs_exists(user_ssl, node_ips)
+    ssl.update(_ssl)
+    ssl.update(user_ssl)
+    return ssl
 
 def keystone_ssl_enabled():
     ssl = False
@@ -514,6 +614,9 @@ def keystone_ssl_enabled():
         ssl = True
     return ssl
 
+
+def config_cassandra_ssl_enabled():
+    return get_from_testbed_dict('cfgm','cassandra_ssl', {}).get('enabled', False)
 
 def apiserver_ssl_enabled():
     ssl = False
@@ -533,3 +636,9 @@ def discovery_ssl_enabled():
 
 def get_apiserver_insecure_flag():
     return get_from_testbed_dict('cfgm', 'insecure', 'False')
+
+def get_config_db_hosts():
+    role = 'database'
+    if manage_config_db():
+        role = 'cfgm'
+    return env.roledefs[role]
