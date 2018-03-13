@@ -15,7 +15,9 @@ from fabfile.utils.host import (
         get_keystone_cert_bundle, get_openstack_external_vip,
         get_contrail_external_vip, get_discovery_cafile,
         get_discovery_certfile, get_discovery_keyfile,
-        get_discovery_cert_bundle, discovery_ssl_enabled
+        get_discovery_cert_bundle, discovery_ssl_enabled,
+        get_config_cassandra_ssl, get_config_db_hosts,
+        copy_cassandra_keys, update_cassandra_config, retry_task
         )
 from fabfile.utils.fabos import get_as_sudo, get_openstack_services
 
@@ -212,6 +214,42 @@ def copy_discovery_ssl_certs_to_node(*nodes):
                 os.remove(tmp_fname)
                 with settings(warn_only=True):
                    sudo("chown -R contrail:contrail /etc/contrail/ssl")
+
+@task
+@EXECUTE_TASK
+@roles('build')
+def setup_config_cassandra_ssl_certs():
+    config_db_hosts = get_config_db_hosts()
+    execute('setup_config_cassandra_ssl_certs_node', *config_db_hosts)
+
+@task
+def setup_config_cassandra_ssl_certs_node(*nodes):
+    if not nodes:
+        return
+    ssl_options = get_config_cassandra_ssl(nodes)
+    # ssl is not enabled
+    if not ssl_options['enabled'] or not nodes:
+        return
+    config_db_hosts = get_config_db_hosts()
+    config_db_ips = map(hstr_to_ip, get_control_host_string(config_db_hosts))
+    # Just copy and change permission to cassandra
+    # if keys are provided by user
+    if ssl_options['user_certs']:
+        copy_cassandra_keys(nodes=nodes, ssl_options=ssl_options)
+        return
+    for node in nodes:
+        if node == config_db_hosts[0]:
+            with settings(host_string=node,
+                          password=get_env_passwords(node)):
+                sudo('nodes="%s" create_keys=true cleanup=true'
+                     ' create-cassandra-ssl-keys.sh' % " ".join(map(hstr_to_ip, config_db_hosts)))
+        else:
+            other_nodes = list(set(nodes) - set(config_db_hosts[0]))
+            if other_nodes:
+                copy_cassandra_keys(nodes=other_nodes,
+                            from_node=config_db_hosts[0],
+                            ssl_options=ssl_options)
+
 @task
 @EXECUTE_TASK
 @roles('cfgm')
