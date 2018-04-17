@@ -633,5 +633,7 @@ def frame_vnc_collector_cmd(host_string, cmd='setup-vnc-collector'):
     cloud_admin_role = get_cloud_admin_role()
     if cloud_admin_role:
         cmd += " --cloud_admin_role %s" % cloud_admin_role
+    if get_uve_cache_disable():
+        cmd += " --disable_uve_cache"
     return cmd
 

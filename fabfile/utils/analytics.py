@@ -150,3 +150,6 @@ def get_cassandra_password():
 def get_alarm_gen_num_instances():
     return getattr(testbed, 'alarm_gen_num_instances', None)
 # end get_alarm_gen_num_instances
+
+def get_uve_cache_disable():
+    return getattr(testbed, 'uve_cache_disable', None)
