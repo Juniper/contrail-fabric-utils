@@ -256,6 +256,9 @@ def frame_vnc_config_cmd(host_string, cmd="setup-vnc-config"):
     cloud_admin_role = get_cloud_admin_role()
     if cloud_admin_role:
         cmd += " --cloud_admin_role %s" % cloud_admin_role
+    minimum_diskGB = get_minimum_diskGB()
+    if minimum_diskGB is not None:
+        cmd += " --minimum_diskGB %s" % minimum_diskGB
     return cmd
 
 def frame_vnc_vcenter_plugin_cmd(host_string, cmd="setup-vcenter-plugin"):
