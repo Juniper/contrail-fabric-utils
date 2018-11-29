@@ -44,8 +44,8 @@ def upgrade_kernel_all(*tgzs, **kwargs):
             (package, os_type) = ('linux-image-3.13.0-142-generic', 'ubuntu')
             default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-142-generic'
         elif 'centos' in dist.lower() and version.startswith('6'):
-            (package, os_type) = ('kernel-2.6.32-696.10.2.el6.centos.plus.x86_64', 'centos')
-            default_grub='2.6.32-696.10.2.el6.centos.plus.x86_64'
+            (package, os_type) = ('kernel-2.6.32-754.3.5.el6.centos.plus.x86_64', 'centos')
+            default_grub='2.6.32-754.3.5.el6.centos.plus.x86_64'
         else:
             raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
                                " kernel upgrade." % (dist, version, extra))
