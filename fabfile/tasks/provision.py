@@ -1319,7 +1319,12 @@ def setup_redis_server_node(*args):
             sudo("sed -i -e '/^[ ]*bind/s/^/#/' %s" % (redis_conf_file))
             # Set the lua-time-limit to 15000 milliseconds
             sudo("sed -i -e 's/lua-time-limit.*/lua-time-limit 15000/' %s" % (redis_conf_file))
-            # If redis passwd specified, add that to the conf file
+            
+	    # Set the timeout to 43200 sec i.e 12hr and tcpkeepalive to 300 seconds (300 seconds because redis version 3.2 onwards tcp-keepalive has default value 300)
+            sudo("sed -i -e 's/timeout.*/timeout 43200/' %s" % (redis_conf_file))
+            sudo("sed -i -e 's/tcp-keepalive.*/tcp-keepalive 300/' %s" % (redis_conf_file))
+
+	    # If redis passwd specified, add that to the conf file
             if get_redis_password():
                 sudo("sed -i '/^# requirepass/ c\ requirepass %s' %s" % (get_redis_password(), redis_conf_file))
             # Disable persistence
