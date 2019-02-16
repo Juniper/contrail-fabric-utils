@@ -397,6 +397,16 @@ env.ostypes = {
 # certfile : Specify local remote(cfgm node) path to certificate file
 #            If local path specifed, it will be copied to cfgm node(/etc/contrail/ssl/certs/apiserver.pem)
 #            If remote path in cfgm node specified, contrail-api.conf will point to the specified location
+# cassandra_ssl: To provision cassandra with SSL (config cassandra) in config nodes
+#            enabled: Set True to provision Cassandra SSL. Default False
+#            truststore: Absolute path to user created truststore key (local path in host_build role)
+#            rootCa: Absolute path to user created rootCa cert file (local path in host_build role)
+#            '<node_ip>: Absolute path to user created keystore per node. Add one entry per node.
+#                        (local path in host_build role)
+#            trustsore_password: Preferred truststore password or Configured truststore password
+#                                in case of user created truststore
+#            keystore_password: Preferred keystore password or Configured keystore password in case
+#                               of user created keystore
 #env.cfgm = {
 #    'amqp_hosts' : ['10.10.10.1', '10.10.10.2'],
 #    'amqp_port' : '5672',
@@ -409,6 +419,13 @@ env.ostypes = {
 #    'certfile'        : '/root/apiserver.pem',    #Default is '/etc/contrail/ssl/certs/apiserver.pem'
 #    'keyfile'         : '/root/apiserver_key.pem',#Default is '/etc/contrail/ssl/private/apiserver_key.pem'
 #    'cafile'          : '/root/apiserver_ca.pem', #Default is '/etc/contrail/ssl/certs/apiserver_ca.pem'
+#     'cassandra_ssl': {'enabled': True,
+#                      'truststore': '/absolute/path/to/truststore.jks',
+#                      'rootCa': '/absolute/path/to/rootCa.crt',
+#                      '<node_ip>: '/absolute/path/to/<node_ip>.jks',
+#                       'trustsore_password': 'c0ntrail123',
+#                       'keystore_password': 'c0ntrail123',
+#                      }
 #}
 
 # Link-Local Metadata Service
