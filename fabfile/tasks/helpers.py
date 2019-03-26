@@ -1488,11 +1488,12 @@ def populate_hosts_file_node(*args):
     for host_string in args:
         with settings(host_string=host_string):
             host_name = sudo('hostname -s')
+            host_fqdn = sudo('hostname -f')
             ctrl_ip = hstr_to_ip(get_control_host_string(host_string))
         for every_host in env.roledefs['all']:
             with settings(host_string=every_host, warn_only=True):
                 if sudo('grep %s /etc/hosts' % host_name).failed:
-                     sudo("echo '%s     %s' >> /etc/hosts" % (ctrl_ip, host_name))
+                     sudo("echo '%s  %s  %s' >> /etc/hosts" % (ctrl_ip, host_fqdn, host_name))
 
 @task
 @EXECUTE_TASK

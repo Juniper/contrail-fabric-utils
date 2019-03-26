@@ -20,7 +20,8 @@ def verfiy_and_update_hosts(host_name, host_string):
     # the same interface that is used for rabbitMQ TCP listener
     with settings(hide('stderr'), warn_only=True):
         if sudo('grep %s /etc/hosts' % (host_name+ctrl)).failed:
-            sudo("echo '%s     %s     %s' >> /etc/hosts" % (hstr_to_ip(get_control_host_string(host_string)), host_name, host_name+ctrl))
+            host_fqdn = sudo('hostname -f')
+            sudo("echo '%s     %s     %s' >> /etc/hosts" % (hstr_to_ip(get_control_host_string(host_string)), host_fqdn, host_name+ctrl))
 
 @task
 @EXECUTE_TASK
