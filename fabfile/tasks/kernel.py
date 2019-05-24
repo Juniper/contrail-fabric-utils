@@ -143,8 +143,13 @@ def upgrade_kernel_node(*args, **kwargs):
                 apt_install(["linux-headers-"+kernel_ver,
                              "linux-headers-"+kernel_ver+"-generic"])
                 print "Upgrading the kernel to "+kernel_ver
-                apt_install(["linux-image-"+kernel_ver+"-generic",
-                             "linux-image-extra-"+kernel_ver+"-generic"])
+                if kernel_ver == '3.13.0-166':
+                    # Linux-image-extra has been renamed to linux-modules-extra for 3.13.0-166
+                    apt_install(["linux-image-"+kernel_ver+"-generic",
+                                "linux-modules-extra-"+kernel_ver+"-generic"])
+                else:
+                    apt_install(["linux-image-"+kernel_ver+"-generic",
+                                "linux-image-extra-"+kernel_ver+"-generic"])
                 default_grub='Advanced options for Ubuntu>Ubuntu, with Linux '+kernel_ver+'-generic'
                 execute('set_grub_default_node', host_string, value=default_grub)
             elif 'red hat' in dist.lower() and version.startswith('7'):
