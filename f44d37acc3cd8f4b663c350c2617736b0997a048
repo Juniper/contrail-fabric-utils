@@ -1,0 +1,21 @@
+{
+  "comments": [
+    {
+      "key": {
+        "uuid": "04457050_6e1f652c",
+        "filename": "fabfile/tasks/kernel.py",
+        "patchSetId": 1
+      },
+      "lineNbr": 144,
+      "author": {
+        "id": 16
+      },
+      "writtenOn": "2019-07-12T07:42:20Z",
+      "side": 1,
+      "message": "Have you tested the change in package?",
+      "revId": "f44d37acc3cd8f4b663c350c2617736b0997a048",
+      "serverId": "c72cd27d-1743-4a55-84a4-cd13b8400c52",
+      "unresolved": true
+    }
+  ]
+}
