@@ -59,7 +59,7 @@ def upgrade_kernel_all(*tgzs, **kwargs):
         elif 'centos linux' in dist.lower() and version.startswith('7'):
             (package, os_type) = ('kernel-3.10.0-327.10.1.el7.x86_64', 'centoslinux')
         elif 'red hat' in dist.lower() and version.startswith('7'):
-            (package, os_type) = ('kernel-3.10.0-327.10.1.el7.x86_64', 'redhat')
+            (package, os_type) = ('kernel-3.10.0-957.12.2.el7.x86_64', 'redhat')
         else:
             raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
                                " kernel upgrade." % (dist, version, extra))
@@ -90,7 +90,7 @@ def upgrade_kernel_without_openstack(*tgzs, **kwargs):
         dist, version, extra = get_linux_distro()
 
     if ('red hat' in dist.lower() or 'centos linux' in dist.lower()) and version.startswith('7'):
-        (package, os_type) = ('kernel-3.10.0-327.10.1.el7.x86_64', 'redhat')
+        (package, os_type) = ('kernel-3.10.0-957.12.2.el7.x86_64', 'redhat')
     else:
         raise RuntimeError("Unsupported platfrom (%s, %s, %s) for"
                            " kernel upgrade." % (dist, version, extra))
@@ -145,12 +145,12 @@ def upgrade_kernel_node(*args):
                 default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-171-generic'
                 execute('set_grub_default_node', host_string, value=default_grub)
             elif 'red hat' in dist.lower() and version.startswith('7'):
-                print "Upgrading RHEL kernel to version 3.10.0-327.10.1"
-                pkg_install(["kernel-3.10.0-327.10.1.el7.x86_64",
-                             "kernel-tools-3.10.0-327.10.1.el7.x86_64",
-                             "kernel-tools-libs-3.10.0-327.10.1.el7.x86_64",
-                             "kernel-headers-3.10.0-327.10.1.el7.x86_64"], disablerepo=False)
-                default_grub='Red Hat Enterprise Linux Server (3.10.0-327.10.1.el7.x86_64) 7.2 (Maipo)'
+                print "Upgrading RHEL kernel to version 3.10.0-957.12.2"
+                pkg_install(["kernel-3.10.0-957.12.2.el7.x86_64",
+                             "kernel-tools-3.10.0-957.12.2.el7.x86_64",
+                             "kernel-tools-libs-3.10.0-957.12.2.el7.x86_64",
+                             "kernel-headers-3.10.0-957.12.2.el7.x86_64"], disablerepo=False)
+                default_grub='Red Hat Enterprise Linux Server (3.10.0-957.12.2.el7.x86_64) 7.6'
                 execute('set_grub_default_node', host_string, value=default_grub)
             elif 'centos linux' in dist.lower() and version.startswith('7'):
                 print "Upgrading Centos kernel to version 3.10.0-327.10.1"
