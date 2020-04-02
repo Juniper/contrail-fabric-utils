@@ -24,7 +24,7 @@ def set_grub_default_node(*args, **kwargs):
 
 @task
 @roles('all')
-def set_grub_default(value='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-173-generic'):
+def set_grub_default(value='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-176-generic'):
     '''Set default kernel version to bootup for all nodes'''
     execute('set_grub_default_node', env.host_string, value=value)
 
@@ -44,7 +44,7 @@ def upgrade_kernel_all(*tgzs, **kwargs):
             default_grub='Advanced options for Ubuntu>Ubuntu, with Linux 3.13.0-34-generic'
         elif version == '14.04':
             if kernel_ver is None:
-                kernel_ver='3.13.0-173'
+                kernel_ver='3.13.0-176'
             (package, os_type) = ('linux-image-'+kernel_ver+'-generic', 'ubuntu')
             default_grub='Advanced options for Ubuntu>Ubuntu, with Linux '+kernel_ver+'-generic'
         elif 'centos linux' in dist.lower() and version.startswith('7'):
@@ -87,7 +87,7 @@ def upgrade_kernel_without_openstack(*tgzs, **kwargs):
     if ('red hat' in dist.lower() or 'centos linux' in dist.lower()) and version.startswith('7'):
         (package, os_type) = ('kernel-3.10.0-693.17.1.el7.x86_64', 'redhat')
     elif 'ubuntu' in dist.lower() and version.startswith('14.04'):
-        kernel_ver = kernel_ver or '3.13.0-173'
+        kernel_ver = kernel_ver or '3.13.0-176'
         (package, os_type) = ('linux-image-'+kernel_ver+'-generic', 'ubuntu')
         default_grub='Advanced options for Ubuntu>Ubuntu, with Linux '+kernel_ver+'-generic'
     else:
@@ -138,12 +138,12 @@ def upgrade_kernel_node(*args, **kwargs):
                 if 'version' in kwargs:
                     kernel_ver = kwargs.get('version')
                 else:
-                    kernel_ver = "3.13.0-173"
+                    kernel_ver = "3.13.0-176"
                 print "Installing "+kernel_ver+" kernel headers"
                 apt_install(["linux-headers-"+kernel_ver,
                              "linux-headers-"+kernel_ver+"-generic"])
                 print "Upgrading the kernel to "+kernel_ver
-                if kernel_ver == '3.13.0-166' or kernel_ver == '3.13.0-173':
+                if kernel_ver == '3.13.0-166' or kernel_ver == '3.13.0-176':
                     # Linux-image-extra has been renamed to linux-modules-extra from 3.13.0-166
                     apt_install(["linux-image-"+kernel_ver+"-generic",
                                 "linux-modules-extra-"+kernel_ver+"-generic"])
@@ -192,7 +192,7 @@ def migrate_compute_kernel_node(*args, **kwargs):
             if 'version' in kwargs:
                 kernel_ver = kwargs.get('version')
             else:
-                kernel_ver = "3.13.0-173"
+                kernel_ver = "3.13.0-176"
             if host_string not in dpdk:
                 sudo('apt-get -o Dpkg::Options::="--force-overwrite" -y install contrail-vrouter-'+kernel_ver+'-generic')
             upgrade_kernel_node(host_string, **kwargs)

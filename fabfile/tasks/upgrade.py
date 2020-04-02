@@ -239,9 +239,9 @@ def upgrade_compute_node(from_rel, pkg, *args, **kwargs):
                           pkgs.remove('contrail-vrouter-3.13.0-142-generic')
                        if 'contrail-vrouter-3.13.0-156-generic' in pkgs:
                           pkgs.remove('contrail-vrouter-3.13.0-156-generic')
-                       if 'contrail-vrouter-3.13.0-173-generic' in pkgs:
-                          pkgs.remove('contrail-vrouter-3.13.0-173-generic')
-                       pkgs.append('contrail-vrouter-3.13.0-173-generic')
+                       if 'contrail-vrouter-3.13.0-176-generic' in pkgs:
+                          pkgs.remove('contrail-vrouter-3.13.0-176-generic')
+                       pkgs.append('contrail-vrouter-3.13.0-176-generic')
                 # Identify roles of this node.
                 roles = ['compute']
                 if env.host_string in get_tsn_nodes():
