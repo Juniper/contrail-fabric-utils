@@ -143,7 +143,7 @@ def upgrade_kernel_node(*args, **kwargs):
                 apt_install(["linux-headers-"+kernel_ver,
                              "linux-headers-"+kernel_ver+"-generic"])
                 print "Upgrading the kernel to "+kernel_ver
-                if kernel_ver == '3.13.0-166' or kernel_ver == '3.13.0-176':
+                if kernel_ver == '3.13.0-166' or kernel_ver == '3.13.0-171' or kernel_ver == '3.13.0-176':
                     # Linux-image-extra has been renamed to linux-modules-extra from 3.13.0-166
                     apt_install(["linux-image-"+kernel_ver+"-generic",
                                 "linux-modules-extra-"+kernel_ver+"-generic"])
