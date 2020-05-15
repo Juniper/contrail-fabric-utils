@@ -222,7 +222,7 @@ def upgrade_compute_node(from_rel, pkg, *args, **kwargs):
                 if (getattr(env, 'interface_rename', True) and
                     detect_ostype() not in ['ubuntu', 'redhat']):
                     pkgs.append('contrail-interface-name')
-                if LooseVersion(from_rel) <= LooseVersion('3.2.14.0'):
+                if LooseVersion(from_rel) <= LooseVersion('3.2.15.0'):
                     dist, version, extra = get_linux_distro()
                     if version == '14.04':
                        if 'contrail-vrouter-3.13.0-40-generic' in pkgs:
@@ -239,6 +239,8 @@ def upgrade_compute_node(from_rel, pkg, *args, **kwargs):
                           pkgs.remove('contrail-vrouter-3.13.0-142-generic')
                        if 'contrail-vrouter-3.13.0-156-generic' in pkgs:
                           pkgs.remove('contrail-vrouter-3.13.0-156-generic')
+                       if 'contrail-vrouter-3.13.0-171-generic' in pkgs:
+                          pkgs.remove('contrail-vrouter-3.13.0-171-generic')
                        if 'contrail-vrouter-3.13.0-176-generic' in pkgs:
                           pkgs.remove('contrail-vrouter-3.13.0-176-generic')
                        pkgs.append('contrail-vrouter-3.13.0-176-generic')
