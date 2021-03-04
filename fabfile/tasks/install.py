@@ -291,6 +291,10 @@ def install_database_node(install_mongodb, *args):
                 apt_install(pkg)
             else:
                 yum_install(pkg)
+            update-alternatives --install "/usr/bin/java" "java" "/usr/lib/jvm/java-1.8.0-openjdk-amd64/bin/java" 0
+            update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/jvm/java-1.8.0-openjdk-amd64/bin/javac" 0
+            update-alternatives --set java /usr/lib/jvm/java-1.8.0-openjdk-amd64/bin/java
+            update-alternatives --set javac /usr/lib/jvm/java-1.8.0-openjdk-amd64/bin/javac
 
 @task
 @EXECUTE_TASK
