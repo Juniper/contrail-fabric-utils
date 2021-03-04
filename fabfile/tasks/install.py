@@ -283,6 +283,10 @@ def install_database_node(install_mongodb, *args):
             (dist, version, extra) = get_linux_distro()
             if dist.lower() == 'ubuntu' and version == '14.04':
                 pkg = ['default-jre-headless'] + pkg
+                update-alternatives --install "/usr/bin/java" "java" "/usr/lib/jvm/java-1.8.0-openjdk-amd64/bin/java" 0
+                update-alternatives --install "/usr/bin/javac" "javac" "/usr/lib/jvm/java-1.8.0-openjdk-amd64/bin/javac" 0
+                update-alternatives --set java /usr/lib/jvm/java-1.8.0-openjdk-amd64/bin/java
+                update-alternatives --set javac /usr/lib/jvm/java-1.8.0-openjdk-amd64/bin/javac
             if install_mongodb and is_ceilometer_install_supported(use_install_repo=True):
                 pkgs_ceilometer_database = ['mongodb-clients', 'mongodb-server']
                 pkg.extend(pkgs_ceilometer_database)
